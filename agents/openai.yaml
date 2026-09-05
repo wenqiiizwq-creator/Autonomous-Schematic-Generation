@@ -1,0 +1,6 @@
+interface:
+  display_name: "KiCad EDA"
+  short_description: "KiCad schematic generation & design review"
+  default_prompt: "Use $kicad to add a readable LM5013-style buck circuit to this schematic and verify it end-to-end."
+policy:
+  allow_implicit_invocation: true
