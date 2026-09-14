@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "design_id": "dual_filter",
+  "title": "Two reusable RC blocks - software test fixture",
+  "modules": {
+    "rc": {
+      "ports": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "parameters": {
+        "resistance": "1k",
+        "capacitance": "100n"
+      },
+      "components": [
+        {
+          "id": "input",
+          "lib_id": "Connector_Generic:Conn_01x01",
+          "value": "IN",
+          "footprint": "",
+          "role": "input"
+        },
+        {
+          "id": "series",
+          "lib_id": "Device:R",
+          "value": {
+            "param": "resistance"
+          },
+          "footprint": "",
+          "role": "series"
+        },
+        {
+          "id": "shunt",
+          "lib_id": "Device:C",
+          "value": {
+            "param": "capacitance"
+          },
+          "footprint": "",
+          "role": "shunt"
+        },
+        {
+          "id": "output",
+          "lib_id": "Connector_Generic:Conn_01x01",
+          "value": "OUT",
+          "footprint": "",
+          "role": "output"
+        }
+      ],
+      "nets": [
+        {
+          "name": "IN",
+          "pins": [
+            "input.1",
+            "series.1"
+          ]
+        },
+        {
+          "name": "OUT",
+          "pins": [
+            "series.2",
+            "shunt.1",
+            "output.1"
+          ]
+        },
+        {
+          "name": "GND",
+          "pins": [
+            "shunt.2"
+          ]
+        }
+      ]
+    }
+  },
+  "root": {
+    "nets": [
+      {
+        "name": "IN_A",
+        "pins": []
+      },
+      {
+        "name": "OUT_A",
+        "pins": []
+      },
+      {
+        "name": "IN_B",
+        "pins": []
+      },
+      {
+        "name": "OUT_B",
+        "pins": []
+      },
+      {
+        "name": "GND",
+        "pins": []
+      }
+    ],
+    "instances": [
+      {
+        "id": "filter_a",
+        "module": "rc",
+        "bindings": {
+          "IN": "IN_A",
+          "OUT": "OUT_A",
+          "GND": "GND"
+        }
+      },
+      {
+        "id": "filter_b",
+        "module": "rc",
+        "bindings": {
+          "IN": "IN_B",
+          "OUT": "OUT_B",
+          "GND": "GND"
+        }
+      }
+    ]
+  },
+  "references": {
+    "filter_a/input": "J1",
+    "filter_a/series": "R1",
+    "filter_a/shunt": "C1",
+    "filter_a/output": "J2",
+    "filter_b/input": "J3",
+    "filter_b/series": "R2",
+    "filter_b/shunt": "C2",
+    "filter_b/output": "J4"
+  }
+}

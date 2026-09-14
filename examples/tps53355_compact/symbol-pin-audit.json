@@ -1,0 +1,40 @@
+{
+  "source": "https://www.ti.com/lit/ds/symlink/tps53355.pdf",
+  "section": "Table 5-1, page 4",
+  "ep_convention": "EP = unnumbered GND PowerPAD, not physical lead 23",
+  "pin_map": {
+    "1": "VFB",
+    "2": "EN",
+    "3": "PGOOD",
+    "4": "VBST",
+    "5": "NC",
+    "6": "LL",
+    "7": "LL",
+    "8": "LL",
+    "9": "LL",
+    "10": "LL",
+    "11": "LL",
+    "12": "VIN",
+    "13": "VIN",
+    "14": "VIN",
+    "15": "VIN",
+    "16": "VIN",
+    "17": "VIN",
+    "18": "VREG",
+    "19": "VDD",
+    "20": "MODE",
+    "21": "TRIP",
+    "22": "RF",
+    "EP": "GND"
+  },
+  "electrical_types": {
+    "VIN/VDD/GND/VBST": "power_in",
+    "VREG": "power_out",
+    "LL": "bidirectional",
+    "PGOOD": "open_collector",
+    "NC": "no_connect",
+    "others": "input"
+  },
+  "all_leads_visible": true,
+  "footprint_status": "Not assigned: schematic-only test, DQP package must not be replaced by generic DFN-22"
+}

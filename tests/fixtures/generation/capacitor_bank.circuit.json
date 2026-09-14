@@ -1,0 +1,227 @@
+{
+  "schema_version": 2,
+  "design_id": "capacitor_bank",
+  "title": "12 capacitors - field budget / DNP metadata test fixture",
+  "references": {
+    "cap1": "C1",
+    "cap2": "C2",
+    "cap3": "C3",
+    "cap4": "C4",
+    "cap5": "C5",
+    "cap6": "C6",
+    "cap7": "C7",
+    "cap8": "C8",
+    "cap9": "C9",
+    "cap10": "C10",
+    "cap11": "C11",
+    "cap12": "C12"
+  },
+  "root": {
+    "components": [
+      {
+        "id": "cap1",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_001",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap2",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_002",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap3",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_003",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap4",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_004",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap5",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_005",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap6",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_006",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap7",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_007",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap8",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_008",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap9",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_009",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap10",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_010",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap11",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_011",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": false
+      },
+      {
+        "id": "cap12",
+        "lib_id": "Device:C",
+        "value": "10u 50V X7R",
+        "footprint": "Capacitor_SMD:C_0805_2012Metric",
+        "role": "capacitor",
+        "mpn": "FIXTURE_MPN_012",
+        "ratings": {
+          "Voltage": "50V",
+          "Tolerance": "10%",
+          "Dielectric": "X7R"
+        },
+        "dnp": true
+      }
+    ],
+    "nets": [
+      {
+        "name": "VCC",
+        "pins": [
+          "cap1.1",
+          "cap2.1",
+          "cap3.1",
+          "cap4.1",
+          "cap5.1",
+          "cap6.1",
+          "cap7.1",
+          "cap8.1",
+          "cap9.1",
+          "cap10.1",
+          "cap11.1",
+          "cap12.1"
+        ]
+      },
+      {
+        "name": "GND",
+        "pins": [
+          "cap1.2",
+          "cap2.2",
+          "cap3.2",
+          "cap4.2",
+          "cap5.2",
+          "cap6.2",
+          "cap7.2",
+          "cap8.2",
+          "cap9.2",
+          "cap10.2",
+          "cap11.2",
+          "cap12.2"
+        ]
+      }
+    ]
+  }
+}

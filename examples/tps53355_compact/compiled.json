@@ -1,0 +1,2722 @@
+{
+  "schema_version": 2,
+  "design_id": "TPS53355-Test",
+  "input_sha256": "1f8b49e1086de5c02b1ee01693024a3990808d09a4dcaa4f22e73b0fb63cde02",
+  "blocks": [
+    {
+      "id": "root",
+      "members": [
+        {
+          "id": "U1",
+          "ref": "U1",
+          "role": "regulator"
+        },
+        {
+          "id": "L1",
+          "ref": "L1",
+          "role": "inductor"
+        },
+        {
+          "id": "J1",
+          "ref": "J1",
+          "role": "input"
+        },
+        {
+          "id": "J2",
+          "ref": "J2",
+          "role": "output"
+        },
+        {
+          "id": "C1",
+          "ref": "C1",
+          "role": "input_cap"
+        },
+        {
+          "id": "C2",
+          "ref": "C2",
+          "role": "input_cap"
+        },
+        {
+          "id": "C3",
+          "ref": "C3",
+          "role": "input_cap"
+        },
+        {
+          "id": "C4",
+          "ref": "C4",
+          "role": "input_cap"
+        },
+        {
+          "id": "C5",
+          "ref": "C5",
+          "role": "output_cap"
+        },
+        {
+          "id": "C6",
+          "ref": "C6",
+          "role": "output_cap"
+        },
+        {
+          "id": "C7",
+          "ref": "C7",
+          "role": "output_cap"
+        },
+        {
+          "id": "C8",
+          "ref": "C8",
+          "role": "output_cap"
+        },
+        {
+          "id": "C9",
+          "ref": "C9",
+          "role": "input_cap"
+        },
+        {
+          "id": "C10",
+          "ref": "C10",
+          "role": "input_cap"
+        },
+        {
+          "id": "C11",
+          "ref": "C11",
+          "role": "bootstrap"
+        },
+        {
+          "id": "C12",
+          "ref": "C12",
+          "role": "compensation"
+        },
+        {
+          "id": "C13",
+          "ref": "C13",
+          "role": "compensation"
+        },
+        {
+          "id": "R1",
+          "ref": "R1",
+          "role": "feedback"
+        },
+        {
+          "id": "R2",
+          "ref": "R2",
+          "role": "feedback"
+        },
+        {
+          "id": "R3",
+          "ref": "R3",
+          "role": "compensation"
+        },
+        {
+          "id": "R4",
+          "ref": "R4",
+          "role": "control"
+        },
+        {
+          "id": "R5",
+          "ref": "R5",
+          "role": "control"
+        },
+        {
+          "id": "R6",
+          "ref": "R6",
+          "role": "control"
+        },
+        {
+          "id": "R7",
+          "ref": "R7",
+          "role": "control"
+        },
+        {
+          "id": "R8",
+          "ref": "R8",
+          "role": "bootstrap"
+        },
+        {
+          "id": "C16",
+          "ref": "C16",
+          "role": "input_cap"
+        },
+        {
+          "id": "C17",
+          "ref": "C17",
+          "role": "input_cap"
+        },
+        {
+          "id": "C18",
+          "ref": "C18",
+          "role": "output_cap"
+        },
+        {
+          "id": "C19",
+          "ref": "C19",
+          "role": "output_cap"
+        },
+        {
+          "id": "C14",
+          "ref": "C14",
+          "role": "control"
+        },
+        {
+          "id": "C15",
+          "ref": "C15",
+          "role": "snubber"
+        },
+        {
+          "id": "R9",
+          "ref": "R9",
+          "role": "control"
+        },
+        {
+          "id": "R11",
+          "ref": "R11",
+          "role": "snubber"
+        },
+        {
+          "id": "R12",
+          "ref": "R12",
+          "role": "output"
+        },
+        {
+          "id": "TP1",
+          "ref": "TP1",
+          "role": "testpoint"
+        },
+        {
+          "id": "TP2",
+          "ref": "TP2",
+          "role": "testpoint"
+        },
+        {
+          "id": "TP3",
+          "ref": "TP3",
+          "role": "testpoint"
+        },
+        {
+          "id": "R10",
+          "ref": "R10",
+          "role": "pg_isolation"
+        },
+        {
+          "id": "R13",
+          "ref": "R13",
+          "role": "rf_option"
+        },
+        {
+          "id": "R14",
+          "ref": "R14",
+          "role": "rf_option"
+        },
+        {
+          "id": "R15",
+          "ref": "R15",
+          "role": "mode_option"
+        },
+        {
+          "id": "R16",
+          "ref": "R16",
+          "role": "vdd_filter_link"
+        },
+        {
+          "id": "R17",
+          "ref": "R17",
+          "role": "external_vreg_link"
+        },
+        {
+          "id": "C20",
+          "ref": "C20",
+          "role": "vin_hf_bypass"
+        },
+        {
+          "id": "C21",
+          "ref": "C21",
+          "role": "vin_hf_bypass"
+        },
+        {
+          "id": "C22",
+          "ref": "C22",
+          "role": "load_local_bypass"
+        },
+        {
+          "id": "C23",
+          "ref": "C23",
+          "role": "load_local_bypass"
+        }
+      ],
+      "ports": {},
+      "buses": []
+    }
+  ],
+  "resolved_components": {
+    "U1": {
+      "ref": "U1",
+      "lib_id": "TPS53355_Test:TPS53355DQP",
+      "symbol_sha256": "78e23911e165845d6cd2d892b3c1e0767773b22b42c16f15b7220164063175e1",
+      "pins": {
+        "12": {
+          "number": "12",
+          "name": "VIN",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "13": {
+          "number": "13",
+          "name": "VIN",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "14": {
+          "number": "14",
+          "name": "VIN",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "15": {
+          "number": "15",
+          "name": "VIN",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "16": {
+          "number": "16",
+          "name": "VIN",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "17": {
+          "number": "17",
+          "name": "VIN",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "6": {
+          "number": "6",
+          "name": "LL",
+          "unit": 1,
+          "type": "bidirectional"
+        },
+        "7": {
+          "number": "7",
+          "name": "LL",
+          "unit": 1,
+          "type": "bidirectional"
+        },
+        "8": {
+          "number": "8",
+          "name": "LL",
+          "unit": 1,
+          "type": "bidirectional"
+        },
+        "9": {
+          "number": "9",
+          "name": "LL",
+          "unit": 1,
+          "type": "bidirectional"
+        },
+        "10": {
+          "number": "10",
+          "name": "LL",
+          "unit": 1,
+          "type": "bidirectional"
+        },
+        "11": {
+          "number": "11",
+          "name": "LL",
+          "unit": 1,
+          "type": "bidirectional"
+        },
+        "19": {
+          "number": "19",
+          "name": "VDD",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "22": {
+          "number": "22",
+          "name": "RF",
+          "unit": 1,
+          "type": "input"
+        },
+        "21": {
+          "number": "21",
+          "name": "TRIP",
+          "unit": 1,
+          "type": "input"
+        },
+        "20": {
+          "number": "20",
+          "name": "MODE",
+          "unit": 1,
+          "type": "input"
+        },
+        "18": {
+          "number": "18",
+          "name": "VREG",
+          "unit": 1,
+          "type": "power_out"
+        },
+        "EP": {
+          "number": "EP",
+          "name": "GND",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "1": {
+          "number": "1",
+          "name": "VFB",
+          "unit": 1,
+          "type": "input"
+        },
+        "2": {
+          "number": "2",
+          "name": "EN",
+          "unit": 1,
+          "type": "input"
+        },
+        "3": {
+          "number": "3",
+          "name": "PGOOD",
+          "unit": 1,
+          "type": "open_collector"
+        },
+        "4": {
+          "number": "4",
+          "name": "VBST",
+          "unit": 1,
+          "type": "power_in"
+        },
+        "5": {
+          "number": "5",
+          "name": "NC",
+          "unit": 1,
+          "type": "no_connect"
+        }
+      }
+    },
+    "L1": {
+      "ref": "L1",
+      "lib_id": "Device:L",
+      "symbol_sha256": "34a838875e2189e1ef862fa8112ca690a09f700df51013cc52d02d85f6d01a76",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "1",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "2",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "J1": {
+      "ref": "J1",
+      "lib_id": "Connector_Generic:Conn_01x02",
+      "symbol_sha256": "761cb650f6677ac18fabe81729aea8a12a0d756f9449121decf120d0916d9736",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "Pin_1",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "Pin_2",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "J2": {
+      "ref": "J2",
+      "lib_id": "Connector_Generic:Conn_01x02",
+      "symbol_sha256": "761cb650f6677ac18fabe81729aea8a12a0d756f9449121decf120d0916d9736",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "Pin_1",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "Pin_2",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C1": {
+      "ref": "C1",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C2": {
+      "ref": "C2",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C3": {
+      "ref": "C3",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C4": {
+      "ref": "C4",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C5": {
+      "ref": "C5",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C6": {
+      "ref": "C6",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C7": {
+      "ref": "C7",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C8": {
+      "ref": "C8",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C9": {
+      "ref": "C9",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C10": {
+      "ref": "C10",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C11": {
+      "ref": "C11",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C12": {
+      "ref": "C12",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C13": {
+      "ref": "C13",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R1": {
+      "ref": "R1",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R2": {
+      "ref": "R2",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R3": {
+      "ref": "R3",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R4": {
+      "ref": "R4",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R5": {
+      "ref": "R5",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R6": {
+      "ref": "R6",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R7": {
+      "ref": "R7",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R8": {
+      "ref": "R8",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C16": {
+      "ref": "C16",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C17": {
+      "ref": "C17",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C18": {
+      "ref": "C18",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C19": {
+      "ref": "C19",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C14": {
+      "ref": "C14",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C15": {
+      "ref": "C15",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R9": {
+      "ref": "R9",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R11": {
+      "ref": "R11",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R12": {
+      "ref": "R12",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "TP1": {
+      "ref": "TP1",
+      "lib_id": "Connector:TestPoint",
+      "symbol_sha256": "b8e283358ca5f685652ca25d738d6a3a6fb0c5f3dd8eeaf0ff91b25d433c22ea",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "1",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "TP2": {
+      "ref": "TP2",
+      "lib_id": "Connector:TestPoint",
+      "symbol_sha256": "b8e283358ca5f685652ca25d738d6a3a6fb0c5f3dd8eeaf0ff91b25d433c22ea",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "1",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "TP3": {
+      "ref": "TP3",
+      "lib_id": "Connector:TestPoint",
+      "symbol_sha256": "b8e283358ca5f685652ca25d738d6a3a6fb0c5f3dd8eeaf0ff91b25d433c22ea",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "1",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R10": {
+      "ref": "R10",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R13": {
+      "ref": "R13",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R14": {
+      "ref": "R14",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R15": {
+      "ref": "R15",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R16": {
+      "ref": "R16",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "R17": {
+      "ref": "R17",
+      "lib_id": "Device:R",
+      "symbol_sha256": "d8ba182ee154ca0873035c4a1b143e42fe76c612616a71a3b430f47d1978db24",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C20": {
+      "ref": "C20",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C21": {
+      "ref": "C21",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C22": {
+      "ref": "C22",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    },
+    "C23": {
+      "ref": "C23",
+      "lib_id": "Device:C",
+      "symbol_sha256": "3c0d7fb10904a863cd104d9856712e523ec0a70173c2bff45e9fe688dea04677",
+      "pins": {
+        "1": {
+          "number": "1",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        },
+        "2": {
+          "number": "2",
+          "name": "",
+          "unit": 1,
+          "type": "passive"
+        }
+      }
+    }
+  },
+  "pin_resolution": [
+    {
+      "path": "",
+      "selector": {
+        "component": "J1",
+        "pin": "1"
+      },
+      "resolved": [
+        "J1.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "12"
+      },
+      "resolved": [
+        "U1.12"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "13"
+      },
+      "resolved": [
+        "U1.13"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "14"
+      },
+      "resolved": [
+        "U1.14"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "15"
+      },
+      "resolved": [
+        "U1.15"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "16"
+      },
+      "resolved": [
+        "U1.16"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "17"
+      },
+      "resolved": [
+        "U1.17"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C1",
+        "pin": "1"
+      },
+      "resolved": [
+        "C1.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C2",
+        "pin": "1"
+      },
+      "resolved": [
+        "C2.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C3",
+        "pin": "1"
+      },
+      "resolved": [
+        "C3.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C4",
+        "pin": "1"
+      },
+      "resolved": [
+        "C4.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C16",
+        "pin": "1"
+      },
+      "resolved": [
+        "C16.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C17",
+        "pin": "1"
+      },
+      "resolved": [
+        "C17.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R7",
+        "pin": "1"
+      },
+      "resolved": [
+        "R7.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R16",
+        "pin": "1"
+      },
+      "resolved": [
+        "R16.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R17",
+        "pin": "1"
+      },
+      "resolved": [
+        "R17.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C20",
+        "pin": "1"
+      },
+      "resolved": [
+        "C20.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C21",
+        "pin": "1"
+      },
+      "resolved": [
+        "C21.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "J1",
+        "pin": "2"
+      },
+      "resolved": [
+        "J1.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "J2",
+        "pin": "2"
+      },
+      "resolved": [
+        "J2.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "EP"
+      },
+      "resolved": [
+        "U1.EP"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C1",
+        "pin": "2"
+      },
+      "resolved": [
+        "C1.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C2",
+        "pin": "2"
+      },
+      "resolved": [
+        "C2.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C3",
+        "pin": "2"
+      },
+      "resolved": [
+        "C3.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C4",
+        "pin": "2"
+      },
+      "resolved": [
+        "C4.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C16",
+        "pin": "2"
+      },
+      "resolved": [
+        "C16.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C17",
+        "pin": "2"
+      },
+      "resolved": [
+        "C17.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C5",
+        "pin": "2"
+      },
+      "resolved": [
+        "C5.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C6",
+        "pin": "2"
+      },
+      "resolved": [
+        "C6.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C7",
+        "pin": "2"
+      },
+      "resolved": [
+        "C7.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C8",
+        "pin": "2"
+      },
+      "resolved": [
+        "C8.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C18",
+        "pin": "2"
+      },
+      "resolved": [
+        "C18.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C19",
+        "pin": "2"
+      },
+      "resolved": [
+        "C19.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C9",
+        "pin": "2"
+      },
+      "resolved": [
+        "C9.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C10",
+        "pin": "2"
+      },
+      "resolved": [
+        "C10.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C14",
+        "pin": "2"
+      },
+      "resolved": [
+        "C14.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R2",
+        "pin": "2"
+      },
+      "resolved": [
+        "R2.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R4",
+        "pin": "2"
+      },
+      "resolved": [
+        "R4.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R5",
+        "pin": "2"
+      },
+      "resolved": [
+        "R5.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R11",
+        "pin": "2"
+      },
+      "resolved": [
+        "R11.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R12",
+        "pin": "2"
+      },
+      "resolved": [
+        "R12.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R14",
+        "pin": "2"
+      },
+      "resolved": [
+        "R14.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C20",
+        "pin": "2"
+      },
+      "resolved": [
+        "C20.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C21",
+        "pin": "2"
+      },
+      "resolved": [
+        "C21.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C22",
+        "pin": "2"
+      },
+      "resolved": [
+        "C22.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C23",
+        "pin": "2"
+      },
+      "resolved": [
+        "C23.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "6"
+      },
+      "resolved": [
+        "U1.6"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "7"
+      },
+      "resolved": [
+        "U1.7"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "8"
+      },
+      "resolved": [
+        "U1.8"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "9"
+      },
+      "resolved": [
+        "U1.9"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "10"
+      },
+      "resolved": [
+        "U1.10"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "11"
+      },
+      "resolved": [
+        "U1.11"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "L1",
+        "pin": "1"
+      },
+      "resolved": [
+        "L1.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C11",
+        "pin": "2"
+      },
+      "resolved": [
+        "C11.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R3",
+        "pin": "1"
+      },
+      "resolved": [
+        "R3.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C15",
+        "pin": "1"
+      },
+      "resolved": [
+        "C15.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "L1",
+        "pin": "2"
+      },
+      "resolved": [
+        "L1.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "J2",
+        "pin": "1"
+      },
+      "resolved": [
+        "J2.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C5",
+        "pin": "1"
+      },
+      "resolved": [
+        "C5.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C6",
+        "pin": "1"
+      },
+      "resolved": [
+        "C6.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C7",
+        "pin": "1"
+      },
+      "resolved": [
+        "C7.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C8",
+        "pin": "1"
+      },
+      "resolved": [
+        "C8.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C18",
+        "pin": "1"
+      },
+      "resolved": [
+        "C18.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C19",
+        "pin": "1"
+      },
+      "resolved": [
+        "C19.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R1",
+        "pin": "1"
+      },
+      "resolved": [
+        "R1.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C12",
+        "pin": "2"
+      },
+      "resolved": [
+        "C12.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R12",
+        "pin": "1"
+      },
+      "resolved": [
+        "R12.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "TP1",
+        "pin": "1"
+      },
+      "resolved": [
+        "TP1.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C22",
+        "pin": "1"
+      },
+      "resolved": [
+        "C22.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C23",
+        "pin": "1"
+      },
+      "resolved": [
+        "C23.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "1"
+      },
+      "resolved": [
+        "U1.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R1",
+        "pin": "2"
+      },
+      "resolved": [
+        "R1.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R2",
+        "pin": "1"
+      },
+      "resolved": [
+        "R2.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C13",
+        "pin": "2"
+      },
+      "resolved": [
+        "C13.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R3",
+        "pin": "2"
+      },
+      "resolved": [
+        "R3.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C12",
+        "pin": "1"
+      },
+      "resolved": [
+        "C12.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C13",
+        "pin": "1"
+      },
+      "resolved": [
+        "C13.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "4"
+      },
+      "resolved": [
+        "U1.4"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R8",
+        "pin": "1"
+      },
+      "resolved": [
+        "R8.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R8",
+        "pin": "2"
+      },
+      "resolved": [
+        "R8.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C11",
+        "pin": "1"
+      },
+      "resolved": [
+        "C11.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "21"
+      },
+      "resolved": [
+        "U1.21"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R4",
+        "pin": "1"
+      },
+      "resolved": [
+        "R4.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "20"
+      },
+      "resolved": [
+        "U1.20"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R5",
+        "pin": "1"
+      },
+      "resolved": [
+        "R5.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R15",
+        "pin": "1"
+      },
+      "resolved": [
+        "R15.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "3"
+      },
+      "resolved": [
+        "U1.3"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R10",
+        "pin": "1"
+      },
+      "resolved": [
+        "R10.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R10",
+        "pin": "2"
+      },
+      "resolved": [
+        "R10.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R6",
+        "pin": "2"
+      },
+      "resolved": [
+        "R6.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "TP3",
+        "pin": "1"
+      },
+      "resolved": [
+        "TP3.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R15",
+        "pin": "2"
+      },
+      "resolved": [
+        "R15.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "2"
+      },
+      "resolved": [
+        "U1.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R7",
+        "pin": "2"
+      },
+      "resolved": [
+        "R7.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C14",
+        "pin": "1"
+      },
+      "resolved": [
+        "C14.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R9",
+        "pin": "1"
+      },
+      "resolved": [
+        "R9.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R9",
+        "pin": "2"
+      },
+      "resolved": [
+        "R9.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "TP2",
+        "pin": "1"
+      },
+      "resolved": [
+        "TP2.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C15",
+        "pin": "2"
+      },
+      "resolved": [
+        "C15.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R11",
+        "pin": "1"
+      },
+      "resolved": [
+        "R11.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "22"
+      },
+      "resolved": [
+        "U1.22"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R13",
+        "pin": "2"
+      },
+      "resolved": [
+        "R13.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R14",
+        "pin": "1"
+      },
+      "resolved": [
+        "R14.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R16",
+        "pin": "2"
+      },
+      "resolved": [
+        "R16.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "19"
+      },
+      "resolved": [
+        "U1.19"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C9",
+        "pin": "1"
+      },
+      "resolved": [
+        "C9.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R17",
+        "pin": "2"
+      },
+      "resolved": [
+        "R17.2"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "18"
+      },
+      "resolved": [
+        "U1.18"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "C10",
+        "pin": "1"
+      },
+      "resolved": [
+        "C10.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R13",
+        "pin": "1"
+      },
+      "resolved": [
+        "R13.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "R6",
+        "pin": "1"
+      },
+      "resolved": [
+        "R6.1"
+      ]
+    },
+    {
+      "path": "",
+      "selector": {
+        "component": "U1",
+        "pin": "5"
+      },
+      "resolved": [
+        "U1.5"
+      ]
+    }
+  ],
+  "hierarchy": [
+    {
+      "path": "",
+      "parent": "",
+      "ports": {},
+      "buses": [],
+      "members": [
+        "U1",
+        "L1",
+        "J1",
+        "J2",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "C16",
+        "C17",
+        "C18",
+        "C19",
+        "C14",
+        "C15",
+        "R9",
+        "R11",
+        "R12",
+        "TP1",
+        "TP2",
+        "TP3",
+        "R10",
+        "R13",
+        "R14",
+        "R15",
+        "R16",
+        "R17",
+        "C20",
+        "C21",
+        "C22",
+        "C23"
+      ]
+    }
+  ],
+  "net_sources": {
+    "VIN_5V": [
+      {
+        "path": "",
+        "name": "VIN_5V",
+        "pins": [
+          "J1.1",
+          "U1.12",
+          "U1.13",
+          "U1.14",
+          "U1.15",
+          "U1.16",
+          "U1.17",
+          "C1.1",
+          "C2.1",
+          "C3.1",
+          "C4.1",
+          "C16.1",
+          "C17.1",
+          "R7.1",
+          "R16.1",
+          "R17.1",
+          "C20.1",
+          "C21.1"
+        ]
+      }
+    ],
+    "GND": [
+      {
+        "path": "",
+        "name": "GND",
+        "pins": [
+          "J1.2",
+          "J2.2",
+          "U1.EP",
+          "C1.2",
+          "C2.2",
+          "C3.2",
+          "C4.2",
+          "C16.2",
+          "C17.2",
+          "C5.2",
+          "C6.2",
+          "C7.2",
+          "C8.2",
+          "C18.2",
+          "C19.2",
+          "C9.2",
+          "C10.2",
+          "C14.2",
+          "R2.2",
+          "R4.2",
+          "R5.2",
+          "R11.2",
+          "R12.2",
+          "R14.2",
+          "C20.2",
+          "C21.2",
+          "C22.2",
+          "C23.2"
+        ]
+      }
+    ],
+    "SW": [
+      {
+        "path": "",
+        "name": "SW",
+        "pins": [
+          "U1.6",
+          "U1.7",
+          "U1.8",
+          "U1.9",
+          "U1.10",
+          "U1.11",
+          "L1.1",
+          "C11.2",
+          "R3.1",
+          "C15.1"
+        ]
+      }
+    ],
+    "VOUT_0V85": [
+      {
+        "path": "",
+        "name": "VOUT_0V85",
+        "pins": [
+          "L1.2",
+          "J2.1",
+          "C5.1",
+          "C6.1",
+          "C7.1",
+          "C8.1",
+          "C18.1",
+          "C19.1",
+          "R1.1",
+          "C12.2",
+          "R12.1",
+          "TP1.1",
+          "C22.1",
+          "C23.1"
+        ]
+      }
+    ],
+    "VFB": [
+      {
+        "path": "",
+        "name": "VFB",
+        "pins": [
+          "U1.1",
+          "R1.2",
+          "R2.1",
+          "C13.2"
+        ]
+      }
+    ],
+    "RIPPLE": [
+      {
+        "path": "",
+        "name": "RIPPLE",
+        "pins": [
+          "R3.2",
+          "C12.1",
+          "C13.1"
+        ]
+      }
+    ],
+    "BOOT": [
+      {
+        "path": "",
+        "name": "BOOT",
+        "pins": [
+          "U1.4",
+          "R8.1"
+        ]
+      }
+    ],
+    "BOOT_CAP": [
+      {
+        "path": "",
+        "name": "BOOT_CAP",
+        "pins": [
+          "R8.2",
+          "C11.1"
+        ]
+      }
+    ],
+    "TRIP": [
+      {
+        "path": "",
+        "name": "TRIP",
+        "pins": [
+          "U1.21",
+          "R4.1"
+        ]
+      }
+    ],
+    "MODE": [
+      {
+        "path": "",
+        "name": "MODE",
+        "pins": [
+          "U1.20",
+          "R5.1",
+          "R15.1"
+        ]
+      }
+    ],
+    "PGOOD_IC": [
+      {
+        "path": "",
+        "name": "PGOOD_IC",
+        "pins": [
+          "U1.3",
+          "R10.1"
+        ]
+      }
+    ],
+    "PGOOD": [
+      {
+        "path": "",
+        "name": "PGOOD",
+        "pins": [
+          "R10.2",
+          "R6.2",
+          "TP3.1",
+          "R15.2"
+        ]
+      }
+    ],
+    "EN": [
+      {
+        "path": "",
+        "name": "EN",
+        "pins": [
+          "U1.2",
+          "R7.2",
+          "C14.1",
+          "R9.1"
+        ]
+      }
+    ],
+    "EN_SEQ": [
+      {
+        "path": "",
+        "name": "EN_SEQ",
+        "pins": [
+          "R9.2",
+          "TP2.1"
+        ]
+      }
+    ],
+    "SNUBBER": [
+      {
+        "path": "",
+        "name": "SNUBBER",
+        "pins": [
+          "C15.2",
+          "R11.1"
+        ]
+      }
+    ],
+    "RF": [
+      {
+        "path": "",
+        "name": "RF",
+        "pins": [
+          "U1.22",
+          "R13.2",
+          "R14.1"
+        ]
+      }
+    ],
+    "VDD_5V": [
+      {
+        "path": "",
+        "name": "VDD_5V",
+        "pins": [
+          "R16.2",
+          "U1.19",
+          "C9.1"
+        ]
+      }
+    ],
+    "VREG_5V": [
+      {
+        "path": "",
+        "name": "VREG_5V",
+        "pins": [
+          "R17.2",
+          "U1.18",
+          "C10.1",
+          "R13.1",
+          "R6.1"
+        ]
+      }
+    ]
+  },
+  "library_sources": {
+    "TPS53355_Test": {
+      "path": "libraries/TPS53355_Test.kicad_sym",
+      "sha256": "391a40fe413b93e3e2c413a561d77bedc46af797d8e1b9bc30ae9fec580fd278",
+      "path_base": "example_directory"
+    },
+    "Device": {
+      "path": "Device.kicad_sym",
+      "sha256": "cc7d5a089834f310cfa2e1495606279cd5f0147d129da959de3e4660adf2306e",
+      "path_base": "kicad_symbol_directory"
+    },
+    "Connector_Generic": {
+      "path": "Connector_Generic.kicad_sym",
+      "sha256": "b40057d620867e58e8c3d1be9ab822bba6955e76ccfc566fd0945eedcf527fd3",
+      "path_base": "kicad_symbol_directory"
+    },
+    "Connector": {
+      "path": "Connector.kicad_sym",
+      "sha256": "9a859d08e31c6b71a9cdcc35357e1f84f07164b900bf1ccda3627ce9703c6974",
+      "path_base": "kicad_symbol_directory"
+    }
+  },
+  "evidence": [
+    {
+      "source": "https://www.ti.com/lit/ds/symlink/tps53355.pdf",
+      "status": "CALCULATED_DRAFT",
+      "load_current": "15A comparison assumption from engineer image; not a confirmed production load",
+      "bias": "R16=0 to VDD_5V, R17=0 to VREG_5V; preserve external regulated 5V bias, add isolation/tuning footprints; no unreviewed 10ohm filter",
+      "frequency": "R13/R14 DNP: RF electrically open at default population, 500kHz nominal CCM; R13=866k to VREG for 650kHz option, R14=187k to GND for 300kHz option; never fit both",
+      "mode": "R5=100k fitted to GND, R15=100k to PG DNP; auto-skip/1.4ms. For FCCM swap population; never fit both",
+      "variant": "Default R7 installed, R9 DNP: automatic enable. External sequencing: R7 DNP, R9 installed; never combine without interface review."
+    }
+  ],
+  "electrical_review": "PENDING"
+}

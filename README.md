@@ -1,108 +1,75 @@
 # Autonomous-Schematic-Generation
 
 > KiCad 原理图自主生成 / 分析评审 Skill
-> （KiCad Project Analysis & Schematic Creation Skill）
 
-一个面向 **Codex / Claude / GLM 等 Agent** 的 KiCad Skill：既能按可读的
-LM5013 风格排版**自主创建、新增、重画原理图**，也能对原理图 / PCB /
-Gerber / PDF 原理图做结构化分析与设计评审，并在每次出图后强制执行
-ERC → 网表 → 渲染的验证门，避免“画出来但连不上 / 没法看”的结果。
+面向 Codex、Claude 等 Agent 的 KiCad Skill。根据已确认的电气意图创建、
+新增、重画原理图，并对原理图、PCB、Gerber、PDF 做有证据的分析与评审。
 
----
+绘图流程现在包含可执行后端：**可复用电路模块 → 真实引脚编译 → 自动布局 → 字段摆放 →
+避障布线 → KiCad 原生文件 → ERC / 逐脚网表 / 几何 / 渲染验证**。
+Agent 确定电路和功能角色；后端按真实符号/字段尺寸分配位置、拼页、布线和检查。
 
-## 项目简介
+## 本次融合
 
-原理图自动生成最大的问题不是“连上了”，而是**排版不可读**：器件堆叠、
-走线穿电容、引脚挤在一起、功率路径不直观。本 Skill 把绘图排版做成一套
-可机械执行的规范（见 `references/schematic-drawing-standards.md`），并
-要求生成后必须通过 KiCad 自身的 ERC、网表逐脚核对和 PDF 渲染目检。
+从 [schematic-trace-solver](https://github.com/tscircuit/schematic-trace-solver)
+借鉴分阶段求解、Manhattan MST 配对和坏图回归；从
+[kicad-mcp-pro](https://github.com/oaslananka/kicad-mcp-pro) 改编几何与字段摆放，
+加入 [SKiDL](https://devbisme.github.io/skidl/#generating-a-schematic) 的模块、接口、稳定标签思路，
+以及 [circuit-synth](https://github.com/circuit-synth/circuit-synth) 的层次 JSON 和属性表示，
+形成 Circuit IR v2、导入适配器和自动布局。详细源码路径、commit、许可证、
+实测边界及未采用部分见 [融合说明](references/upstream-integration.md)。
 
-该 Skill 由两部分能力组成：
+- **真实引脚驱动**：器件身份/网络与几何分开，检查所有引脚分配、旋转和镜像。
+- **模块复用**：参数化实例、显式端口绑定、局部网络隔离、按真实库解析重名引脚。
+- **自动布局**：功能模板、字段空间预算、多块单页拼排、有限扩距重试；支持已覆盖的多单元符号。
+- **改版保护**：电气差异报告与锁定模块再生成，拒绝器件/文字/导线/UUID 漂移。
+- **已有工程重排流程**：先保存原层次、器件身份和网表基线，再逐页验证、回写复验；
+  多页操作目前使用项目专用 writer，详见[已有工程重排](references/existing-project-redraw.md)。
+- **正交避障**：器件体、可见字段、其他网络及预留区都是障碍；失败保留诊断。
+- **字段摆放**：Reference/Value 保持水平，避让本体、引脚、已放字段和页边界。
+- **独立几何门禁**：检出堆叠、穿芯、文字相交、标题栏侵入、悬空锚点等；
+  无法覆盖的对象保留 INSUFFICIENT。
+- **原生验证**：ERC、完整 `reference.pin` 网络集合、器件身份、PDF，以及文件哈希。
+- **回归测试**：坏图反例、原生旋转/镜像、标签拓扑、无标签直连和未分段 T。
 
-1. **原理图创建 / 重画（Drawing）**
-   以数据手册为真值计算元件值，按 LM5013 风格排版标准落图：
-   - 从左到右的连续功率母线：`输入 → IC → SW → L → 输出`
-   - 底部公共 GND 母线，GND 符号 + PWR_FLAG 支路
-   - 控制网络（EN / FB / COMP / SS / PG …）一列一功能，整齐排在
-     功率母线与 GND 母线之间
-   - 只有关键网络命名（VIN / VOUT / SW / FB / EN …），标签落在导线端点
-   - 所有坐标严格落在 1.27mm 栅格；导线在接点处分段
-   - 禁止 pin-to-pin 单线、禁止走线穿过器件体、禁止器件重叠
-2. **原理图 / PCB 分析评审（Analysis & Review）**
-   结构化抽取网络、器件、BOM、引脚拓扑，检测电源、滤波、保护等子电路，
-   输出带证据来源和置信度标签的评审结论。
+## 运行一个样例
 
----
+```bash
+python3 scripts/build_circuit.py \
+  tests/fixtures/generation/dual_filter.circuit.json \
+  tests/fixtures/generation/dual_filter.presentation.json \
+  --output-dir output/dual-filter-run-01
 
-## 核心特性
+python3 -m unittest discover -s tests -v
+```
 
-- **LM5013 风格可读排版**：以验收过的 LM5013 33.6V→12V 工程为范本，
-  连续功率路径 + 底部 GND 母线 + 控制带，杜绝“器件堆叠”。
-- **数据手册驱动**：VREF、开关频率、反馈分压、电感/电容均按数据手册
-  公式计算并给出公式依据，不使用“看起来合理”的占位值。
-- **强制验证门**：ERC 0/0、网表逐脚核对、分析器复核、几何检查、
-  PDF/PNG 渲染目检——任一不通过不交付。
-- **KiCad 官方工具闭环**：直接读写 `.kicad_sch`，用
-  `kicad-cli sch erc / export netlist / export pdf` 做最终判定，
-  不信任第三方解析器的“看似连通”。
-- **分析器脚本集**：原理图、PCB、Gerber、跨域一致性、温升、生命周期、
-  what-if 参数扫描等 20+ 脚本。
-- **兼容范围**：KiCad 5–10（S-expr `.kicad_sch` 与旧版 `.sch`），
-  本仓库在 KiCad 9.0.9 上验证。
+输出原生工程、输入快照、布局/布线记录、ERC、XML 网表、PDF和验证报告。
+`AUTOMATED_PASS` 仅表示自动检查通过；原生图面目检和数据手册审查仍须完成。
+输入与自动布局见 [Circuit IR v2](references/circuit-ir.md)；低层定位后端和几何覆盖见
+[生成说明](references/schematic-generation.md)。此前问题的逐项闭环见
+[改造清单](references/improvement-ledger.md)。
 
----
+本次发布验证：**69 项回归通过，无跳过项**，并复跑四个生成入口。
+独立电源/PHY 样例保留外部供电与主控连接相关 ERC 待处理项；验证范围、
+结果与复现命令见[发布验证记录](references/release-validation.md)。
 
-## 排版规范摘要
+## 绘图范围与标准
 
-> 完整规范见 [`references/schematic-drawing-standards.md`](references/schematic-drawing-standards.md)，
-> 创建或重画任何原理图之前必须先读它。
+按实际拓扑选择布局：Buck 使用连续功率路径和控制带；LDO、集成电感模块、
+晶振、去耦、MCU/接口页分别组织。LM5013 是 Buck 范例，不能作为所有电路
+的通用结构。连接器引脚来自接口定义，不能按视觉位置随意指定。
 
-### 1. 功率路径优先
+当前生成后端支持多功能块自动排入单页、已覆盖的多单元符号、可见局部布线及
+显式远端标签。逻辑层次和标量总线有结构化记录；原生多页层次、图形总线、
+任意隐藏/堆叠引脚、复杂跨网图和已有工程原位增量编辑尚未实现。
+已支持同一符号、同一网络的同位置端点（含已覆盖的隐藏被动副本），
+并在原生网表中保留每个物理引脚；其他情况应使用项目专用 writer 并通过相应门禁。
+完整标准见
+[schematic-drawing-standards.md](references/schematic-drawing-standards.md)。
 
-- 电源路径必须让读者一眼看懂：`输入 → IC → 开关 → 电感 → 输出`；
-- 输入/输出电容用可见分支线挂在母线上；
-- 二极管 K 在上、短竖线接 SW、A 接 GND；
-- BOOT 电容从 IC 上方走短轨；测试点挂在被测母线上。
-
-### 2. 器件摆放
-
-- IC 锚定模块：输入脚朝左、输出脚朝右、GND/散热焊盘朝下；
-- 功率无源件（输入/输出电容、电感）紧贴功率母线；
-- 控制无源件（分压、RT、COMP）在功率母线与 GND 母线之间一列一功能；
-- 器件体之间至少 1.27mm 净距，标签不得压进 IC 体；
-- 连接器：输入左、输出右，pin1 为电源。
-
-### 3. 标签策略
-
-- 电源轨按电压命名：`VIN_33V6`、`VOUT_12V`、`VOUT_5V`、`GND`；
-- 功能网按角色命名：`SW`、`FB`、`EN`、`COMP`、`BOOT`…；
-- 同一页多模块加后缀：`SW_5V`、`FB_5V`，避免短路；
-- 只给关键网命名，标签必须落在导线端点或接点上。
-
-### 4. KiCad 9 布线硬规则（实测）
-
-- 每条导线两端都必须终止在 **引脚 / 接点 / 标签 / 电源符号**；
-- **pin-to-pin 单线会被 KiCad 9 整根丢弃**——必须在中间拆接点；
-- 拐角 / T 点要显式接点，母线在每个分支 x 处分段；
-- **整条网络没有任何标签时会被整网丢弃**（控制网必须命名）；
-- 坐标必须是 1.27mm 整数倍，差 0.001mm 都算断开。
-
----
-
-## 验证门（交付前强制）
-
-生成的原理图必须全部通过：
-
-1. `kicad-cli sch erc` → **0 错误 0 警告**（或列出并解释残余项）；
-2. `kicad-cli sch export netlist` → 每个新引脚与设计意图逐脚一致；
-3. 分析器复核：调节器/分压检测正常，Vout 按数据手册 VREF 校正；
-4. 几何检查：无悬空线、无离栅格点、无器件重叠、无线穿器件体；
-5. PDF/PNG 渲染目检：功率母线连续、控制带可读、无堆叠；
-6. 元件值给出数据手册公式与计算过程。
-
-> 仅凭 ERC 通过、分析器 JSON 或 API 成功，都不能视为完成。
-
----
+原有分析能力保持：网络、BOM、信号/电源、器件风险、PCB/Gerber、跨域一致性、
+温升、生命周期等。分析器的 KiCad 5–10 输入支持与新生成器的原生验证范围
+分开描述；新后端本次在 **KiCad 10.0.4** 上执行验证。
 
 ## 安装
 
@@ -115,7 +82,7 @@ git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.
   ~/.codex/skills/kicad
 ```
 
-或直接复制 `SKILL.md`、`agents/`、`references/`、`scripts/` 到
+或直接复制 `SKILL.md`、`agents/`、`references/`、`scripts/`、`examples/`、`tests/` 到
 `~/.codex/skills/kicad/`。
 
 ### 其他 Agent（Claude / GLM 等）
@@ -125,8 +92,8 @@ git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.
 
 ### 依赖
 
-- KiCad CLI：`kicad-cli`（KiCad ≥ 6 推荐 9.x；本仓库在 9.0.9 验证）
-- Python 3（分析脚本）；PDF 分析建议安装 `pdftotext` / `pdfplumber`
+- KiCad CLI 和符号库；新生成后端实测 KiCad 10.0.4，其他版本需跑原生回归
+- 新生成脚本仅用 Python 3.10+ 标准库；PDF 目检渲染使用 `pdftoppm`；分析脚本沿用原依赖
 - 网络（可选）：生命周期审计 / 分销商查询需对应 API Key
 
 ---
@@ -168,12 +135,20 @@ python3 scripts/summarize_findings.py analysis/ --json
 ├── agents/
 │   └── openai.yaml                 # Agent 接口描述
 ├── references/
-│   ├── schematic-drawing-standards.md   # LM5013 风格排版规范（绘图必读）
+│   ├── schematic-drawing-standards.md   # 按拓扑选型的绘图规范（绘图必读）
+│   ├── circuit-ir.md                    # 结构化电路、模块与自动布局
+│   ├── reference-driven-board-design.md # 数据手册外围合同与工程师图面学习
+│   ├── existing-project-redraw.md       # 已有多页工程重排、差异检查与回写
 │   ├── schematic-analysis.md            # 原理图深审方法论
 │   ├── pcb-layout-analysis.md           # PCB 布局分析
 │   ├── report-generation.md             # 评审报告模板
 │   └── ...                              # 文件格式 / Gerber / PDF 抽取等
+├── examples/                       # 可复现的器件级绘图与外围检查样例
+├── tests/                          # 几何、原生网表、改版与错误变异回归
 └── scripts/
+    ├── build_circuit.py            # Circuit IR 编译、布局和原生生成
+    ├── generate_schematic.py       # 显式位置和局部线组的生成入口
+    ├── check_schematic_geometry.py # 序列化图纸的独立几何检查
     ├── analyze_schematic.py        # 原理图分析器
     ├── analyze_pcb.py              # PCB 分析器
     ├── analyze_gerbers.py          # Gerber 分析器
@@ -211,3 +186,6 @@ python3 scripts/summarize_findings.py analysis/ --json
 MIT License
 
 Copyright (c) 2026 wenqiii.zwq
+
+改编部分另保留 tscircuit Inc. 和 Osman Aslan 的 MIT 声明，见
+[上游许可证](references/upstream-licenses/)及[来源记录](references/upstream-sources.json)。

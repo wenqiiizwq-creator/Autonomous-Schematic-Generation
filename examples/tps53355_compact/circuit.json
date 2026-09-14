@@ -1,0 +1,779 @@
+{
+  "schema_version": 2,
+  "design_id": "TPS53355-Test",
+  "title": "TPS53355 5V to 0.85V / 15A",
+  "revision": "C",
+  "references": {
+    "U1": "U1",
+    "L1": "L1",
+    "J1": "J1",
+    "J2": "J2",
+    "C1": "C1",
+    "C2": "C2",
+    "C3": "C3",
+    "C4": "C4",
+    "C5": "C5",
+    "C6": "C6",
+    "C7": "C7",
+    "C8": "C8",
+    "C9": "C9",
+    "C10": "C10",
+    "C11": "C11",
+    "C12": "C12",
+    "C13": "C13",
+    "R1": "R1",
+    "R2": "R2",
+    "R3": "R3",
+    "R4": "R4",
+    "R5": "R5",
+    "R6": "R6",
+    "R7": "R7",
+    "R8": "R8",
+    "C16": "C16",
+    "C17": "C17",
+    "C18": "C18",
+    "C19": "C19",
+    "C14": "C14",
+    "C15": "C15",
+    "R9": "R9",
+    "R11": "R11",
+    "R12": "R12",
+    "TP1": "TP1",
+    "TP2": "TP2",
+    "TP3": "TP3",
+    "R10": "R10",
+    "R13": "R13",
+    "R14": "R14",
+    "R15": "R15",
+    "R16": "R16",
+    "R17": "R17",
+    "C20": "C20",
+    "C21": "C21",
+    "C22": "C22",
+    "C23": "C23"
+  },
+  "root": {
+    "components": [
+      {
+        "id": "U1",
+        "lib_id": "TPS53355_Test:TPS53355DQP",
+        "value": "TPS53355DQP",
+        "footprint": "",
+        "role": "regulator",
+        "mpn": "TPS53355DQPR",
+        "ratings": {
+          "Package": "DQP 22-lead + GND PowerPAD"
+        },
+        "datasheet": "https://www.ti.com/lit/ds/symlink/tps53355.pdf"
+      },
+      {
+        "id": "L1",
+        "lib_id": "Device:L",
+        "value": "0.47uH",
+        "footprint": "",
+        "role": "inductor",
+        "mpn": "XGL7030-471MEC",
+        "ratings": {
+          "DCR_max_25C": "2.3mOhm",
+          "Isat20_25C": "21.5A",
+          "Isat30_25C": "32A",
+          "Irms40K_reference": "29.4A"
+        },
+        "datasheet": "https://www.coilcraft.com/getmedia/63e6e233-cff1-40b9-9e5d-f0f490094f44/xgl7030.pdf"
+      },
+      {
+        "id": "J1",
+        "lib_id": "Connector_Generic:Conn_01x02",
+        "value": "5V INPUT",
+        "footprint": "",
+        "role": "input"
+      },
+      {
+        "id": "J2",
+        "lib_id": "Connector_Generic:Conn_01x02",
+        "value": "0.85V/15A",
+        "footprint": "",
+        "role": "output"
+      },
+      {
+        "id": "C1",
+        "lib_id": "Device:C",
+        "value": "22uF/16V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Requirement": "6 x 22uF: Ceff >= 66uF at 5V; bank ripple >= 6Arms at application temperature"
+        }
+      },
+      {
+        "id": "C2",
+        "lib_id": "Device:C",
+        "value": "22uF/16V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Requirement": "6 x 22uF: Ceff >= 66uF at 5V; bank ripple >= 6Arms at application temperature"
+        }
+      },
+      {
+        "id": "C3",
+        "lib_id": "Device:C",
+        "value": "22uF/16V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Requirement": "6 x 22uF: Ceff >= 66uF at 5V; bank ripple >= 6Arms at application temperature"
+        }
+      },
+      {
+        "id": "C4",
+        "lib_id": "Device:C",
+        "value": "22uF/16V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Requirement": "6 x 22uF: Ceff >= 66uF at 5V; bank ripple >= 6Arms at application temperature"
+        }
+      },
+      {
+        "id": "C5",
+        "lib_id": "Device:C",
+        "value": "100uF/6.3V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "output_cap",
+        "mpn": "GRM32ER60J107ME20L",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Tolerance": "+/-20%",
+          "Requirement": "6 x 100uF: combined effective COUT >= 300uF including bias, temperature and aging"
+        },
+        "datasheet": "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx"
+      },
+      {
+        "id": "C6",
+        "lib_id": "Device:C",
+        "value": "100uF/6.3V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "output_cap",
+        "mpn": "GRM32ER60J107ME20L",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Tolerance": "+/-20%",
+          "Requirement": "6 x 100uF: combined effective COUT >= 300uF including bias, temperature and aging"
+        },
+        "datasheet": "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx"
+      },
+      {
+        "id": "C7",
+        "lib_id": "Device:C",
+        "value": "100uF/6.3V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "output_cap",
+        "mpn": "GRM32ER60J107ME20L",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Tolerance": "+/-20%",
+          "Requirement": "6 x 100uF: combined effective COUT >= 300uF including bias, temperature and aging"
+        },
+        "datasheet": "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx"
+      },
+      {
+        "id": "C8",
+        "lib_id": "Device:C",
+        "value": "100uF/6.3V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "output_cap",
+        "mpn": "GRM32ER60J107ME20L",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Tolerance": "+/-20%",
+          "Requirement": "6 x 100uF: combined effective COUT >= 300uF including bias, temperature and aging"
+        },
+        "datasheet": "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx"
+      },
+      {
+        "id": "C9",
+        "lib_id": "Device:C",
+        "value": "4.7uF/10V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R"
+        }
+      },
+      {
+        "id": "C10",
+        "lib_id": "Device:C",
+        "value": "1uF/10V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R"
+        }
+      },
+      {
+        "id": "C11",
+        "lib_id": "Device:C",
+        "value": "100nF/16V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "bootstrap",
+        "ratings": {
+          "Dielectric": "X7R"
+        }
+      },
+      {
+        "id": "C12",
+        "lib_id": "Device:C",
+        "value": "100nF/16V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "compensation",
+        "ratings": {
+          "Dielectric": "X7R"
+        }
+      },
+      {
+        "id": "C13",
+        "lib_id": "Device:C",
+        "value": "1nF/50V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "compensation",
+        "ratings": {
+          "Dielectric": "C0G"
+        }
+      },
+      {
+        "id": "R1",
+        "lib_id": "Device:R",
+        "value": "3.97k 0.1%",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "feedback",
+        "ratings": {
+          "Tolerance": "0.1%"
+        }
+      },
+      {
+        "id": "R2",
+        "lib_id": "Device:R",
+        "value": "10k 0.1%",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "feedback",
+        "ratings": {
+          "Tolerance": "0.1%"
+        }
+      },
+      {
+        "id": "R3",
+        "lib_id": "Device:R",
+        "value": "1k",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "compensation",
+        "ratings": {
+          "Tolerance": "1%"
+        }
+      },
+      {
+        "id": "R4",
+        "lib_id": "Device:R",
+        "value": "100k",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "control",
+        "ratings": {
+          "Tolerance": "1%"
+        }
+      },
+      {
+        "id": "R5",
+        "lib_id": "Device:R",
+        "value": "100k",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "control",
+        "ratings": {
+          "Tolerance": "1%"
+        }
+      },
+      {
+        "id": "R6",
+        "lib_id": "Device:R",
+        "value": "10k",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "control",
+        "ratings": {
+          "Tolerance": "1%"
+        }
+      },
+      {
+        "id": "R7",
+        "lib_id": "Device:R",
+        "value": "10k",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "control",
+        "ratings": {
+          "Tolerance": "1%"
+        }
+      },
+      {
+        "id": "R8",
+        "lib_id": "Device:R",
+        "value": "2R",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "bootstrap",
+        "ratings": {
+          "Tolerance": "1%"
+        }
+      },
+      {
+        "id": "C16",
+        "lib_id": "Device:C",
+        "value": "22uF/16V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Requirement": "Ceff bank >= 66uF; ripple >= 6Arms"
+        }
+      },
+      {
+        "id": "C17",
+        "lib_id": "Device:C",
+        "value": "22uF/16V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "input_cap",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Requirement": "Ceff bank >= 66uF; ripple >= 6Arms"
+        }
+      },
+      {
+        "id": "C18",
+        "lib_id": "Device:C",
+        "value": "100uF/6.3V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "output_cap",
+        "mpn": "GRM32ER60J107ME20L",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Requirement": "Ceff bank >= 300uF"
+        },
+        "datasheet": "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx"
+      },
+      {
+        "id": "C19",
+        "lib_id": "Device:C",
+        "value": "100uF/6.3V",
+        "footprint": "Capacitor_SMD:C_1210_3225Metric",
+        "role": "output_cap",
+        "mpn": "GRM32ER60J107ME20L",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Requirement": "Ceff bank >= 300uF"
+        },
+        "datasheet": "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx"
+      },
+      {
+        "id": "C14",
+        "lib_id": "Device:C",
+        "value": "100nF/16V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "control",
+        "ratings": {
+          "Voltage": "16V",
+          "Dielectric": "X7R"
+        }
+      },
+      {
+        "id": "C15",
+        "lib_id": "Device:C",
+        "value": "1nF/50V DNP",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "snubber",
+        "ratings": {
+          "Voltage": "50V",
+          "Dielectric": "C0G"
+        },
+        "dnp": true
+      },
+      {
+        "id": "R9",
+        "lib_id": "Device:R",
+        "value": "0R DNP",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "control",
+        "dnp": true
+      },
+      {
+        "id": "R11",
+        "lib_id": "Device:R",
+        "value": "100R DNP",
+        "footprint": "Resistor_SMD:R_1206_3216Metric",
+        "role": "snubber",
+        "ratings": {
+          "Power": "0.25W; tuning only"
+        },
+        "dnp": true
+      },
+      {
+        "id": "R12",
+        "lib_id": "Device:R",
+        "value": "100R DNP",
+        "footprint": "Resistor_SMD:R_1206_3216Metric",
+        "role": "output",
+        "dnp": true
+      },
+      {
+        "id": "TP1",
+        "lib_id": "Connector:TestPoint",
+        "value": "VOUT",
+        "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+        "role": "testpoint"
+      },
+      {
+        "id": "TP2",
+        "lib_id": "Connector:TestPoint",
+        "value": "EN_SEQ",
+        "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+        "role": "testpoint"
+      },
+      {
+        "id": "TP3",
+        "lib_id": "Connector:TestPoint",
+        "value": "PGOOD",
+        "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+        "role": "testpoint"
+      },
+      {
+        "id": "R10",
+        "lib_id": "Device:R",
+        "value": "0R",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "pg_isolation",
+        "ratings": {
+          "Tolerance": "1%",
+          "Purpose": "pg_isolation"
+        }
+      },
+      {
+        "id": "R13",
+        "lib_id": "Device:R",
+        "value": "866k DNP",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "rf_option",
+        "ratings": {
+          "Tolerance": "1%",
+          "Purpose": "rf_option"
+        },
+        "dnp": true
+      },
+      {
+        "id": "R14",
+        "lib_id": "Device:R",
+        "value": "187k DNP",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "rf_option",
+        "ratings": {
+          "Tolerance": "1%",
+          "Purpose": "rf_option"
+        },
+        "dnp": true
+      },
+      {
+        "id": "R15",
+        "lib_id": "Device:R",
+        "value": "100k DNP",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "mode_option",
+        "ratings": {
+          "Tolerance": "1%",
+          "Purpose": "mode_option"
+        },
+        "dnp": true
+      },
+      {
+        "id": "R16",
+        "lib_id": "Device:R",
+        "value": "0R",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "vdd_filter_link",
+        "ratings": {
+          "Tolerance": "1%",
+          "Purpose": "vdd_filter_link"
+        }
+      },
+      {
+        "id": "R17",
+        "lib_id": "Device:R",
+        "value": "0R",
+        "footprint": "Resistor_SMD:R_0603_1608Metric",
+        "role": "external_vreg_link",
+        "ratings": {
+          "Tolerance": "1%",
+          "Purpose": "external_vreg_link"
+        }
+      },
+      {
+        "id": "C20",
+        "lib_id": "Device:C",
+        "value": "100nF/16V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "vin_hf_bypass",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Purpose": "vin_hf_bypass"
+        }
+      },
+      {
+        "id": "C21",
+        "lib_id": "Device:C",
+        "value": "1nF/50V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "vin_hf_bypass",
+        "ratings": {
+          "Dielectric": "C0G",
+          "Purpose": "vin_hf_bypass"
+        }
+      },
+      {
+        "id": "C22",
+        "lib_id": "Device:C",
+        "value": "10uF/6.3V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "load_local_bypass",
+        "ratings": {
+          "Dielectric": "X5R",
+          "Purpose": "load_local_bypass"
+        }
+      },
+      {
+        "id": "C23",
+        "lib_id": "Device:C",
+        "value": "100nF/16V",
+        "footprint": "Capacitor_SMD:C_0603_1608Metric",
+        "role": "load_local_bypass",
+        "ratings": {
+          "Dielectric": "X7R",
+          "Purpose": "load_local_bypass"
+        }
+      }
+    ],
+    "nets": [
+      {
+        "name": "VIN_5V",
+        "pins": [
+          "J1.1",
+          "U1.12",
+          "U1.13",
+          "U1.14",
+          "U1.15",
+          "U1.16",
+          "U1.17",
+          "C1.1",
+          "C2.1",
+          "C3.1",
+          "C4.1",
+          "C16.1",
+          "C17.1",
+          "R7.1",
+          "R16.1",
+          "R17.1",
+          "C20.1",
+          "C21.1"
+        ]
+      },
+      {
+        "name": "GND",
+        "pins": [
+          "J1.2",
+          "J2.2",
+          "U1.EP",
+          "C1.2",
+          "C2.2",
+          "C3.2",
+          "C4.2",
+          "C16.2",
+          "C17.2",
+          "C5.2",
+          "C6.2",
+          "C7.2",
+          "C8.2",
+          "C18.2",
+          "C19.2",
+          "C9.2",
+          "C10.2",
+          "C14.2",
+          "R2.2",
+          "R4.2",
+          "R5.2",
+          "R11.2",
+          "R12.2",
+          "R14.2",
+          "C20.2",
+          "C21.2",
+          "C22.2",
+          "C23.2"
+        ]
+      },
+      {
+        "name": "SW",
+        "pins": [
+          "U1.6",
+          "U1.7",
+          "U1.8",
+          "U1.9",
+          "U1.10",
+          "U1.11",
+          "L1.1",
+          "C11.2",
+          "R3.1",
+          "C15.1"
+        ]
+      },
+      {
+        "name": "VOUT_0V85",
+        "pins": [
+          "L1.2",
+          "J2.1",
+          "C5.1",
+          "C6.1",
+          "C7.1",
+          "C8.1",
+          "C18.1",
+          "C19.1",
+          "R1.1",
+          "C12.2",
+          "R12.1",
+          "TP1.1",
+          "C22.1",
+          "C23.1"
+        ]
+      },
+      {
+        "name": "VFB",
+        "pins": [
+          "U1.1",
+          "R1.2",
+          "R2.1",
+          "C13.2"
+        ]
+      },
+      {
+        "name": "RIPPLE",
+        "pins": [
+          "R3.2",
+          "C12.1",
+          "C13.1"
+        ]
+      },
+      {
+        "name": "BOOT",
+        "pins": [
+          "U1.4",
+          "R8.1"
+        ]
+      },
+      {
+        "name": "BOOT_CAP",
+        "pins": [
+          "R8.2",
+          "C11.1"
+        ]
+      },
+      {
+        "name": "TRIP",
+        "pins": [
+          "U1.21",
+          "R4.1"
+        ]
+      },
+      {
+        "name": "MODE",
+        "pins": [
+          "U1.20",
+          "R5.1",
+          "R15.1"
+        ]
+      },
+      {
+        "name": "PGOOD_IC",
+        "pins": [
+          "U1.3",
+          "R10.1"
+        ]
+      },
+      {
+        "name": "PGOOD",
+        "pins": [
+          "R10.2",
+          "R6.2",
+          "TP3.1",
+          "R15.2"
+        ]
+      },
+      {
+        "name": "EN",
+        "pins": [
+          "U1.2",
+          "R7.2",
+          "C14.1",
+          "R9.1"
+        ]
+      },
+      {
+        "name": "EN_SEQ",
+        "pins": [
+          "R9.2",
+          "TP2.1"
+        ]
+      },
+      {
+        "name": "SNUBBER",
+        "pins": [
+          "C15.2",
+          "R11.1"
+        ]
+      },
+      {
+        "name": "RF",
+        "pins": [
+          "U1.22",
+          "R13.2",
+          "R14.1"
+        ]
+      },
+      {
+        "name": "VDD_5V",
+        "pins": [
+          "R16.2",
+          "U1.19",
+          "C9.1"
+        ]
+      },
+      {
+        "name": "VREG_5V",
+        "pins": [
+          "R17.2",
+          "U1.18",
+          "C10.1",
+          "R13.1",
+          "R6.1"
+        ]
+      }
+    ],
+    "no_connect": [
+      "U1.5"
+    ]
+  },
+  "evidence": [
+    {
+      "source": "https://www.ti.com/lit/ds/symlink/tps53355.pdf",
+      "status": "CALCULATED_DRAFT",
+      "load_current": "15A comparison assumption from engineer image; not a confirmed production load",
+      "bias": "R16=0 to VDD_5V, R17=0 to VREG_5V; preserve external regulated 5V bias, add isolation/tuning footprints; no unreviewed 10ohm filter",
+      "frequency": "R13/R14 DNP: RF electrically open at default population, 500kHz nominal CCM; R13=866k to VREG for 650kHz option, R14=187k to GND for 300kHz option; never fit both",
+      "mode": "R5=100k fitted to GND, R15=100k to PG DNP; auto-skip/1.4ms. For FCCM swap population; never fit both",
+      "variant": "Default R7 installed, R9 DNP: automatic enable. External sequencing: R7 DNP, R9 installed; never combine without interface review."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "blocks": {
+    "root": {
+      "template": "capacitor_bank",
+      "title": "Decoupling array (test fixture)"
+    }
+  },
+  "nets": {
+    "VCC": {
+      "mode": "labels"
+    },
+    "GND": {
+      "mode": "labels"
+    }
+  }
+}

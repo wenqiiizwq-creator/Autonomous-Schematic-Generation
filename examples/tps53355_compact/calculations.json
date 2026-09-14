@@ -1,0 +1,133 @@
+{
+  "status": "CALCULATED_DRAFT_CONDITIONAL",
+  "datasheet": "TI TPS53355 SLUSAE5G, equations 8-16, Tables 6.5/7-1/7-3",
+  "nominal": {
+    "duty": 0.16999999999999998,
+    "delta_i_pp_A": 3.002127659574468,
+    "i_peak_at_load_A": 16.501063829787235,
+    "i_inductor_rms_A": 15.025014615867494,
+    "i_cin_rms_A": 5.634491991297885,
+    "ton_ns": 340.0,
+    "toff_ns": 1660.0000000000002,
+    "N": 2,
+    "eq11_margin": 8.433735294117648,
+    "v_inj_sw_mV": 14.110000000000003,
+    "v_inj_output_mV": 2.2308877394984834,
+    "v_inj_total_mV": 16.340887739498484,
+    "vfb_average_estimate_V": 0.6081704438697492,
+    "vout_estimate_V": 0.8496141100860396,
+    "ocp_average_estimate_A": 19.883416770963706,
+    "ocp_peak_estimate_A": 21.38448060075094
+  },
+  "corners": {
+    "duty": {
+      "min": 0.1619047619047619,
+      "max": 0.17894736842105263
+    },
+    "delta_i_pp_A": {
+      "min": 2.249821846686348,
+      "max": 6.014699023817564
+    },
+    "i_peak_at_load_A": {
+      "min": 16.124910923343172,
+      "max": 18.00734951190878
+    },
+    "i_inductor_rms_A": {
+      "min": 15.014053689632,
+      "max": 15.100156192202979
+    },
+    "i_cin_rms_A": {
+      "min": 5.525451315946777,
+      "max": 5.749623617694671
+    },
+    "ton_ns": {
+      "min": 294.3722943722944,
+      "max": 397.6608187134503
+    },
+    "toff_ns": {
+      "min": 1492.8229665071772,
+      "max": 1862.4338624338625
+    },
+    "N": {
+      "min": 2,
+      "max": 2
+    },
+    "eq11_margin": {
+      "min": 1.787229311166411,
+      "max": 15.48235294117647
+    },
+    "v_inj_sw_mV": {
+      "min": 11.421237817561659,
+      "max": 17.76732640930172
+    },
+    "v_inj_output_mV": {
+      "min": 0.710171037464125,
+      "max": 11.583864786611604
+    },
+    "v_inj_total_mV": {
+      "min": 12.131408855025784,
+      "max": 29.351191195913326
+    },
+    "vfb_average_estimate_V": {
+      "min": 0.6060657044275128,
+      "max": 0.6146755955979566
+    },
+    "vout_estimate_V": {
+      "min": 0.8466737890852355,
+      "max": 0.8587018070503454
+    },
+    "ocp_average_estimate_A": {
+      "min": 19.507263864519643,
+      "max": 21.389702453085253
+    },
+    "ocp_peak_estimate_A": {
+      "min": 20.632174787862816,
+      "max": 24.397051964994034
+    }
+  },
+  "ocp_parameter_sensitivity": {
+    "ocp_average_estimate_A": {
+      "min": 18.231528570401995,
+      "max": 25.31151617857545
+    },
+    "ocp_peak_estimate_A": {
+      "min": 19.356439493745167,
+      "max": 28.31886569048423
+    }
+  },
+  "engineer_image_all_ceramic_conditional": {
+    "duty": 0.16999999999999998,
+    "delta_i_pp_A": 6.413636363636364,
+    "i_peak_at_load_A": 18.206818181818182,
+    "i_inductor_rms_A": 15.113831224535577,
+    "i_cin_rms_A": 5.634491991297885,
+    "ton_ns": 340.0,
+    "toff_ns": 1660.0000000000002,
+    "N": 4,
+    "eq11_margin": 0.9692941176470589,
+    "v_inj_sw_mV": 6.271111111111112,
+    "v_inj_output_mV": 2.37859233186336,
+    "v_inj_total_mV": 8.649703442974472,
+    "vfb_average_estimate_V": 0.6043248517214872,
+    "vout_estimate_V": 0.8574181656903153,
+    "ocp_average_estimate_A": 39.97152406417112,
+    "ocp_peak_estimate_A": 43.1783422459893
+  },
+  "engineer_no_ripple_divider_V": 0.8512820512820513,
+  "engineer_min_Cout_nominal_eq11_uF": 695.4545454545453,
+  "loss_estimates": {
+    "L1_copper_25C_max_DCR_W": 0.5192274476761731,
+    "L1_copper_100C_DCR_est_W": 0.6722697378787252,
+    "input_average_at_4_75V_85pct_eff_A": 3.1578947368421058,
+    "ideal_charge_current_610_1uF_1_4ms_A": 0.37041785714285713
+  },
+  "assumptions": [
+    "COUT effective >=300uF including tolerance/DC bias/temperature/aging is a requirement, not supplier-curve evidence.",
+    "ESR aggregate 0.333mOhm nominal and 0-1mOhm sensitivity are assumed; output-voltage estimate excludes ESL and dynamic skip behavior.",
+    "450-550kHz is not a guaranteed all-temperature/5V range; TI table test condition differs.",
+    "Isat curves are at 25C. OCP sensitivity excludes unbounded VOCL and MOSFET hot variation; not a guaranteed trip range.",
+    "VREF +/-1% and divider tolerance add output uncertainty; no +/-1% rail-accuracy claim.",
+    "Engineer capacitance type/MPN unknown: Eq11 comparison applies ONLY if the bank is all ceramic.",
+    "No simulator installed; these calculations are not a switching/closed-loop simulation."
+  ]
+}

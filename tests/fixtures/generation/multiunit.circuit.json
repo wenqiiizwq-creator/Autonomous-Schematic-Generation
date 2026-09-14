@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "design_id": "multiunit_probe",
+  "title": "Multi-unit identity probe - intentionally NC test fixture",
+  "references": {
+    "amp": "U1"
+  },
+  "root": {
+    "components": [
+      {
+        "id": "amp",
+        "lib_id": "Amplifier_Operational:LM358",
+        "value": "LM358",
+        "footprint": "Package_DIP:DIP-8_W7.62mm"
+      }
+    ],
+    "nets": [],
+    "no_connect": [
+      "amp.1",
+      "amp.2",
+      "amp.3",
+      "amp.5",
+      "amp.6",
+      "amp.7",
+      "amp.4",
+      "amp.8"
+    ]
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "design_id": "ACU-Power-RevC",
+  "title": "ACU TPS62130 reference-driven redraw",
+  "revision": "C-validation",
+  "components": [
+    {
+      "ref": "C2010",
+      "value": "10uF / 25V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_1210_3225Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE_MPN_AND_EFFECTIVE_CAPACITANCE_OPEN"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C2011",
+      "value": "100nF",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C2012",
+      "value": "22uF / 10V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_1210_3225Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE_MPN_AND_EFFECTIVE_CAPACITANCE_OPEN"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C2013",
+      "value": "22uF / 10V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_1210_3225Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE_MPN_AND_EFFECTIVE_CAPACITANCE_OPEN"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C2014",
+      "value": "10nF",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "L201",
+      "value": "2.2uH",
+      "lib_id": "Device:L",
+      "footprint": "Inductor_SMD:L_Coilcraft_XAL4020-XXX",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "DATASHEET_CANDIDATE; HOT_DCR_AND_CORE_LOSS_OPEN"
+      },
+      "mpn": "XAL4020-222MEC",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R2010",
+      "value": "525k / 0.1%",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R2011",
+      "value": "100k / 0.1%",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R2012",
+      "value": "100k",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "U201",
+      "value": "TPS62130RGTR",
+      "lib_id": "Regulator_Switching:TPS62130",
+      "footprint": "Package_DFN_QFN:VQFN-16-1EP_3x3mm_P0.5mm_EP1.68x1.68mm_ThermalVias",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "TPS62130RGTR",
+      "units": [
+        1
+      ],
+      "datasheet": "https://www.ti.com/lit/ds/symlink/tps62130.pdf"
+    }
+  ],
+  "nets": [
+    {
+      "name": "ACU_12V",
+      "pins": [
+        "C2010.1",
+        "C2011.1",
+        "U201.10",
+        "U201.11",
+        "U201.12",
+        "U201.13"
+      ]
+    },
+    {
+      "name": "ACU_3V3",
+      "pins": [
+        "R2012.1"
+      ]
+    },
+    {
+      "name": "ACU_5V",
+      "pins": [
+        "C2012.1",
+        "C2013.1",
+        "L201.2",
+        "R2010.1",
+        "U201.14"
+      ]
+    },
+    {
+      "name": "ACU_5V_FB",
+      "pins": [
+        "R2010.2",
+        "R2011.1",
+        "U201.5"
+      ]
+    },
+    {
+      "name": "ACU_5V_PG",
+      "pins": [
+        "R2012.2",
+        "U201.4"
+      ]
+    },
+    {
+      "name": "ACU_5V_SS",
+      "pins": [
+        "C2014.1",
+        "U201.9"
+      ]
+    },
+    {
+      "name": "ACU_5V_SW",
+      "pins": [
+        "L201.1",
+        "U201.1",
+        "U201.2",
+        "U201.3"
+      ]
+    },
+    {
+      "name": "ACU_GND",
+      "pins": [
+        "C2010.2",
+        "C2011.2",
+        "C2012.2",
+        "C2013.2",
+        "C2014.2",
+        "R2011.2",
+        "U201.15",
+        "U201.16",
+        "U201.17",
+        "U201.6",
+        "U201.7",
+        "U201.8"
+      ]
+    }
+  ],
+  "no_connect": []
+}

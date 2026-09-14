@@ -1,0 +1,42 @@
+{
+  "schema_version": 2,
+  "papers": [
+    "A4",
+    "A3"
+  ],
+  "blocks": {
+    "filter_a": {
+      "template": "rc_filter",
+      "orientations": {
+        "J1": {
+          "mirror": "y"
+        }
+      }
+    },
+    "filter_b": {
+      "template": "rc_filter",
+      "orientations": {
+        "J3": {
+          "mirror": "y"
+        }
+      }
+    }
+  },
+  "nets": {
+    "GND": {
+      "mode": "labels"
+    },
+    "IN_A": {
+      "label": true
+    },
+    "OUT_A": {
+      "label": true
+    },
+    "IN_B": {
+      "label": true
+    },
+    "OUT_B": {
+      "label": true
+    }
+  }
+}

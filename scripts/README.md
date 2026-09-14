@@ -2,6 +2,29 @@
 
 This directory contains the core analysis scripts, shared utilities, the S-expression parser, and the rich-finding/trust-summary infrastructure. Each analyzer outputs a structured JSON envelope for the AI agent to consume during design reviews.
 
+## Deterministic generation and geometry
+
+`build_circuit.py` compiles Circuit IR v2, resolves named pins/physical units,
+automatically places and packs functional blocks, retries with bounded spacing,
+and supports baseline diffs plus locked-block regeneration. See
+[`circuit-ir.md`](../references/circuit-ir.md). `import_circuit_synth.py` imports
+audited upstream JSON; `schematic_layout.importers.skidl_to_ir` reads an already
+built SKiDL Circuit. Neither executes an input Python file.
+
+`generate_schematic.py` consumes separate electrical intent and layout JSON,
+writes a new single-sheet project, and runs native ERC/XML/PDF verification.
+`check_schematic_geometry.py` inspects a serialized native schematic read-only.
+Both use `schematic_layout/` (standard-library runtime). See
+[`schematic-generation.md`](../references/schematic-generation.md) for schema,
+commands, supported objects, limitations and `AUTOMATED_PASS` semantics.
+
+The generation backend is separate from the existing analysis parsers. Its
+native tests compare exact pin partitions; it does not inherit analyzer
+heuristics as connectivity truth. Tests are in `tests/`; optional upstream
+source probes do not require installing the complete MCP server.
+
+## Analysis scripts
+
 | Script | Input | Size | Purpose |
 |--------|-------|------|---------|
 | `analyze_schematic.py` | `.kicad_sch` / `.sch` | ~9,300 LOC | Component extraction, net building, subcircuit detection, signal/power/BOM/DFM analysis, audit detectors |

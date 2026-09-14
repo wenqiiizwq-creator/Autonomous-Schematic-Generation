@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "title": "RC filter - generation regression fixture",
+  "revision": "test only",
+  "components": [
+    {"ref":"J1","lib_id":"Connector_Generic:Conn_01x02","value":"INPUT","footprint":""},
+    {"ref":"R1","lib_id":"Device:R","value":"1k","footprint":""},
+    {"ref":"C1","lib_id":"Device:C","value":"100n","footprint":""},
+    {"ref":"J2","lib_id":"Connector_Generic:Conn_01x02","value":"OUTPUT","footprint":""}
+  ],
+  "nets": [
+    {"name":"SIGNAL_IN","pins":["J1.1","R1.1"]},
+    {"name":"SIGNAL_OUT","pins":["R1.2","C1.1","J2.1"]},
+    {"name":"GND","pins":["J1.2","C1.2","J2.2"]}
+  ],
+  "no_connect": []
+}

@@ -1,0 +1,76 @@
+{
+  "downloaded_on": "2026-09-10",
+  "repos": [
+    {
+      "name": "schematic-trace-solver",
+      "url": "https://github.com/tscircuit/schematic-trace-solver.git",
+      "commit": "1c6fff647502591b15eb491e01a8f989c73123c7",
+      "license": "MIT",
+      "files": {
+        "LICENSE": "a5f5fb24026081322e48c6de970de4300dbc516fcddf02468d74b3978909f156",
+        "package.json": "695ef09f5ce6134ca895c8746e6fdef1e999aa3a312527860f0bf9856fbc6034",
+        "lib/types/InputProblem.ts": "3e8a5cfee73032f1b54a6cd6a0cba1c66605ebfb453dfd6c5a359620fff6ff2c",
+        "lib/solvers/MspConnectionPairSolver/getMspConnectionPairsFromPins.ts": "7fe52b0946ab44f8f7ab1b13c0339581797abdc352ae1b108d733a8b40c423ee",
+        "lib/solvers/SchematicTracePipelineSolver/SchematicTracePipelineSolver.ts": "0f2996b2f29af3e2912e27f565c8dabc1ec7e506077d1e74abd1a7c58363f380",
+        "lib/solvers/SchematicTraceLinesSolver/SchematicTraceSingleLineSolver2/SchematicTraceSingleLineSolver2.ts": "456a06f2574f6b0473e898ba99e49ffaee88b21ff797879f57b85a1baf46c01f",
+        "lib/utils/textBoxBounds.ts": "08b687ad2fa4218525de5228476a9099540a66c7a5aaa4b2cebdd9b1d91ba4a0"
+      }
+    },
+    {
+      "name": "kicad-mcp-pro",
+      "url": "https://github.com/oaslananka/kicad-mcp-pro.git",
+      "commit": "19dc85611c892166003edf54a1c2b68e7a4db527",
+      "license": "MIT",
+      "files": {
+        "LICENSE": "2874c976a7562b60f0f69b5618ac3d6e29cb9f87d197efb29d86ea6089729b72",
+        "pyproject.toml": "5d754cf6ea31f827c28448f70beff4cc1040711e3c8d4852ec36cd9ae03ac471",
+        "src/kicad_mcp/utils/geometry.py": "e681b87c1fb64206898ad3f751f663543899dc9ac375bc079747bb1816e45754",
+        "src/kicad_mcp/utils/field_placer.py": "b8847f88e1b9a31b8b239038878db2a874de932cc8951160a3f7ca5deb487b82",
+        "src/kicad_mcp/utils/schematic_router.py": "eb4f0556f331db17ff25e9f6caddbaee5e47dfd66579d1e8580ab86514ca3e83",
+        "src/kicad_mcp/models/visual_qa.py": "2e225cc287d6297b1e2444bd5bf9b8722aa66aa10736cbd31b82ef88aad31de0",
+        "src/kicad_mcp/tools/schematic.py": "799e49c73eb80c273259f19a4f52d921da4c979876fe7d6e7cc56a88b04eea3d"
+      }
+    },
+    {
+      "name": "skidl",
+      "url": "https://github.com/devbisme/skidl.git",
+      "commit": "4372de59bdc5d37c83c0870a0a25d8152ef75359",
+      "license": "MIT",
+      "checkout": "shallow sparse source checkout",
+      "files": {
+        "LICENSE": "394aa436bb65c74dde2b93f942e737821d262029d674a510c7602364879ab194",
+        "src/skidl/circuit.py": "928f6445e282ba96edd43da14a076e7685c32e70af50efc12fc83ccdfc8339de",
+        "src/skidl/part.py": "c7291bc0411d778e72db555f1db0ac7d32ff596c9d45fe2a44dc843116894a4c",
+        "src/skidl/node.py": "0542e1444c72f64e2dcbb0e577a04525dbce8f3896f325c76f6ba699f0e7baf9",
+        "src/skidl/net.py": "072b4652c1263629f847a15be27eb5dd6a5c9be769dd28af3b373d4f807f295f",
+        "src/skidl/pin.py": "a7f6614986622b56204a9c80162408067ccb66346a86fd4b78ffbbb7d5babcfc",
+        "src/skidl/bus.py": "43f87ad6300ab940db870925c6499d5161e60d29c1b3fcbcdaa1d5cb3f038774",
+        "src/skidl/interface.py": "5014ef1e86373bc10fd7419918808caae96a6b4905c526c9c56a48708b72d00d",
+        "src/skidl/skidlbaseobj.py": "9f5d035866a94108616241d8be189866d77ef8ad1ae812e112742e979401433d",
+        "src/skidl/tools/kicad9/gen_schematic.py": "49024b52a91193f82bf08cefc1c6740ce6475657ac48725fe89878df059280c8",
+        "src/skidl/schematics/sch_node.py": "bf25deafb04d78f75011a382a3a8668f9a046f88f8672815416b70ed42c92c5f",
+        "src/skidl/schematics/place.py": "3b7a81a9180ae8ed285b516c0c34a864656f7783efe0bb6ec5579d953fab2633",
+        "src/skidl/schematics/route.py": "7ab5fbea22d9aeee2ad6d301054a2a33b6c5938232099995d2a2a23c55c6deb9"
+      }
+    },
+    {
+      "name": "circuit-synth",
+      "url": "https://github.com/circuit-synth/circuit-synth.git",
+      "commit": "3aaff18c056de7cbe8f5b0a3e1e6e7e7895f544e",
+      "license": "MIT",
+      "checkout": "full clone",
+      "files": {
+        "LICENSE": "956d976d68af89fc3ce02d579ac14a3876b3b6920083d50d73e195421f7cf9eb",
+        "src/circuit_synth/core/circuit.py": "575f0044db834dde27980f667b6bcd33eeead1a63ee23633982bc2b3989ded26",
+        "src/circuit_synth/core/component.py": "fd180c2cb7e807f2c57caa51dce8b47d7761d8ad8d393feac2a24b95297a7b6b",
+        "src/circuit_synth/core/net.py": "ac68e640dbecf3b24866cc1e7a18a7563427042f0095e9b52e556d319ba7fd8f",
+        "src/circuit_synth/core/pin.py": "08a2b961dfd9b751f69e34373d698ed316ae75114bd27341dff459cbcbca84ad",
+        "src/circuit_synth/core/netlist_exporter.py": "b765b516d4bf6600593d5155f86a2d7910a9e125081334462e594e48a6b438c0",
+        "src/circuit_synth/core/decorators.py": "b6bbb033a5ef6db1e1b7f166e6cc0e2cbae3684cc23f5c3cac78ee4413c72f51",
+        "src/circuit_synth/core/simple_pin_access.py": "ef6bae43cf389eb6f08dd3d6cb19b78b175a899d6b9da6e65204235c2746bb5e",
+        "src/circuit_synth/core/reference_manager.py": "e41cb3f848027fb517db048384cb3d0aa8ce5069510c018f09fb475778003ae5",
+        "src/circuit_synth/kicad/sch_gen/connection_aware_collision_manager.py": "17dce762fbf805f3479dea46c4db02d1ebd776665932dea8330de03324992604"
+      }
+    }
+  ]
+}

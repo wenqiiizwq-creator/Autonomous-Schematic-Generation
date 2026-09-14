@@ -1,0 +1,572 @@
+{
+  "schema_version": 1,
+  "design_id": "TCU-Ethernet-RevC",
+  "title": "TCU KSZ8081RNA reference-driven redraw",
+  "revision": "C-validation",
+  "components": [
+    {
+      "ref": "C26010",
+      "value": "100nF",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C26011",
+      "value": "22uF / 10V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0805_2012Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C26012",
+      "value": "2.2uF / 10V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C26013",
+      "value": "100nF",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C260191",
+      "value": "22pF / C0G",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C260192",
+      "value": "22pF / C0G",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C26060",
+      "value": "100nF / 25V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "C26061",
+      "value": "100nF / 25V",
+      "lib_id": "Device:C",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "J2601",
+      "value": "7499010121A",
+      "lib_id": "Connector:RJ45_Wuerth_7499010121A",
+      "footprint": "Connector_RJ:RJ45_Wuerth_7499010121A_Horizontal",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "PINOUT_CHECKED; EMC_AND_HIPOT_VALIDATION_OPEN"
+      },
+      "mpn": "7499010121A",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R26010",
+      "value": "6.49k / 1%",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R26011",
+      "value": "1k / 1%",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R26012",
+      "value": "33R",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R26013",
+      "value": "10k",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R26014",
+      "value": "1k / 1%",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "R26060",
+      "value": "330R",
+      "lib_id": "Device:R",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "U2601",
+      "value": "KSZ8081RNAIA",
+      "lib_id": "Interface_Ethernet:KSZ8081RNA",
+      "footprint": "Package_DFN_QFN:QFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CANDIDATE"
+      },
+      "mpn": "KSZ8081RNAIA",
+      "units": [
+        1
+      ],
+      "datasheet": "https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/KSZ8081RNA-RND-10BASE-T-100BASE-TX-PHY-with-RMII-Support-DS00002199D.pdf"
+    },
+    {
+      "ref": "U2651",
+      "value": "TPD4E05U06DQAR",
+      "lib_id": "Power_Protection:TPD4E05U06DQA",
+      "footprint": "Package_SON:USON-10_2.5x1.0mm_P0.5mm",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "PINOUT_CHECKED; PHY_SIDE_ESD_CANDIDATE"
+      },
+      "mpn": "TPD4E05U06DQAR",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "Y2601",
+      "value": "25MHz / CL16pF",
+      "lib_id": "Device:Crystal",
+      "footprint": "",
+      "dnp": false,
+      "fields": {
+        "ReviewStatus": "CRYSTAL_CL_ESR_MPN_OPEN"
+      },
+      "mpn": "",
+      "units": [
+        1
+      ]
+    },
+    {
+      "ref": "FB2601",
+      "lib_id": "Device:FerriteBead",
+      "value": "600R@100MHz candidate",
+      "footprint": "Inductor_SMD:L_0603_1608Metric",
+      "units": [
+        1
+      ],
+      "fields": {
+        "ReviewStatus": "REFERENCE_CANDIDATE_MPN_OPEN"
+      }
+    },
+    {
+      "ref": "C26014",
+      "lib_id": "Device:C",
+      "value": "22uF / 10V",
+      "footprint": "Capacitor_SMD:C_0805_2012Metric",
+      "units": [
+        1
+      ],
+      "fields": {
+        "ReviewStatus": "REFERENCE_CANDIDATE_MPN_OPEN"
+      }
+    },
+    {
+      "ref": "C26015",
+      "lib_id": "Device:C",
+      "value": "100nF",
+      "footprint": "Capacitor_SMD:C_0603_1608Metric",
+      "units": [
+        1
+      ],
+      "fields": {
+        "ReviewStatus": "REFERENCE_CANDIDATE_MPN_OPEN"
+      }
+    },
+    {
+      "ref": "R26015",
+      "lib_id": "Device:R",
+      "value": "1k / 1%",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "units": [
+        1
+      ],
+      "fields": {
+        "ReviewStatus": "REFERENCE_CANDIDATE_MPN_OPEN"
+      }
+    },
+    {
+      "ref": "R26016",
+      "lib_id": "Device:R",
+      "value": "1k / 1%",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "units": [
+        1
+      ],
+      "fields": {
+        "ReviewStatus": "REFERENCE_CANDIDATE_MPN_OPEN"
+      }
+    },
+    {
+      "ref": "R26017",
+      "lib_id": "Device:R",
+      "value": "10k / 1%",
+      "footprint": "Resistor_SMD:R_0603_1608Metric",
+      "units": [
+        1
+      ],
+      "fields": {
+        "ReviewStatus": "REFERENCE_CANDIDATE_MPN_OPEN"
+      }
+    }
+  ],
+  "nets": [
+    {
+      "name": "TCU_3V3",
+      "pins": [
+        "C26011.1",
+        "R26011.1",
+        "R26013.1",
+        "R26014.1",
+        "R26060.1",
+        "U2601.14",
+        "FB2601.1",
+        "C26015.1"
+      ]
+    },
+    {
+      "name": "TCU_ETH_CRS_DV",
+      "pins": [
+        "U2601.15",
+        "R26015.1"
+      ]
+    },
+    {
+      "name": "TCU_ETH_MDC",
+      "pins": [
+        "U2601.11"
+      ]
+    },
+    {
+      "name": "TCU_ETH_MDIO",
+      "pins": [
+        "R26011.2",
+        "U2601.10"
+      ]
+    },
+    {
+      "name": "TCU_ETH_RXD0",
+      "pins": [
+        "U2601.13"
+      ]
+    },
+    {
+      "name": "TCU_ETH_RXD1",
+      "pins": [
+        "U2601.12"
+      ]
+    },
+    {
+      "name": "TCU_ETH_RXER",
+      "pins": [
+        "U2601.17",
+        "R26017.1"
+      ]
+    },
+    {
+      "name": "TCU_ETH_SHIELD",
+      "pins": [
+        "J2601.8",
+        "J2601.SH"
+      ]
+    },
+    {
+      "name": "TCU_ETH_TXD0",
+      "pins": [
+        "U2601.20"
+      ]
+    },
+    {
+      "name": "TCU_ETH_TXD1",
+      "pins": [
+        "U2601.21"
+      ]
+    },
+    {
+      "name": "TCU_ETH_TXEN",
+      "pins": [
+        "U2601.19"
+      ]
+    },
+    {
+      "name": "TCU_GND",
+      "pins": [
+        "C26010.2",
+        "C26011.2",
+        "C26012.2",
+        "C26013.2",
+        "C260191.2",
+        "C260192.2",
+        "C26060.2",
+        "C26061.2",
+        "R26010.2",
+        "U2601.22",
+        "U2601.25",
+        "U2651.3",
+        "U2651.8",
+        "C26014.2",
+        "C26015.2",
+        "R26015.2",
+        "R26016.2",
+        "R26017.2"
+      ]
+    },
+    {
+      "name": "TCU_MDI_RCT",
+      "pins": [
+        "C26061.1",
+        "J2601.5"
+      ]
+    },
+    {
+      "name": "TCU_MDI_RX_N",
+      "pins": [
+        "J2601.6",
+        "U2601.3",
+        "U2651.5"
+      ]
+    },
+    {
+      "name": "TCU_MDI_RX_P",
+      "pins": [
+        "J2601.4",
+        "U2601.4",
+        "U2651.4"
+      ]
+    },
+    {
+      "name": "TCU_MDI_TCT",
+      "pins": [
+        "C26060.1",
+        "J2601.2"
+      ]
+    },
+    {
+      "name": "TCU_MDI_TX_N",
+      "pins": [
+        "J2601.3",
+        "U2601.5",
+        "U2651.2"
+      ]
+    },
+    {
+      "name": "TCU_MDI_TX_P",
+      "pins": [
+        "J2601.1",
+        "U2601.6",
+        "U2651.1"
+      ]
+    },
+    {
+      "name": "TCU_PHY_1V2",
+      "pins": [
+        "C26012.1",
+        "C26013.1",
+        "U2601.1"
+      ]
+    },
+    {
+      "name": "TCU_ETH_CLK50_RAW",
+      "pins": [
+        "R26012.1",
+        "U2601.16",
+        "R26016.1"
+      ]
+    },
+    {
+      "name": "TCU_PHY_IRQ_N",
+      "pins": [
+        "R26014.2",
+        "U2601.18"
+      ]
+    },
+    {
+      "name": "TCU_PHY_LED0",
+      "pins": [
+        "J2601.9",
+        "U2601.23"
+      ]
+    },
+    {
+      "name": "TCU_PHY_LED_A",
+      "pins": [
+        "J2601.10",
+        "R26060.2"
+      ]
+    },
+    {
+      "name": "TCU_PHY_RESET_N",
+      "pins": [
+        "R26013.2",
+        "U2601.24"
+      ]
+    },
+    {
+      "name": "TCU_PHY_REXT",
+      "pins": [
+        "R26010.1",
+        "U2601.9"
+      ]
+    },
+    {
+      "name": "TCU_PHY_XI",
+      "pins": [
+        "C260191.1",
+        "U2601.8",
+        "Y2601.1"
+      ]
+    },
+    {
+      "name": "TCU_PHY_XO",
+      "pins": [
+        "C260192.1",
+        "U2601.7",
+        "Y2601.2"
+      ]
+    },
+    {
+      "name": "TCU_RMII_CLK",
+      "pins": [
+        "R26012.2"
+      ]
+    },
+    {
+      "name": "TCU_PHY_AVDD",
+      "pins": [
+        "U2601.2",
+        "C26010.1",
+        "FB2601.2",
+        "C26014.1"
+      ]
+    }
+  ],
+  "no_connect": [
+    "J2601.11",
+    "J2601.12",
+    "J2601.7",
+    "U2651.10",
+    "U2651.6",
+    "U2651.7",
+    "U2651.9"
+  ]
+}

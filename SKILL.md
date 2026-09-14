@@ -1,25 +1,16 @@
 ---
 name: kicad
 description: >-
-  Analyze KiCad projects and PDF schematics: schematics, PCB layouts, Gerbers,
-  footprints, symbols, netlists, and design rules. Reviews designs for bugs,
-  traces nets, cross-references schematic to PCB, extracts BOM data, checks
-  DRC/ERC, DFM, power trees, and regulator circuits. Every finding carries a
-  confidence label and evidence source with trust_summary rollup. Analyzes PDF
-  schematics from dev boards, reference designs, eval kits, and datasheets.
-  Also creates, adds, redraws, and restyles KiCad schematics in a readable
-  LM5013-style layout: continuous left-to-right power bus, bottom GND bus,
-  visible branch wires, key-net labels only, datasheet-driven values, and a
-  mandatory ERC/netlist/render verification gate. Supports KiCad 5–10. Use
-  whenever the user mentions .kicad_sch, .kicad_pcb,
-  .kicad_pro, PCB design review, schematic analysis, PDF schematics, reference
-  designs, Gerber files, DRC/ERC, netlist issues, BOM extraction, signal
-  tracing, power budget, DFM, or wants to understand, debug, compare, or
-  review any hardware design. Also for drawing tasks: "画原理图", "生成原理图",
-  "新建电路", "加一路电源", "自动绘图", "原理图排版/重画", or any request to
-  create or redraw a schematic in a readable style. Also for "check my board", "review before fab",
-  "what's wrong with my schematic", "is this ready to order", "check my power
-  supply", "verify this circuit", or any electronics/PCB design question.
+  Create, add, redraw, and inspect KiCad schematics with topology-specific
+  layouts, obstacle-aware orthogonal routing, readable fields, and native
+  ERC/netlist/geometry/render verification. Includes a deterministic generator
+  from reusable Circuit IR modules with explicit ports, real pin resolution,
+  automatic functional placement, supported multi-unit symbols and protected
+  regeneration. Includes SKiDL/circuit-synth data adapters and geometry checks. Analyze
+  KiCad schematics, PCB layouts, Gerbers, PDF schematics, netlists, BOMs, power
+  trees, and DRC/ERC findings with evidence and confidence labels. Use for
+  .kicad_sch, .kicad_pcb, .kicad_pro, schematic generation or redraw,
+  原理图自动生成、画原理图、原理图排版、信号追踪、电源检查 and KiCad design reviews.
 ---
 
 # KiCad Project Analysis & Schematic Creation Skill
@@ -50,35 +41,90 @@ Use this workflow when the user asks to **create, add, redraw, or restyle a
 schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读风格",
 "generate a buck schematic", "重画这块电源".
 
-1. **Read the standard first.** `references/schematic-drawing-standards.md`
-   is mandatory before creating or editing any schematic. It defines the
-   LM5013-style power-bus layout, GND bus, label policy, KiCad 9 wiring
-   constraints (split wires at connection points; no pin-to-pin lone wires;
-   labels at shared nodes), and the verification gate.
-2. **Design from the datasheet.** Fetch/read the IC datasheet; extract pinout,
-   Vref, abs-max ratings, and the typical application. Compute values
-   (feedback divider, RT/frequency, inductor, caps, compensation) with the
-   datasheet equations and state the numbers before drawing.
-3. **Plan the block on the 1.27 mm grid**, mirroring the canonical LM5013
-   structure: one continuous power bus `INPUT → IC → SW → L → OUTPUT`, a
-   bottom GND bus, and control components in an orderly band below the IC
-   (one column per function). Verify symbol pin positions and rotation
-   semantics before writing wires.
-4. **Generate.** Edit the `.kicad_sch` S-expr directly or use a generator
-   script. Every wire must end at a pin, junction, label, or power symbol;
-   rails are split into segments at every connection point. For EasyEDA Pro,
-   hand off to the `easyeda-schematic-draw` skill with the same standard.
-5. **Verify with KiCad itself** — this gate is mandatory before reporting
-   success:
-   - `kicad-cli sch erc` → 0 errors / 0 warnings
-   - `kicad-cli sch export netlist` → pin-by-pin match against design intent
-   - schematic analyzer run, with heuristic Vout estimates corrected to the
-     datasheet Vref
-   - geometry check: no symbol-body overlaps, no label inside an IC body
-   - PDF/PNG render + visual review: one continuous power bus, readable
-     control band, no component stacking
-6. **Report** the design values with equations, the verification evidence, and
-   any analyzer limitations you corrected.
+1. **Read the drawing standard** in `references/schematic-drawing-standards.md`.
+   For board-level work or a rejected generated board, also read
+   `references/reference-driven-board-design.md`. Record the actual datasheet
+   pages/figures read and a per-IC peripheral-circuit contract before designing
+   or changing electrical circuits. For layout-only edits to an existing
+   hierarchy, read `references/existing-project-redraw.md`; preserve electrical
+   identity and report inherited electrical gaps separately.
+   Visually study the user's engineering PDF examples when supplied; separate
+   presentation lessons from device-specific electrical connections.
+   For structured generation, read `references/circuit-ir.md` for the modular
+   model, automatic placement, imports and locked baselines; use
+   `references/schematic-generation.md` for the low-level writer and geometry.
+2. **Establish electrical intent independently of geometry.** Use datasheets
+   for real symbol/footprint pin numbers, ratings, topology and computed values.
+   Account for every pin as connected or intentionally NC. A redraw preserves
+   references, values, footprints, assembly state and native net partitions.
+   Prefer Circuit IR v2: explicit module ports, reusable parameterized instances,
+   stable IDs/reference mappings, and a physical pin coverage ledger. Resolve
+   named pins against the real symbol; require explicit handling of repeated
+   names. Keep values, ratings, MPN and evidence distinct. Never infer sharing
+   from same-name nets across imported circuit-synth subcircuits.
+3. **Choose a topology-specific layout.** Buck, LDO, integrated-inductor module,
+   filter and MCU pages have different structures. Plan visible local wiring,
+   keepouts, fields, rails and page allocation on a grid compatible with the
+   actual pins. Do not invent a SW/inductor stage for a different topology.
+   When comparing an engineer reference, read
+   `references/engineer-template-comparison.md`: extract visible facts separately
+   from unknown material identity, preserve the baseline, and record electrical
+   changes. Use explicit local wire groups and fixed bank rails for compact
+   power stages; consistently rotated bank fields are allowed after native
+   visual verification. The TPS53355 example is a draft presentation recipe,
+   not a qualified electrical design or an automatic topology recognizer.
+   Account for every reference peripheral branch by function and population,
+   including optional RF/MODE settings, isolation links and local bypasses.
+   A component marked NC/DNP is not an IC no-connect pin: preserve its wired
+   pads and explicit DNP state. Record each control pin's datasheet basis,
+   default assembly and allowed alternatives; do not infer a required pull-up
+   from an unpopulated resistor in a reference image.
+4. **Generate deterministically when supported.** Prefer `scripts/build_circuit.py`
+   with Circuit IR v2 and separate presentation JSON. Select functional roles
+   and templates; the program measures bodies/pins/fields, allocates cells,
+   packs blocks, and retries failed layouts with bounded spacing expansion.
+   Supported multi-unit symbols retain physical reference and unit identity.
+   Use `scripts/generate_schematic.py` when explicit positions are required.
+   Both use MST pairing, bounded A*, field obstacles and explicit label policy.
+   For a generated baseline use `--baseline` and `--lock-block`: keep the
+   electrical diff and reject changes to protected symbols, fields, wires or
+   UUIDs. Generate candidates in a new directory; apply a reviewed candidate to
+   an authorized existing project only after the baseline and delta checks in
+   `references/existing-project-redraw.md`. Native multi-page sheets, graphical
+   buses and unsupported hidden/stacked pins still require a dedicated writer;
+   the writer supports same-symbol coincident pads on one connected net, including
+   hidden passive copies, while retaining each physical pin in native verification.
+   Library NC pins require explicit NC; internal legends remain protected graphics.
+   The v2 pack mode is explicitly a one-sheet presentation of logical modules.
+   Never silently flatten an existing hierarchical project or replace a failed
+   visible route with labels.
+5. **Verify independent outputs.** New-design automated acceptance requires
+   native ERC with no unresolved errors or warnings. For a layout-only redraw,
+   retain the raw baseline and final ERC, reject unreviewed new violations and
+   disclose inherited findings; this does not qualify the electrical design.
+   Native XML net partitions must match all intended pins exactly
+   (including no accidental merges). Run `scripts/check_schematic_geometry.py`
+   on the serialized file; inspect body overlap, wire-through-body, all visible
+   fields/labels (including same-owner Reference/Value), pin legs, page/title
+   regions and connection anchors. Unsupported geometry remains INSUFFICIENT.
+   Run the existing schematic analyzer, then render through KiCad and inspect
+   both the full page and crowded regions. Text estimates and JSON are not
+   visual proof. Keep the exact file hash, KiCad version and evidence.
+   Separately audit the assembled circuit after removing DNP parts and merging
+   fitted zero-ohm links, with mutual-exclusion rules for configurable inputs.
+   The native all-pads netlist cannot prove default population behavior.
+   A valid setting code is not a qualified alternate converter design; changing
+   frequency or mode requires the coupled calculations and physical validation.
+6. **Close the review explicitly.** `AUTOMATED_PASS` is only the script gate;
+   datasheet review and native visual review remain pending until performed.
+   Report gaps honestly. On a failed layout, change the relevant layout block,
+   regenerate into a new run directory and repeat dependent checks.
+
+For implementation provenance, local adaptations and upstream limitations, see
+`references/upstream-integration.md` and `references/improvement-ledger.md`.
+The runtime does not require any full
+upstream repository, a new MCP server, Bun, or network access. EasyEDA execution
+still hands off to `easyeda-schematic-draw` when that is the user's target.
 
 The analysis and design-review workflows below still apply to whatever was
 generated.

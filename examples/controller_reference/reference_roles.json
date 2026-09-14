@@ -1,0 +1,49 @@
+{
+  "basis": "Microchip DS00002199D table3-6; declared local references prevent borrowing remote same-rail bypass capacitors",
+  "instances": {
+    "U1201": {
+      "capacitors": {
+        "core-bulk": [
+          "C12012"
+        ],
+        "core-hf": [
+          "C12013"
+        ],
+        "analog-bulk": [
+          "C12014"
+        ],
+        "analog-hf": [
+          "C12010"
+        ],
+        "io-bulk": [
+          "C12011"
+        ],
+        "io-hf": [
+          "C12015"
+        ]
+      }
+    },
+    "U2601": {
+      "capacitors": {
+        "core-bulk": [
+          "C26012"
+        ],
+        "core-hf": [
+          "C26013"
+        ],
+        "analog-bulk": [
+          "C26014"
+        ],
+        "analog-hf": [
+          "C26010"
+        ],
+        "io-bulk": [
+          "C26011"
+        ],
+        "io-hf": [
+          "C26015"
+        ]
+      }
+    }
+  }
+}

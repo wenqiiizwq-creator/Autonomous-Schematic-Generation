@@ -1,0 +1,16 @@
+{
+  "schema_version":1,
+  "paper":"A4",
+  "grid_mm":1.27,
+  "placements": {
+    "J1":{"at":[40.64,63.5],"mirror":"y"},
+    "R1":{"at":[69.85,63.5],"rotation":90},
+    "C1":{"at":[91.44,76.2]},
+    "J2":{"at":[121.92,63.5]}
+  },
+  "nets": {
+    "GND":{"rail_y":91.44,"priority":-1,"label":true},
+    "SIGNAL_IN":{"label":true},
+    "SIGNAL_OUT":{"label":true}
+  }
+}
