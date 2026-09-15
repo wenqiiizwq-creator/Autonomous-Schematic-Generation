@@ -1,4 +1,30 @@
-# Publication validation — 2026-09-14
+# Publication validation — 2026-09-15
+
+Current publication extends the previous revision with read-only hierarchy and
+native electrical-change verification. The existing layout/router backend is
+retained. These checks are not a production review of a board.
+
+| Current check | Result |
+| --- | --- |
+| Complete test suite | 101 tests passed, no skips: the existing 69 plus 32 hierarchy/change-contract regressions. |
+| Native change probe | KiCad 10.0.4 exported a before/after RC fixture with an explicitly changed resistor value and swapped physical terminal connections. The independent intended change passed; an undeclared change failed. |
+| Delivery check on a local project | 44 hierarchy instances, 915 physical components and the actual 44-page PDF agreed; no missing child files or cached-definition conflicts. Private source files are not distributed. |
+| Wrong-version PDF | Pairing that root with an old 36-page PDF returned FAIL and a page-count mismatch. This tests count detection, not arbitrary PDF content equivalence. |
+| Skill structure | `quick_validate.py`: passed. |
+| Python syntax | 68 source files in scripts/tests/examples parsed successfully. |
+| Independent forward check | 20 bounded cases found four defects involving malformed-child report overwrite, hardlink aliases, absent symbol units and missing XML pin attributes. All were fixed; five targeted reproductions were rerun and every input hash was unchanged. |
+| Packaging | No existing runtime script removed or changed; staged diff and relative links checked. No concrete private user paths or recognized credential patterns in published files. Generic `/home/user/` documentation examples are retained. |
+
+Native XML, logs and private-project audit outputs remain local under `output/`;
+public neutral failure fixtures are in the test suite. The current full suite
+also exercises the earlier generation, population and native-export cases.
+The four standalone commands listed in the historical entry below were not
+individually repeated for this update; their underlying code was unchanged.
+CopperPilot live service submission, arbitrary multi-page generation, newly
+generalized hierarchy/global-label geometry and electrical performance are not
+claimed as tested features of this release.
+
+## Previous publication — 2026-09-14
 
 Environment: macOS, KiCad CLI **10.0.4**, installed KiCad symbol libraries,
 Python virtual environment, Poppler `pdftoppm`. These results cover the

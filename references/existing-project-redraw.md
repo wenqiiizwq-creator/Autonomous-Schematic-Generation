@@ -4,7 +4,9 @@ Use this workflow when the user asks to improve placement and visible wiring
 in an existing multi-page KiCad project. It is a procedure for a project-specific
 writer and verification, not an automatic multi-page feature of
 `build_circuit.py`. For new electrical design or peripheral repairs, also use
-[reference-driven-board-design.md](reference-driven-board-design.md).
+[reference-driven-board-design.md](reference-driven-board-design.md) and
+[electrical-redesign.md](electrical-redesign.md). Executable hierarchy/intent
+checks are documented in [project-verification.md](project-verification.md).
 
 ## Freeze the actual baseline
 

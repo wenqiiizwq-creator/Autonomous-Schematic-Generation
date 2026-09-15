@@ -9,6 +9,25 @@
 避障布线 → KiCad 原生文件 → ERC / 逐脚网表 / 几何 / 渲染验证**。
 Agent 确定电路和功能角色；后端按真实符号/字段尺寸分配位置、拼页、布线和检查。
 
+## 多页电路改版与交付检查
+
+本次增加了从完整板卡改图中提炼的两项可执行检查，以及分立电路展开、
+跨页符号一致性、System_block 首页和 CopperPilot 参考候选的工作流程。
+
+- **电气改版合同**：`verify_design_change.py` 以事先声明的器件增删、属性变化和
+  完整引脚网络变化核对前后原生 XML；未声明的开短路、NC 遗漏和 DNP 漂移不能通过。
+- **工程交付核对**：`audit_project.py` 递归检查实际层次实例、页面数、可移植路径、
+  物理位号/单元、缓存符号一致性和完整 PDF 页数，并报告与基线的差异。
+- **具体电路展开**：明确成品模块、普通 IC 与未实现功能的边界，记录参考设计条件、
+  计算、外围、默认装配及未解决项，避免用接口或方框代替缺失电路。
+- **参考服务接入**：优先验证官方接口；必要时使用 CopperPilot 界面提交和读取候选，
+  再独立核查 BOM、引脚表、图面与真实 KiCad 连接。此仓库不包含 CopperPilot 客户端。
+
+用法及格式见[工程验证工具](references/project-verification.md)、
+[电气改版流程](references/electrical-redesign.md)、
+[CopperPilot 参考流程](references/copperpilot-reference-workflow.md)。
+这些工具不等于任意多页自动绘图或生产准出；既有几何引擎的未覆盖对象仍须明确报告。
+
 ## 本次融合
 
 从 [schematic-trace-solver](https://github.com/tscircuit/schematic-trace-solver)
@@ -49,9 +68,8 @@ python3 -m unittest discover -s tests -v
 [生成说明](references/schematic-generation.md)。此前问题的逐项闭环见
 [改造清单](references/improvement-ledger.md)。
 
-本次发布验证：**69 项回归通过，无跳过项**，并复跑四个生成入口。
-独立电源/PHY 样例保留外部供电与主控连接相关 ERC 待处理项；验证范围、
-结果与复现命令见[发布验证记录](references/release-validation.md)。
+扩展后的回归结果、验证范围及复现命令见[发布验证记录](references/release-validation.md)。
+独立电源/PHY 样例仍保留外部供电与主控连接相关 ERC 待处理项。
 
 ## 绘图范围与标准
 
@@ -94,6 +112,7 @@ git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.
 
 - KiCad CLI 和符号库；新生成后端实测 KiCad 10.0.4，其他版本需跑原生回归
 - 新生成脚本仅用 Python 3.10+ 标准库；PDF 目检渲染使用 `pdftoppm`；分析脚本沿用原依赖
+- 工程完整 PDF 页数核对使用 Poppler `pdfinfo`；未安装时明确返回检查不足
 - 网络（可选）：生命周期审计 / 分销商查询需对应 API Key
 
 ---
@@ -149,6 +168,8 @@ python3 scripts/summarize_findings.py analysis/ --json
     ├── build_circuit.py            # Circuit IR 编译、布局和原生生成
     ├── generate_schematic.py       # 显式位置和局部线组的生成入口
     ├── check_schematic_geometry.py # 序列化图纸的独立几何检查
+    ├── audit_project.py            # 原生多页层次、缓存一致性和完整PDF页数
+    ├── verify_design_change.py     # 按独立改版合同验证前后原生XML
     ├── analyze_schematic.py        # 原理图分析器
     ├── analyze_pcb.py              # PCB 分析器
     ├── analyze_gerbers.py          # Gerber 分析器

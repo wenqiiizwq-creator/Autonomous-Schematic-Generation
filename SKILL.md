@@ -42,12 +42,22 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
 "generate a buck schematic", "重画这块电源".
 
 1. **Read the drawing standard** in `references/schematic-drawing-standards.md`.
+   **Every board-level design must start with page 1 titled `System_block`.**
+   Draw the actual system architecture, power and signal flows, physical board
+   and isolation boundaries, interconnects and detail-page references. Distinguish
+   drawn circuits from missing/optional requirements; a sheet index alone is
+   insufficient. Preserve this cover during regeneration.
    For board-level work or a rejected generated board, also read
    `references/reference-driven-board-design.md`. Record the actual datasheet
    pages/figures read and a per-IC peripheral-circuit contract before designing
    or changing electrical circuits. For layout-only edits to an existing
    hierarchy, read `references/existing-project-redraw.md`; preserve electrical
    identity and report inherited electrical gaps separately.
+   For authorized electrical replacement or module expansion, read
+   `references/electrical-redesign.md` and `references/project-verification.md`.
+   For requested CopperPilot assistance, use
+   `references/copperpilot-reference-workflow.md`; reference candidates still
+   require independent electrical review and native verification.
    Visually study the user's engineering PDF examples when supplied; separate
    presentation lessons from device-specific electrical connections.
    For structured generation, read `references/circuit-ir.md` for the modular

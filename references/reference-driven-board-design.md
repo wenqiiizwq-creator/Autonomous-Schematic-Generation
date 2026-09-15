@@ -2,6 +2,31 @@
 
 Use this workflow when a generated board has incomplete IC peripherals or an unreadable multi-page layout. A datasheet URL, a pinout table, or an ERC pass does not establish application-circuit completeness.
 
+## Mandatory first page: System_block
+
+Every board-level schematic begins with an architecture cover titled exactly
+`System_block`, ordered as page 1 in the native project and exported PDF. A list
+of sheet links alone does not meet this requirement. Reuse the root sheet when
+appropriate so project filenames, hierarchy UUIDs and existing page numbers
+need not change.
+
+Show physical boards, core devices, power sources/rails and direction, major
+signal interfaces, connectors, ground/PE and isolation boundaries, external
+loads and the relevant detail-page IDs. Trace the blocks against the current
+native schematic and confirmed requirements. Mark absent circuitry, interface
+reserves and optional/DNP implementations explicitly; do not turn a requirement
+or unselected module into a supposedly completed circuit. Keep a block-to-page
+and requirement mapping with the project.
+
+Use native editable graphics/text for functional arrows; they must not create
+electrical wires or merge separate board netlists. Show the physical harness
+pin mapping and control direction separately, including direct hardware fault
+paths that must not appear to depend on MCU software. Keep hierarchy navigation
+links usable. Check the final page title/order, complete page coverage, exact
+native netlist/ERC delta, frame/text geometry and rendered readability after
+applying the cover to the actual project. This page supports architecture
+review; it does not certify requirement compliance or production readiness.
+
 ## Establish a reference contract before placing the IC
 
 For each exact IC/package/operating mode, record the manufacturer document revision, file hash, pages/figures actually read, and these circuits where applicable:

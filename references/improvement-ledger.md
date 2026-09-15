@@ -1,5 +1,26 @@
 # 此前问题点的改造闭环
 
+## Existing-project electrical changes and delivery, 2026-09-15
+
+- Added a native-XML change-contract verifier: explicit component additions,
+  removals and before/after identity/partition changes; retained physical NC
+  pins; optional frozen-baseline hash and named/same-net/distinct-net contracts.
+- Added a root hierarchy audit: instance-aware page/component counts, portable
+  sheet paths, missing/cyclic children, annotation coverage, cached-library and
+  multi-unit pin signatures, actual PDF count and descriptive baseline delta.
+- Added neutral failure fixtures and native KiCad before/after resistor pin/value
+  changes. Tests cover unexpected opens/shorts, DNP drift, pin loss, stale hashes,
+  cache conflicts, reused sheets and historical PDF count mismatch.
+- Carried forward System_block as the architecture cover, and documented module
+  expansion, electrical redesign, canonical cross-page symbols and CopperPilot
+  candidate provenance. No private board or vendor reference package is included.
+- The tools are read-only verifiers, not an automatic multi-page writer. The
+  project-specific geometry extensions are documented as bounded work requiring
+  native validation; the stock engine's unsupported objects remain insufficient.
+- All earlier generation, redraw and population mechanisms are retained. The
+  release evidence is in `release-validation.md`; electrical/production approval
+  and external service availability are not implied by these checks.
+
 对应 2026-09-08 调研清单，更新于 2026-09-14。本表说明程序真正执行的规则，
 不把流程文字或单一 ERC 结果当成已解决图面问题。
 
