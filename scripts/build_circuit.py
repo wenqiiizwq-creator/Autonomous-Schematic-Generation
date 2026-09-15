@@ -48,7 +48,7 @@ def write_project(out, name, root, libraries):
     return path
 
 
-def build(document, policy, out, dirs=(), cli=None, baseline_path=None, locks=()):
+def build(document, policy, out, dirs=(), cli=None, baseline_path=None, locks=(), reference_contract=None):
     result = {
         "status": "FAIL",
         "native_render_review": "PENDING",
@@ -117,7 +117,7 @@ def build(document, policy, out, dirs=(), cli=None, baseline_path=None, locks=()
         write_json(out / "planning.json", planning)
         write_json(out / "generation.json", manifest)
         result["geometry"] = manifest["geometry"]
-        result["native"] = verify(path, intent, layout, out / "native", cli)
+        result["native"] = verify(path, intent, layout, out / "native", cli, reference_contract)
         result["status"] = (
             "AUTOMATED_PASS" if result["native"]["status"] == "PASS" else "FAIL"
         )
@@ -133,6 +133,7 @@ def main():
     ap.add_argument("--output-dir", type=Path, required=True)
     ap.add_argument("--symbol-dir", action="append", default=[])
     ap.add_argument("--kicad-cli")
+    ap.add_argument("--reference-contract", type=Path, help="Externally authored source/pin/peripheral contract; failure blocks automated acceptance")
     ap.add_argument("--baseline", type=Path)
     ap.add_argument("--lock-block", action="append", default=[])
     args = ap.parse_args()
@@ -149,6 +150,7 @@ def main():
             args.kicad_cli,
             args.baseline,
             args.lock_block,
+            args.reference_contract,
         )
     except (ValueError, KeyError, TypeError, OSError) as e:
         result = {

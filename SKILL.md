@@ -58,6 +58,11 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    For requested CopperPilot assistance, use
    `references/copperpilot-reference-workflow.md`; reference candidates still
    require independent electrical review and native verification.
+   Read `references/symbol-and-peripheral-contracts.md` before choosing or
+   repairing symbols/peripherals. Inventory every active page's core devices,
+   bind exact MPN/package pin maps and electrical types to source evidence, and
+   map required functions to real fitted circuit stages and load endpoints.
+   An interface header or named MCU net cannot satisfy an absent functional stage.
    Visually study the user's engineering PDF examples when supplied; separate
    presentation lessons from device-specific electrical connections.
    For structured generation, read `references/circuit-ir.md` for the modular
@@ -120,6 +125,15 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    Run the existing schematic analyzer, then render through KiCad and inspect
    both the full page and crowded regions. Text estimates and JSON are not
    visual proof. Keep the exact file hash, KiCad version and evidence.
+   Run `scripts/audit_symbol_integrity.py` against the saved hierarchy and native
+   XML: inner pin legs must meet actual symbol ink, not merely its bounding box.
+   NC is not a blanket graphics exemption; retain per-pin justified dispositions.
+   For artwork-only fixes, keep external pin tips and native partitions unchanged.
+   Both generation entrypoints run this check in native verification; supply
+   `--reference-contract` to gate declared source/pin/peripheral facts as well.
+   Test contracts with removed parts, wrong returns/types/packages, DNP changes
+   and missing stages. Source/functional coverage must be independently authored,
+   not reconstructed as expected results from the generated candidate.
    Separately audit the assembled circuit after removing DNP parts and merging
    fitted zero-ohm links, with mutual-exclusion rules for configurable inputs.
    The native all-pads netlist cannot prove default population behavior.

@@ -29,6 +29,11 @@ review; it does not certify requirement compliance or production readiness.
 
 ## Establish a reference contract before placing the IC
 
+Use [symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md)
+for active-page core coverage, exact package pin/type maps, source hashes,
+functional stage boundaries, native topology checks and mutation tests. It also
+provides the executable contract format and generation entrypoint option.
+
 For each exact IC/package/operating mode, record the manufacturer document revision, file hash, pages/figures actually read, and these circuits where applicable:
 
 - Every supply domain, exposed pad, internal regulator output, local bypass/filter and return.

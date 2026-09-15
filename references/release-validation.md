@@ -1,5 +1,24 @@
 # Publication validation — 2026-09-15
 
+## Current local integration: symbol and reference contracts
+
+| Check | Result |
+| --- | --- |
+| Full regression suite | 136 tests passed, no skips: prior 101 plus 35 attachment/source/pin/peripheral/stage and native gate tests. KiCad 10.0.4. |
+| Native failure probe | An intentionally shortened internal resistor leg, with the electrical tip unchanged, retained exact native netlist agreement but failed the new symbol gate. A supplied incompatible reference contract also blocked acceptance despite passing native pin partitions and symbol checks. |
+| Local project reproduction | All 44 active pages, 915 physical components and 3253 pins covered. Before repair: 35 attachment candidates; after repair: 2. The 33 corrected candidates match the previous audit. Remaining isolated NC terminals retain candidates pending explicit disposition; no blanket NC suppression. |
+| Source/peripheral mutations | Reject changed document hash, exact package/MPN or electrical type mismatch, incomplete pin map, removed required capacitor, wrong return/value, DNP required endpoint, shorted rails and absent declared stage. Missing document/scope stays INSUFFICIENT. |
+| Geometry distinctions | Regressions include thick capacitor plates, sloped triangles, clockwise/counterclockwise arc sweeps, reused hierarchy instances, missing annotation, hidden/zero-length pins, separate bodyless supply units, unsupported geometry and stale exceptions. |
+| Runtime integration | Shared native verification invokes symbol audit. Both generation entrypoints accept optional `--reference-contract`; supplied contract failures block automated acceptance. Datasheet/native visual review remains pending. |
+| Skill/package checks | Skill structure validator passed; 74 Python files parsed; links in changed documentation resolve. Changed public files contain no concrete private user paths or board names. |
+
+These checks verify bounded facts, not source authority, adequate requirements,
+semantic stage implementation, footprint dimensions, zero-ohm/alternate assembly
+behavior or electrical performance. The new public fixture uses fictional parts
+and a synthetic specification. Private full-board regression inputs stay local.
+
+## Previous local publication: hierarchy and electrical changes
+
 Current publication extends the previous revision with read-only hierarchy and
 native electrical-change verification. The existing layout/router backend is
 retained. These checks are not a production review of a board.

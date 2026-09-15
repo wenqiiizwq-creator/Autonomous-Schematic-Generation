@@ -1,0 +1,4 @@
+SYNTHETIC TEST SPECIFICATION, revision 1. Not a manufacturer datasheet or usable circuit.
+Probe5, DEMO-5 package: 1 IN input; 2 GND power input; 3 OUT output;
+4 EN input; 5 VCC power input. An example bypass is 100nF from VCC to GND.
+The scope is a demonstration analog interface: core U1 and local bypass C1.

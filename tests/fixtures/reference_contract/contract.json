@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "scope": {
+    "core_refs": [
+      "U1"
+    ],
+    "feature_ids": [
+      "analog"
+    ]
+  },
+  "sources": {
+    "demo": {
+      "path": "source.txt",
+      "sha256": "b57aef1d3098e75e51eba68cc9b43c2dec60e2f3e630918fbae2ed2df2b2d3b8",
+      "url": "https://example.invalid/synthetic-spec",
+      "document": "Synthetic fixture only",
+      "revision": "1"
+    }
+  },
+  "pin_maps": {
+    "U1": {
+      "identity": {
+        "value": "Probe5-DEMO5",
+        "mpn": "Probe5-DEMO5",
+        "footprint": "Demo:DEMO-5",
+        "lib_id": "Demo:Probe5"
+      },
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4",
+      "pins": {
+        "1": {
+          "names": [
+            "IN"
+          ],
+          "types": [
+            "input"
+          ]
+        },
+        "2": {
+          "names": [
+            "GND"
+          ],
+          "types": [
+            "power_in"
+          ]
+        },
+        "3": {
+          "names": [
+            "OUT"
+          ],
+          "types": [
+            "output"
+          ]
+        },
+        "4": {
+          "names": [
+            "EN"
+          ],
+          "types": [
+            "input"
+          ]
+        },
+        "5": {
+          "names": [
+            "VCC"
+          ],
+          "types": [
+            "power_in"
+          ]
+        }
+      }
+    }
+  },
+  "checks": [
+    {
+      "id": "bypass-value",
+      "kind": "component",
+      "ref": "C1",
+      "expected": {
+        "value": "100nF",
+        "footprint": "Demo:C_0603",
+        "lib_id": "Device:C",
+        "dnp": false
+      },
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4"
+    },
+    {
+      "id": "bypass-high",
+      "kind": "same_net",
+      "pins": [
+        "U1.5",
+        "C1.1"
+      ],
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4"
+    },
+    {
+      "id": "bypass-low",
+      "kind": "same_net",
+      "pins": [
+        "U1.2",
+        "C1.2"
+      ],
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4"
+    },
+    {
+      "id": "rails-distinct",
+      "kind": "distinct_nets",
+      "pins": [
+        "U1.5",
+        "U1.2"
+      ],
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4"
+    },
+    {
+      "id": "enable",
+      "kind": "same_net",
+      "pins": [
+        "U1.4",
+        "U1.5"
+      ],
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4"
+    }
+  ],
+  "features": [
+    {
+      "id": "analog",
+      "boundary": "Synthetic IC and local bypass only; no external sensor design implied.",
+      "source": "demo",
+      "locator": "synthetic specification, lines 2-4",
+      "stages": [
+        {
+          "id": "core",
+          "role": "Signal conditioning",
+          "refs": [
+            "U1"
+          ],
+          "checks": [
+            "enable"
+          ]
+        },
+        {
+          "id": "bypass",
+          "role": "Local supply bypass",
+          "refs": [
+            "C1"
+          ],
+          "checks": [
+            "bypass-value",
+            "bypass-high",
+            "bypass-low",
+            "rails-distinct"
+          ]
+        }
+      ]
+    }
+  ]
+}

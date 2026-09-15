@@ -18,12 +18,18 @@ Agent 确定电路和功能角色；后端按真实符号/字段尺寸分配位�
   完整引脚网络变化核对前后原生 XML；未声明的开短路、NC 遗漏和 DNP 漂移不能通过。
 - **工程交付核对**：`audit_project.py` 递归检查实际层次实例、页面数、可移植路径、
   物理位号/单元、缓存符号一致性和完整 PDF 页数，并报告与基线的差异。
+- **符号内部引脚检查**：`audit_symbol_integrity.py` 检查引脚内端与实际图形线条的衔接，
+  计入线宽、圆弧、单元和旋转，双向核对原生 XML 的物理引脚覆盖；生成时自动执行。
+- **资料与外围约束**：`verify_reference_contract.py` 核对源文件哈希、确切 MPN/封装、
+  全引脚名称/类型、必需器件及其装配状态、外围连接和声明的功能阶段。
+  生成命令可用 `--reference-contract` 接入；约束未通过时不能获得自动检查通过状态。
 - **具体电路展开**：明确成品模块、普通 IC 与未实现功能的边界，记录参考设计条件、
   计算、外围、默认装配及未解决项，避免用接口或方框代替缺失电路。
 - **参考服务接入**：优先验证官方接口；必要时使用 CopperPilot 界面提交和读取候选，
   再独立核查 BOM、引脚表、图面与真实 KiCad 连接。此仓库不包含 CopperPilot 客户端。
 
 用法及格式见[工程验证工具](references/project-verification.md)、
+[符号与外围约束](references/symbol-and-peripheral-contracts.md)、
 [电气改版流程](references/electrical-redesign.md)、
 [CopperPilot 参考流程](references/copperpilot-reference-workflow.md)。
 这些工具不等于任意多页自动绘图或生产准出；既有几何引擎的未覆盖对象仍须明确报告。

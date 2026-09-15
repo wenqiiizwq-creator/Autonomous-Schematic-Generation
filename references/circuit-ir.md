@@ -124,6 +124,9 @@ python3 scripts/build_circuit.py \
 输出 `circuit.json/presentation.json` 原输入、`compiled.json` 层次/端口/
 引脚解析/源库 hash、`electrical_intent.json`、`layout_plan.json`、`planning.json`、
 每次 attempt 的布局/失败诊断、原生工程及 ERC/XML/PDF/verification。
+原生验证还自动执行内部引脚与符号图形衔接检查，并输出 `native/symbol-integrity.json`。
+可用 `--reference-contract path/to/contract.json` 将资料、封装引脚及外围事实纳入通过条件；
+格式与边界见 [符号与外围约束](symbol-and-peripheral-contracts.md)。未提供合同不代表资料已核验。
 引脚网表之外，还回读 Value、Footprint、MPN、额定值、自定义字段、DNP、单元
 数量和全部物理引脚（含 NC）。精确字形/引脚名称与编号仍需原生全页及局部目检。
 

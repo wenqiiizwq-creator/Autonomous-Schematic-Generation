@@ -1,5 +1,22 @@
 # 此前问题点的改造闭环
 
+## Symbol and peripheral generation gates, 2026-09-15
+
+- Added actual inner-pin-to-stroke checks, distinct from symbol AABBs and native
+  electrical continuity. Stroke width, arc sweep, unit/style, hidden/zero-length
+  pins and standard separate bodyless supply units have explicit treatment.
+- Added source-bound exact MPN/package and full physical pin name/type contracts,
+  direct native peripheral/assembly assertions and declared functional stages.
+- Added automatic symbol checks to native generation verification and optional
+  `--reference-contract` on both generation entrypoints. Supplying a contract
+  makes its assertions a required automated gate; omitted evidence is not verified.
+- Reproduced 33 corrected internal-leg/artwork candidates on a private full-board
+  before/after regression while retaining two intentional NC-terminal candidates
+  for explicit disposition. No private design or manufacturer PDF is packaged.
+- Added 35 regression tests for real failure modes and negative mutations; all
+  136 current tests passed. Scope adequacy, datasheet interpretation, functional
+  performance, footprint dimensions and production release remain separate gates.
+
 ## Existing-project electrical changes and delivery, 2026-09-15
 
 - Added a native-XML change-contract verifier: explicit component additions,

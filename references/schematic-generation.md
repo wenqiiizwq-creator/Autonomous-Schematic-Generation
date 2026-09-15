@@ -138,12 +138,18 @@ is untouched. Those absolute library paths need rebinding on another machine.
   order/retries, wire/junction counts and geometry findings.
 - `.kicad_sch`, `.kicad_pro`, `sym-lib-table` form the native editable project.
 - `native/erc.json`, `native/netlist.xml`, `native/schematic.pdf` are KiCad outputs.
+- `native/symbol-integrity.json` checks actual pin-to-body strokes and physical
+  pin coverage. It is a required native verification gate, including custom symbols.
+- Optional `--reference-contract path/to/contract.json` adds source/pin/peripheral
+  facts as a required gate and writes `native/reference-contract.json`. Schema,
+  coverage and limits: [symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md).
 - `verification.json` records exact schematic SHA-256, CLI version/commands and
   gate results. Routing/schema failures preserve the original input files and
   an error report; an existing output directory is never overwritten.
 
-Exit 0 / `AUTOMATED_PASS` means geometry within its declared model, native ERC
-and exact netlist partitions passed and a PDF was produced. It is **not final
+Exit 0 / `AUTOMATED_PASS` means geometry within its declared model, symbol
+integrity, native ERC, exact netlist partitions and any supplied reference
+contract passed, and a PDF was produced. It is **not final
 design acceptance**. `native_render_review` and `datasheet_review` remain
 `PENDING` until a separate evidence-backed review is performed.
 

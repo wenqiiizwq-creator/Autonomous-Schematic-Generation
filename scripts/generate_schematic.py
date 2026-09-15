@@ -25,6 +25,7 @@ def main():
     ap.add_argument("--name", default="generated")
     ap.add_argument("--symbol-dir", action="append", default=[])
     ap.add_argument("--kicad-cli")
+    ap.add_argument("--reference-contract", type=Path, help="Externally authored source/pin/peripheral contract")
     args = ap.parse_args()
     if not args.name.replace("_", "").replace("-", "").isalnum():
         ap.error("name must be alphanumeric with hyphens/underscores")
@@ -65,7 +66,7 @@ def main():
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
         )
         result["geometry"] = manifest["geometry"]
-        result["native"] = verify(path, intent, layout, out / "native", args.kicad_cli)
+        result["native"] = verify(path, intent, layout, out / "native", args.kicad_cli, args.reference_contract)
         result["status"] = (
             "AUTOMATED_PASS"
             if result["geometry"]["status"] == result["native"]["status"] == "PASS"

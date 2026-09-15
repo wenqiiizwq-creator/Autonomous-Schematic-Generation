@@ -6,6 +6,11 @@ Choose a fresh `--out` path for every run. Existing files, symlinks and hardlink
 aliases are rejected before processing, and reports are created exclusively.
 This also protects malformed input files from being overwritten by error reports.
 
+For pin-to-body artwork, physical pin/type/source evidence and peripheral/stage
+contracts, also run the tools in
+[symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md).
+The hierarchy and change checks below do not replace those independent gates.
+
 ## Hierarchy and complete PDF
 
 ```sh

@@ -156,7 +156,7 @@ def compare_netlist(xml_path, intent, layout=None):
     }
 
 
-def verify(schematic, intent, layout, output, cli=None):
+def verify(schematic, intent, layout, output, cli=None, reference_contract=None):
     cli = find_cli(cli)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -237,10 +237,32 @@ def verify(schematic, intent, layout, output, cli=None):
         if net_run.returncode == 0 and netlist.is_file()
         else {"status": "INSUFFICIENT"}
     )
+    # Run on the saved hierarchy and native export, including custom library ink.
+    # An ERC/netlist match alone cannot detect a shortened internal pin leg.
+    from .symbol_integrity import audit_symbols
+    result["symbol_integrity"] = audit_symbols(
+        schematic, netlist if net_run.returncode == 0 and netlist.is_file() else None
+    )
+    (output / "symbol-integrity.json").write_text(
+        json.dumps(result["symbol_integrity"], ensure_ascii=False, indent=2) + "\n"
+    )
+    if reference_contract is not None:
+        from .reference_contract import verify_reference
+        contract_path = Path(reference_contract)
+        result["reference_contract"] = (
+            verify_reference(netlist, json.loads(contract_path.read_text()), contract_path.parent)
+            if net_run.returncode == 0 and netlist.is_file()
+            else {"status": "INSUFFICIENT", "reason": "Native netlist export unavailable"}
+        )
+        (output / "reference-contract.json").write_text(
+            json.dumps(result["reference_contract"], ensure_ascii=False, indent=2) + "\n"
+        )
     result["status"] = (
         "PASS"
         if (
             result["erc"]["status"] == result["netlist"]["status"] == "PASS"
+            and result["symbol_integrity"]["status"] == "PASS"
+            and result.get("reference_contract", {"status": "PASS"})["status"] == "PASS"
             and pdf_run.returncode == 0
             and pdf.is_file()
         )
