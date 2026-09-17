@@ -2,7 +2,7 @@
 import argparse, hashlib, json, shutil, sys
 from pathlib import Path
 BASE=Path(__file__).resolve().parent
-SKILL=next(p for p in [*BASE.parents, Path.home()/'.codex/skills/kicad'] if (p/'scripts/schematic_layout').is_dir())
+SKILL=next(p for p in [*BASE.parents, Path.home()/'.codex/skills/autonomous-schematic-generation'] if (p/'scripts/schematic_layout').is_dir())
 sys.path.insert(0,str(SKILL/'scripts'))
 from schematic_layout.generate import make_root, route_root, pin_net_map, Libraries, library_dirs
 from schematic_layout.scene import read_scene

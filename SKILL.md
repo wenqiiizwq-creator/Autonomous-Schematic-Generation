@@ -1,7 +1,7 @@
 ---
-name: kicad
+name: autonomous-schematic-generation
 description: >-
-  Create, add, redraw, and inspect KiCad schematics with topology-specific
+  Autonomous-Schematic-Generation (ASG): create, add, redraw, and inspect KiCad schematics with topology-specific
   layouts, obstacle-aware orthogonal routing, readable fields, and native
   ERC/netlist/geometry/render verification. Includes a deterministic generator
   from reusable Circuit IR modules with explicit ports, real pin resolution,
@@ -13,7 +13,9 @@ description: >-
   原理图自动生成、画原理图、原理图排版、信号追踪、电源检查 and KiCad design reviews.
 ---
 
-# KiCad Project Analysis & Schematic Creation Skill
+# Autonomous-Schematic-Generation (ASG)
+
+ASG is the KiCad-based autonomous schematic generation and analysis skill.
 
 ## Related Skills
 

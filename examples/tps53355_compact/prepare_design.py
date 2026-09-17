@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
-SKILL = next(p for p in [*BASE.parents, Path.home()/'.codex/skills/kicad'] if (p/'scripts/schematic_layout').is_dir())
+SKILL = next(p for p in [*BASE.parents, Path.home()/'.codex/skills/autonomous-schematic-generation'] if (p/'scripts/schematic_layout').is_dir())
 sys.path.insert(0, str(SKILL / 'scripts'))
 from schematic_layout.sexpr import form as f, Atom as A, dump
 from schematic_layout.circuit_ir import compile_circuit

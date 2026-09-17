@@ -1,8 +1,9 @@
-# Autonomous-Schematic-Generation
+# Autonomous-Schematic-Generation (ASG)
 
-> KiCad 原理图自主生成 / 分析评审 Skill
+> ASG：基于 KiCad 的原理图自主生成 / 分析评审 Skill
 
-面向 Codex、Claude 等 Agent 的 KiCad Skill。根据已确认的电气意图创建、
+Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claude 等 Agent 的 Skill。
+基于 KiCad，根据已确认的电气意图创建、
 新增、重画原理图，并对原理图、PCB、Gerber、PDF 做有证据的分析与评审。
 
 绘图流程现在包含可执行后端：**可复用电路模块 → 真实引脚编译 → 自动布局 → 字段摆放 →
@@ -99,20 +100,26 @@ python3 -m unittest discover -s tests -v
 
 ### Codex
 
+显示名称为 **Autonomous-Schematic-Generation (ASG)**；skill 标识和安装目录名使用
+符合命名规范的小写形式 `autonomous-schematic-generation`。
+
 将本仓库内容放入 Codex skills 目录：
 
 ```bash
 git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.git \
-  ~/.codex/skills/kicad
+  ~/.codex/skills/autonomous-schematic-generation
 ```
 
 或直接复制 `SKILL.md`、`agents/`、`references/`、`scripts/`、`examples/`、`tests/` 到
-`~/.codex/skills/kicad/`。
+`~/.codex/skills/autonomous-schematic-generation/`。
+
+已有旧版 `kicad` 安装时，将旧目录迁移至上述新目录并更新内容，避免保留两份可被扫描的安装。
+如果本机配置指定了旧的 `SKILL.md` 路径，也需更新对应路径。
 
 ### 其他 Agent（Claude / GLM 等）
 
 按对应平台的 skill 安装方式注册即可；仓库结构遵循通用 skill 布局：
-`SKILL.md` 为入口，frontmatter 中的 `name` 为 `kicad`。
+`SKILL.md` 为入口，frontmatter 中的 `name` 为 `autonomous-schematic-generation`。
 
 ### 依赖
 
@@ -124,6 +131,9 @@ git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.
 ---
 
 ## 使用示例
+
+在 Codex 中显式调用：`$autonomous-schematic-generation`。自然语言中可称其为 **ASG**，
+例如“使用 ASG 绘制并验证这份原理图”。
 
 ### 画图 / 重画
 

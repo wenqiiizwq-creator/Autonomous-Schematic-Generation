@@ -6,7 +6,7 @@ manifest.json for freshness tracking, source file hashing, retention
 pruning, and .gitignore generation.
 
 Consumed by:
-  - kicad skill (writer): creates runs, updates manifest
+  - ASG skill (writer): creates runs, updates manifest
   - kidoc skill (reader): loads current run data via manifest
 
 Zero external dependencies -- stdlib only.
