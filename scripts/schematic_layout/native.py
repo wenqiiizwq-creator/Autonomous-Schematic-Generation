@@ -25,11 +25,13 @@ def compare_netlist(xml_path, intent, layout=None):
         or root.find("components") is None
     ):
         raise ValueError("Not a KiCad XML netlist")
+    # Power symbols (#PWR...) are virtual net-name carriers, not physical pins.
     nets = [
         (
             n.attrib["name"],
             frozenset(
                 f"{p.attrib['ref']}.{p.attrib['pin']}" for p in n.findall("node")
+                if not p.attrib["ref"].startswith("#")
             ),
         )
         for n in root.findall("nets/net")
@@ -52,7 +54,8 @@ def compare_netlist(xml_path, intent, layout=None):
             errors.append({"kind": "unexpected_net_partition", "pins": sorted(actual)})
     for n in intent["nets"]:
         policy = (layout or {}).get("nets", {}).get(n["name"], {})
-        if policy.get("mode") == "labels" or policy.get("label") or len(policy.get("groups", [])) > 1:
+        if (policy.get("mode") in ("labels", "power") or policy.get("label")
+                or len(policy.get("groups", [])) > 1):
             found = [name for name, s in nets if s == frozenset(n["pins"])]
             # Local labels are qualified by the root sheet path in native XML.
             if len(found) != 1 or found[0] not in (n["name"], "/" + n["name"]):

@@ -13,6 +13,7 @@ from .geometry import Box, TextField
 from .scene import read_scene
 from .field_placer import FieldSpec, autoplace_fields
 from .routing import (
+    on_segment,
     route,
     wire_box,
     grid_point,
@@ -154,6 +155,7 @@ def make_root(intent, layout, name, dirs=()):
         "reserved",
         "max_route_states",
         "annotations",
+        "power_ref_start",
     }
     if unknown:
         raise ValueError(f"Unknown layout options: {sorted(unknown)}")
@@ -472,7 +474,7 @@ def routing_groups(intent, layout):
         normalized = []
         for group in groups:
             spec = {"pins": group} if isinstance(group, list) else group
-            if (not isinstance(spec, dict) or set(spec) - {"pins", "mode", "rail_y", "priority"}
+            if (not isinstance(spec, dict) or set(spec) - {"pins", "mode", "rail_y", "priority", "label_at"}
                     or not isinstance(spec.get("pins"), list) or not spec["pins"]):
                 raise ValueError(f"{name}: groups must partition every net pin exactly once")
             normalized.append(spec)
@@ -487,7 +489,8 @@ def routing_groups(intent, layout):
             work["nets"].append({"name": key, "pins": pins})
             plan["nets"][key] = dict(policy)
             plan["nets"][key].update({k: v for k, v in group.items() if k != "pins"})
-            if len(groups) > 1:
+            # Power-symbol groups are joined by the symbol's net name, not labels.
+            if len(groups) > 1 and plan["nets"][key].get("mode") != "power":
                 plan["nets"][key]["label"] = True
                 if len(pins) == 1:
                     plan["nets"][key]["mode"] = "labels"
@@ -495,7 +498,66 @@ def routing_groups(intent, layout):
     return work, plan, aliases
 
 
-def route_root(root, intent, layout, uid, reserved):
+class Terminal:
+    """Explicit label terminal: a routed wire end that carries a label."""
+
+    def __init__(self, tid, point, direction):
+        self.id, self.point, self.direction = tid, point, direction
+
+
+def power_anchor(pins):
+    """Pin that receives a group's power symbol: downward pin, else the lowest."""
+    down = [p for p in pins if tuple(p.direction) == (0, 1)]
+    if down:
+        return min(down, key=lambda p: (p.point[0], p.point[1], p.id))
+    return min(pins, key=lambda p: (-p.point[1], p.point[0], p.id))
+
+
+def power_geometry(libraries, lib_id, value_text, end, rotation):
+    """Native body box and Value field centre of a power symbol at ``end``."""
+    lib = libraries.load(lib_id)
+    sym = form("symbol", form("lib_id", lib_id), form("at", *end, rotation), form("unit", 1),
+               form("property", "Reference", "#PWR", form("effects", form("hide", Atom("yes")))))
+    scene = read_scene(form("kicad_sch", form("paper", "A4"), form("lib_symbols", lib), sym))
+    body = scene.symbols[0].body
+    y = body.y_max + 0.9 if rotation == 0 else body.y_min - 0.9
+    value_at = (round(end[0], 4), round(y, 4))
+    return lib, body, value_at, TextField(value_text, *value_at, 0, 1.0).box()
+
+
+def pin_clipped_body(body, pins, margin=0.35):
+    """Body AABB cut back so every pin tip lies outside it on its own side.
+
+    Conservative arc/circle bounds can extend past a pin tip; a wire must still
+    leave that pin outward. Only the side a pin exits is cut; the other sides
+    and all foreign obstacles are unchanged.
+    """
+    x0, y0, x1, y1 = body.x_min, body.y_min, body.x_max, body.y_max
+    for p in pins:
+        dx, dy = p.direction
+        if (dx, dy) == (1, 0):
+            x1 = min(x1, p.point[0] - margin)
+        elif (dx, dy) == (-1, 0):
+            x0 = max(x0, p.point[0] + margin)
+        elif (dx, dy) == (0, 1):
+            y1 = min(y1, p.point[1] - margin)
+        elif (dx, dy) == (0, -1):
+            y0 = max(y0, p.point[1] + margin)
+    if x0 >= x1 or y0 >= y1:
+        return body
+    return Box(x0, y0, x1, y1)
+
+
+def global_label_box(text, at, side, font=1.27):
+    """Native global-label outline estimate; side is where its body extends."""
+    width = TextField(text, 0, 0, 0, font).box().width + 3.0
+    x, y = at
+    if side == "right":
+        return Box(x + 0.5, y - 1.5, x + width, y + 1.5)
+    return Box(x - width, y - 1.5, x - 0.5, y + 1.5)
+
+
+def route_root(root, intent, layout, uid, reserved, dirs=()):
     intent, layout, aliases = routing_groups(intent, layout)
     scene = read_scene(root)
     grid = float(layout.get("grid_mm", 1.27))
@@ -512,16 +574,85 @@ def route_root(root, intent, layout, uid, reserved):
     if set(policies) - {n["name"] for n in intent["nets"]}:
         raise ValueError("Unknown net in layout policies")
     for name, policy in policies.items():
-        unknown = set(policy) - {"mode", "rail_y", "label", "priority"}
+        unknown = set(policy) - {"mode", "rail_y", "label", "priority", "symbol",
+                                 "label_kind", "label_font_mm", "label_at", "label_hint"}
         if unknown:
             raise ValueError(f"{name}: unknown routing options {sorted(unknown)}")
-        if policy.get("mode") == "labels" and "rail_y" in policy:
-            raise ValueError(f"{name}: labels mode cannot also specify rail_y")
+        if policy.get("mode", "wire") not in ("wire", "labels", "power"):
+            raise ValueError(f"{name}: unknown routing mode {policy.get('mode')}")
+        if policy.get("mode") in ("labels", "power") and "rail_y" in policy:
+            raise ValueError(f"{name}: {policy['mode']} mode cannot also specify rail_y")
         if not isinstance(policy.get("label", False), bool):
             raise ValueError(f"{name}: label must be a boolean")
-    base = [s.body.expanded(0.3) for s in scene.symbols] + list(reserved)
+        if policy.get("mode") == "power":
+            if not re.fullmatch(r"power:[\w+-]+", str(policy.get("symbol", ""))):
+                raise ValueError(f"{name}: power mode needs a power:<symbol> library ID")
+            if policy.get("label") or "label_at" in policy:
+                raise ValueError(f"{name}: a power symbol already names its net; no label")
+        if policy.get("label_kind", "local") not in ("local", "global"):
+            raise ValueError(f"{name}: label_kind must be local or global")
+        font = policy.get("label_font_mm", 1.27)
+        if not isinstance(font, (int, float)) or not 0.8 <= font <= 2.0:
+            raise ValueError(f"{name}: label_font_mm must be between 0.8 and 2.0")
+        hint = policy.get("label_hint")
+        if hint is not None:
+            if len(hint) != 2 or not all(math.isfinite(v) for v in hint):
+                raise ValueError(f"{name}: label_hint must be a point")
+            grid_point(tuple(hint), grid)
+        at = policy.get("label_at")
+        if at is not None:
+            if (not isinstance(at, dict) or set(at) != {"at", "outward", "side"}
+                    or len(at["at"]) != 2 or not all(math.isfinite(v) for v in at["at"])
+                    or tuple(at["outward"]) not in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    or at["side"] not in ("left", "right")):
+                raise ValueError(f"{name}: label_at needs at, outward unit axis and side")
+            grid_point(tuple(at["at"]), grid)
+    # Power symbols keep their full body: their pin is a point contact on it.
+    base = [(s.body.expanded(0.3) if s.ref.startswith("#") else
+             pin_clipped_body(s.body.expanded(0.3), [p for p in s.pins if p.point != p.inner]))
+            for s in scene.symbols] + list(reserved)
     base += [f.box().expanded(0.3) for s in scene.symbols for _, f in s.fields]
     base += [f.box().expanded(0.3) for _, f in scene.labels]
+    libraries = Libraries(library_dirs(dirs))
+    legs = {pid: wire_box(p.point, p.inner, 0.35) for pid, p in pinmap.items()}
+
+    def label_extent(name, policy):
+        la = policy["label_at"]
+        font = policy.get("label_font_mm", 1.27)
+        if policy.get("label_kind", "local") == "global":
+            return global_label_box(aliases[name], tuple(la["at"]), la["side"], font)
+        return TextField(aliases[name], *la["at"], 0.0, font,
+                         justify=frozenset({"left", "bottom"})).box()
+
+    # Explicit label terminals and power symbols are reserved before any
+    # route, so an earlier net cannot take the space they were planned in.
+    planned = {}
+    for net in intent["nets"]:
+        name = net["name"]
+        policy = policies.get(name, {})
+        if "label_at" in policy:
+            planned[name] = [label_extent(name, policy).expanded(0.3)]
+        if policy.get("mode") == "power":
+            pins = [pinmap[pid] for pid in sorted(net["pins"])]
+            pin = power_anchor(pins)
+            others = base + [box for pid, box in legs.items() if mapping.get(pid) != name]
+            others += [b for boxes in planned.values() for b in boxes]
+            rotation = 180 if tuple(pin.direction) == (0, -1) else 0
+            for length in (2.54, 5.08, 7.62, 10.16):
+                end = (round(pin.point[0] + length * pin.direction[0], 6),
+                       round(pin.point[1] + length * pin.direction[1], 6))
+                lib, body, value_at, value_box = power_geometry(
+                    libraries, policy["symbol"], aliases[name], end, rotation)
+                boxes = [body.expanded(0.3), value_box.expanded(0.3)]
+                stub = wire_box(pin.point, end, 0.35)
+                if (all(b.inside(page) for b in boxes)
+                        and not any(b.overlaps(o) for b in boxes for o in others)
+                        and not any(stub.overlaps(o) for o in base)):
+                    planned[name] = boxes
+                    policy["_power"] = (pin, end, rotation, lib, value_at)
+                    break
+            else:
+                raise ValueError(f"No clear power symbol position for {name}")
     attempts = []
     orders = [
         sorted(
@@ -530,32 +661,67 @@ def route_root(root, intent, layout, uid, reserved):
         )
     ]
     orders.append(list(reversed(orders[0])))
+    max_states = int(layout.get("max_route_states", 150000))
     for order in orders:
         wires = []
         labels = []
+        powers = []
         stage = []
         try:
             for net in order:
                 name = net["name"]
                 policy = policies.get(name, {})
                 mode = policy.get("mode", "wire")
-                if mode not in ("wire", "labels"):
-                    raise ValueError(f"Unknown routing mode {mode}")
+                kind = policy.get("label_kind", "local")
+                font = policy.get("label_font_mm", 1.27)
                 selected = list({pinmap[pid].point: pinmap[pid]
                                  for pid in sorted(net["pins"])}.values())
-                if mode == "wire" and len(selected) == 1 and len(net["pins"]) > 1 and policy.get("label") and "rail_y" not in policy:
+                terminal = None
+                if "label_at" in policy:
+                    la = policy["label_at"]
+                    terminal = Terminal("label:" + name, tuple(la["at"]), tuple(la["outward"]))
+                if (mode == "wire" and terminal is None and len(selected) == 1
+                        and len(net["pins"]) > 1 and policy.get("label") and "rail_y" not in policy):
                     # An explicitly labelled local group of shared pads has
                     # one geometric endpoint. Draw one stem, retaining all pads.
                     mode = "labels"
                 forbidden = base + [
                     wire_box(a, b, 0.35) for other, a, b in wires if other != name
                 ]
-                forbidden += [
-                    wire_box(p.point, p.inner, 0.35)
-                    for pid, p in pinmap.items()
-                    if mapping.get(pid) != name
-                ]
-                forbidden += [f.box().expanded(0.3) for _, f in labels]
+                forbidden += [box for pid, box in legs.items() if mapping.get(pid) != name]
+                forbidden += [l.box().expanded(0.3) for _, l in labels]
+                forbidden += [b for other, boxes in planned.items() if other != name for b in boxes]
+                if mode == "power":
+                    # Pins of one part on one rail may share a symbol; the
+                    # symbol's Value is the net name, so no label is added.
+                    pairs = manhattan_mst(selected)
+                    for aid, bid in pairs:
+                        a, b = pinmap[aid], pinmap[bid]
+                        points = route(a.point, b.point, forbidden, page, grid,
+                                       start_dir=a.direction, end_dir=b.direction,
+                                       max_states=max_states)
+                        wires.extend((name, x, y) for x, y in zip(points, points[1:]))
+                    pin, end, rotation, lib, value_at = policy["_power"]
+                    if any(segment_hits_box(pin.point, end, o) for o in forbidden):
+                        raise ValueError(f"Power symbol stub obstructed on {name}")
+                    wires.append((name, pin.point, end))
+                    powers.append((name, policy["symbol"], end, rotation, lib, value_at))
+                    stage.append({"net": name, "mode": mode, "pairs": pairs,
+                                  "symbol": policy["symbol"]})
+                    continue
+                if mode == "labels" and terminal is not None:
+                    # Explicit label terminal planned by the layout compiler.
+                    if len(selected) != 1:
+                        raise ValueError(f"{name}: label_at in labels mode needs one pin")
+                    p = selected[0]
+                    points = route(p.point, terminal.point, forbidden, page, grid,
+                                   start_dir=p.direction, end_dir=terminal.direction,
+                                   max_states=max_states)
+                    wires.extend((name, x, y) for x, y in zip(points, points[1:]))
+                    labels.append((name, PlacedLabel(aliases[name], kind, terminal.point,
+                                                     font, policy["label_at"]["side"])))
+                    stage.append({"net": name, "mode": mode, "terminals": 1, "label_at": True})
+                    continue
                 if mode == "labels":
                     # Explicit remote-label topology, never an automatic escape
                     # hatch for a failed visible connection.
@@ -564,9 +730,14 @@ def route_root(root, intent, layout, uid, reserved):
                         # Left-facing labels still use KiCad's tested left
                         # justification, so the stem must clear their real
                         # estimated width, not a fixed ten-millimetre limit.
-                        text_width = TextField(aliases[name], 0, 0, 0, 1.27).box().width
+                        text_width = TextField(aliases[name], 0, 0, 0, font).box().width
                         long_stem = math.ceil(text_width / grid) + 2
-                        for steps in sorted(set((2, 4, 6, 8, long_stem, long_stem + 4))):
+                        steps_list = (2, 4, 6, 8) if kind == "global" else (2, 4, 6, 8, long_stem, long_stem + 4)
+                        label_obstacles = (forbidden
+                                           + [wire_box(a, b, 0.04) for _, a, b in wires]
+                                           + [wire_box(pin.point, pin.inner, 0.5)
+                                              for pin in pinmap.values()])
+                        for steps in sorted(set(steps_list)):
                             end = (
                                 round(p.point[0] + steps * grid * p.direction[0], 6),
                                 round(p.point[1] + steps * grid * p.direction[1], 6),
@@ -576,17 +747,14 @@ def route_root(root, intent, layout, uid, reserved):
                             ):
                                 continue
                             try:
-                                label = place_net_label(
-                                    aliases[name],
-                                    [end],
-                                    forbidden
-                                    + [wire_box(a, b, 0.04) for _, a, b in wires]
-                                    + [
-                                        wire_box(pin.point, pin.inner, 0.5)
-                                        for pin in pinmap.values()
-                                    ],
-                                    page,
-                                )
+                                if kind == "global":
+                                    label = place_global_label(
+                                        aliases[name], font, end, p.direction,
+                                        label_obstacles, page, (p.point, end))
+                                else:
+                                    tf = place_net_label(aliases[name], [end], label_obstacles,
+                                                         page, font)
+                                    label = PlacedLabel(aliases[name], "local", (tf.x, tf.y), font)
                                 break
                             except ValueError:
                                 continue
@@ -624,11 +792,13 @@ def route_root(root, intent, layout, uid, reserved):
                         wires.append((name, a, b))
                     pairs = [(p.id, None) for p in selected]
                 else:
-                    pairs = manhattan_mst(selected)
+                    # A planned label terminal joins the tree like a pin.
+                    pairs = manhattan_mst(selected + ([terminal] if terminal else []))
                     targets = {}
+                lookup = {**pinmap, **({terminal.id: terminal} if terminal else {})}
                 for aid, bid in pairs:
-                    a = pinmap[aid]
-                    b = pinmap[bid] if bid else None
+                    a = lookup[aid]
+                    b = lookup[bid] if bid else None
                     end = b.point if b else targets[aid]
                     points = route(
                         a.point,
@@ -638,14 +808,27 @@ def route_root(root, intent, layout, uid, reserved):
                         grid,
                         start_dir=a.direction,
                         end_dir=b.direction if b else None,
-                        max_states=int(layout.get("max_route_states", 150000)),
+                        max_states=max_states,
                     )
                     wires.extend((name, x, y) for x, y in zip(points, points[1:]))
-                if len(selected) == 1 and "rail_y" not in policy:
+                if len(selected) == 1 and terminal is None and "rail_y" not in policy:
                     raise ValueError(
                         f"One-pin net {name} needs explicit labels mode, or no_connect instead"
                     )
-                if policy.get("label", False):
+                if terminal is not None:
+                    labels.append((name, PlacedLabel(aliases[name], kind, terminal.point,
+                                                     font, policy["label_at"]["side"])))
+                elif policy.get("label", False) and kind == "global":
+                    own = [wire_box(a, b, 0.04) for n, a, b in wires if n == name]
+                    label_obstacles = forbidden + [
+                        wire_box(a, b, 0.04) for n, a, b in wires if n != name
+                    ] + [wire_box(p.point, p.inner, 0.5) for p in pinmap.values()]
+                    label, stub = place_global_on_segments(
+                        aliases[name], font, [(a, b) for n, a, b in wires if n == name],
+                        label_obstacles, own, page, grid)
+                    wires.append((name, *stub))
+                    labels.append((name, label))
+                elif policy.get("label", False):
                     segments = [(a, b) for n, a, b in wires if n == name]
                     if not segments:
                         raise ValueError(f"No segment available for label on {name}")
@@ -653,12 +836,20 @@ def route_root(root, intent, layout, uid, reserved):
                         wire_box(a, b, 0.04) for _, a, b in wires
                     ] + [wire_box(p.point, p.inner, 0.5) for p in pinmap.values()]
                     placed = None
-                    for a, b in sorted(
+                    if "label_hint" in policy:
+                        # A spot the layout compiler reserved on this net's wire.
+                        hint = tuple(policy["label_hint"])
+                        if any(on_segment(hint, a, b) for a, b in segments):
+                            try:
+                                placed = place_net_label(aliases[name], [hint], label_obstacles, page, font)
+                            except ValueError:
+                                placed = None
+                    for a, b in ([] if placed else sorted(
                         segments,
                         key=lambda w: (
                             -(abs(w[1][0] - w[0][0]) + abs(w[1][1] - w[0][1]))
                         ),
-                    ):
+                    )):
                         try:
                             # Try interior grid points as well as endpoints,
                             # which may lie next to the IC's pin text.
@@ -670,18 +861,20 @@ def route_root(root, intent, layout, uid, reserved):
                                                 round(a[1]+(b[1]-a[1])*j/count,6))
                                                for j in range(1,count)]
                             placed = place_net_label(
-                                aliases[name], candidates, label_obstacles, page
+                                aliases[name], candidates, label_obstacles, page, font
                             )
                             break
                         except ValueError:
                             pass
                     if placed is None:
                         raise ValueError(f"No clear label location on {name}")
-                    labels.append((name, placed))
+                    labels.append((name, PlacedLabel(aliases[name], "local",
+                                                     (placed.x, placed.y), font)))
                 stage.append({"net": name, "mode": mode, "pairs": pairs})
             wires, dots = normalize_wires(
                 [(aliases[n], a, b) for n, a, b in wires],
-                [p.point for p in pinmap.values()] + [(f.x, f.y) for _, f in labels],
+                [p.point for p in pinmap.values()] + [(l.x, l.y) for _, l in labels]
+                + [p[2] for p in powers],
             )
             break
         except ValueError as e:
@@ -709,20 +902,83 @@ def route_root(root, intent, layout, uid, reserved):
                 form("uuid", uid("dot:" + repr(p))),
             )
         )
-    for i, (name, f) in enumerate(labels):
+    for i, (name, l) in enumerate(labels):
+        key = uid("label:" + name + ":" + repr((l.x, l.y)))
+        if l.kind == "global":
+            # Side is where the outline extends from the connection point.
+            angle = 180 if l.side == "right" else 0
+            root.append(
+                form(
+                    "global_label",
+                    aliases[name],
+                    form("shape", Atom("passive")),
+                    form("at", l.x, l.y, angle),
+                    form(
+                        "effects",
+                        form("font", form("size", l.font, l.font)),
+                        form("justify", Atom("left" if angle == 180 else "right")),
+                    ),
+                    form("uuid", key),
+                    form(
+                        "property",
+                        "Intersheetrefs",
+                        "${INTERSHEET_REFS}",
+                        form("at", l.x, l.y, angle),
+                        form("effects", form("font", form("size", 1, 1)), form("hide", Atom("yes"))),
+                    ),
+                )
+            )
+            continue
         root.append(
             form(
                 "label",
                 aliases[name],
-                form("at", f.x, f.y, f.angle),
+                form("at", l.x, l.y, 0),
                 form(
                     "effects",
-                    form("font", form("size", f.font_mm, f.font_mm)),
-                    form("justify", *[Atom(j) for j in sorted(f.justify)]),
+                    form("font", form("size", l.font, l.font)),
+                    form("justify", Atom("left"), Atom("bottom")),
                 ),
-                form("uuid", uid("label:" + name + ":" + repr((f.x, f.y)))),
+                form("uuid", key),
             )
         )
+    if powers:
+        cache = first(root, "lib_symbols")
+        present = {str(n[1]) for n in all_nodes(cache, "symbol")}
+        template = next((first(s, "instances") for s in all_nodes(root, "symbol")
+                         if first(s, "instances")), None)
+        start = int(layout.get("power_ref_start", 1))
+        hidden = lambda: form("effects", form("font", form("size", 1.27, 1.27)), form("hide", Atom("yes")))
+        for k, (name, lib_id, end, rotation, lib, value_at) in enumerate(powers):
+            if lib_id not in present:
+                cache.append(copy.deepcopy(lib))
+                present.add(lib_id)
+            ref = f"#PWR{start + k:03d}"
+            numbers = [str(value(p, "number")) for s in all_nodes(lib, "symbol")
+                       for p in all_nodes(s, "pin")]
+            sym = [
+                Atom("symbol"),
+                form("lib_id", lib_id),
+                form("at", *end, rotation),
+                form("unit", 1),
+                form("in_bom", Atom("no")),
+                form("on_board", Atom("no")),
+                form("dnp", Atom("no")),
+                form("uuid", uid("power:" + name + ":" + repr(end))),
+                form("property", "Reference", ref, form("at", *end, 0), hidden()),
+                form("property", "Value", aliases[name], form("at", *value_at, 0),
+                     form("effects", form("font", form("size", 1.0, 1.0)))),
+                form("property", "Footprint", "", form("at", *end, 0), hidden()),
+                form("property", "Datasheet", "", form("at", *end, 0), hidden()),
+                *[form("pin", n, form("uuid", uid("power-pin:" + ref + ":" + n))) for n in numbers],
+            ]
+            if template is not None:
+                instances = copy.deepcopy(template)
+                for path in all_nodes(first(instances, "project") or [], "path"):
+                    set_node(path, "reference", ref)
+                    set_node(path, "unit", 1)
+                sym.append(instances)
+            root.append(sym)
     for pid in intent.get("no_connect", []):
         root.append(
             form(
@@ -736,10 +992,66 @@ def route_root(root, intent, layout, uid, reserved):
         "stages": stage,
         "wire_count": len(wires),
         "junction_count": len(dots),
+        "power_symbols": len(powers),
+        "labels": {k: sum(l.kind == k for _, l in labels) for k in ("local", "global")},
     }
 
 
-def place_net_label(name, segment, obstacles, page):
+class PlacedLabel:
+    """A local (text on the wire) or global (outlined port) label."""
+
+    def __init__(self, text, kind, at, font=1.27, side="right"):
+        self.text, self.kind, self.font, self.side = text, kind, font, side
+        self.x, self.y = round(at[0], 6), round(at[1], 6)
+
+    def box(self):
+        if self.kind == "global":
+            return global_label_box(self.text, (self.x, self.y), self.side, self.font)
+        return TextField(self.text, self.x, self.y, 0.0, self.font,
+                         justify=frozenset({"left", "bottom"})).box()
+
+
+def place_global_label(name, font, end, direction, obstacles, page, stub):
+    """Global label at a stub end; its outline extends away from the stub."""
+    sides = ("right", "left") if direction[0] == 0 else (("right",) if direction[0] > 0 else ("left",))
+    for side in sides:
+        label = PlacedLabel(name, "global", end, font, side)
+        box = label.box()
+        if (box.inside(page) and not any(box.expanded(-0.06).overlaps(o) for o in obstacles)
+                and not segment_hits_box(*stub, box)):
+            return label
+    raise ValueError(f"No clear global label placement for {name}")
+
+
+def place_global_on_segments(name, font, segments, obstacles, own, page, grid):
+    """Short perpendicular stub from a routed segment, then a global label."""
+    for a, b in sorted(segments, key=lambda w: -(abs(w[1][0] - w[0][0]) + abs(w[1][1] - w[0][1]))):
+        count = max(1, round((abs(b[0] - a[0]) + abs(b[1] - a[1])) / grid))
+        points = [(round(a[0] + (b[0] - a[0]) * j / count, 6), round(a[1] + (b[1] - a[1]) * j / count, 6))
+                  for j in range(count + 1)]
+        horizontal = a[1] == b[1]
+        for p in points:
+            ends = p in (a, b)
+            dirs = ((0, -1), (0, 1)) if horizontal else ((1, 0), (-1, 0))
+            if ends:
+                dirs += ((1, 0), (-1, 0)) if horizontal else ((0, -1), (0, 1))
+            for d in dirs:
+                for length in (2.54, 5.08):
+                    end = (round(p[0] + d[0] * length, 6), round(p[1] + d[1] * length, 6))
+                    if not page.contains_point(*end) or any(
+                            segment_hits_box(p, end, o) for o in obstacles):
+                        continue
+                    # The stub must not run along this net's own segments.
+                    if any(segment_hits_box(end, end, o) for o in own):
+                        continue
+                    try:
+                        return place_global_label(name, font, end, d, obstacles, page, (p, end)), (p, end)
+                    except ValueError:
+                        continue
+    raise ValueError(f"No clear global label location on {name}")
+
+
+def place_net_label(name, segment, obstacles, page, font=1.27):
     from .geometry import TextField
 
     # Anchors stay at segment endpoints. Text remains horizontal and uses an
@@ -749,7 +1061,7 @@ def place_net_label(name, segment, obstacles, page):
         # 0-degree style and extend left-facing stubs instead of falsifying
         # bounds with property-field justification that KiCad will ignore.
         for just in (frozenset({"left", "bottom"}),):
-            f = TextField(name, *p, 0.0, 1.27, justify=just)
+            f = TextField(name, *p, 0.0, font, justify=just)
             box = f.box()
             if box.inside(page) and not any(
                 box.expanded(-0.06).overlaps(o) for o in obstacles
@@ -762,7 +1074,7 @@ def generate(intent, layout, name, dirs=()):
     root, manifest, uid, reserved = make_root(intent, layout, name, dirs)
     # Save stage facts separately from the final KiCad result; neither is an
     # electrical PASS. The CLI re-reads the serialized file and uses native CLI.
-    manifest["routing"] = route_root(root, intent, layout, uid, reserved)
+    manifest["routing"] = route_root(root, intent, layout, uid, reserved, dirs)
     scene = read_scene(parse(dump(root)))
     report = check_scene(
         scene, grid=manifest["grid_mm"], reserved=reserved, pin_nets=pin_net_map(intent)

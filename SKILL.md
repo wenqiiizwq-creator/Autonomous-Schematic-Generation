@@ -79,7 +79,15 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    named pins against the real symbol; require explicit handling of repeated
    names. Keep values, ratings, MPN and evidence distinct. Never infer sharing
    from same-name nets across imported circuit-synth subcircuits.
-3. **Choose a topology-specific layout.** Buck, LDO, integrated-inductor module,
+3. **Choose a topology-specific layout.** First apply
+   `references/human-readable-routing.md`: declare the reading path,
+   required visible local relationships, return structure and intentional
+   label boundaries before placing components. Apply its component-placement
+   conventions and choose a spacing profile; resolve alignment, ordering,
+   local association and exit corridors before fixing x/y coordinates.
+   Group by circuit function;
+   do not isolate an IC from its support parts to permit label-only wiring.
+   Buck, LDO, integrated-inductor module,
    filter and MCU pages have different structures. Plan visible local wiring,
    keepouts, fields, rails and page allocation on a grid compatible with the
    actual pins. Do not invent a SW/inductor stage for a different topology.
@@ -103,6 +111,9 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    Supported multi-unit symbols retain physical reference and unit identity.
    Use `scripts/generate_schematic.py` when explicit positions are required.
    Both use MST pairing, bounded A*, field obstacles and explicit label policy.
+   These are routing primitives, not automatic readability enforcement.
+   Establish functional spines/rails and local branches first; when routes
+   obscure those relationships, revise placement/fields and regenerate.
    For a generated baseline use `--baseline` and `--lock-block`: keep the
    electrical diff and reject changes to protected symbols, fields, wires or
    UUIDs. Generate candidates in a new directory; apply a reviewed candidate to
@@ -141,8 +152,17 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    The native all-pads netlist cannot prove default population behavior.
    A valid setting code is not a qualified alternate converter design; changing
    frequency or mode requires the coupled calculations and physical validation.
+For board redraws and delivery handoffs, apply
+[`execution-evidence.md`](references/execution-evidence.md): distinguish placement
+from actual routing, invalidate evidence after post-processing, and check the
+final delivery snapshot before reporting completion.
+
 6. **Close the review explicitly.** `AUTOMATED_PASS` is only the script gate;
    datasheet review and native visual review remain pending until performed.
+   Trace each block's declared reading tasks under
+   `references/human-readable-routing.md` and record concrete path findings.
+   A viewed-page checklist, fewer labels, or collision-free routing is not
+   readability acceptance. User rejection reopens that review.
    Report gaps honestly. On a failed layout, change the relevant layout block,
    regenerate into a new run directory and repeat dependent checks.
 

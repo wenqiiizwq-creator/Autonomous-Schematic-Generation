@@ -54,6 +54,11 @@ its circuit structure. These are layout patterns, not verified design templates.
 
 ## 4. Wiring and label policy
 
+Apply [human-readable-routing.md](human-readable-routing.md) before fixing
+placement: functional membership, visible local paths, rails/returns and
+label boundaries constrain routing. Its path-tracing review is required
+in addition to the electrical and geometry checks below.
+
 - Use orthogonal wires on a grid compatible with actual pin positions
   (usually 1.27 mm; some symbols require 0.635 mm). Do not silently snap pins.
 - Wires must avoid body graphics, visible text and other nets' terminal/route
