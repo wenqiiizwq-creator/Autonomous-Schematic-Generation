@@ -65,7 +65,7 @@ def measure(root):
             (a, b), (c, d) = wires[segs[0]], wires[segs[1]]
             if (a[1] == b[1]) != (c[1] == d[1]):
                 bends[isl] = bends.get(isl, 0) + 1
-    crossings = 0
+    crossings = []
     for i, (a, b) in enumerate(wires):
         for j in range(i):
             if island[i] == island[j]:
@@ -76,7 +76,7 @@ def measure(root):
                 continue
             p = (c[0], a[1]) if ah else (a[0], c[1])
             if on_segment(p, a, b) and on_segment(p, c, d):
-                crossings += 1
+                crossings.append(list(p))
     power_islands = {isl for isl, t in terminals.items() if any(k == "power" for k, *_ in t)}
     rail_mm = sum(length(w) for i, w in enumerate(wires) if island[i] in power_islands)
     two = [isl for isl, t in terminals.items() if len(t) == 2]
@@ -86,7 +86,7 @@ def measure(root):
         "segments": len(wires),
         "wire_mm": round(sum(map(length, wires)), 1),
         "bends": sum(bends.values()),
-        "cross_net_crossings": crossings,
+        "cross_net_crossings": len(crossings),
         "junctions": len(junctions),
         "two_terminal_connections": len(two),
         "tortuous_connections": len(tortuous),
@@ -96,10 +96,15 @@ def measure(root):
         "labels_local": labels.count("label"),
         "labels_global": labels.count("global_label"),
         "power_libraries": sorted(p for p in power if p.startswith("power:")),
+        # Locations, so a failure names what to redraw.
+        "crossing_points": sorted(crossings),
+        "tortuous": [sorted(t[2] if t[0] in ("part", "power") else f"{t[0]}:{t[1]}" for t in terminals[isl])
+                     for isl in tortuous],
     }
 
 
 def gate(metrics, max_crossings=0, max_tortuous=0):
+    """Hard drawing gate. Raise a limit only through a reasoned waiver."""
     reasons = []
     if metrics["cross_net_crossings"] > max_crossings:
         reasons.append(f"{metrics['cross_net_crossings']} different-net wire crossings (limit {max_crossings})")

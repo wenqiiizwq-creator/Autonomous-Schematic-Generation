@@ -33,6 +33,23 @@ def body_terminal_contact(a, b, body, terminals):
     return False
 
 
+def own_pin_exit(a, b, exits):
+    """A wire leaving one of the symbol's own pin tips straight outward.
+
+    Conservative graphic bounds (LED arrows, magnetics arcs) can reach past a
+    pin tip; that pin's own outward wire is its intended exit, not a traversal.
+    Any other wire through the same box remains a defect.
+    """
+    for point, other in ((a, b), (b, a)):
+        d = exits.get(point)
+        if d is None:
+            continue
+        vx, vy = other[0] - point[0], other[1] - point[1]
+        if vx * d[0] + vy * d[1] > 0 and abs(vx * d[1] - vy * d[0]) < 1e-8:
+            return True
+    return False
+
+
 def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=None):
     findings = []
 
@@ -55,6 +72,10 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
         f"{s.ref}:unit{s.unit}": {
             p.point: p.direction for p in s.pins if p.point == p.inner
         }
+        for s in scene.symbols
+    }
+    pin_exits = {
+        f"{s.ref}:unit{s.unit}": {p.point: p.direction for p in s.pins if p.point != p.inner}
         for s in scene.symbols
     }
     if reserved is None:
@@ -111,9 +132,9 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
         if a[0] != b[0] and a[1] != b[1]:
             add("diagonal_wire", [f"wire:{i}"], "Non-orthogonal wire")
         for name, box in bodies:
-            if segment_hits_box(a, b, box) and not body_terminal_contact(
-                a, b, box, body_terminals[name]
-            ):
+            if (segment_hits_box(a, b, box)
+                    and not body_terminal_contact(a, b, box, body_terminals[name])
+                    and not own_pin_exit(a, b, pin_exits[name])):
                 add(
                     "wire_body",
                     [f"wire:{i}", name],

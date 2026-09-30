@@ -156,6 +156,7 @@ def make_root(intent, layout, name, dirs=()):
         "max_route_states",
         "annotations",
         "power_ref_start",
+        "defer_fields",
     }
     if unknown:
         raise ValueError(f"Unknown layout options: {sorted(unknown)}")
@@ -405,7 +406,8 @@ def make_root(intent, layout, name, dirs=()):
             set_node(first(first(prop, "effects"), "font"), "size", font, font)
             obstacles.append(box)
             explicit.add((key, n))
-    for s in sorted(scene.symbols, key=lambda s: s.ref):
+    # A caller that draws explicit wires first places fields afterwards itself.
+    for s in [] if layout.get("defer_fields") else sorted(scene.symbols, key=lambda s: s.ref):
         key = s.ref if s.ref in placements else f"{s.ref}:{s.unit}"
         specs = [FieldSpec(n, f.text, f.font_mm) for n, f in s.fields if (key, n) not in explicit]
         placed = autoplace_fields(

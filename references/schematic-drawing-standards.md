@@ -66,6 +66,14 @@ in addition to the electrical and geometry checks below.
 - Prefer visible local connections. Use named rails and labels where meaningful;
   remote labels are an explicit intent/layout choice, not a silent fallback
   when routing fails. Do not label every local wire automatically.
+- Label roles (HR-07): global labels (1.27 mm) only for nets leaving the sheet;
+  rails and returns as power symbols whose Value is the exact net name; small
+  1.0 mm local names on the wire of selected local nets (default: nets touching
+  a part with three or more pins); local join labels only at a declared block
+  boundary. Other local nets stay unnamed.
+- A generated or redrawn sheet must pass `scripts/check_schematic_readability.py`
+  (no different-net crossings, no two-terminal connection with three or more
+  bends) or carry a reasoned per-sheet waiver.
 - Scope block-local names (`SW_5V`, `FB_5V`, etc.) so unrelated blocks cannot
   short through reused labels. Label-connected islands must use the exact same
   net name and scope.

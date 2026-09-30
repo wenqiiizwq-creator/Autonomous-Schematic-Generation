@@ -35,7 +35,7 @@ extension to Circuit IR or the generator JSON schema.
 | HR-04 | Choose a return representation explicitly. A compact power loop may use a visible return rail; repeated independent shunts may use local, domain-correct ground symbols or short named return connections. Avoid large perimeter ground rectangles and staircase chains through successive channels. Never merge primary, secondary, chassis, signal or Kelvin returns for appearance. |
 | HR-05 | Repeat interface lanes consistently. Keep series elements on the lane and shunt protection perpendicular to it. Use the same series/shunt placement pattern in each lane; align repeated devices and order lanes to reduce crossings at the connector. Preserve the real connector pin assignments and any existing paired contacts. |
 | HR-06 | Reserve short, direct local paths before routing long inter-block nets. Identify those paths by function (for example drive, sense, feedback and support branches), not alphabetical net order. Visual proximity communicates association; it does not prove short PCB routing or SI/PI performance. |
-| HR-07 | Use labels for intentional abstraction. Cross-sheet links, shared supplies and genuine block interfaces are valid uses. Within a directly connected local circuit, omit redundant labels unless they help identify an important node. Avoid decorative label-only branches. Select label scope from actual connectivity; changing global to local is not automatically safe. |
+| HR-07 | Use labels for intentional abstraction, with one role each. **Global label (1.27 mm)** only where a net leaves the sheet. **Power symbol** for rails and returns, its Value being the exact net name; never a generic GND on an isolated return. **Small local name (1.0 mm)** on the visible wire of *selected* page-local nets: by default nets touching a part with three or more pins (controller/transistor function nodes, see `select_local_names`), minus names the design never had, plus documented additions. It names a wire; it never replaces one. **Local join label** only at a declared block boundary with the reason recorded. All other local nets stay unnamed (native auto names). Select scope from actual connectivity; changing global to local is not automatically safe. |
 | HR-08 | Place symbols and fields together with their exit corridors. If text forces a simple branch into a detour, move the text within a clear ownership area, adjust the component, or change the block arrangement. Never trade text readability for a shorter wire. Expand the block only when the local arrangement actually needs room. |
 | HR-09 | Prefer a few clear bends to wire weaving. Remove avoidable tiny jogs, reversals, enclosing loops and excursions across unrelated blocks. When avoiding one obstacle makes a path obscure, revisit placement or the chosen recipe instead of accepting the first legal route. Do not impose a universal bend count on all topologies. |
 | HR-10 | Make connection state unambiguous. Prefer a T branch with a visible junction for a connection; keep nonconnecting orthogonal crossings away from bends, pins and junctions. Rearrange repeated lanes before adding crossings. Do not ban every crossing if the alternative is a worse maze; verify both native connectivity and the rendered distinction. |
@@ -127,12 +127,14 @@ pin`, `source` and `return` to real parts/pins, then applies vertical alignment
 and a sideways midpoint branch. It does not start by assigning unrelated x/y
 coordinates and asking A* to discover the divider's shape.
 
-Current scripts do not implement a general solver for these relationships. Keep
-them in the presentation plan and translate supported ones into existing layout
-parameters; use a scoped writer for the rest. Future checks should examine the
-saved positions and wires against these relations, with defaults reported as
-review findings and hard violations rejected. A flag saying a template was used
-is insufficient.
+`schematic_layout.recipes.Sheet` implements these relations as construction
+primitives (`series`, `shunt`, `bank`, `divider`, `stub`, `connect`, `power`,
+`label`, `name`); see [drawing-recipes.md](drawing-recipes.md). It is not a
+solver: the agent still chooses the recipe, anchors and directions, guided by
+the outline rules O1-O8 and the proposed roles in `sheet.plan`; the build
+report audits the chosen recipes and label roles, and a deviation needs a reason. Relations
+it cannot express go into the same page script as explicit pin-relative wires.
+A flag saying a template was used is insufficient; the built sheet is checked.
 
 
 ## 3. Route within a planned structure
@@ -160,9 +162,13 @@ packing. A shorter total wire length must not override a clearer circuit.
 
 ### Current implementation boundary
 
-The low-level generator still expects component placements to be supplied; it
-does not choose a topology-specific component layout from the reading recipe.
-It supports explicit net groups and the following route controls:
+Readable pages are drawn with the recipe builder above: it places supporting
+parts from real pins, writes explicit wires, power symbols and labels, rejects
+different-net contact, wires through bodies and disconnected unnamed pieces,
+places fields last, and reports the readability metrics. The low-level
+MST/A* generator below still expects supplied placements and does not choose a
+layout from the reading recipe. It supports explicit net groups and the
+following route controls:
 
 - Net policy: `mode` (`wire`, `labels`, or `power`), `rail_y`, `label`,
   `priority`, `symbol` (for power-symbol mode), `label_kind` (`local` or
@@ -175,9 +181,10 @@ It supports explicit net groups and the following route controls:
 
 Unspecified wire groups use Manhattan MST; A* considers obstacles and bends.
 These route primitives do not automatically enforce HR-01 through HR-11,
-recognize the recipes above, or retry a component placement. The optional
-readability checker reports geometric diagnostics only; a human still traces
-the required reading paths in the rendered drawing. Use supported parameters
+recognize the recipes above, or retry a component placement. The readability
+checker is mandatory for every generated or redrawn sheet (section 4), but it
+measures geometry only; a human still traces the required reading paths in the
+rendered drawing. Use supported parameters
 or a scoped writer and inspect the serialized output. Do not claim a readability
 pass from the router succeeding.
 
@@ -211,16 +218,25 @@ Use these **manual review states**, not fabricated tool results:
   readability findings. This is a bounded reviewer conclusion, not user approval
   or electrical qualification. Later user rejection reopens it.
 
-Label count, bends, wire length, detour ratio and page occupancy are diagnostics.
-Do not set universal numerical pass thresholds: a labeled MCU bank and a visible
-power stage have different needs. When comparing variants, keep electrical
+Run `scripts/check_schematic_readability.py` first. It is a hard gate: zero
+different-net wire crossings and zero two-terminal connections with three or
+more bends, each reported with its location. Redraw rather than waive; a waiver
+file entry must give the sheet, the allowed count and the reason. Label count,
+bends, wire length, detour ratio and page occupancy remain diagnostics without
+universal thresholds: a labeled MCU bank and a visible power stage have
+different needs. When comparing variants, keep electrical
 identity, symbol scale, font size and viewing scale comparable. Do not improve
 one metric by hiding relationships or shrinking text.
 
 ## 5. Ground future implementation in positive and negative examples
 
 For each recipe being automated, retain an electrically equivalent bad/good
-pair with real native schematics and readable renders. Include both the original
+pair with real native schematics and readable renders. The first pair is
+`tests/fixtures/drawing/recipe_board.py` (`draw()` / `draw(bad=True)`): the bad
+drawing reproduces the support-net crossing (R410 pattern) and the two-terminal
+U-turn (J101.2 -> L101.3 pattern) of a 100 W charger redraw, and
+`tests/test_drawing_recipes.py` requires identical native partitions, a gate
+failure naming both locations for the bad drawing and a pass for the good one. Include both the original
 failure and a legitimate exception, such as a dense labeled interface or a
 necessary crossing. Check native pin partitions and trace the same reading task
 in both candidates. Extend to other pin arrangements and component counts before

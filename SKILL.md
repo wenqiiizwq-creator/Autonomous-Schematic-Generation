@@ -112,8 +112,16 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    Use `scripts/generate_schematic.py` when explicit positions are required.
    Both use MST pairing, bounded A*, field obstacles and explicit label policy.
    These are routing primitives, not automatic readability enforcement.
-   Establish functional spines/rails and local branches first; when routes
-   obscure those relationships, revise placement/fields and regenerate.
+   **Draw every sheet a person will read with the drawing recipes** in
+   `references/drawing-recipes.md` (`schematic_layout.recipes.Sheet`): state
+   anchors, series chains, shunts, banks, dividers, repeated lanes, rails and
+   labels in a short page script; positions follow from real pin geometry and
+   wires are explicit. Declare `rails` and `external` nets, follow the outline
+   rules O1-O8 and the per-part roles in `sheet.plan`, and record every intended
+   deviation with `justify`; the build report's structure audit must be PASS.
+   Do not hand-type coordinates for supporting parts, and do not hand a
+   readable page to MST/A*. On a recipe error, audit finding or gate failure,
+   change the structure (anchor, direction, gap, order, block) and rebuild.
    For a generated baseline use `--baseline` and `--lock-block`: keep the
    electrical diff and reject changes to protected symbols, fields, wires or
    UUIDs. Generate candidates in a new directory; apply a reviewed candidate to
@@ -135,6 +143,11 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    on the serialized file; inspect body overlap, wire-through-body, all visible
    fields/labels (including same-owner Reference/Value), pin legs, page/title
    regions and connection anchors. Unsupported geometry remains INSUFFICIENT.
+   Run `scripts/check_schematic_readability.py` on every generated or redrawn
+   sheet; it is mandatory and fails on any different-net wire crossing or
+   two-terminal connection with three or more bends, naming their locations.
+   Redraw instead of accepting; a waiver file entry needs a per-sheet count and
+   a reason (for example a crossing that a necessary loop cannot avoid).
    Run the existing schematic analyzer, then render through KiCad and inspect
    both the full page and crowded regions. Text estimates and JSON are not
    visual proof. Keep the exact file hash, KiCad version and evidence.
@@ -159,6 +172,7 @@ final delivery snapshot before reporting completion.
 
 6. **Close the review explicitly.** `AUTOMATED_PASS` is only the script gate;
    datasheet review and native visual review remain pending until performed.
+   A failing or unwaived readability gate blocks readability acceptance.
    Trace each block's declared reading tasks under
    `references/human-readable-routing.md` and record concrete path findings.
    A viewed-page checklist, fewer labels, or collision-free routing is not

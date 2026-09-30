@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, replace
 import math
 import re
 from .sexpr import all_nodes, first, value
-from .geometry import Box, TextField, union, parse_justify
+from .geometry import Box, TextField, parse_justify, text_extent, union
 
 Point = tuple[float, float]
 PAPERS = {
@@ -112,6 +112,43 @@ class Scene:
     junctions: list[Point] = field(default_factory=list)
     no_connects: list[Point] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
+
+
+# Global label styles whose native outline direction was verified by render
+# (KiCad 10.0.6): (angle, justify) -> direction the outline extends.
+GLOBAL_LABEL_STYLES = {
+    (0, frozenset({"right"})): (-1, 0),
+    (180, frozenset({"left"})): (1, 0),
+    (90, frozenset({"left"})): (0, -1),
+    (270, frozenset({"right"})): (0, 1),
+}
+
+
+@dataclass(frozen=True)
+class GlobalLabelText(TextField):
+    """A global label whose box is its native outline, not a rotated text field."""
+
+    outward: tuple = (1, 0)
+
+    def box(self) -> Box:
+        scale = self.font_mm / 1.27
+        length = text_extent(self.text, self.font_mm)[0] + 3.0 * scale
+        half = 1.5 * scale
+        x, y = self.x, self.y
+        dx, dy = self.outward
+        if dx:
+            x0, x1 = (x + 0.5, x + length) if dx > 0 else (x - length, x - 0.5)
+            return Box(x0, y - half, x1, y + half)
+        y0, y1 = (y + 0.5, y + length) if dy > 0 else (y - length, y - 0.5)
+        return Box(x - half, y0, x + half, y1)
+
+
+TESTED_LOCAL_LABELS = {
+    (0, frozenset({"left", "bottom"})),
+    (180, frozenset({"right", "bottom"})),
+    (90, frozenset({"left", "bottom"})),
+    (270, frozenset({"right", "bottom"})),
+}
 
 
 def read_scene(root):
@@ -317,15 +354,22 @@ def read_scene(root):
         scene.wires.append(tuple((float(p[1]), float(p[2])) for p in points))
     for kind in ("label", "global_label", "hierarchical_label", "text"):
         for n in all_nodes(root, kind):
-            scene.labels.append((kind, text_field(n, label=kind != "text")))
-            if kind == "label" and (
-                float(first(n, "at")[3]) != 0
-                or "right" in first(first(n, "effects", []), "justify", [])
-            ):
-                scene.gaps.append(
-                    "Local label angle/justification outside tested 0-degree style needs native review"
-                )
-            if kind in ("global_label", "hierarchical_label"):
+            f = text_field(n, label=kind != "text")
+            if kind == "label":
+                # KiCad draws local label text readable: 180 as 0 and 270 as 90,
+                # keeping the justification (native render, KiCad 10.0.6).
+                style = (round(f.angle) % 360, f.justify)
+                f = replace(f, angle=f.angle % 180)
+                if style not in TESTED_LOCAL_LABELS:
+                    scene.gaps.append(
+                        "Local label angle/justification outside the tested styles needs native review"
+                    )
+            scene.labels.append((kind, f))
+            if kind == "global_label" and (round(f.angle) % 360, f.justify) in GLOBAL_LABEL_STYLES:
+                outward = GLOBAL_LABEL_STYLES[(round(f.angle) % 360, f.justify)]
+                scene.labels[-1] = (kind, GlobalLabelText(f.text, f.x, f.y, f.angle, f.font_mm, f.bold,
+                                                          f.justify, outward))
+            elif kind in ("global_label", "hierarchical_label"):
                 scene.gaps.append(
                     f"{kind}: outline and attached fields need render review"
                 )

@@ -130,3 +130,31 @@
   are not distributed. The general generator remains a bounded single-sheet
   backend; this update does not claim arbitrary automatic board layout or
   electrical/production qualification of the examples.
+
+## Readable drawing construction (2026-09-30)
+
+- Root cause from a rejected 100 W charger redraw: blind coordinates and
+  page-spanning ground wires, not the router. Added `recipes.Sheet`
+  (`drawing-recipes.md`): supporting parts are placed from real pin geometry by
+  series/shunt/bank/divider/lane recipes with explicit wires, power symbols named
+  by net and fields placed last. Different-net contact, wires through bodies and
+  unnamed disconnected pieces are rejected at build time.
+- The readability checker is now a mandatory gate with reported locations and
+  reasoned per-sheet waivers. HR-07 fixes label roles, including small local
+  names on selected nets.
+- Regression pair `tests/fixtures/drawing/recipe_board.py`: identical native
+  partitions; the bad drawing reproduces the charger's support-net crossing and
+  two-terminal U-turn and fails the gate. The fixture is not a qualified design,
+  and the builder does not choose a topology's structure.
+- Outline rules O1-O8 with `Sheet.plan` (proposed part and net roles from
+  connectivity) and a structure audit; deviations need recorded reasons.
+  Vertical global/local labels and names, render-verified on KiCad 10.0.6; the
+  scene reader accepts the four tested local label styles. QA no longer reports
+  a pin's own straight exit through graphics that overhang its tip (11 such
+  findings on the charger v0.2.4 pages); foreign wires are still reported.
+- Nine-page charger redraw (v0.2.5) with recipes: native identity, partitions and
+  ERC by net group unchanged; readability, structure audit and geometry PASS on
+  all pages. Added from that work: `bank` lead/depth, draft builds, corner
+  fields, frame margin, named-part body clearance messages, coincident pads
+  counted once for junctions, rung-vs-lane planning fix, and native global-label
+  outlines in the scene reader (v0.2.4 pages: 60 QA errors -> 2).
