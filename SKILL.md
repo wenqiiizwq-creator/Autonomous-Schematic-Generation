@@ -56,7 +56,11 @@ schematic** — e.g. "add a 5V/5A TPS54560 circuit", "把原理图画成可读�
    hierarchy, read `references/existing-project-redraw.md`; preserve electrical
    identity and report inherited electrical gaps separately.
    For authorized electrical replacement or module expansion, read
-   `references/electrical-redesign.md` and `references/project-verification.md`.
+   `references/electrical-redesign.md`, `references/change-preflight.md` and
+   `references/project-verification.md`. Before drawing, declare changed objects,
+   coupled electrical effects and calculation guarantee conditions in a preflight
+   manifest. Bind changed design facts to BOM, notes and constraints; deliver with
+   `verify_design_change.py --preflight ...`. Conditional models remain conditional.
    For requested CopperPilot assistance, use
    `references/copperpilot-reference-workflow.md`; reference candidates still
    require independent electrical review and native verification.

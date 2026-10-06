@@ -97,3 +97,11 @@ performance. Keep source tables, footprint/population and performance checks.
 python3 -m unittest discover -s tests -p 'test_project_audit.py' -v
 python3 -m unittest discover -s tests -p 'test_design_change.py' -v
 ```
+
+
+## Electrical redesign preflight
+
+For electrical revisions also run the [change preflight](change-preflight.md) before
+writing the candidate and at final delivery. Include its status and unresolved
+assumptions alongside native/ERC/readability results. Artifact freshness alone does
+not detect a freshly generated stale note; facts bindings check declared current values.

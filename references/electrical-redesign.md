@@ -1,5 +1,12 @@
 # Expand and repair an existing circuit
 
+Before generation, follow [change-preflight.md](change-preflight.md): declare coupled
+impacts independently of the candidate, check parameter guarantee conditions, and
+run `verify_design_preflight.py --before-generation`. At delivery use
+`verify_design_change.py --preflight` to combine the native change contract with
+current BOM/notes/constraint consistency. A conditional suggestion is not a verified fix.
+
+
 Use for authorized electrical changes, including replacement of purchased
 modules with concrete board circuits. For presentation-only work use
 [existing-project-redraw.md](existing-project-redraw.md); executable checks are
