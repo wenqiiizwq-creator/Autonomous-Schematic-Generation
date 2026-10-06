@@ -16,20 +16,26 @@ DOMAINS = ('supply', 'drive', 'voltage_stress', 'current_power', 'protection', '
 
 
 def contract_objects(contract):
-    refs = set(contract.get('remove_components', []))
-    refs.update(contract.get('add_components', {}))
-    refs.update(contract.get('component_changes', {}))
+    endpoints = set(contract.get('remove_components', [])) | set(contract.get('add_components', {}))
+    refs = endpoints | set(contract.get('component_changes', {}))
     for replacement in contract.get('replace_partitions', []):
+        groups = {}
         for side in ('before', 'after'):
+            groups[side] = {}
             for group in replacement.get(side, []):
-                refs.update(pin.rsplit('.', 1)[0] for pin in group)
+                # Pins of added/removed parts appear or vanish by declaration; joining an existing
+                # net does not rewire its other members. Those belong in affected_objects instead.
+                kept = frozenset(pin for pin in group if pin.rsplit('.', 1)[0] not in endpoints)
+                groups[side].update((pin, kept) for pin in kept)
+        before, after = groups['before'], groups['after']
+        refs.update(pin.rsplit('.', 1)[0] for pin in before.keys() | after.keys() if before.get(pin) != after.get(pin))
     return refs
 
 
 def read_binding(path, binding):
     kind = binding.get('format')
     if kind == 'json':
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding='utf-8-sig'))
         pointer = binding.get('pointer')
         if not isinstance(pointer, str) or not pointer.startswith('/'):
             raise ValueError('JSON binding requires a non-root pointer')
@@ -38,7 +44,7 @@ def read_binding(path, binding):
             value = value[int(token)] if isinstance(value, list) else value[token]
         return value
     if kind == 'csv':
-        with path.open(newline='') as stream:
+        with path.open(newline='', encoding='utf-8-sig') as stream:
             rows = list(csv.DictReader(stream))
         selected = [r for r in rows if r.get(binding['key_column']) == binding['key']]
         if len(selected) != 1:
@@ -49,7 +55,7 @@ def read_binding(path, binding):
         if not text(pattern):
             raise ValueError('text binding needs a pattern with one capture group')
         compiled = re.compile(pattern, re.MULTILINE)
-        matches = list(compiled.finditer(path.read_text()))
+        matches = list(compiled.finditer(path.read_text(encoding='utf-8-sig')))
         if compiled.groups != 1 or len(matches) != 1:
             raise ValueError('text binding must match exactly once with one capture group')
         return matches[0].group(1)
@@ -65,6 +71,8 @@ def verify_preflight(manifest, root, contract=None, artifacts=True):
     changed = manifest.get('changed_objects')
     if not isinstance(changed, list) or not changed or not all(text(x) for x in changed) or len(set(changed)) != len(changed):
         errors.append('changed_objects must be nonempty unique strings'); changed = []
+    if contract is not None and not isinstance(contract, dict):
+        errors.append('design contract must be an object'); contract = None
     if contract is not None:
         if manifest.get('baseline_sha256') != contract.get('baseline_sha256') or not text(manifest.get('baseline_sha256')):
             errors.append('preflight and design contract must bind the same baseline SHA256')
@@ -109,7 +117,10 @@ def verify_preflight(manifest, root, contract=None, artifacts=True):
                 links = check.get('calculation_ids')
                 if not isinstance(links, list) or not links or not all(text(k) and k in calculations for k in links):
                     errors.append(label + ': link known calculations'); continue
-                if any(calculations[k]['status'] != 'SUPPORTED' for k in links):
+                failed = sorted(k for k in links if calculations[k]['status'] == 'FAIL')
+                if failed:  # Guaranteed conditions cover it and the margin is missed: a computed violation.
+                    errors.append(label + ': linked calculation fails acceptance: ' + ', '.join(failed))
+                elif any(calculations[k]['status'] != 'SUPPORTED' for k in links):
                     pending.append(label)
             elif disposition == 'DOCUMENTED' and domain == 'documentation':
                 if not evidence(check.get('evidence')):
@@ -165,7 +176,7 @@ def main():
         result = verify_preflight(json.loads(source.read_text()), args.root or source.parent,
                                   json.loads(Path(args.contract).read_text()) if args.contract else None,
                                   artifacts=not args.before_generation)
-    except (ValueError, OSError, TypeError) as exc:
+    except (ValueError, OSError, TypeError, KeyError, AttributeError) as exc:
         result = {'status': 'FAIL', 'errors': [str(exc)]}
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open('x') as stream:

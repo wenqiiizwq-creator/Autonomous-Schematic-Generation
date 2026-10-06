@@ -6,6 +6,8 @@
 反推出来的“预期变化”。根据需求、SR 当前规则下的修改建议和原厂资料先确定：
 
 - changed_objects：改动器件/参数/模型的稳定标识，与 contract 的增删器件、值及连线变化核对。
+  新增/删除器件只是挂上或离开已有网络时，该网络上其他未改器件不算 changed，列入 affected_objects；
+  引脚之间连接关系真正改变（拆分、合并、改接）的器件才必须作为 changed_objects。
 - 每个 trigger 的 affected_objects：包含电气依赖的未改器件，例如偏置绕组变化影响
   控制器供电、驱动幅度、栅极电荷预算、整流二极管反压、电容耐压、稳压支路功耗。
 - 每个 trigger 都分类 supply、drive、voltage_stress、current_power、protection、
@@ -22,7 +24,7 @@ python3 scripts/verify_design_preflight.py design-preflight.json \
 
 PASS 只表示声明的预检查通过。CONDITIONAL 允许在用户已授权的方案范围内继续制作
 明确标为条件设计的候选图；必须列出未关闭假设，不宣称可冻结/可投板。结构或算术错误 FAIL
-先修正。工具不能自动证明 affected_objects 已穷尽，仍需工程师复核耦合链。
+先修正；保证条件覆盖下算得不满足门槛（计算状态 FAIL）是已算出的违规，预检查同样 FAIL。工具不能自动证明 affected_objects 已穷尽，仍需工程师复核耦合链。
 
 ## 出图后：一份当前事实核对所有产物
 

@@ -74,6 +74,42 @@ class PreflightTests(unittest.TestCase):
         self.assertEqual(self.verify()['status'], 'FAIL')
         self.assertEqual(contract_objects({'replace_partitions': [{'before': [['J1.1', 'R1.2']], 'after': [['J1.1'], ['R1.2']]}]}), {'J1', 'R1'})
 
+    def test_joining_an_existing_net_does_not_mark_its_other_members_changed(self):
+        rail = ['U1.1', 'U2.3', 'C5.1', 'J1.2']
+        added = {'add_components': {'R10': {'identity': {}, 'pins': ['1', '2']}},
+                 'replace_partitions': [{'before': [rail, ['U1.2']], 'after': [rail + ['R10.1'], ['U1.2', 'R10.2']]}]}
+        self.assertEqual(contract_objects(added), {'R10'})
+        removed = {'remove_components': ['R10'], 'replace_partitions': [{'before': [rail + ['R10.1']], 'after': [rail]}]}
+        self.assertEqual(contract_objects(removed), {'R10'})
+        moved = {'replace_partitions': [{'before': [rail, ['U1.2']], 'after': [['U1.1', 'U2.3'], ['C5.1', 'J1.2', 'U1.2']]}]}
+        self.assertEqual(contract_objects(moved), {'U1', 'U2', 'C5', 'J1'})
+
+    def test_failed_guaranteed_calculation_is_a_violation_not_conditional(self):
+        self.manifest['calculations'][0].update(acceptance={'operator': '>=', 'value': 6, 'unit': 'mA'}, claim='FAIL')
+        result = self.verify()
+        self.assertEqual(result['status'], 'FAIL')
+        self.assertTrue(any('fails acceptance: BIAS' in e for e in result['errors']), result['errors'])
+
+    def test_utf8_bom_exports_are_read(self):
+        bom = '\ufeff'.encode('utf-8')
+        (self.root/'bom.csv').write_bytes(bom + b'Ref,Turns\nT1,4\n')
+        (self.root/'constraints.json').write_bytes(bom + b'{"T1":{"turns":"4"}}')
+        (self.root/'notes.txt').write_bytes(bom + b'T1 bias turns=4\n')
+        self.manifest['artifact_bindings'] += [
+            {'fact': 'bias_turns', 'path': 'bom.csv', 'format': 'csv', 'key_column': 'Ref', 'key': 'T1', 'column': 'Turns'},
+            {'fact': 'bias_turns', 'path': 'constraints.json', 'format': 'json', 'pointer': '/T1/turns'}]
+        self.assertEqual(self.verify()['errors'], [])
+
+    def test_malformed_contract_reports_fail_instead_of_crashing(self):
+        self.assertEqual(verify_preflight(self.manifest, self.root, ['not', 'a', 'contract'])['status'], 'FAIL')
+        path, contract = self.root/'manifest.json', self.root/'contract.json'
+        path.write_text(json.dumps(self.manifest)); contract.write_text('[]')
+        command = [sys.executable, '-B', str(Path(__file__).resolve().parents[1]/'scripts/verify_design_preflight.py'),
+                   str(path), '--contract', str(contract), '--out', str(self.root/'out.json')]
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads((self.root/'out.json').read_text())['status'], 'FAIL')
+
     def test_before_generation_checks_impact_without_existing_outputs(self):
         (self.root/'notes.txt').unlink()
         self.assertEqual(self.verify(artifacts=False)['status'], 'PASS')
