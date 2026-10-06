@@ -242,7 +242,10 @@ def make_root(intent, layout, name, dirs=()):
         at = placement["at"]
         angle = placement.get("rotation", 0)
         mirror = placement.get("mirror", "")
-        grid_point(at, grid)
+        try:
+            grid_point(at, grid)
+        except ValueError as exc:
+            raise ValueError(f"{ref}: symbol origin off grid ({exc})") from None
         if angle not in (0, 90, 180, 270) or mirror not in ("", "x", "y"):
             raise ValueError(
                 f"{ref}: only orthogonal rotations and single-axis mirrors supported"

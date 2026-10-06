@@ -46,6 +46,12 @@ tied to that part/package; do not strip suffixes or punctuation globally to make
 comparisons pass. The XML `+no_connect` marker is separate from electrical type.
 Manufacturer function, library type and native wiring are distinct evidence.
 
+Generic family names do not fix a pinout. Before authoring or reusing a symbol for a
+discrete part, read the pinning table of the exact orderable MPN: for example the KiCad
+library `BCX56` (SOT-89) numbers pins 1=B 2=C 3=E, while Nexperia BCX56-16TX (BCX56T
+series) is 1=E 2=C 3=B, so the generic symbol would swap base and emitter. Record the
+MPN-bound pin table in the device contract before placing the part.
+
 Check footprint pad-number sets, then independently check manufacturer package
 drawing, pitch, exposed pad, pad dimensions and orientation. Matching pad-number
 sets do not validate mechanical footprints. Missing MPNs, unresolved library

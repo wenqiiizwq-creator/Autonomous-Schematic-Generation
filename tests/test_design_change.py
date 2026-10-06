@@ -67,6 +67,20 @@ class ChangeTests(unittest.TestCase):
         c.pop("replace_partitions")
         with self.assertRaises(ValueError):verify_change(self.old, self.new, c)
 
+    def test_replaced_component_with_renumbered_and_extra_pins(self):
+        c = {"schema_version": 1, "remove_components": ["R2"],
+             "add_components": {"R2": {"identity": identity("2k2"), "pins": ["A", "B", "C"]}},
+             "replace_partitions": [{"before": [self.groups[0], self.groups[2]],
+                                     "after": [["R1.1", "R2.A"], ["R2.B"], ["R2.C"]]}]}
+        r2 = identity("2k2")
+        write_xml(self.new, {"R1": identity(), "R2": r2}, [["R1.1", "R2.A"], ["R1.2"], ["R2.B"], ["R2.C"]])
+        self.assertEqual(verify_change(self.old, self.new, c)["status"], "PASS")
+        c["add_components"]["R2"]["pins"] = ["A", "B"]          # undeclared new pin C -> invented
+        with self.assertRaisesRegex(ValueError, "physical pins"):verify_change(self.old, self.new, c)
+        c2 = copy.deepcopy(c); c2.pop("remove_components")     # re-adding a kept reference stays invalid
+        c2["add_components"]["R2"]["pins"] = ["A", "B", "C"]
+        with self.assertRaisesRegex(ValueError, "Invalid added component"):verify_change(self.old, self.new, c2)
+
     def test_value_footprint_and_dnp_changes_need_before_after(self):
         for key, v in [("value", "9k"), ("footprint", "Resistor_SMD:R_0603_1608Metric"), ("dnp", True)]:
             with self.subTest(key=key):

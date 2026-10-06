@@ -599,6 +599,9 @@ DigiKey is best (direct PDF URLs). element14 is reliable (no bot protection). LC
 - `<project>/docs/` or `<project>/documentation/`
 - PDF files in the project directory whose names contain MPNs
 - `Datasheet` property URLs embedded in the KiCad symbols
+- The HardwareWiki datasheet library (`~/Documents/知识库/HardwareWiki/raw/Datasheet/`, files named `Vendor - PartNumber.pdf`)
+
+**Copy new downloads into HardwareWiki:** After saving a newly downloaded component datasheet in the project, also copy it to `~/Documents/知识库/HardwareWiki/raw/Datasheet/<category>/<subcategory>/`. Skip it if raw/ already holds the same hash or part. Name it `Vendor - PartNumber.pdf` using the vendor short names in `raw/Datasheet/VENDORS.yaml` (register a new vendor there first), and classify with `raw/Datasheet/元器件体系/器件统一分类大表.md`; parts with no category go to `ZZ_其他` and are reported. Copy the original bytes only — do not change project paths or trigger wiki ingestion. Reference designs and eval-board manuals are copied too, into `raw/Designexample/<topology>/<board>/` named `Vendor - BoardName - Title.pdf`; app notes and standards do not go in the Datasheet folder.
 
 **Fallback methods when automated sync isn't available or misses parts:**
 1. Use the `Datasheet` property URL from the schematic symbol — many KiCad libraries include direct PDF links

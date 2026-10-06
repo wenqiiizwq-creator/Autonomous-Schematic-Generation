@@ -135,6 +135,14 @@ wire dropped through the +5 V spine and the LED reversed into a U-turn. The gate
 names the crossing (`+5V`/`FB`) and the tortuous connection (`D3.2`, `R3.2`);
 the structure audit names D3, placed by hand although its role is a shunt.
 
+## Keep the generator with the delivery
+
+Store the page scripts (intent derivation, recipe redraw, assembly) inside every delivered
+revision directory, next to the native project. The next electrical revision regenerates only
+its changed pages from the previous revision's intent plus these scripts; a delivery without its
+generator forces hand edits of readable pages, which this workflow forbids. Directory clean-ups
+must not delete a revision's generator while a later revision still derives from it.
+
 ## Limits
 
 - The agent chooses structure; nothing here recognizes a topology.

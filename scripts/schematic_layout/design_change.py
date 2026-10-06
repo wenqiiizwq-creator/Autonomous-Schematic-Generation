@@ -107,7 +107,9 @@ def verify_change(before_path, after_path, contract):
         del expected_components[ref]
     added_pins = set()
     for ref, data in contract.get("add_components", {}).items():
-        if ref in old["components"] or ref.startswith("#") or set(data) != {"identity", "pins"}:
+        # A reference listed in remove_components may be re-added: a symbol/package replacement whose
+        # physical pins are renumbered or extended. Its old pins are dropped and every new pin must be declared.
+        if (ref in old["components"] and ref not in removed) or ref.startswith("#") or set(data) != {"identity", "pins"}:
             raise ValueError("Invalid added component")
         expected_components[ref] = _identity(data["identity"])
         pins = data["pins"]

@@ -69,7 +69,7 @@ XML hash for stored/reused contracts. Reports bind both actual XML hashes.
 | Optional field | Meaning |
 | --- | --- |
 | `remove_components` | Unique list of baseline references; affected nets also need explicit replacement. |
-| `add_components` | New reference → `{ "identity": ..., "pins": ["1", "2"] }`; list all physical pin numbers. |
+| `add_components` | New reference → `{ "identity": ..., "pins": ["1", "2"] }`; list all physical pin numbers. A reference also listed in `remove_components` is a replacement (symbol/package swap with renumbered or additional pins): its old pins are dropped and every new pin must appear in `replace_partitions`. |
 | `component_changes` | Existing reference → identity field → exact `before` / `after`; verify the baseline precondition. |
 | `replace_partitions` | List of `{ "before": [["J1.1", "R1.1"]], "after": [["J1.1"], ["R1.1"]] }`; each inner list is a complete physical net. Empty outer lists mean no nets, not empty nets. |
 | `named_nets` | Required exact candidate names → complete pin sets; declare interfaces whose names matter downstream. |
