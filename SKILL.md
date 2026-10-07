@@ -142,6 +142,14 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 - 交接给 `schematic-review` 的内容：工程文件和哈希、电气意图、需求追溯表、器件合同、计算、OPEN 清单、
   `summary.json` 和目检记录。报告时如实写出 PASS/FAIL/INSUFFICIENT 各项及其数量（含零）。
 
+## 有状态工作流交接
+
+参与 ASG/SR 薄控制器流程时，读 [工作流交接合同 v1](references/workflow-handoff.md)。
+以 `task.json` 的需求、版本、前版设计和审查问题为输入；架构生成、取证、计算与改图仍由 ASG 完成。
+交付原有设计与证据；用控制器 `pack-result` 自动生成 `result.json`，无需手填 hash 或候选版本。
+日常出图与整改沿用当前版本，关键交接检查当前依赖；重要变化和冻结记录里程碑。
+控制器只验交接与新鲜度，不替 ASG 自检或 SR 电气审查；独立使用本技能不依赖控制器。
+
 ## ASG 自检与 schematic-review 的分工
 
 | ASG 出图时自检 | 交 schematic-review |
