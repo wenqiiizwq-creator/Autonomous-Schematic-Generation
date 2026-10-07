@@ -41,6 +41,7 @@ ASG 不负责以下事项：
 | 从需求做新设计 | 主流程第 0–8 步 |
 | 给已有工程新增模块或页面 | 第 0 步只读相关需求，第 2–8 步；改动已有网络时按“电气改版” |
 | 重画已有工程，电气不变 | [existing-project-redraw.md](references/existing-project-redraw.md) 冻结基线，再走第 4–8 步 |
+| 已授权、保持连线与图面的 Value 参数修改 | [value-patch.md](references/value-patch.md) 生成原生验证候选，再更新意图/脚本与计算，走第 6–8 步和 SR 复审 |
 | 授权的电气改版 | 先读 [electrical-redesign.md](references/electrical-redesign.md) 和 [change-preflight.md](references/change-preflight.md)，再走主流程 |
 | 从 PDF 参考设计提取电路 | [pdf-schematic-extraction.md](references/pdf-schematic-extraction.md)；提取结果只作线索，仍按第 2 步核对手册 |
 | 模块化数据、SKiDL/circuit-synth 导入、锁定基线 | [circuit-ir.md](references/circuit-ir.md)。人读的页面仍按第 5 步用 recipes 画 |

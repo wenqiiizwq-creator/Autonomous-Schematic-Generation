@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "80af6d3169f03336a32148390adb18a6dcab1eae",
+  "case": "RC filter fixture, no explicit design_id; R1 1k to 2k",
+  "uuid_count": 32,
+  "regenerated_uuid_replacements": 32,
+  "patched_uuid_replacements": 0,
+  "patched_exact_value_token_only": true,
+  "baseline_sha256_unchanged": true,
+  "scope": "One synthetic native RC fixture, not a general timing/accuracy benchmark. Existing regeneration can preserve UUIDs when a stable design_id is supplied.",
+  "regenerated_native_change": "PASS",
+  "patched_native_change": "PASS",
+  "unit_tests_before": 211,
+  "unit_tests_after": 224,
+  "new_patch_tests": 13,
+  "python": "3.13.13",
+  "kicad": "10.0.6",
+  "diff_check": "PASS",
+  "skill_validation": "PASS"
+}
