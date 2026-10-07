@@ -52,10 +52,12 @@ library `BCX56` (SOT-89) numbers pins 1=B 2=C 3=E, while Nexperia BCX56-16TX (BC
 series) is 1=E 2=C 3=B, so the generic symbol would swap base and emitter. Record the
 MPN-bound pin table in the device contract before placing the part.
 
-Check footprint pad-number sets, then independently check manufacturer package
-drawing, pitch, exposed pad, pad dimensions and orientation. Matching pad-number
-sets do not validate mechanical footprints. Missing MPNs, unresolved library
-paths or unavailable package drawings remain explicit gaps.
+When footprints are assigned, check footprint pad-number sets, then
+independently check manufacturer package drawing, pitch, exposed pad, pad
+dimensions and orientation. Matching pad-number sets do not validate mechanical
+footprints. At the schematic stage footprints may stay empty; the pin map of the
+exact MPN is still required. Missing MPNs, unresolved library paths or
+unavailable package drawings remain explicit gaps.
 
 ## Detect internal pin-leg faults without moving electrical endpoints
 

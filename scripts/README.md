@@ -14,7 +14,15 @@ built SKiDL Circuit. Neither executes an input Python file.
 `generate_schematic.py` consumes separate electrical intent and layout JSON,
 writes a new single-sheet project, and runs native ERC/XML/PDF verification.
 `check_schematic_geometry.py` inspects a serialized native schematic read-only.
-Both use `schematic_layout/` (standard-library runtime). See
+Both use `schematic_layout/` (standard-library runtime).
+
+Readable pages are drawn with `schematic_layout.recipes.Sheet`
+([`drawing-recipes.md`](../references/drawing-recipes.md));
+`schematic_layout.pages.page_intents()` splits one board intent into page
+intents with their external nets and rails. `verify_schematic.py` runs every
+automated drawing gate on a saved root sheet (ERC, intent partitions and
+identity, hierarchy/PDF, symbol integrity, readability, per-sheet geometry,
+optional reference and change contracts) and writes `summary.json`. See
 [`schematic-generation.md`](../references/schematic-generation.md) for schema,
 commands, supported objects, limitations and `AUTOMATED_PASS` semantics.
 

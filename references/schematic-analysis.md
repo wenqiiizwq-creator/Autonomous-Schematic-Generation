@@ -33,7 +33,7 @@ Follow this sequence for a thorough schematic review. Each step builds on the pr
 
 ### Step 1: Run the schematic analyzer
 
-Run `analyze_schematic.py` on the schematic file (see SKILL.md for the command). The JSON output provides:
+Run `analyze_schematic.py` on the schematic file (see analysis-toolkit.md for the command). The JSON output provides:
 - Component inventory grouped by type, with values, footprints, MPNs
 - Full net connectivity map with pin-to-net mapping
 - **Automated subcircuit detection** (in `findings[]`, filtered by `detector` field): power regulators, voltage dividers, RC/LC filters, op-amp circuits, transistor circuits, bridge circuits, protection devices, current sense, crystal circuits, feedback networks, decoupling analysis, plus domain-specific detections (RF chains/matching, BMS, Ethernet, HDMI/DVI, memory interfaces, key matrices, isolation barriers, addressable LEDs, battery chargers, motor drivers, ESD protection audit, debug interfaces, power path/load switches, ADC signal conditioning, reset/supervisor circuits, clock distribution, display/touch interfaces, sensor fusion, level shifters, audio circuits, LED driver ICs, RTC circuits, LED lighting audit, thermocouple/RTD, power sequencing validation)
@@ -93,7 +93,7 @@ The analyzer's `findings[]` array automatically identifies most subcircuits (fil
 
 **Datasheets are mandatory for verification — not optional reference material.** Without datasheets, you cannot confirm that the schematic's pin assignments match reality. Every IC pinout verification in Step 2 requires the datasheet's pin table as ground truth.
 
-**Automated sync (preferred):** If the `digikey` skill is installed, run `sync_datasheets.py` on the schematic. This should have been done in the workflow's Step 3 (see SKILL.md). If not done yet, run it now:
+**Automated sync (preferred):** If the `digikey` skill is installed, run `sync_datasheets.py` on the schematic. This should have been done before analysis (see analysis-toolkit.md). If not done yet, run it now:
 
 ```bash
 python3 <digikey-skill-path>/scripts/sync_datasheets.py <file.kicad_sch>

@@ -158,3 +158,27 @@
   fields, frame margin, named-part body clearance messages, coincident pads
   counted once for junctions, rung-vs-lane planning fix, and native global-label
   outlines in the scene reader (v0.2.4 pages: 60 QA errors -> 2).
+
+## Requirements-first drawing focus (2026-10-07)
+
+- SKILL.md now covers only the drawing flow from requirement documents to a
+  verified schematic (936 → about 200 lines). Strict review is handed to
+  `schematic-review`; the analyzer documentation moved unchanged to
+  `references/analysis-toolkit.md`, without the mandatory SPICE/EMC review
+  contract (those companion skills and `analyze_emc.py` are not shipped).
+- New `references/requirements-to-intent.md`: requirement inventory, function
+  trace, board intent format (`fields.Circuit` page key), OPEN items, handoff.
+- Outline rules: O1 covers controller pages and folding a long path (the O1/O8
+  conflict is removed), O2 groups anchors of one function, O3 resolves parts on
+  nets shared by several anchors and anchor-less chains, O4 places negative
+  rails; the audit coverage table states that the structure audit covers O4
+  and O6 only.
+- From the charger v0.4.0 project scripts: `Sheet.place(..., pin=, facing=,
+  order=)` and `Sheet.orient()` replace project helpers that used the private
+  `_shape`; `schematic_layout.pages.page_intents()` splits a board intent into
+  page intents with external nets and page rails; `scripts/verify_schematic.py`
+  replaces per-project gate runners. On charger v0.4.0 it reproduces the
+  project's own results in about 3 s (intent partitions, hierarchy, symbols,
+  readability PASS; the eight inherited `power_pin_not_driven` ERC findings;
+  root `System_block` geometry INSUFFICIENT for sheet/polyline objects).
+

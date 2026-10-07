@@ -289,6 +289,25 @@ class RecipeRejectionTests(unittest.TestCase):
         intent = copy.deepcopy(INTENT)
         return Sheet(intent)
 
+    def test_place_by_pin_and_required_exits(self):
+        s = self.sheet()
+        s.place('U1', (101.6, 50.8), pin='1', facing={'1': RIGHT}, order=('2', '4', 1))
+        self.assertEqual(((101.6, 50.8), RIGHT), s.pins['U1.1'])
+        self.assertLess(s.point('U1.2')[1], s.point('U1.4')[1])
+        self.assertEqual(s.orient('U1', {'1': RIGHT}, ('2', '4', 1)),
+                         (s.placements['U1']['rotation'], s.placements['U1']['mirror']))
+        upright = self.sheet()
+        upright.place('U1', (101.6, 50.8), pin='1')
+        self.assertEqual((101.6, 50.8), upright.point('U1.1'))
+        self.assertEqual(0, upright.placements['U1']['rotation'])
+
+    def test_orient_rejects_unknown_pins_and_impossible_exits(self):
+        s = self.sheet()
+        with self.assertRaisesRegex(ValueError, 'no pins'):
+            s.orient('U1', {'99': RIGHT})
+        with self.assertRaisesRegex(ValueError, 'no orientation'):
+            s.orient('C2', {'1': RIGHT, '2': RIGHT})
+
     def test_pin_cannot_face_an_impossible_direction(self):
         s = self.sheet()
         s.place('U1', (101.6, 50.8))

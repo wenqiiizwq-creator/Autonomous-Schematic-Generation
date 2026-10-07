@@ -639,7 +639,7 @@ Focus on: power sequencing (EN/PG chains from analyzer), input protection (TVS, 
 
 ## Cross-Referencing with Raw Schematic
 
-The analyzer can silently produce plausible but incorrect results. Cross-reference against the raw `.kicad_sch` AND manufacturer PDF datasheets to catch these. Internal consistency checks (schematic matches PCB matches analyzer) are necessary but not sufficient — they only prove the design agrees with itself, not that it matches the real-world parts. The full verification procedure is in SKILL.md — the key checks are:
+The analyzer can silently produce plausible but incorrect results. Cross-reference against the raw `.kicad_sch` AND manufacturer PDF datasheets to catch these. Internal consistency checks (schematic matches PCB matches analyzer) are necessary but not sufficient — they only prove the design agrees with itself, not that it matches the real-world parts. The full verification procedure is in analysis-toolkit.md — the key checks are:
 
 1. **Component count**: Analyzer total vs `grep -c '(lib_id' file.kicad_sch` (subtract power symbols)
 2. **Pin-to-net mapping**: Verify against raw schematic for each component. Cross-reference IC pin assignments against **manufacturer PDF datasheets** (not KiCad library symbols — the library is the potential source of error). Cite datasheet page/section numbers.

@@ -239,8 +239,38 @@ class Sheet:
         return self.nets.get(target) if isinstance(target, str) else self.net_at(target)
 
     # ----- placement ------------------------------------------------------
-    def place(self, ref, at, rotation=0, mirror=""):
-        """Place an anchor device explicitly (controllers, connectors, magnetics)."""
+    def orient(self, ref, facing, order=None):
+        """First (rotation, mirror) in which each pin of ``facing`` ({pin: direction}) exits that way.
+
+        ``order=(a, b, axis)`` also keeps pin ``a`` before pin ``b`` along x (0) or y (1).
+        """
+        if ref not in self.components:
+            raise ValueError(f"Unknown reference {ref}")
+        for rot, mir in ORIENTATIONS:
+            pins, _ = self._shape(ref, rot, mir)
+            missing = [str(k) for k in facing if str(k) not in pins]
+            if missing:
+                raise ValueError(f"{ref} has no pins {missing}")
+            if all(pins[str(k)][1] == tuple(d) for k, d in facing.items()) and (
+                    order is None or pins[str(order[0])][0][order[2]] < pins[str(order[1])][0][order[2]]):
+                return rot, mir
+        raise ValueError(f"{ref}: no orientation gives pin exits {facing}; change the requested sides")
+
+    def place(self, ref, at, rotation=0, mirror="", pin=None, facing=None, order=None):
+        """Place an anchor device explicitly (controllers, connectors, magnetics).
+
+        ``facing`` ({pin: direction}, optional ``order``) chooses rotation and
+        mirror from the required pin exits; see ``orient``. With ``pin``, ``at``
+        is where that pin's tip lands instead of the symbol origin.
+        """
+        if facing:
+            rotation, mirror = self.orient(ref, facing, order)
+        if pin is not None:
+            pins, _ = self._shape(ref, rotation, mirror)
+            if str(pin) not in pins:
+                raise ValueError(f"{ref} has no pin {pin}")
+            q = pins[str(pin)][0]
+            at = (at[0] - q[0], at[1] - q[1])
         self.decisions.append({"recipe": "place", "parts": [ref]})
         return self._place(ref, at, rotation, mirror)
 

@@ -14,7 +14,8 @@ placing support parts from their pins with explicit spines, had 0 crossings and
 ## Workflow
 
 1. Write the presentation plan (reading path, blocks, rails, labels) per
-   human-readable-routing.md section 1.
+   human-readable-routing.md section 1. For a board, get each page's intent and
+   external nets from `pages.page_intents(board, rails=...)`.
 2. `sheet = Sheet(intent, rails={...}, external=[...])` and read `sheet.plan`:
    the proposed role of every part and the label role of every net.
 3. Write the page script following the outline rules below: place anchors,
@@ -25,32 +26,41 @@ placing support parts from their pins with explicit spines, had 0 crossings and
    any hard defect (see below); fix the structure, not the symptom.
 5. `report["structure"]` must be PASS: every finding is either fixed or a
    recorded deviation with its reason.
-6. Native checks: netlist partition identity (`compare_netlist(xml, intent,
-   report["layout"])`), ERC, `check_schematic_geometry.py`, symbol integrity.
-7. Mandatory: `scripts/check_schematic_readability.py` on the written sheet.
-8. Render natively and trace each declared reading task.
+6. Run `scripts/verify_schematic.py <root.kicad_sch> --intent <intent.json>
+   --out <fresh dir>`: native ERC, intent partitions and identity, hierarchy/PDF,
+   symbol integrity, the mandatory readability gate and geometry on every
+   active sheet, in one pass. `compare_netlist(xml, intent, report["layout"])`
+   additionally checks a single page's label and rail names.
+7. Render natively and trace each declared reading task.
 
 ## Outline rules (how to decide the structure)
 
 The agent owns the topology decisions; these rules make them repeatable. Apply
-them in order; later rules never override earlier ones.
+them in order. A later rule refines an earlier one and never reverses it; only
+O8 changes an earlier decision, in the order it states.
 
 | # | Decision | Rule |
 | --- | --- | --- |
-| O1 | Page flow | The main energy/signal path runs left to right along one row, from the input interface to the output interface. A second path gets its own row below; rows are ordered by the path's position in the system. |
-| O2 | Anchors | Anchors are parts with three or more pins and connectors. One block per anchor; place anchors first, on the main row in path order, upright. Rotate or mirror only when the pin sides otherwise invert the flow (inputs should face upstream). |
-| O3 | Ownership | A two-pin part belongs to the anchor whose pin net it touches; a part between two anchors belongs to the path between them and is drawn in path order. Never draw a support part inside another anchor's block. |
-| O4 | Recipe by role | Use the proposed role from `sheet.plan`: `series` on the path axis; `shunt` off its node toward its rail (returns down, supplies up); `bank` for parallel parts on the same nets, as one bank with one return; `divider` stacked with the tap sideways to the sense pin; `lane_*` as identical series+shunt lanes with the same arrangement; `decoupling` as a shunt or bank at its anchor's supply pin. |
+| O1 | Page flow | Pick the page's reading task first. A **path page** (power stage, filter, protected interface) runs its main energy/signal path left to right along one row, from the input interface to the output interface; a second path gets its own row below, rows ordered by their position in the system. When the main path is wider than the drawing area, fold it into the next row at a node that is already a bank, rail or test point; a fold continues the same path. A **controller page** (MCU, PD/protocol controller, PHY) centres the controller; each pin group's support circuit sits on that pin group's side, and external interfaces sit on the page edge facing their connector or sheet. |
+| O2 | Anchors | Anchors are parts with three or more pins and connectors (`sheet.plan` proposes them). Place anchors first, upright where possible; rotate or mirror (`place(..., facing=...)`) only so inputs face upstream and outputs downstream. Anchors that form one function, such as a controller with its FETs or a driver with its bridge, share one block; otherwise one block per anchor, in path order. |
+| O3 | Ownership | A two-pin part belongs to the anchor whose pin net it touches. If several anchors share that net, it belongs to the pin that gives it its function (a pull-up to the open-drain output it pulls, a bypass to the supply pin it decouples, a gate resistor to its gate), else to the first anchor in path order. A part between two anchors, or in a passive chain with no anchor pin, belongs to the path segment it lies on and is drawn in path order. Never draw a support part inside another anchor's block. |
+| O4 | Recipe by role | Use the proposed role from `sheet.plan`: `series` on the path axis; `shunt` off its node toward its rail (returns down, positive supplies up, a negative rail below its return); `bank` for parallel parts on the same nets, as one bank with one return; `divider` stacked with the tap sideways to the sense pin; `lane_*` as identical series+shunt lanes with the same arrangement; `decoupling` as a shunt or bank at its anchor's supply pin. |
 | O5 | Pin exits | Start each branch from the pin along its outward direction (`stub`, or a recipe started at the pin). A support branch that must reach a pin on the far side of its anchor goes over or under the anchor block, never through another branch; if that is impossible, move the part to that pin's side. |
 | O6 | Rails and labels | Rails and returns are power symbols from the declared `rails`; global labels only on `external` nets; small names on the plan's `name` nets; a local join label only with a boundary reason. |
-| O7 | Spacing | Recipe gaps are at least two grid steps; widen a gap before moving parts by hand. A net that carries a small name needs one straight run longer than the name plus two grid steps. A vertical part with a long value needs that text width free on one side. Pins 7.62 mm apart cannot both hang a shunt down: fold one branch up or make the lower pin's run shorter than the upper one's. Blocks are separated by more space than parts inside a block. |
-| O8 | Repair order | On a build error or failing gate, first change the recipe direction, gap or order; then the anchor position; then split the block into rows. Never add a label to hide a failed wire. |
+| O7 | Spacing | Recipe gaps are at least two grid steps; widen a gap before moving parts by hand. A net that carries a small name needs one straight run longer than the name plus two grid steps. A vertical part with a long value needs that text width free on one side. Blocks are separated by more space than parts inside a block. |
+| O8 | Repair order | On a build error or failing gate, first change the recipe direction, gap or order; then the anchor position or orientation; then fold the path or split the block into rows (O1). Never add a label to hide a failed wire. |
 
-The audit checks what can be checked from the drawing: the recipe used for
-each part against its role, banks drawn as one bank, repeated lanes with an
-identical arrangement, global labels exactly on external nets, rails drawn only
-with their power symbols, selected names present and no unselected local label
-without a reason. O1, O2, O3 and O5 remain review items: trace them in the render.
+What is checked automatically:
+
+| Rule | Checked by | Not checked (trace in the render) |
+| --- | --- | --- |
+| O4 | structure audit: recipe against role, banks drawn as one bank, identical lanes | whether the role itself suits the circuit |
+| O6 | structure audit: global labels exactly on external nets, rails only as their power symbols, selected names present, no unselected local label without a reason | label wording |
+| O7 | `build()` hard rejections: body clearance, text collisions, wires through bodies | gap sizes beyond collisions, block-versus-part spacing |
+| O1, O2, O3, O5 | readability gate catches some consequences (crossings, U-turns) | path order, block membership, ownership, branch side |
+
+A structure audit PASS therefore covers O4 and O6 only. Review the other rules
+on the rendered page before calling the page readable.
 
 ## API
 
@@ -59,7 +69,8 @@ without a reason. O1, O2, O3 and O5 remain review items: trace them in the rende
 | `Sheet(intent, rails, external, paper, dirs, power_ref_start)` | One sheet. `rails` maps nets to `power:` symbols, `external` lists nets leaving the sheet; both enable `plan` and the audit. `power_ref_start` keeps `#PWR` references unique across pages. |
 | `plan` | `{"parts": {ref: {role, why, ...}}, "nets": {net: "power" \| "global" \| "name" \| None}}`. |
 | `justify(part_or_net, reason)` | Records an intended deviation; the audit lists it with the reason. |
-| `place(ref, at, rotation, mirror)` | An anchor: controller, connector, magnetic, bridge. |
+| `place(ref, at, rotation, mirror, pin, facing, order)` | An anchor: controller, connector, magnetic, bridge. `facing={pin: direction}` picks rotation/mirror from the required pin exits (`order=(a, b, axis)` keeps pin a before b); with `pin`, `at` is that pin's tip. |
+| `orient(ref, facing, order)` | The (rotation, mirror) that `facing` would choose; raises when no orientation gives those exits. |
 | `put(ref, pin, at, toward)` | Part with `pin` on `at`, extending along `toward` (pin faces back). Parts with more than two pins stay upright. |
 | `stub(pin, n)` | Pin exit along its own direction; returns the end point. |
 | `series(start, [refs], toward, gap, net)` | Series chain on one axis in circuit order; the pin on the current net faces the start. Returns far-pin points. |
@@ -83,11 +94,16 @@ locations, label and rail sets, readability metrics with the gate, the
 structure audit, and a `layout` whose net policies `compare_netlist` uses to
 check label and rail names.
 
-For a multi-page project, build each page with its own `power_ref_start`, then
-restore the baseline identity (symbol properties, UUIDs, pin UUIDs, instance
-paths, page UUID, title block) before writing. The charger redraw
-(`design/v0.2.5-recipes/scripts/redraw.py` in that project) is a worked example
-of nine hierarchical pages drawn this way.
+For a multi-page project keep one board intent (see
+[requirements-to-intent.md](requirements-to-intent.md)) and split it with
+`schematic_layout.pages.page_intents(board, rails=...)`: each page gets its own
+components, the page-local part of every net, its NC pins and its `external`
+nets (nets with pins on another page that are not rails). Build each page with
+its own `power_ref_start`. For a redraw, restore the baseline identity (symbol
+properties, UUIDs, pin UUIDs, instance paths, page UUID, title block) before
+writing. Then run `scripts/verify_schematic.py` on the root with the board
+intent. The charger redraw (`design/v0.2.5-recipes/scripts/redraw.py` in that
+project) is a worked example of nine hierarchical pages drawn this way.
 
 Native label styles (render-verified on KiCad 10.0.6): global labels extend
 left at 0/`right`, right at 180/`left`, up at 90/`left`, down at 270/`right`;
@@ -106,9 +122,11 @@ wire, left of a vertical one).
   label or rail symbol.
 - A rail symbol, label or name that collides; no clear Reference/Value position.
 
-Typical fixes: lengthen a `gap` or stub, change a recipe direction, move an
-anchor, split a crowded block into rows, reverse a chain's order. Never replace
-a failed wire with a label unless the plan declares that boundary.
+Typical fixes: lengthen a `gap` or stub, change a recipe direction, move or
+reorient an anchor, split a crowded block into rows, reverse a chain's order.
+Two pins 7.62 mm apart cannot both hang a shunt down: fold one branch up or make
+the lower pin's run shorter than the upper one's. Never replace a failed wire
+with a label unless the plan declares that boundary.
 
 ## Worked example
 

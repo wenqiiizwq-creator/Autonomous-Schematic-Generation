@@ -1,10 +1,12 @@
 # Autonomous-Schematic-Generation (ASG)
 
-> ASG：基于 KiCad 的原理图自主生成 / 分析评审 Skill
+> ASG：从需求文档出发，基于 KiCad 自主绘制可读、电气正确、经原生验证的原理图
 
 Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claude 等 Agent 的 Skill。
-基于 KiCad，根据已确认的电气意图创建、
-新增、重画原理图，并对原理图、PCB、Gerber、PDF 做有证据的分析与评审。
+从已确认的需求出发，建立板级电气意图，按纲要 O1–O8 用引脚几何画法（recipes）新建、新增或重画
+KiCad 原理图，并用一键门禁（`verify_schematic.py`）完成原生 ERC、逐脚网表、层次、符号、可读性和几何检查。
+ASG 只做出图自检；严格的电气审查交给 `schematic-review`。原有的原理图/PCB/Gerber/PDF 分析器
+作为可选工具保留，见 [analysis-toolkit.md](references/analysis-toolkit.md)。
 
 绘图流程现在包含可执行后端：**可复用电路模块 → 真实引脚编译 → 自动布局 → 字段摆放 →
 避障布线 → KiCad 原生文件 → ERC / 逐脚网表 / 几何 / 渲染验证**。
@@ -143,15 +145,15 @@ git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.
 - 把这张原理图重画成可读布局，电气连接不能变
 ```
 
-### 评审
+### 出图验证
 
-```text
-- review before fab
-- 检查我的原理图有没有问题
-- 这份 33.6V→12V 电源可以投板吗
+```bash
+python3 scripts/verify_schematic.py board.kicad_sch --intent electrical-intent.json --out runs/verify-01
 ```
 
-### 脚本直用
+严格的电路审查（投板前评审、需求符合性）请使用 `schematic-review`。
+
+### 可选分析器
 
 ```bash
 python3 scripts/analyze_schematic.py your.kicad_sch --analysis-dir analysis/
@@ -166,11 +168,14 @@ python3 scripts/summarize_findings.py analysis/ --json
 
 ```text
 .
-├── SKILL.md                        # Skill 入口：绘图 / 评审流程与规范
+├── SKILL.md                        # Skill 入口：从需求到验证的出图流程
 ├── agents/
 │   └── openai.yaml                 # Agent 接口描述
 ├── references/
+│   ├── requirements-to-intent.md        # 需求 → 功能追溯 → 板级电气意图
+│   ├── drawing-recipes.md               # 纲要 O1–O8 与引脚几何画法 API
 │   ├── schematic-drawing-standards.md   # 按拓扑选型的绘图规范（绘图必读）
+│   ├── analysis-toolkit.md              # 可选分析器说明（原 SKILL.md 后半部分）
 │   ├── circuit-ir.md                    # 结构化电路、模块与自动布局
 │   ├── reference-driven-board-design.md # 数据手册外围合同与工程师图面学习
 │   ├── existing-project-redraw.md       # 已有多页工程重排、差异检查与回写
@@ -183,6 +188,7 @@ python3 scripts/summarize_findings.py analysis/ --json
 └── scripts/
     ├── build_circuit.py            # Circuit IR 编译、布局和原生生成
     ├── generate_schematic.py       # 显式位置和局部线组的生成入口
+    ├── verify_schematic.py         # 一键出图门禁：ERC/网表对意图/层次/符号/可读性/几何
     ├── check_schematic_geometry.py # 序列化图纸的独立几何检查
     ├── audit_project.py            # 原生多页层次、缓存一致性和完整PDF页数
     ├── verify_design_change.py     # 按独立改版合同验证前后原生XML
@@ -206,7 +212,7 @@ python3 scripts/summarize_findings.py analysis/ --json
 - **数据手册是唯一真值**：值来自手册典型应用 / 设计公式，图纸只决定怎么摆；
 - **工具行为是约束而非风格**：KiCad/EasyEDA 的坐标精确连接规则要机械遵守；
 - **可读性是交付标准**：连得对但像器件堆叠的图不算完成；
-- **证据可追溯**：评审结论带 `rule_id`、严重度、证据来源与置信度。
+- **证据可追溯**：意图追溯到需求和手册页码，验证结果绑定文件哈希；严格审查交 `schematic-review`。
 
 ---
 

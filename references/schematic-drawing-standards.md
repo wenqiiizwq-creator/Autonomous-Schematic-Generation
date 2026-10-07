@@ -102,6 +102,10 @@ installed KiCad version. On **10.0.4** these are connected as expected. Therefor
 
 ## 5. Mandatory verification gate
 
+`scripts/verify_schematic.py <root> --intent <intent> --out <fresh dir>` runs
+items 1–3 plus symbol integrity and the readability gate in one pass and
+writes `summary.json`; items 4–6 stay manual.
+
 1. Native ERC: no unresolved errors/warnings. Keep the full report, exclusions,
    ignored-check metadata, command result and exact KiCad version. An explained
    residual warning is still a residual warning, not “0/0”.
@@ -112,8 +116,10 @@ installed KiCad version. On **10.0.4** these are connected as expected. Therefor
    field/label collisions (including same-owner), wire/text and pin/text overlap,
    page/title intrusion, electrical grid, wire/label/NC/junction attachment and
    cross-net contact. Report unsupported objects as coverage gaps.
-4. Existing analyzer: reconcile findings and heuristics with datasheet truth,
-   including regulator Vref/formulas. Analyzer counts alone are not proof.
+4. Optional analyzer ([analysis-toolkit.md](analysis-toolkit.md)): if used,
+   reconcile its findings and heuristics with datasheet truth, including
+   regulator Vref/formulas. Analyzer counts alone are not proof; the full
+   electrical review belongs to `schematic-review`.
 5. Native PDF/PNG: inspect the full page and crowded regions. Confirm text
    direction, legibility, pin names/numbers, association, local paths and page
    composition. Geometry uses approximate text boxes and conservative arcs.
