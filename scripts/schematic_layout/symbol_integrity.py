@@ -198,15 +198,23 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
     physical = {f'{r["reference"]}.{r["pin"]}' for r in rows}
     native_result = {"status": "INSUFFICIENT", "reason": "Native KiCad XML not supplied"}
     if netlist is not None:
-        native = read_native(netlist)
-        exported = set(native["pin_nets"])
-        missing, extra = sorted(physical - exported), sorted(exported - physical)
-        source_refs = {r["reference"] for r in rows}
-        native_result = {"status": "FAIL" if missing or extra or source_refs != set(native["components"]) else "PASS",
-                         "sha256": native["sha256"], "source_pins_missing_from_xml": missing,
-                         "xml_pins_missing_from_source": extra,
-                         "source_only_references": sorted(source_refs - native["components"].keys()),
-                         "xml_only_references": sorted(native["components"].keys() - source_refs)}
+        try:
+            native = read_native(netlist)
+        except ValueError as exc:
+            # Keep strict rejection, but retain the already-computed source audit.
+            reason = str(exc)
+            native_result = {"status": "FAIL", "reason": reason,
+                             "sha256": hashlib.sha256(Path(netlist).read_bytes()).hexdigest()}
+            errors.append({"kind": "native_netlist_invalid", "reason": reason})
+        else:
+            exported = set(native["pin_nets"])
+            missing, extra = sorted(physical - exported), sorted(exported - physical)
+            source_refs = {r["reference"] for r in rows}
+            native_result = {"status": "FAIL" if missing or extra or source_refs != set(native["components"]) else "PASS",
+                             "sha256": native["sha256"], "source_pins_missing_from_xml": missing,
+                             "xml_pins_missing_from_source": extra,
+                             "source_only_references": sorted(source_refs - native["components"].keys()),
+                             "xml_only_references": sorted(native["components"].keys() - source_refs)}
     axes = [hierarchy["status"], graphics_status, native_result["status"]]
     status = "FAIL" if errors or "FAIL" in axes else "INSUFFICIENT" if gaps or "INSUFFICIENT" in axes else "PASS"
     return {"schema_version": 1, "status": status,

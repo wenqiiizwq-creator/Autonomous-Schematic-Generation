@@ -66,6 +66,11 @@ python3 scripts/audit_symbol_integrity.py path/to/board.kicad_sch \
   --netlist path/to/native.xml --out output/symbol-integrity.json
 ```
 
+If strict native XML parsing fails, the report retains the source pin, artwork,
+hierarchy and coverage diagnostics alongside a failed native axis and XML hash.
+Those retained rows do not establish native coverage or qualify a zero-pin
+object. Resolve the recorded native error before acceptance.
+
 The command follows actual hierarchy annotations, selects active/common units
 and body styles, and compares full physical pin sets with native XML in both
 directions. It measures the **inner** end of visible pins against rectangle,

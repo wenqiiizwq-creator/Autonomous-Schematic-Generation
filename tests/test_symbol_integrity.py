@@ -115,6 +115,60 @@ class ProjectSymbolTests(unittest.TestCase):
         self.assertEqual(r["native_pin_coverage"]["source_pins_missing_from_xml"], ["U1.1"])
         self.assertEqual(r["native_pin_coverage"]["xml_pins_missing_from_source"], ["U1.2"])
 
+    def test_rejected_native_xml_retains_source_pin_and_graphics_diagnostics(self):
+        cached = first(first(self.tree, "lib_symbols"), "symbol")
+        set_node(first(first(cached, "symbol"), "pin"), "length", 1)
+        first(cached, "symbol").append(parse('(pin input line (at 6 0 180) (length 2) (name "OUT") (number "2"))'))
+        first(self.tree, "lib_symbols").append(parse('(symbol "Demo:Marker" (symbol "Marker_1_1" (circle (center 0 0) (radius 1) (stroke (width 0.1)))))'))
+        marker = sym("M1"); set_node(marker, "lib_id", "Demo:Marker"); self.tree.append(marker)
+        self.save()
+        raw = self.xml.read_text().replace('</net>', '<node ref="U1" pin="2"/></net>').replace('</components>', '<comp ref="M1"><value>Marker</value></comp></components>')
+        self.xml.write_text(raw)
+        before = self.root.read_bytes(), self.xml.read_bytes()
+        report = audit_symbols(self.root, self.xml)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["native_pin_coverage"]["status"], "FAIL")
+        self.assertIn('M1', report["native_pin_coverage"]["reason"])
+        self.assertEqual(report["physical_pin_count"], 2)
+        self.assertEqual(report["graphics"]["counts"]["CANDIDATE"], 1)
+        self.assertEqual(report["pins"][0]["reference"], "U1")
+        self.assertEqual(report["native_pin_coverage"]["sha256"], hashlib.sha256(self.xml.read_bytes()).hexdigest())
+        self.assertEqual(before, (self.root.read_bytes(), self.xml.read_bytes()))
+
+    def test_malformed_native_xml_is_a_failed_gate_with_source_details(self):
+        for raw in ('<export>', '<unrelated/>'):
+            with self.subTest(raw=raw):
+                self.xml.write_text(raw)
+                report = audit_symbols(self.root, self.xml)
+                self.assertEqual(report["status"], "FAIL")
+                self.assertEqual(report["physical_pin_count"], 1)
+                self.assertEqual(report["graphics"]["status"], "PASS")
+                self.assertTrue(report["native_pin_coverage"]["reason"])
+                self.assertIn("native_netlist_invalid", {e["kind"] for e in report["errors"]})
+
+    def test_cli_keeps_failed_native_diagnostics_and_nonzero_exit(self):
+        self.xml.write_text('<export>')
+        out = self.base / 'report.json'
+        run = subprocess.run([sys.executable, str(ROOT / "scripts/audit_symbol_integrity.py"),
+                              str(self.root), "--netlist", str(self.xml), "--out", str(out)],
+                             capture_output=True, text=True)
+        report = json.loads(out.read_text())
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["physical_pin_count"], 1)
+        self.assertEqual(report["pins"][0]["pin"], "1")
+
+    def test_wrong_active_unit_still_fails_with_full_native_report(self):
+        symbol = first(self.tree, "symbol")
+        set_node(symbol, "unit", 99)
+        ctx = first(first(first(symbol, "instances"), "project"), "path")
+        set_node(ctx, "unit", 99)
+        self.save()
+        report = audit_symbols(self.root, self.xml)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertIn("missing_active_unit_pins", {e["kind"] for e in report["errors"]})
+        self.assertEqual(report["native_pin_coverage"]["xml_pins_missing_from_source"], ["U1.1"])
+
     def test_native_coverage_absence_never_overall_passes(self):
         r = audit_symbols(self.root)
         self.assertEqual(r["status"], "INSUFFICIENT")
