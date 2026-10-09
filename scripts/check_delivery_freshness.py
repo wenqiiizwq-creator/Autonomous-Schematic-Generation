@@ -8,7 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-from schematic_layout.sexpr import parse, all_nodes
+from schematic_layout.native_hierarchy import NativeHierarchy
 
 REQUIRED_ROLES = {'netlist', 'erc', 'geometry', 'render'}
 
@@ -45,28 +45,11 @@ def check(manifest_path):
             if not isinstance(paths, list) or not paths or not all(isinstance(p, str) and p in m['outputs'] for p in paths):
                 errors.append({'kind': 'missing_role_evidence', 'role': role})
         # Derive active hierarchy coverage independently of the manifest list.
-        pending = [local(m['root'])]
-        visited = set()
-        while pending:
-            path = pending.pop()
-            if path in visited:
-                continue
-            visited.add(path)
-            relative = path.relative_to(base).as_posix()
+        context = NativeHierarchy(local(m['root']), base=base, annotations=False)
+        errors.extend(context.file_errors)
+        for relative in context.file_sha256:
             if relative not in m['inputs']:
                 errors.append({'kind': 'untracked_active_sheet', 'path': relative})
-            tree = parse(path.read_text())
-            if not tree or str(tree[0]) != 'kicad_sch':
-                raise ValueError('Not a native schematic: ' + relative)
-            for sheet in all_nodes(tree, 'sheet'):
-                props = {str(p[1]): str(p[2]) for p in all_nodes(sheet, 'property')}
-                filename = props.get('Sheetfile', '')
-                if not filename or '${' in filename:
-                    raise ValueError('Unresolved child sheet in ' + relative)
-                child = (path.parent / filename).resolve()
-                if not child.is_relative_to(base):
-                    raise ValueError('Child sheet escapes delivery root')
-                pending.append(child)
         root = local(m['root'])
         ancillary = [root.with_suffix('.kicad_pro'), base / 'sym-lib-table']
         ancillary += list((base / 'symbols').glob('*.kicad_sym'))

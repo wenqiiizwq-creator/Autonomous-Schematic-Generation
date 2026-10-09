@@ -11,7 +11,8 @@ import re
 import shutil
 import subprocess
 
-from .sexpr import all_nodes, first, value, parse, dump
+from .sexpr import all_nodes, first, value, dump
+from .native_hierarchy import NativeHierarchy
 
 
 def properties(node):
@@ -58,54 +59,23 @@ def pdf_page_count(path):
     return int(match[1])
 
 
-def audit_project(root, pdf=None, project=None, expected_pages=None):
+def audit_project(root, pdf=None, project=None, expected_pages=None, *, context=None):
     root = Path(root).resolve()
-    base = root.parent
-    project = project or root.stem
-    pages, errors, gaps, caches, definitions, refs = [], [], [], {}, {}, {}
-    file_hashes = {}
-
-    def visit(path, uuid_path=None, page="1", ancestors=()):
-        try:
-            relative = str(path.relative_to(base))
-        except ValueError:
-            errors.append({"kind": "nonportable_sheet_path"})
-            return
-        if path in ancestors:
-            errors.append({"kind": "hierarchy_cycle", "path": relative})
-            return
-        if not path.is_file():
-            errors.append({"kind": "missing_sheet", "path": relative})
-            return
-        try:
-            data = path.read_bytes()
-            tree = parse(data.decode("utf-8"))
-            if tree[0] != "kicad_sch":
-                raise ValueError("Expected kicad_sch")
-        except (ValueError, UnicodeError) as exc:
-            errors.append({"kind": "invalid_sheet", "path": relative, "reason": str(exc)})
-            return
-        file_hashes[relative] = hashlib.sha256(data).hexdigest()
-        if uuid_path is None:
-            uid = value(tree, "uuid")
-            if not uid:
-                errors.append({"kind": "missing_root_uuid"})
-                return
-            uuid_path = "/" + str(uid)
-            root_pages = [value(p, "page") for p in all_nodes(first(tree, "sheet_instances", []), "path") if p[1] == "/"]
-            if len(root_pages) > 1:
-                errors.append({"kind": "duplicate_root_page_annotation"})
-            if root_pages:
-                page = root_pages[0]
-        pages.append({"path": relative, "instance": uuid_path, "page": page})
+    context = context or NativeHierarchy(root, project)
+    project = context.project
+    pages = context.pages
+    errors, gaps = list(context.errors), list(context.coverage_gaps)
+    caches, definitions, refs = {}, {}, {}
+    file_hashes = context.file_sha256
+    for page in pages:
+        relative = page["path"]
+        tree = context.tree_for(page)
         libs = {str(n[1]): n for n in all_nodes(first(tree, "lib_symbols", []), "symbol")}
         for symbol in all_nodes(tree, "symbol"):
-            props = properties(symbol)
-            ctx = _instance(symbol, project, uuid_path)
+            ctx = context.symbol_context(page, symbol)
             if ctx is None:
-                gaps.append(f"{relative}: missing symbol annotation for {project}:{uuid_path}")
-            ref = str(value(ctx or [], "reference", props.get("Reference", "?")))
-            unit = int(value(ctx or [], "unit", value(symbol, "unit", 1)))
+                continue
+            ref, unit = ctx["reference"], ctx["unit"]
             if not ref.startswith("#"):
                 if (ref, unit) in refs:
                     errors.append({"kind": "duplicate_reference_unit", "ref": ref, "unit": unit})
@@ -132,33 +102,6 @@ def audit_project(root, pdf=None, project=None, expected_pages=None):
             if ref in definitions and definitions[ref] != signature:
                 errors.append({"kind": "multiunit_pin_definition_conflict", "ref": ref})
             definitions[ref] = signature
-        child_ids = set()
-        for sheet in all_nodes(tree, "sheet"):
-            props = properties(sheet)
-            uid = value(sheet, "uuid")
-            if not uid or uid in child_ids:
-                errors.append({"kind": "missing_or_duplicate_sheet_uuid", "path": relative})
-                continue
-            child_ids.add(uid)
-            ctx = _instance(sheet, project, uuid_path)
-            child_page = value(ctx or [], "page")
-            if child_page is None:
-                gaps.append(f"{relative}: missing child page annotation for {project}:{uuid_path}")
-            raw = props.get("Sheetfile", "")
-            if not raw:
-                errors.append({"kind": "missing_sheetfile_property", "path": relative})
-                continue
-            if Path(raw).is_absolute():
-                errors.append({"kind": "nonportable_absolute_sheet_path", "path": relative})
-                continue
-            raw = raw.replace("${KIPRJMOD}", str(base))
-            if "${" in raw or re.match(r"^[A-Za-z]:", raw):
-                errors.append({"kind": "unresolved_sheet_path", "path": relative})
-                continue
-            visit((path.parent / raw).resolve(), uuid_path + "/" + str(uid),
-                  str(child_page) if child_page is not None else None, ancestors + (path,))
-
-    visit(root)
     numbers = [p["page"] for p in pages if p["page"] is not None]
     if len(numbers) != len(set(numbers)):
         errors.append({"kind": "duplicate_page_number"})

@@ -9,7 +9,8 @@ from dataclasses import dataclass, field, replace
 import math
 import re
 from .sexpr import all_nodes, first, value
-from .geometry import Box, TextField, parse_justify, text_extent, union
+from .geometry import Box, TextField, parse_justify, union
+from .label_geometry import global_outline, STYLES
 
 Point = tuple[float, float]
 PAPERS = {
@@ -116,31 +117,29 @@ class Scene:
 
 # Global label styles whose native outline direction was verified by render
 # (KiCad 10.0.6): (angle, justify) -> direction the outline extends.
-GLOBAL_LABEL_STYLES = {
-    (0, frozenset({"right"})): (-1, 0),
-    (180, frozenset({"left"})): (1, 0),
-    (90, frozenset({"left"})): (0, -1),
-    (270, frozenset({"right"})): (0, 1),
-}
+GLOBAL_LABEL_STYLES = STYLES
 
 
 @dataclass(frozen=True)
 class GlobalLabelText(TextField):
-    """A global label whose box is its native outline, not a rotated text field."""
+    """Full native outline plus the style needed for precise cap contact."""
 
     outward: tuple = (1, 0)
+    shape: str = "passive"
+    italic: bool = False
+    face: str | None = None
+    size: tuple | None = None
+    thickness: float | None = None
+    native_justify: tuple | None = None
+
+    def outline(self):
+        return global_outline(self.text, (self.x, self.y), self.outward, self.font_mm,
+                              shape=self.shape, bold=self.bold, italic=self.italic,
+                              face=self.face, size=self.size, thickness=self.thickness,
+                              angle=self.angle, justify=self.justify if self.native_justify is None else self.native_justify)
 
     def box(self) -> Box:
-        scale = self.font_mm / 1.27
-        length = text_extent(self.text, self.font_mm)[0] + 3.0 * scale
-        half = 1.5 * scale
-        x, y = self.x, self.y
-        dx, dy = self.outward
-        if dx:
-            x0, x1 = (x + 0.5, x + length) if dx > 0 else (x - length, x - 0.5)
-            return Box(x0, y - half, x1, y + half)
-        y0, y1 = (y + 0.5, y + length) if dy > 0 else (y - length, y - 0.5)
-        return Box(x - half, y0, x + half, y1)
+        return self.outline().box
 
 
 TESTED_LOCAL_LABELS = {
@@ -365,11 +364,28 @@ def read_scene(root):
                         "Local label angle/justification outside the tested styles needs native review"
                     )
             scene.labels.append((kind, f))
-            if kind == "global_label" and (round(f.angle) % 360, f.justify) in GLOBAL_LABEL_STYLES:
-                outward = GLOBAL_LABEL_STYLES[(round(f.angle) % 360, f.justify)]
-                scene.labels[-1] = (kind, GlobalLabelText(f.text, f.x, f.y, f.angle, f.font_mm, f.bold,
-                                                          f.justify, outward))
-            elif kind in ("global_label", "hierarchical_label"):
+            if kind == "global_label":
+                style = (f.angle % 360, f.justify)
+                if style not in GLOBAL_LABEL_STYLES:
+                    # Preserve the former text estimate at its actual native
+                    # angle/justify. An unknown outline has no qualified
+                    # direction: guessing RIGHT and unioning four outlines
+                    # creates fictitious obstacles. Coverage remains open.
+                    scene.gaps.append("Global label angle/justify direction needs native review")
+                    continue
+                outward = GLOBAL_LABEL_STYLES[style]
+                font_node = first(first(n, "effects", []), "font", [])
+                size = first(font_node, "size", [None, 1.27, 1.27])
+                label = GlobalLabelText(f.text, f.x, f.y, f.angle, f.font_mm, f.bold,
+                                        f.justify, outward, str(value(n, "shape", "unknown")),
+                                        "italic" in font_node, value(font_node, "face"),
+                                        (float(size[1]), float(size[2])),
+                                        value(font_node, "thickness"),
+                                        tuple(first(first(n, "effects", []), "justify", [])[1:]))
+                scene.labels[-1] = (kind, label)
+                if label.outline().gaps:
+                    scene.gaps.append("Global label native coverage gap: " + ", ".join(label.outline().gaps))
+            elif kind == "hierarchical_label":
                 scene.gaps.append(
                     f"{kind}: outline and attached fields need render review"
                 )

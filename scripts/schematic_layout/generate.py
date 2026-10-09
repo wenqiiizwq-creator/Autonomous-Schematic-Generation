@@ -554,12 +554,9 @@ def pin_clipped_body(body, pins, margin=0.35):
 
 
 def global_label_box(text, at, side, font=1.27):
-    """Native global-label outline estimate; side is where its body extends."""
-    width = TextField(text, 0, 0, 0, font).box().width + 3.0
-    x, y = at
-    if side == "right":
-        return Box(x + 0.5, y - 1.5, x + width, y + 1.5)
-    return Box(x - width, y - 1.5, x - 0.5, y + 1.5)
+    """Compatibility API for the shared full global-label outline."""
+    from .label_geometry import global_outline
+    return global_outline(text, at, (1, 0) if side == "right" else (-1, 0), font).box
 
 
 def route_root(root, intent, layout, uid, reserved, dirs=()):

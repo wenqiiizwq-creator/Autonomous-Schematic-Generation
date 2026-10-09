@@ -10,9 +10,10 @@ from pathlib import Path
 import re
 
 from .design_change import read_native
-from .project_audit import audit_project, properties, _instance
+from .project_audit import audit_project, properties
+from .native_hierarchy import NativeHierarchy
 from .scene import is_hidden, transform, xy
-from .sexpr import all_nodes, dump, first, parse, value
+from .sexpr import all_nodes, dump, first, value
 
 
 def segment_distance(p, a, b):
@@ -134,7 +135,8 @@ def attachment_rows(lib, unit, style, tolerance=0.16):
 
 def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0.16):
     root = Path(root).resolve()
-    hierarchy = audit_project(root, project=project)
+    context = NativeHierarchy(root, project)
+    hierarchy = audit_project(root, project=project, context=context)
     rows, errors, gaps, used = [], [], [], set()
     exceptions = exceptions or {"schema_version": 1, "exceptions": []}
     if set(exceptions) != {"schema_version", "exceptions"} or exceptions["schema_version"] != 1 or not isinstance(exceptions["exceptions"], list):
@@ -150,18 +152,17 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
     errors.extend(hierarchy["errors"])
     gaps.extend(hierarchy["coverage_gaps"])
     for page in hierarchy["pages"]:
-        path = root.parent / page["path"]
-        tree = parse(path.read_text())
+        tree = context.tree_for(page)
         libs = {str(l[1]): l for l in all_nodes(first(tree, "lib_symbols", []), "symbol")}
         for sym in all_nodes(tree, "symbol"):
             props = properties(sym)
-            ctx = _instance(sym, hierarchy["project"], page["instance"])
+            ctx = context.symbol_context(page, sym)
             if ctx is None:  # Never borrow the reference from a different project/instance.
                 continue
-            ref = str(value(ctx, "reference", ""))
+            ref = ctx["reference"]
             if ref.startswith("#"):
                 continue
-            unit = int(value(ctx, "unit", value(sym, "unit", 1)))
+            unit = ctx["unit"]
             style = int(value(sym, "body_style", value(sym, "convert", 1)))
             lid = str(value(sym, "lib_name", value(sym, "lib_id", "")))
             lib = libs.get(lid)

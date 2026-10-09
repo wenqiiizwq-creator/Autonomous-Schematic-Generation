@@ -15,8 +15,9 @@ import copy
 import math
 
 from .field_placer import FieldSpec, autoplace_fields
-from .generate import Libraries, global_label_box, library_dirs, make_root, pin_clipped_body, pin_net_map
+from .generate import Libraries, library_dirs, make_root, pin_clipped_body, pin_net_map
 from .geometry import Box, TextField, text_extent
+from .label_geometry import global_outline, DIRECTION_STYLE
 from .readability import gate, measure
 from .routing import on_segment, segment_hits_box, wire_box
 from .scene import read_scene
@@ -48,11 +49,8 @@ def label_geometry(kind, text, at, outward, font):
     """
     x, y = at
     if kind == "global":
-        angle, just = {RIGHT: (180, ["left"]), LEFT: (0, ["right"]), UP: (90, ["left"]), DOWN: (270, ["right"])}[outward]
-        if outward in (LEFT, RIGHT):
-            return angle, just, global_label_box(text, at, "right" if outward == RIGHT else "left", font)
-        w = TextField(text, 0, 0, 0, font).box().width + 3.0
-        return angle, just, (Box(x - 1.5, y - w, x + 1.5, y - 0.5) if outward == UP else Box(x - 1.5, y + 0.5, x + 1.5, y + w))
+        angle, just = DIRECTION_STYLE[outward]
+        return angle, sorted(just), global_outline(text, at, outward, font).box
     angle, just = {RIGHT: (0, ["left", "bottom"]), LEFT: (180, ["right", "bottom"]),
                    UP: (90, ["left", "bottom"]), DOWN: (270, ["right", "bottom"])}[outward]
     w, h = text_extent(text, font)
@@ -644,7 +642,9 @@ class Sheet:
                 if segment_hits_box(a, b, box.expanded(-0.05)):
                     raise ValueError(f"{n} wire {a}-{b} crosses the body of {ref}")
         obstacles = [b.expanded(0.2) for b in bodies.values()] + list(reserved)
-        obstacles += [wire_box(p.point, p.inner, 0.25) for s in scene.symbols for p in s.pins]
+        label_pin_obstacles = [(p, wire_box(p.point, p.inner, 0.25))
+                               for s in scene.symbols for p in s.pins]
+        obstacles += [box for _, box in label_pin_obstacles]
         obstacles += [t.box() for kind, t in scene.labels if kind == "text"]
         wires = {n: [] for n, _, _ in segments}
         for n, a, b in segments:
@@ -680,8 +680,23 @@ class Sheet:
         labels = []
         for l in self.labels:
             box = label_geometry(l["kind"], l["net"], l["at"], l["outward"], l["font"])[2]
-            if foreign(box, l["net"]) or any(box.overlaps(o) for o in obstacles) or not box.inside(page):
-                raise ValueError(f"{l['net']} label at {l['at']} collides; lengthen or move its stub")
+            outline = (global_outline(l["net"], l["at"], l["outward"], l["font"])
+                       if l["kind"] == "global" else None)
+            # A same-net segment elsewhere in the body still collides. Only
+            # the native connection cap can touch an attached wire or pin.
+            if outline:
+                pin_boxes = {id(o) for _, o in label_pin_obstacles}
+                blockers = [o for o in obstacles if id(o) not in pin_boxes]
+                pin_collision = any(box.overlaps(o) and not outline.terminal_contact(p.point, p.inner)
+                                    for p, o in label_pin_obstacles)
+                wire_collision = any(segment_hits_box(a, b, box) and not outline.terminal_contact(a, b)
+                                     for _, a, b in segments)
+            else:
+                blockers = obstacles
+                pin_collision = False
+                wire_collision = foreign(box, l["net"])
+            if wire_collision or pin_collision or any(box.overlaps(o) for o in blockers) or not box.inside(page):
+                raise ValueError(f"{l['net']} label at {l['at']} collides; move its anchor or increase label pitch")
             obstacles.append(box.expanded(0.2))
             labels.append(dict(l))
         for spec in self.names:

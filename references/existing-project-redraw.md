@@ -55,6 +55,23 @@ bounded generator's supported cases.
 
 ## Verify the staged candidate
 
+When a scoped writer restores source UUIDs, cached definitions or property text
+after `Sheet.build()`, its serialized drawing is a new verification boundary.
+Preserve property text separately from field anchors, angle and justification;
+check those against the transformed **saved** symbol. A field position from a
+different cached shape, or a manually changed justification, need not render as
+the recipe model predicted. Keep visible values upright independently of a
+symbol's rotation, and inspect every repeated channel after such overrides.
+For rotated power symbols, recheck the actual wire endpoint and pin anchor;
+retained short tails can add an ERC endpoint warning without changing the
+physical net partition. Compare each added native ERC item, not just totals.
+
+If construction uses a temporary label representation, its successful build
+does not qualify the final label outlines or attachment geometry. Verify the
+actual serialized representation with native exports and retain any unsupported
+coverage or failed build separately. Do not substitute the temporary model's
+PASS for the saved candidate's result.
+
 Keep separate results for these checks; no single PASS covers the others.
 
 | Check | Required evidence |

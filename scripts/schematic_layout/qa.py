@@ -2,6 +2,7 @@
 
 from collections import Counter
 from .geometry import Box, union
+from .scene import GlobalLabelText
 from .routing import on_segment, intersection, segment_hits_box, wire_box, grid_point
 
 
@@ -67,6 +68,11 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
     fields += [
         (f"{kind}:{i}:{f.text}", f.box()) for i, (kind, f) in enumerate(scene.labels)
     ]
+    global_labels = {f"{kind}:{i}:{f.text}": f.outline()
+                     for i, (kind, f) in enumerate(scene.labels) if isinstance(f, GlobalLabelText)}
+    gaps = list(scene.gaps)
+    gaps += ["Global label native coverage gap: " + ", ".join(outline.gaps)
+             for outline in global_labels.values() if outline.gaps]
     pins = [p for s in scene.symbols for p in s.pins]
     body_terminals = {
         f"{s.ref}:unit{s.unit}": {
@@ -101,8 +107,8 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
                 add("text_body_overlap", [a, b], "Visible text overlaps a symbol body")
         for pin in pins:
             if pin.point != pin.inner and segment_hits_box(
-                pin.point, pin.inner, box.expanded(-0.04)
-            ):
+                pin.point, pin.inner, box if a in global_labels else box.expanded(-0.04)
+            ) and not (a in global_labels and global_labels[a].terminal_contact(pin.point, pin.inner)):
                 add("text_pin_overlap", [a, pin.id], "Visible text crosses a pin leg")
     extents = bodies + fields
     extents += [
@@ -141,7 +147,8 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
                     "Wire passes through a symbol body",
                 )
         for name, box in fields:
-            if segment_hits_box(a, b, box.expanded(-0.04)):
+            if (segment_hits_box(a, b, box if name in global_labels else box.expanded(-0.04))
+                    and not (name in global_labels and global_labels[name].terminal_contact(a, b))):
                 add(
                     "wire_text", [f"wire:{i}", name], "Wire passes through visible text"
                 )
@@ -257,7 +264,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
     status = (
         "FAIL"
         if any(f["severity"] == "error" for f in findings)
-        else ("INSUFFICIENT" if scene.gaps else ("REVIEW" if findings else "PASS"))
+        else ("INSUFFICIENT" if gaps else ("REVIEW" if findings else "PASS"))
     )
     return {
         "status": status,
@@ -269,7 +276,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
             "visible_texts": len(fields),
             "wires": len(scene.wires),
             "pins": len(pins),
-            "gaps": sorted(set(scene.gaps)),
+            "gaps": sorted(set(gaps)),
             "checks": [
                 "body_overlap",
                 "wire_body",

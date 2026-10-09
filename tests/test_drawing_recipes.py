@@ -228,10 +228,10 @@ class RecipeRefinementTests(unittest.TestCase):
             root.append(form('global_label', f'N{i}', form('shape', Atom('passive')), form('at', 100, 100, angle),
                              form('effects', form('font', form('size', 1.27, 1.27)), form('justify', Atom(just)))))
         boxes = [f.box() for _, f in read_scene(root).labels]
-        self.assertLess(boxes[0].x_max, 100)      # extends left
-        self.assertGreater(boxes[1].x_min, 100)   # extends right
-        self.assertLess(boxes[2].y_max, 100)      # extends up
-        self.assertGreater(boxes[3].y_min, 100)   # extends down
+        self.assertAlmostEqual(boxes[0].x_max, 100.0772)  # complete native stroke cap
+        self.assertAlmostEqual(boxes[1].x_min, 99.9228)  # complete native stroke cap
+        self.assertAlmostEqual(boxes[2].y_max, 100.0772)  # complete native stroke cap
+        self.assertAlmostEqual(boxes[3].y_min, 99.9228)  # complete native stroke cap
         self.assertFalse(read_scene(root).gaps)
 
     def test_a_part_between_two_candidate_lanes_is_a_rung(self):
