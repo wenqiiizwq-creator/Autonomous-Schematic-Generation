@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 import re
 
-from .design_change import read_native
+from .design_change import read_native, NativeEvidenceGap
 from .project_audit import audit_project, properties
 from .native_hierarchy import NativeHierarchy
 from .scene import is_hidden, transform, xy
@@ -133,10 +133,12 @@ def attachment_rows(lib, unit, style, tolerance=0.16):
     return rows, gaps
 
 
-def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0.16):
+def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0.16, *, source_roles=None):
     root = Path(root).resolve()
     context = NativeHierarchy(root, project)
-    hierarchy = audit_project(root, project=project, context=context)
+    hierarchy = audit_project(root, project=project, context=context, source_roles=source_roles, netlist=netlist)
+    pinless_keys = {(r["instance"], r["symbol_uuid"]) for r in hierarchy["pinless_objects"]}
+    pinless_refs = {r["reference"] for r in hierarchy["pinless_objects"]}
     rows, errors, gaps, used = [], [], [], set()
     exceptions = exceptions or {"schema_version": 1, "exceptions": []}
     if set(exceptions) != {"schema_version", "exceptions"} or exceptions["schema_version"] != 1 or not isinstance(exceptions["exceptions"], list):
@@ -168,6 +170,8 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
             lib = libs.get(lid)
             if lib is None:
                 continue
+            if (page["instance"], str(value(sym, "uuid", ""))) in pinless_keys:
+                continue  # Identity remains in hierarchy/coverage; no invented pin rows.
             digest = hashlib.sha256(dump(lib).encode()).hexdigest()
             pins, pin_gaps = attachment_rows(lib, unit, style, tolerance)
             gaps.extend(f"{ref} unit {unit}: {g}" for g in pin_gaps)
@@ -200,7 +204,11 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
     native_result = {"status": "INSUFFICIENT", "reason": "Native KiCad XML not supplied"}
     if netlist is not None:
         try:
-            native = read_native(netlist)
+            native = read_native(netlist, source_root=root, source_roles=source_roles, project=project)
+        except NativeEvidenceGap as exc:
+            native_result = {"status": "INSUFFICIENT", "reason": str(exc),
+                             "sha256": hashlib.sha256(Path(netlist).read_bytes()).hexdigest()}
+            gaps.append(str(exc))
         except ValueError as exc:
             # Keep strict rejection, but retain the already-computed source audit.
             reason = str(exc)
@@ -210,7 +218,7 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
         else:
             exported = set(native["pin_nets"])
             missing, extra = sorted(physical - exported), sorted(exported - physical)
-            source_refs = {r["reference"] for r in rows}
+            source_refs = {r["reference"] for r in rows} | pinless_refs
             native_result = {"status": "FAIL" if missing or extra or source_refs != set(native["components"]) else "PASS",
                              "sha256": native["sha256"], "source_pins_missing_from_xml": missing,
                              "xml_pins_missing_from_source": extra,
@@ -223,4 +231,14 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
             "hierarchy_status": hierarchy["status"], "page_count": hierarchy["page_count"],
             "component_count": len({r["reference"] for r in rows}), "physical_pin_count": len(physical),
             "file_sha256": hierarchy["file_sha256"], "graphics": {"status": graphics_status, "tolerance_mm": tolerance, "counts": counts},
+            "missing_symbol_annotations": context.missing_symbol_annotations,
+            "pinless_objects": hierarchy["pinless_objects"], "source_role_evidence": hierarchy["source_role_evidence"],
+            "component_count_domain": "References with resolved active pin rows; qualified pinless objects are listed separately",
+            "native_inventory": hierarchy["native_inventory"],
+            "native_inventory_reconciliation": {
+                "qualification": "NOT_EVALUATED", "selected_project": context.project,
+                "source_pin_reference_count": len({r["reference"] for r in rows}),
+                "source_pinless_reference_count": len(pinless_refs),
+                "selected_context_reference_count": hierarchy["component_count"],
+                "missing_selected_context_count": len(context.missing_symbol_annotations)},
             "native_pin_coverage": native_result, "errors": errors, "coverage_gaps": sorted(set(gaps)), "pins": rows}

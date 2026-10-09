@@ -153,6 +153,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
                     "wire_text", [f"wire:{i}", name], "Wire passes through visible text"
                 )
     anchors = [(p.id, p.point) for p in pins]
+    anchors += scene.sheet_pins
     anchors += [(f"wire:{i}", p) for i, w in enumerate(scene.wires) for p in w]
     anchors += [
         (f"{kind}:{f.text}", (f.x, f.y)) for kind, f in scene.labels if kind != "text"
@@ -167,7 +168,8 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
             add("off_grid", [name], str(e))
     # Detect wire ends without a pin, label, or another segment; corners count
     # as connected segments and need no spurious junction dot.
-    attached = {p.point for p in pins} | {
+    terminals = {p.point for p in pins} | {point for _, point in scene.sheet_pins}
+    attached = terminals | {
         (f.x, f.y) for k, f in scene.labels if k != "text"
     }
     for i, w in enumerate(scene.wires):
@@ -179,7 +181,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
     for kind, f in scene.labels:
         if (
             kind != "text"
-            and (f.x, f.y) not in {p.point for p in pins}
+            and (f.x, f.y) not in terminals
             and not any(on_segment((f.x, f.y), *w) for w in scene.wires)
         ):
             add(
@@ -276,6 +278,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
             "visible_texts": len(fields),
             "wires": len(scene.wires),
             "pins": len(pins),
+            "sheet_pins": len(scene.sheet_pins),
             "gaps": sorted(set(gaps)),
             "checks": [
                 "body_overlap",

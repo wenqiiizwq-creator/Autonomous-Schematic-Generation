@@ -52,6 +52,7 @@ class NativeHierarchy:
         self.pages, self.errors, self.coverage_gaps = [], [], []
         self.file_errors, self.file_sha256, self.trees = [], {}, {}
         self.symbol_contexts = {}
+        self.missing_symbol_annotations = []
         self._visit(self.root, None, ())
         if annotations and self.pages:
             self._annotations()
@@ -194,6 +195,22 @@ class NativeHierarchy:
             return None
         return global_record if global_record is not None else local_record
 
+    def _missing_symbol(self, page, symbol):
+        """Locator hints explain coverage gaps; none supplies active identity."""
+        contexts = []
+        for container in all_nodes(symbol, "instances"):
+            for project in all_nodes(container, "project"):
+                contexts.append({"project": str(project[1]) if len(project) > 1 else None,
+                                 "paths": [str(p[1]) for p in all_nodes(project, "path") if len(p) > 1]})
+        refs = [str(p[2]) for p in all_nodes(symbol, "property")
+                if len(p) > 2 and p[1] == "Reference"]
+        self.missing_symbol_annotations.append({
+            "file": page["path"], "instance": page["instance"],
+            "symbol_uuid": value(symbol, "uuid"), "selected_project": self.project,
+            "declared_unit": value(symbol, "unit", 1),
+            "non_authoritative_reference_property": refs[0] if len(refs) == 1 else None,
+            "available_local_contexts": contexts})
+
     def _annotations(self):
         root_tree = self.trees[self.root]
         unsupported = set()
@@ -229,10 +246,12 @@ class NativeHierarchy:
                 declared = str(value(tree, "version")) in SUPPORTED_VERSIONS
                 if not uuid_nodes and declared:
                     self.coverage_gaps.append(f"{page['path']}: missing native symbol UUID for {chain}")
+                    self._missing_symbol(page, symbol)
                     continue
                 if uuid_nodes and (len(uuid_nodes) != 1 or len(uuid_nodes[0]) != 2
                                    or not str(uid or "").strip() or re.search(r"[\s/]", str(uid))):
                     self._annotation_error("invalid_symbol_uuid", path=page["path"])
+                    self._missing_symbol(page, symbol)
                     continue
                 full = chain + "/" + str(uid) if uid else None
                 if full:
@@ -241,7 +260,8 @@ class NativeHierarchy:
                 local_record = local[file].get(id(symbol), {}).get(chain)
                 record = self._merge(global_record, local_record, full or chain)
                 if record is None:
-                    self.coverage_gaps.append(f"{page['path']}: missing symbol annotation for {self.project}:{chain}")
+                    self.coverage_gaps.append(f"{page['path']}: missing symbol annotation for {self.project}:{full or chain}")
+                    self._missing_symbol(page, symbol)
                 else:
                     self.symbol_contexts[(chain, id(symbol))] = record
             for sheet in all_nodes(tree, "sheet"):

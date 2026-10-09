@@ -52,6 +52,7 @@ def main():
     ap.add_argument("--symbol-exceptions", type=Path)
     ap.add_argument("--readability-waivers", type=Path)
     ap.add_argument("--reference-contract", type=Path)
+    ap.add_argument("--source-role-contract", type=Path, help="Reviewed hash-bound pinless mechanical/documentation roles")
     ap.add_argument("--baseline-xml", type=Path, help="baseline native XML for an electrical change")
     ap.add_argument("--change-contract", type=Path)
     ap.add_argument("--preflight", type=Path, help="design-preflight.json for an electrical change")
@@ -103,7 +104,8 @@ def main():
     hierarchy = out / "hierarchy.json"
     extra = ["--expected-pages", args.expected_pages] if args.expected_pages else []
     project = ["--project", args.project] if args.project else []
-    tool("audit_project.py", args.root, "--pdf", pdf, *extra, *project, "--out", hierarchy)
+    roles = ["--source-role-contract", args.source_role_contract] if args.source_role_contract else []
+    tool("audit_project.py", args.root, "--pdf", pdf, "--netlist", xml, *extra, *project, *roles, "--out", hierarchy)
     gates["hierarchy"] = {"status": status_of(hierarchy)}
     try:
         files = json.loads(hierarchy.read_text())["file_sha256"]
@@ -113,7 +115,7 @@ def main():
 
     symbols = out / "symbol-integrity.json"
     extra = ["--exceptions", args.symbol_exceptions] if args.symbol_exceptions else []
-    tool("audit_symbol_integrity.py", args.root, "--netlist", xml, *extra, *project, "--out", symbols)
+    tool("audit_symbol_integrity.py", args.root, "--netlist", xml, *extra, *project, *roles, "--out", symbols)
     gates["symbol_integrity"] = {"status": status_of(symbols)}
 
     readability = out / "readability.json"

@@ -113,6 +113,7 @@ class Scene:
     junctions: list[Point] = field(default_factory=list)
     no_connects: list[Point] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
+    sheet_pins: list[tuple[str, Point]] = field(default_factory=list)
 
 
 # Global label styles whose native outline direction was verified by render
@@ -142,12 +143,61 @@ class GlobalLabelText(TextField):
         return self.outline().box
 
 
+@dataclass(frozen=True)
+class HierarchicalLabelText(TextField):
+    """Qualified text offset only; the electrical anchor remains unchanged."""
+    outward: tuple = (1, 0)
+
+    def box(self) -> Box:
+        dx, dy = self.outward
+        # Native default-font text starts 1.15*font beyond the anchor. The
+        # contour and attached fields are deliberately still coverage gaps.
+        return TextField(self.text, self.x + dx*self.font_mm*1.15,
+                         self.y + dy*self.font_mm*1.15, self.angle % 180,
+                         self.font_mm, self.bold, self.justify).box()
+
+
+HIERARCHICAL_LABEL_STYLES = {
+    (0, frozenset({"left"})): (1, 0),
+    (90, frozenset({"left"})): (0, -1),
+    (180, frozenset({"right"})): (-1, 0),
+    (270, frozenset({"right"})): (0, 1),
+}
+
+
 TESTED_LOCAL_LABELS = {
     (0, frozenset({"left", "bottom"})),
     (180, frozenset({"right", "bottom"})),
     (90, frozenset({"left", "bottom"})),
     (270, frozenset({"right", "bottom"})),
 }
+
+
+def placed_field(field, symbol_angle, mirror):
+    """Native field anchors stay absolute; justification follows placement axes.
+
+    KiCad keeps readable glyph orientation while its symbol transform changes
+    the long and short justification axes. Verified against a native SVG
+    matrix, not by reflecting the already-absolute field position.
+    """
+    total = (field.angle + symbol_angle) % 360
+    angle = total % 180
+    if total % 90 or mirror not in ("", "x", "y"):
+        return replace(field, angle=angle)
+    a, b = map(math.radians, (total, angle))
+    long_axis = [round(math.cos(a)), -round(math.sin(a))]
+    short_axis = [round(math.sin(a)), round(math.cos(a))]
+    if mirror:
+        axis = 1 if mirror == "x" else 0
+        long_axis[axis] *= -1
+        short_axis[axis] *= -1
+    long_sign = long_axis[0]*round(math.cos(b)) - long_axis[1]*round(math.sin(b))
+    short_sign = short_axis[0]*round(math.sin(b)) + short_axis[1]*round(math.cos(b))
+    just = set(field.justify)
+    for sign, tokens in ((long_sign, ("left", "right")), (short_sign, ("top", "bottom"))):
+        if sign < 0:
+            just = {tokens[1] if t == tokens[0] else tokens[0] if t == tokens[1] else t for t in just}
+    return replace(field, angle=angle, justify=frozenset(just))
 
 
 def read_scene(root):
@@ -179,6 +229,22 @@ def read_scene(root):
     ):
         if all_nodes(root, key):
             scene.gaps.append(f"Unsupported sheet object: {key}")
+    # Native sheet terminals are explicit electrical anchors. Recognising
+    # their coordinates does not qualify the sheet frame, text or pin outline.
+    for si, sheet in enumerate(all_nodes(root, "sheet")):
+        for pi, pin in enumerate(all_nodes(sheet, "pin")):
+            try:
+                at = first(pin, "at", [])
+                if (len(pin) < 3 or not str(pin[1]).strip()
+                        or pin[2] not in ("input", "output", "bidirectional", "tri_state", "passive")
+                        or len(at) != 4):
+                    raise ValueError("unsupported terminal form")
+                x, y, angle = map(float, at[1:])
+                if not all(map(math.isfinite, (x, y, angle))) or angle % 90:
+                    raise ValueError("unsupported terminal coordinates/angle")
+                scene.sheet_pins.append((f"sheet:{si}:pin:{pi}:{pin[1]}", (x, y)))
+            except (ValueError, TypeError, IndexError) as exc:
+                scene.gaps.append(f"sheet:{si}:pin:{pi}: {exc}")
     libs = {n[1]: n for n in all_nodes(first(root, "lib_symbols", []), "symbol")}
     for node in all_nodes(root, "symbol"):
         lib_id = value(node, "lib_id", "")
@@ -309,11 +375,11 @@ def read_scene(root):
                 # KiCad field stored orientation is combined with the symbol's
                 # rotation. Horizontal fields on a 90/270-degree symbol must
                 # be written at 90 degrees (native-render regression).
-                f = replace(f, angle=(f.angle + angle) % 180)
-                if f.justify and (angle != 0 or mirror):
+                if (f.angle + angle) % 90 or mirror not in ("", "x", "y"):
                     scene.gaps.append(
                         f"{ref}: transformed non-centred field justification needs native review"
                     )
+                f = placed_field(f, angle, mirror)
                 fields.append((str(p[1]), f))
         # Some official multi-unit ICs draw their separate power unit using
         # pins only. Its interior envelope is derived from actual inner pin
@@ -386,6 +452,21 @@ def read_scene(root):
                 if label.outline().gaps:
                     scene.gaps.append("Global label native coverage gap: " + ", ".join(label.outline().gaps))
             elif kind == "hierarchical_label":
+                font = first(first(n, "effects", []), "font", [])
+                size = first(font, "size", [None, 1.27, 1.27])
+                style = (f.angle % 360, f.justify)
+                if (style in HIERARCHICAL_LABEL_STYLES and f.font_mm in (.889, 1.0, 1.27)
+                        and float(size[1]) == float(size[2]) and not f.bold
+                        and "italic" not in font and value(font, "face") in (None, "")
+                        and value(font, "thickness") in (None, "0", 0)
+                        and f.text and all(32 <= ord(c) <= 126 for c in f.text)
+                        and not any(c in f.text for c in '~{}^\\')
+                        and str(value(n, "shape")) in ("input", "output", "bidirectional", "tri_state", "passive")):
+                    scene.labels[-1] = (kind, HierarchicalLabelText(
+                        f.text, f.x, f.y, f.angle, f.font_mm, f.bold, f.justify,
+                        HIERARCHICAL_LABEL_STYLES[style]))
+                else:
+                    scene.gaps.append("Hierarchical label text style needs native review")
                 scene.gaps.append(
                     f"{kind}: outline and attached fields need render review"
                 )

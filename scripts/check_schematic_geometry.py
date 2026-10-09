@@ -9,6 +9,7 @@ from schematic_layout.scene import read_scene
 from schematic_layout.qa import check_scene
 from schematic_layout.generate import pin_net_map
 from schematic_layout.geometry import Box
+from schematic_layout.pages import normalize
 
 
 def main():
@@ -20,15 +21,19 @@ def main():
     ap.add_argument("--grid-mm", type=float, default=1.27)
     args = ap.parse_args()
     layout = json.loads(args.layout.read_text()) if args.layout else {}
+    pin_nets = None
+    if args.intent:
+        try:
+            pin_nets = pin_net_map(normalize(json.loads(args.intent.read_text())))
+        except (ValueError, TypeError, KeyError) as exc:
+            ap.error(f"Invalid --intent: {exc}; use nets {{name: [ref.pin]}} or [{{name, pins}}]")
     report = check_scene(
         read_scene(parse(args.schematic.read_text())),
         grid=layout.get("grid_mm", args.grid_mm),
         reserved=[Box(*b) for b in layout["reserved"]]
         if "reserved" in layout
         else None,
-        pin_nets=pin_net_map(json.loads(args.intent.read_text()))
-        if args.intent
-        else None,
+        pin_nets=pin_nets,
     )
     result = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
     if args.output:

@@ -58,3 +58,17 @@ label outlines and conservative body envelopes can need render reconciliation;
 never suppress every label or every symbol finding by category. Do not promote
 one project's routing adaptation into the reusable engine without a separate,
 representative regression set.
+
+Geometry coverage is narrower than native connectivity. Explicit sheet pin
+coordinates are attachment anchors; an arbitrary point on a sheet frame is
+not. Native field rotation/mirror changes text justification, not the stored
+absolute field anchor. The calibrated hierarchical-label text offset does not
+qualify its contour or intersheet fields; keep those coverage gaps and render
+review. The standalone geometry gate accepts either documented board-net
+format, without changing membership or ignoring cross-net contacts.
+
+For incomplete selected-project annotations, report each missing symbol UUID,
+instance path and available project contexts. Reference properties are locator
+hints, not fallback identities. Native exported object/pin counts and resolved
+source annotation counts are different domains; reconcile them before drawing
+electrical or delivery-completeness conclusions.

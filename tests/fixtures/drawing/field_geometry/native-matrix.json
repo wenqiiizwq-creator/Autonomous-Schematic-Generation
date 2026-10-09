@@ -1,0 +1,2282 @@
+[
+  {
+    "ref": "F000REF",
+    "at": [
+      45,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      41.19,
+      39.3095,
+      48.9309,
+      40.5795
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F001REF",
+    "at": [
+      135,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      135.4135,
+      39.3095,
+      143.1544,
+      40.5795
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F002REF",
+    "at": [
+      225,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      216.9664,
+      39.3095,
+      224.7073,
+      40.5795
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F003REF",
+    "at": [
+      315,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      315.4135,
+      38.5847,
+      323.1544,
+      39.8547
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.78
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F004REF",
+    "at": [
+      405,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      404.2491,
+      36.0689,
+      405.5795,
+      43.8098
+    ],
+    "native_center_offset": [
+      -0.086,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F005REF",
+    "at": [
+      495,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      494.3095,
+      31.8454,
+      495.5795,
+      39.5863
+    ],
+    "native_center_offset": [
+      -0.055,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F006REF",
+    "at": [
+      585,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      584.3095,
+      40.2925,
+      585.5795,
+      48.0334
+    ],
+    "native_center_offset": [
+      -0.055,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F007REF",
+    "at": [
+      675,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      673.5847,
+      31.8454,
+      674.8547,
+      39.5863
+    ],
+    "native_center_offset": [
+      -0.78,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F008REF",
+    "at": [
+      765,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      761.19,
+      39.3094,
+      768.9309,
+      40.5794
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F009REF",
+    "at": [
+      855,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      855.4135,
+      39.3094,
+      863.1544,
+      40.5794
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F010REF",
+    "at": [
+      945,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      936.9664,
+      39.3094,
+      944.7073,
+      40.5794
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F011REF",
+    "at": [
+      1035,
+      40
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1035.4135,
+      40.0342,
+      1043.1544,
+      41.3042
+    ],
+    "native_center_offset": [
+      4.284,
+      0.669
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F012REF",
+    "at": [
+      45,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      44.3095,
+      126.069,
+      45.5795,
+      133.8099
+    ],
+    "native_center_offset": [
+      -0.055,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F013REF",
+    "at": [
+      135,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      134.3095,
+      130.2925,
+      135.5795,
+      138.0334
+    ],
+    "native_center_offset": [
+      -0.055,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F014REF",
+    "at": [
+      225,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      224.2491,
+      121.8454,
+      225.5795,
+      129.5863
+    ],
+    "native_center_offset": [
+      -0.086,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F015REF",
+    "at": [
+      315,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      313.5847,
+      130.2925,
+      314.8547,
+      138.0334
+    ],
+    "native_center_offset": [
+      -0.78,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F016REF",
+    "at": [
+      405,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      401.1899,
+      129.3095,
+      408.9308,
+      130.5795
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F017REF",
+    "at": [
+      495,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      486.9664,
+      129.3095,
+      494.7073,
+      130.5795
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F018REF",
+    "at": [
+      585,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      585.4135,
+      129.3095,
+      593.1544,
+      130.5795
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F019REF",
+    "at": [
+      675,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      666.9664,
+      128.5847,
+      674.7073,
+      129.8547
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.78
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F020REF",
+    "at": [
+      765,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      764.3094,
+      126.0689,
+      765.5794,
+      133.8098
+    ],
+    "native_center_offset": [
+      -0.056,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F021REF",
+    "at": [
+      855,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      854.3094,
+      121.8454,
+      855.5794,
+      129.5863
+    ],
+    "native_center_offset": [
+      -0.056,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F022REF",
+    "at": [
+      945,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      944.3094,
+      130.2925,
+      945.5794,
+      138.0334
+    ],
+    "native_center_offset": [
+      -0.056,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F023REF",
+    "at": [
+      1035,
+      130
+    ],
+    "symbol_angle": 0,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1035.0342,
+      121.8454,
+      1036.3042,
+      129.5863
+    ],
+    "native_center_offset": [
+      0.669,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F024REF",
+    "at": [
+      45,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      44.2491,
+      216.0689,
+      45.5795,
+      223.8098
+    ],
+    "native_center_offset": [
+      -0.086,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F025REF",
+    "at": [
+      135,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      134.3095,
+      211.8454,
+      135.5795,
+      219.5863
+    ],
+    "native_center_offset": [
+      -0.055,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F026REF",
+    "at": [
+      225,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      224.3095,
+      220.2925,
+      225.5795,
+      228.0334
+    ],
+    "native_center_offset": [
+      -0.055,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F027REF",
+    "at": [
+      315,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      313.5847,
+      211.8454,
+      314.8547,
+      219.5863
+    ],
+    "native_center_offset": [
+      -0.78,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F028REF",
+    "at": [
+      405,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      401.1899,
+      219.3094,
+      408.9308,
+      220.5794
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F029REF",
+    "at": [
+      495,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      486.9664,
+      219.3094,
+      494.7073,
+      220.5794
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F030REF",
+    "at": [
+      585,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      585.4135,
+      219.3094,
+      593.1544,
+      220.5794
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F031REF",
+    "at": [
+      675,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      666.9664,
+      220.0342,
+      674.7073,
+      221.3042
+    ],
+    "native_center_offset": [
+      -4.163,
+      0.669
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F032REF",
+    "at": [
+      765,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      764.3095,
+      216.069,
+      765.5795,
+      223.8099
+    ],
+    "native_center_offset": [
+      -0.055,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F033REF",
+    "at": [
+      855,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      854.3095,
+      220.2925,
+      855.5795,
+      228.0334
+    ],
+    "native_center_offset": [
+      -0.055,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F034REF",
+    "at": [
+      945,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      944.2491,
+      211.8454,
+      945.5795,
+      219.5863
+    ],
+    "native_center_offset": [
+      -0.086,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F035REF",
+    "at": [
+      1035,
+      220
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1033.5847,
+      220.2925,
+      1034.8547,
+      228.0334
+    ],
+    "native_center_offset": [
+      -0.78,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F036REF",
+    "at": [
+      45,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      41.1899,
+      309.3095,
+      48.9308,
+      310.5795
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F037REF",
+    "at": [
+      135,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      126.9664,
+      309.3095,
+      134.7073,
+      310.5795
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F038REF",
+    "at": [
+      225,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      225.4135,
+      309.3095,
+      233.1544,
+      310.5795
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F039REF",
+    "at": [
+      315,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      306.9664,
+      308.5847,
+      314.7073,
+      309.8547
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.78
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F040REF",
+    "at": [
+      405,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      404.249,
+      306.0689,
+      405.5794,
+      313.8098
+    ],
+    "native_center_offset": [
+      -0.086,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F041REF",
+    "at": [
+      495,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      494.249,
+      301.8454,
+      495.5794,
+      309.5863
+    ],
+    "native_center_offset": [
+      -0.086,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F042REF",
+    "at": [
+      585,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      584.249,
+      310.2925,
+      585.5794,
+      318.0334
+    ],
+    "native_center_offset": [
+      -0.086,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F043REF",
+    "at": [
+      675,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      674.9738,
+      301.8454,
+      676.3042,
+      309.5863
+    ],
+    "native_center_offset": [
+      0.639,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F044REF",
+    "at": [
+      765,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      761.19,
+      309.249,
+      768.9309,
+      310.5794
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F045REF",
+    "at": [
+      855,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      855.4135,
+      309.249,
+      863.1544,
+      310.5794
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F046REF",
+    "at": [
+      945,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      936.9664,
+      309.249,
+      944.7073,
+      310.5794
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F047REF",
+    "at": [
+      1035,
+      310
+    ],
+    "symbol_angle": 90,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1035.4135,
+      309.9738,
+      1043.1544,
+      311.3042
+    ],
+    "native_center_offset": [
+      4.284,
+      0.639
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F048REF",
+    "at": [
+      45,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      41.1899,
+      399.249,
+      48.9308,
+      400.5794
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F049REF",
+    "at": [
+      135,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      126.9664,
+      399.249,
+      134.7073,
+      400.5794
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F050REF",
+    "at": [
+      225,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      225.4135,
+      399.3094,
+      233.1544,
+      400.5794
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F051REF",
+    "at": [
+      315,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      306.9664,
+      400.0342,
+      314.7073,
+      401.3042
+    ],
+    "native_center_offset": [
+      -4.163,
+      0.669
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F052REF",
+    "at": [
+      405,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      404.3094,
+      396.069,
+      405.5794,
+      403.8099
+    ],
+    "native_center_offset": [
+      -0.056,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F053REF",
+    "at": [
+      495,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      494.3094,
+      400.2925,
+      495.5794,
+      408.0334
+    ],
+    "native_center_offset": [
+      -0.056,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F054REF",
+    "at": [
+      585,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      584.249,
+      391.8454,
+      585.5794,
+      399.5863
+    ],
+    "native_center_offset": [
+      -0.086,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F055REF",
+    "at": [
+      675,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      675.0342,
+      400.2925,
+      676.3042,
+      408.0334
+    ],
+    "native_center_offset": [
+      0.669,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F056REF",
+    "at": [
+      765,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      761.1899,
+      399.3095,
+      768.9308,
+      400.5795
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F057REF",
+    "at": [
+      855,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      846.9664,
+      399.3095,
+      854.7073,
+      400.5795
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F058REF",
+    "at": [
+      945,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      945.4135,
+      399.3095,
+      953.1544,
+      400.5795
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F059REF",
+    "at": [
+      1035,
+      400
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1026.9664,
+      398.5847,
+      1034.7073,
+      399.8547
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.78
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F060REF",
+    "at": [
+      45,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      44.3094,
+      486.0689,
+      45.5794,
+      493.8098
+    ],
+    "native_center_offset": [
+      -0.056,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F061REF",
+    "at": [
+      135,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      134.3094,
+      481.8454,
+      135.5794,
+      489.5863
+    ],
+    "native_center_offset": [
+      -0.056,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F062REF",
+    "at": [
+      225,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      224.3094,
+      490.2925,
+      225.5794,
+      498.0334
+    ],
+    "native_center_offset": [
+      -0.056,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F063REF",
+    "at": [
+      315,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      315.0342,
+      481.8454,
+      316.3042,
+      489.5863
+    ],
+    "native_center_offset": [
+      0.669,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F064REF",
+    "at": [
+      405,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      401.19,
+      489.249,
+      408.9309,
+      490.5794
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F065REF",
+    "at": [
+      495,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      495.4135,
+      489.3094,
+      503.1544,
+      490.5794
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F066REF",
+    "at": [
+      585,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      576.9664,
+      489.3094,
+      584.7073,
+      490.5794
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F067REF",
+    "at": [
+      675,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      675.4135,
+      490.0342,
+      683.1544,
+      491.3042
+    ],
+    "native_center_offset": [
+      4.284,
+      0.669
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F068REF",
+    "at": [
+      765,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      764.3095,
+      486.069,
+      765.5795,
+      493.8099
+    ],
+    "native_center_offset": [
+      -0.055,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F069REF",
+    "at": [
+      855,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      854.3095,
+      490.2925,
+      855.5795,
+      498.0334
+    ],
+    "native_center_offset": [
+      -0.055,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F070REF",
+    "at": [
+      945,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      944.3095,
+      481.8454,
+      945.5795,
+      489.5863
+    ],
+    "native_center_offset": [
+      -0.055,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F071REF",
+    "at": [
+      1035,
+      490
+    ],
+    "symbol_angle": 180,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1033.5847,
+      490.2925,
+      1034.8547,
+      498.0334
+    ],
+    "native_center_offset": [
+      -0.78,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F072REF",
+    "at": [
+      45,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      44.3094,
+      576.069,
+      45.5794,
+      583.8099
+    ],
+    "native_center_offset": [
+      -0.056,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F073REF",
+    "at": [
+      135,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      134.3094,
+      580.2925,
+      135.5794,
+      588.0334
+    ],
+    "native_center_offset": [
+      -0.056,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F074REF",
+    "at": [
+      225,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      224.249,
+      571.8454,
+      225.5794,
+      579.5863
+    ],
+    "native_center_offset": [
+      -0.086,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F075REF",
+    "at": [
+      315,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      315.0342,
+      580.2925,
+      316.3042,
+      588.0334
+    ],
+    "native_center_offset": [
+      0.669,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F076REF",
+    "at": [
+      405,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      401.19,
+      579.3095,
+      408.9309,
+      580.5795
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F077REF",
+    "at": [
+      495,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      495.4135,
+      579.3095,
+      503.1544,
+      580.5795
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F078REF",
+    "at": [
+      585,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      576.9664,
+      579.3095,
+      584.7073,
+      580.5795
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F079REF",
+    "at": [
+      675,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      675.4135,
+      578.5847,
+      683.1544,
+      579.8547
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.78
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F080REF",
+    "at": [
+      765,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      764.3094,
+      576.0689,
+      765.5794,
+      583.8098
+    ],
+    "native_center_offset": [
+      -0.056,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F081REF",
+    "at": [
+      855,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      854.3094,
+      571.8454,
+      855.5794,
+      579.5863
+    ],
+    "native_center_offset": [
+      -0.056,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F082REF",
+    "at": [
+      945,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      944.3094,
+      580.2925,
+      945.5794,
+      588.0334
+    ],
+    "native_center_offset": [
+      -0.056,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F083REF",
+    "at": [
+      1035,
+      580
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1035.0342,
+      571.8454,
+      1036.3042,
+      579.5863
+    ],
+    "native_center_offset": [
+      0.669,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F084REF",
+    "at": [
+      45,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      41.19,
+      669.249,
+      48.9309,
+      670.5794
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F085REF",
+    "at": [
+      135,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      135.4135,
+      669.3094,
+      143.1544,
+      670.5794
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F086REF",
+    "at": [
+      225,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      216.9664,
+      669.3094,
+      224.7073,
+      670.5794
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.056
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F087REF",
+    "at": [
+      315,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "x",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      315.4135,
+      670.0342,
+      323.1544,
+      671.3042
+    ],
+    "native_center_offset": [
+      4.284,
+      0.669
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F088REF",
+    "at": [
+      405,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [],
+    "native_ink_box": [
+      404.3095,
+      666.069,
+      405.5795,
+      673.8099
+    ],
+    "native_center_offset": [
+      -0.055,
+      -0.061
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F089REF",
+    "at": [
+      495,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      494.3095,
+      670.2925,
+      495.5795,
+      678.0334
+    ],
+    "native_center_offset": [
+      -0.055,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F090REF",
+    "at": [
+      585,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      584.3095,
+      661.8454,
+      585.5795,
+      669.5863
+    ],
+    "native_center_offset": [
+      -0.055,
+      -4.284
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F091REF",
+    "at": [
+      675,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 0,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      673.5847,
+      670.2925,
+      674.8547,
+      678.0334
+    ],
+    "native_center_offset": [
+      -0.78,
+      4.163
+    ],
+    "native_long_axis": "y"
+  },
+  {
+    "ref": "F092REF",
+    "at": [
+      765,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [],
+    "native_ink_box": [
+      761.1899,
+      669.3095,
+      768.9308,
+      670.5795
+    ],
+    "native_center_offset": [
+      0.06,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F093REF",
+    "at": [
+      855,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left"
+    ],
+    "native_ink_box": [
+      846.9664,
+      669.3095,
+      854.7073,
+      670.5795
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.055
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F094REF",
+    "at": [
+      945,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "right"
+    ],
+    "native_ink_box": [
+      945.4135,
+      669.2491,
+      953.1544,
+      670.5795
+    ],
+    "native_center_offset": [
+      4.284,
+      -0.086
+    ],
+    "native_long_axis": "x"
+  },
+  {
+    "ref": "F095REF",
+    "at": [
+      1035,
+      670
+    ],
+    "symbol_angle": 270,
+    "mirror": "y",
+    "field_angle": 90,
+    "justify": [
+      "left",
+      "bottom"
+    ],
+    "native_ink_box": [
+      1026.9664,
+      668.5847,
+      1034.7073,
+      669.8547
+    ],
+    "native_center_offset": [
+      -4.163,
+      -0.78
+    ],
+    "native_long_axis": "x"
+  }
+]

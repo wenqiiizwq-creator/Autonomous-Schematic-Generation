@@ -13,6 +13,38 @@ import xml.etree.ElementTree as ET
 FIELDS = {"value", "footprint", "datasheet", "lib_id", "dnp", "fields"}
 
 
+class NativeEvidenceGap(ValueError):
+    """Source coverage cannot establish a native component's qualification."""
+
+
+def native_inventory(path):
+    """Independent export diagnostics, never electrical qualification.
+
+    Counts are XML element occurrences, not inferred physical parts/pins. They
+    remain available when the stricter partition/identity reader rejects XML.
+    """
+    raw = Path(path).read_bytes()
+    result = {"status": "INSUFFICIENT", "qualification": "NOT_EVALUATED",
+              "sha256": hashlib.sha256(raw).hexdigest(),
+              "count_domain": "Native XML component/node element occurrences"}
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError:
+        return {**result, "reason": "Malformed native XML"}
+    if root.tag != "export" or root.find("components") is None or root.find("nets") is None:
+        return {**result, "reason": "Expected a KiCad XML netlist"}
+    comps, nodes = root.findall("components/comp"), root.findall("nets/net/node")
+    physical = [c for c in comps if not c.get("ref", "").startswith("#")]
+    endpoints = [n for n in nodes if not n.get("ref", "").startswith("#")]
+    connected = {n.get("ref") for n in endpoints}
+    return {**result, "status": "DIAGNOSTIC_ONLY", "export_component_count": len(comps),
+            "export_endpoint_count": len(nodes), "physical_component_count": len(physical),
+            "physical_endpoint_count": len(endpoints),
+            "physical_unique_endpoint_count": len({(n.get("ref"), n.get("pin")) for n in endpoints}),
+            "physical_references": sorted({c.get("ref", "") for c in physical}),
+            "zero_endpoint_references": sorted(c.get("ref", "") for c in physical if c.get("ref") not in connected)}
+
+
 def _partition(pins):
     if not isinstance(pins, list) or not pins or any(not isinstance(p, str) or "." not in p or p.startswith("#") for p in pins):
         raise ValueError("A partition must contain physical reference.pin strings")
@@ -23,7 +55,7 @@ def _partition(pins):
     return frozenset(pins)
 
 
-def read_native(path):
+def read_native(path, *, source_root=None, source_roles=None, project=None):
     raw = Path(path).read_bytes()
     try:
         root = ET.fromstring(raw)
@@ -65,11 +97,44 @@ def read_native(path):
         if name in named:
             raise ValueError("Duplicate nonempty native net name")
         named[name] = group
+    pinless, pinless_gaps = {}, {}
+    if source_roles is not None:
+        if source_root is None:
+            raise ValueError("Pinless source-role evidence requires the native source root")
+        from .project_audit import validate_pinless_roles
+        from .native_hierarchy import NativeHierarchy
+        evidence = validate_pinless_roles(NativeHierarchy(source_root, project), source_roles)
+        if evidence["errors"]:
+            raise ValueError("Invalid pinless source-role evidence: " + "; ".join(evidence["errors"]))
+        if source_roles["native_xml_sha256"] != hashlib.sha256(raw).hexdigest():
+            raise ValueError("Pinless evidence native XML SHA256 mismatch")
+        for item in evidence["objects"]:
+            ref = item["reference"]
+            if item["status"] != "NA":
+                if ref in components and not any(p.startswith(ref + ".") for p in pin_nets):
+                    pinless_gaps[ref] = item["reason"]
+                continue
+            c = next((c for c in root.findall("components/comp") if c.get("ref") == ref), None)
+            chain = item["instance"].split("/")[2:]
+            expected_sheet = "/" + "/".join(chain) + ("/" if chain else "")
+            sheet = c.find("sheetpath") if c is not None else None
+            if (c is None or components.get(ref) != item["native_identity"] or
+                    (c.findtext("tstamps") or "").split() != [item["symbol_uuid"]] or
+                    sheet is None or sheet.get("tstamps") != expected_sheet):
+                raise ValueError(f"Pinless evidence native identity/instance mismatch for {ref}")
+            if any(p.startswith(ref + ".") for p in pin_nets) or c.findall("units/unit/pins/pin"):
+                raise ValueError(f"Pinless evidence contradicts exported pins for {ref}")
+            pinless[ref] = {"status": "NA", "role": item["role"],
+                            "reason": "Hash-bound source role and fully resolved pinless cache"}
     for ref in components:
         if not any(p.startswith(ref + ".") for p in pin_nets):
-            raise ValueError(f"Component {ref} has no exported physical pins")
+            if ref not in pinless and ref not in pinless_gaps:
+                raise ValueError(f"Component {ref} has no exported physical pins")
+    if pinless_gaps:
+        raise NativeEvidenceGap("; ".join(f"Component {ref}: {reason}" for ref, reason in sorted(pinless_gaps.items())))
     return {"sha256": hashlib.sha256(raw).hexdigest(), "components": components,
-            "partitions": partitions, "pin_nets": pin_nets, "named": named}
+            "partitions": partitions, "pin_nets": pin_nets, "named": named,
+            "pinless_objects": pinless, "native_inventory": native_inventory(path)}
 
 
 def _identity(descriptor):

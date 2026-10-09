@@ -164,6 +164,66 @@ states, thermal and load margins separately.
 
 ## Close with negative tests and independent evidence
 
+### Intentional pinless native objects
+
+A mechanical or documentation object may have no physical pins. Preserve its
+complete component identity; its pin-integrity result is `NA`, not a part or
+manufacturing qualification. Never infer this role from a reference prefix,
+library/model name, BOM flag or an empty XML pin list. Electrical parts with
+missing exported pins still fail. Unresolved cache inheritance or unavailable
+selected-project annotations remains `INSUFFICIENT` and cannot qualify an object.
+
+Use an externally reviewed `source-role-contract.json` with exactly these keys:
+
+```json
+{
+  "schema_version": 1,
+  "project": "board",
+  "file_sha256": {"board.kicad_sch": "<complete NativeHierarchy file hash map>"},
+  "native_xml_sha256": "<exact reviewed native XML SHA256>",
+  "objects": [{
+    "reference": "OBJECT1",
+    "instance": "/root-uuid/sheet-uuid",
+    "symbol_uuid": "object-uuid",
+    "lib_id": "Example:Marker",
+    "lib_sha256": "<SHA256 of sexpr.dump(cached symbol).encode()>",
+    "source_properties": {"Reference": "OBJECT1", "Value": "Marker"},
+    "source_flags": {"exclude_from_sim": "yes", "in_bom": "no", "on_board": "yes", "dnp": "unspecified"},
+    "role": "mechanical",
+    "native_identity": {"value": "Marker", "footprint": "", "datasheet": "", "lib_id": "Example:Marker", "dnp": false, "fields": {}}
+  }]
+}
+```
+
+`source_properties` must contain every source property; the four flags use the
+native value or `unspecified` when absent. `role` is only `mechanical` or
+`documentation`, selected by an independent source-role review. The checker
+verifies exact selected-project reference/instance/UUID, full source and cache
+hashes, export identity agreement with source properties, and absence of pins
+across every resolved cached unit/style. Native XML additionally must match the
+contract hash, descriptor, symbol UUID and sheet path. A stale hash or incorrect
+identity fails. No missing annotation may borrow another project's reference.
+
+```sh
+python3 scripts/audit_project.py board.kicad_sch --netlist native.xml \
+  --source-role-contract source-role-contract.json --out new-hierarchy.json
+python3 scripts/audit_symbol_integrity.py board.kicad_sch --netlist native.xml \
+  --source-role-contract source-role-contract.json --out new-symbols.json
+python3 scripts/verify_schematic.py board.kicad_sch --intent electrical-intent.json \
+  --source-role-contract source-role-contract.json --out new-verification
+```
+
+The option is forwarded only to hierarchy and symbol audits. It does not waive
+ERC, electrical intent, peripheral contracts or electrical-change verification.
+`verify_schematic.py` exports a fresh XML: timestamp or other byte changes make an
+older XML hash stale and require review/rebinding before symbol qualification.
+The read-only Python API is `read_native(xml, source_root=root,
+source_roles=contract, project=selected_project)`; without a contract its existing
+strict rejection of zero-pin components remains. `native_inventory(xml)` and the
+audit reports separately retain XML component/node occurrence counts and the
+zero-endpoint list even when strict parsing fails. Those diagnostics neither
+qualify a component nor resolve selected-annotation coverage gaps.
+
 Remove a required part, change a value/package, make it DNP, move a return, short
 distinct rails and remove a declared stage. Each affected check must reject the
 mutation. A source-hash change and wrong pin type must fail even with unchanged
