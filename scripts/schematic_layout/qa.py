@@ -95,8 +95,12 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
         ]
     for i, (a, box) in enumerate(bodies):
         for b, other in bodies[i + 1 :]:
-            if box.overlaps(other, gap_mm=body_clearance - 1e-6):
-                add("body_overlap", [a, b], "Body overlap or insufficient clearance")
+            if box.overlaps(other):
+                add("body_overlap", [a, b], "Symbol body bounds overlap")
+            elif box.overlaps(other, gap_mm=body_clearance - 1e-6):
+                findings.append({"code": "body_clearance", "objects": [a, b],
+                                 "detail": f"Separated bodies have less than {body_clearance:g} mm clearance; inspect in native render",
+                                 "severity": "warning"})
     for i, (a, box) in enumerate(fields):
         # Reference and Value on the SAME component are checked as well.
         for b, other in fields[i + 1 :]:
@@ -282,6 +286,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
             "gaps": sorted(set(gaps)),
             "checks": [
                 "body_overlap",
+                "body_clearance",
                 "wire_body",
                 "text_overlap_including_same_owner",
                 "text_body",

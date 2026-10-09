@@ -201,6 +201,7 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
     counts = {s: sum(r["attachment"] == s for r in rows) for s in ("PASS", "CANDIDATE", "INSUFFICIENT", "NOT_APPLICABLE", "REVIEWED_EXCEPTION")}
     graphics_status = "FAIL" if counts["CANDIDATE"] else "INSUFFICIENT" if counts["INSUFFICIENT"] else "PASS"
     physical = {f'{r["reference"]}.{r["pin"]}' for r in rows}
+    native = None
     native_result = {"status": "INSUFFICIENT", "reason": "Native KiCad XML not supplied"}
     if netlist is not None:
         try:
@@ -224,10 +225,42 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
                              "xml_pins_missing_from_source": extra,
                              "source_only_references": sorted(source_refs - native["components"].keys()),
                              "xml_only_references": sorted(native["components"].keys() - source_refs)}
-    axes = [hierarchy["status"], graphics_status, native_result["status"]]
+    # Hidden physical supply pins must not inherit the graphic attachment NA as
+    # electrical qualification. Virtual power symbols were excluded above.
+    # Coincident supply copies remain unsupported, even when XML binds them;
+    # the generator contract currently supports hidden passive copies only.
+    hidden_power_rows = []
+    for pin in rows:
+        if not pin["hidden"] or pin["electrical_type"] not in ("power_in", "power_out"):
+            continue
+        peers = [peer for peer in rows
+                 if not peer["hidden"] and peer["pin"] != pin["pin"]
+                 and all(peer[key] == pin[key] for key in ("reference", "instance", "page", "electrical_type", "name"))
+                 and math.dist(peer["tip_sheet"], pin["tip_sheet"]) <= 1e-6]
+        key = f'{pin["reference"]}.{pin["pin"]}'
+        connected = [peer for peer in peers if native is not None
+                     and key in native["pin_nets"]
+                     and native["pin_nets"].get(f'{peer["reference"]}.{peer["pin"]}') == native["pin_nets"][key]]
+        if connected or (peers and native is None):
+            disposition = "INSUFFICIENT"
+            reason = "unsupported coincident hidden power; explicit physical-power contract required"
+            gaps.append(f'{key}: {reason}')
+        else:
+            disposition = "FAIL"
+            reason = "hidden physical power lacks a matching visible, coincident, native-connected supply anchor"
+            errors.append({"kind": "unrepresented_hidden_power", "reference": pin["reference"],
+                           "pin": pin["pin"], "instance": pin["instance"], "page": pin["page"], "reason": reason})
+        hidden_power_rows.append({"reference": pin["reference"], "pin": pin["pin"],
+                                  "instance": pin["instance"], "page": pin["page"],
+                                  "status": disposition, "reason": reason,
+                                  "visible_anchor_candidates": [peer["pin"] for peer in peers],
+                                  "native_connected_anchors": [peer["pin"] for peer in connected]})
+    hidden_power_status = ("FAIL" if any(p["status"] == "FAIL" for p in hidden_power_rows)
+                           else "INSUFFICIENT" if hidden_power_rows else "PASS")
+    axes = [hierarchy["status"], graphics_status, native_result["status"], hidden_power_status]
     status = "FAIL" if errors or "FAIL" in axes else "INSUFFICIENT" if gaps or "INSUFFICIENT" in axes else "PASS"
     return {"schema_version": 1, "status": status,
-            "scope": "Pin-to-ink candidates and native physical pin coverage only. No manufacturer, pad geometry, peripheral or electrical approval.",
+            "scope": "Pin-to-ink candidates, explicit physical-power visibility and native physical pin coverage only. No manufacturer, pad geometry, peripheral or electrical approval.",
             "hierarchy_status": hierarchy["status"], "page_count": hierarchy["page_count"],
             "component_count": len({r["reference"] for r in rows}), "physical_pin_count": len(physical),
             "file_sha256": hierarchy["file_sha256"], "graphics": {"status": graphics_status, "tolerance_mm": tolerance, "counts": counts},
@@ -241,4 +274,5 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
                 "source_pinless_reference_count": len(pinless_refs),
                 "selected_context_reference_count": hierarchy["component_count"],
                 "missing_selected_context_count": len(context.missing_symbol_annotations)},
+            "hidden_power": {"status": hidden_power_status, "pins": hidden_power_rows},
             "native_pin_coverage": native_result, "errors": errors, "coverage_gaps": sorted(set(gaps)), "pins": rows}

@@ -40,6 +40,10 @@ its circuit structure. These are layout patterns, not verified design templates.
 - Keep at least 1.27 mm between bodies where feasible. Account separately for
   wire/pin exit corridors and visible Reference/Value/labels; moving only the
   body does not resolve text collisions.
+  The geometry gate records separated bodies below this spacing as
+  `body_clearance` requiring native review; actual overlapping body bounds
+  remain `body_overlap` errors. A spacing warning does not yield an automated
+  PASS, and it does not close independent text, pin, wire or coverage findings.
 - Keep ordinary fields horizontal and clearly associated with their component.
   A dense, regular capacitor bank may use consistent 90-degree Reference/Value
   fields with measured pitch and native visual verification; see

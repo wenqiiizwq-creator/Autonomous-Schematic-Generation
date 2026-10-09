@@ -91,6 +91,15 @@ not proof; a pin touching a supported stroke can be checked even when other
 unsupported primitives exist. This is not complete raster/text-layout analysis.
 The default distance tolerance is 0.16 mm; it does not establish wire connectivity.
 
+The separate `hidden_power` axis rejects physical hidden `power_in`/`power_out`
+pins lacking a visible coincident supply anchor with matching type/name and
+native connectivity. Graphics `NOT_APPLICABLE` does not close that axis.
+Coincident hidden supply copies remain `INSUFFICIENT` under the current bounded
+generation contract, even when native XML connects them; do not infer approval
+from a shared name or net. Virtual `#` power symbols, visible zero-length pins,
+visible separate supply units and hidden passive copies retain their existing
+coverage rules. Pin-artwork exceptions cannot bypass this power-visibility check.
+
 For an intentional isolated terminal, retain an explicit disposition:
 
 ```json
