@@ -6,6 +6,33 @@ from .scene import GlobalLabelText
 from .routing import on_segment, intersection, segment_hits_box, wire_box, grid_point
 
 
+def _round_stroke_hits_box(a, b, box, radius):
+    """Intersect a round-capped segment capsule with axis-aligned bounds.
+
+    Square expansion is only a broad-phase bound: it includes corner areas
+    outside the circular cap. The shortest Euclidean distance is attained
+    by a segment endpoint and the box, or a box corner and the segment.
+    """
+    if segment_hits_box(a, b, box):
+        return True
+
+    def point_box(p):
+        dx = max(box.x_min - p[0], 0, p[0] - box.x_max)
+        dy = max(box.y_min - p[1], 0, p[1] - box.y_max)
+        return dx * dx + dy * dy
+
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length_sq = dx * dx + dy * dy
+
+    def point_segment(p):
+        t = max(0, min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length_sq)) if length_sq else 0
+        return (p[0] - a[0] - t * dx) ** 2 + (p[1] - a[1] - t * dy) ** 2
+
+    corners = ((x, y) for x in (box.x_min, box.x_max) for y in (box.y_min, box.y_max))
+    distance_sq = min(point_box(a), point_box(b), *(point_segment(p) for p in corners))
+    return distance_sq <= radius * radius
+
+
 def body_terminal_contact(a, b, body, terminals):
     """Allow only a point contact at an explicit zero-length body terminal.
 
@@ -136,6 +163,36 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
                 [name],
                 "Object intrudes into reserved title/block region",
             )
+    # Native default polyline ink has round caps/joins. Clip each real
+    # capsule against actual bounds rather than treating an outline's
+    # interior (or a diagonal's entire AABB) as opaque. Annotation crossings
+    # with conductors are visual warnings, never electrical contacts.
+    graphic_extents = []
+    for name, a, b, width in scene.graphic_segments:
+        radius = width / 2
+        extent = wire_box(a, b, radius)
+        graphic_extents.append((name, extent))
+        if not extent.inside(scene.page, margin_mm=5):
+            add("off_page", [name], "Graphic ink outside page/frame clearance")
+        if any(_round_stroke_hits_box(a, b, r, radius) for r in reserved):
+            add("reserved_region", [name], "Graphic ink enters reserved title/block region")
+        for target, box in fields:
+            if _round_stroke_hits_box(a, b, box, radius):
+                findings.append({"code": "graphic_text", "objects": [name, target],
+                                 "detail": "Annotation ink intersects conservative text bounds; inspect actual glyphs in native render",
+                                 "severity": "warning"})
+        for target, box in bodies:
+            if _round_stroke_hits_box(a, b, box, radius):
+                add("graphic_body", [name, target], "Annotation ink crosses symbol body bounds")
+        for target, c, d in (
+            [(f"wire:{i}", *wire) for i, wire in enumerate(scene.wires)]
+            + [(p.id, p.point, p.inner) for p in pins if p.point != p.inner]
+        ):
+            if _round_stroke_hits_box(a, b, wire_box(c, d, 0), radius):
+                findings.append({"code": "graphic_wire" if target.startswith("wire:") else "graphic_pin",
+                                 "objects": [name, target],
+                                 "detail": "Annotation ink crosses a conductor; inspect native render, no electrical contact inferred",
+                                 "severity": "warning"})
     for i, (a, b) in enumerate(scene.wires):
         if a == b:
             add("zero_wire", [f"wire:{i}"], "Zero-length wire")
@@ -265,7 +322,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
                         "severity": "warning",
                     }
                 )
-    content = union(box for name, box in extents)
+    content = union(box for name, box in extents + graphic_extents)
     counts = Counter(f["code"] for f in findings)
     status = (
         "FAIL"
@@ -283,6 +340,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
             "wires": len(scene.wires),
             "pins": len(pins),
             "sheet_pins": len(scene.sheet_pins),
+            "graphic_segments": len(scene.graphic_segments),
             "gaps": sorted(set(gaps)),
             "checks": [
                 "body_overlap",
@@ -301,6 +359,7 @@ def check_scene(scene, grid=1.27, reserved=None, body_clearance=1.27, pin_nets=N
                 "orphan_nc",
                 "collinear_overlap",
                 "wire_crossing",
+                "explicit_unfilled_polyline_ink",
             ],
             "pin_net_intent_checked": bool(pin_nets),
             "limitations": [

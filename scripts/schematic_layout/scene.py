@@ -114,6 +114,50 @@ class Scene:
     no_connects: list[Point] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
     sheet_pins: list[tuple[str, Point]] = field(default_factory=list)
+    # Annotation ink is never an electrical wire or a connectivity anchor.
+    graphic_segments: list[tuple[str, Point, Point, float]] = field(default_factory=list)
+
+
+def sheet_polyline(node):
+    """Qualify only native-tested explicit unfilled default strokes.
+
+    Default-width resolution, dash patterns, fills and unknown properties
+    require separate native evidence; they remain coverage gaps.
+    """
+    keys = [str(n[0]) for n in node[1:] if isinstance(n, list) and n]
+    if len(keys) != len(node) - 1 or set(keys) - {"pts", "stroke", "fill", "uuid"}:
+        raise ValueError("unknown polyline property")
+    if len(keys) != len(set(keys)) or keys.count("pts") != 1 or keys.count("stroke") != 1:
+        raise ValueError("missing or duplicate polyline property")
+    fill = first(node, "fill")
+    if fill is not None and fill != ["fill", ["type", "none"]]:
+        raise ValueError("unsupported polyline fill")
+    stroke = first(node, "stroke")
+    if (len(stroke) != 3 or len(all_nodes(stroke, "width")) != 1
+            or len(all_nodes(stroke, "type")) != 1
+            or first(stroke, "type") != ["type", "default"]):
+        raise ValueError("unsupported polyline stroke")
+    width_node = first(stroke, "width")
+    if len(width_node) != 2:
+        raise ValueError("malformed polyline width")
+    width = float(width_node[1])
+    if not math.isfinite(width) or width <= 0:
+        raise ValueError("polyline width must be explicit, finite and positive")
+    pts = first(node, "pts")
+    if len(pts) < 3:
+        raise ValueError("polyline requires two points")
+    points = []
+    for n in pts[1:]:
+        if not isinstance(n, list) or len(n) != 3 or n[0] != "xy":
+            raise ValueError("malformed polyline point")
+        p = (float(n[1]), float(n[2]))
+        if not all(map(math.isfinite, p)):
+            raise ValueError("nonfinite polyline point")
+        points.append(p)
+    segments = list(zip(points, points[1:]))
+    if any(a == b for a, b in segments):
+        raise ValueError("zero-length polyline segment")
+    return [(a, b, width) for a, b in segments]
 
 
 # Global label styles whose native outline direction was verified by render
@@ -221,7 +265,6 @@ def read_scene(root):
         "bus_entry",
         "image",
         "text_box",
-        "polyline",
         "rectangle",
         "arc",
         "circle",
@@ -229,6 +272,12 @@ def read_scene(root):
     ):
         if all_nodes(root, key):
             scene.gaps.append(f"Unsupported sheet object: {key}")
+    for i, node in enumerate(all_nodes(root, "polyline")):
+        try:
+            for j, (a, b, width) in enumerate(sheet_polyline(node)):
+                scene.graphic_segments.append((f"polyline:{i}:segment:{j}", a, b, width))
+        except (ValueError, TypeError, IndexError) as exc:
+            scene.gaps.append(f"Unsupported sheet polyline:{i}: {exc}")
     # Native sheet terminals are explicit electrical anchors. Recognising
     # their coordinates does not qualify the sheet frame, text or pin outline.
     for si, sheet in enumerate(all_nodes(root, "sheet")):

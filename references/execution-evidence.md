@@ -27,6 +27,15 @@ actual paths inspected and unresolved reading obstacles, not only which
 pages were opened. A fresh snapshot can preserve an unreadable drawing;
 it does not establish that this separate review passed.
 
+Before handoff, inspect each OPEN item's closure plan against its actual
+obligation: owner, target/state, needed input or action, acquisition method,
+acceptance boundary and affected reruns. Follow the distinctions in
+[requirements-to-intent.md](requirements-to-intent.md): external evidence,
+design guarantee, tool coverage and downstream handoff need different actions.
+Report generic or mismatched closure text as a delivery gap; a fresh hash or a
+written proposal cannot close it. Preserve the original item when later adding
+actual evidence and the independent disposition.
+
 ## Snapshot gate
 
 After the final exports/checks, save `delivery-evidence.json` in the project root:

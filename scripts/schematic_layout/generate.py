@@ -256,6 +256,17 @@ def make_root(intent, layout, name, dirs=()):
             for sub in all_nodes(lib, "symbol")
             if (m := re.search(r"_(\d+)_(\d+)$", str(sub[1]))) and int(m[1]) > 0
         }
+        # KiCad also permits a single default view whose physical pins all
+        # live in common unit 0. Keep the cached numbering, and infer unit 1
+        # only when default-style physical pins actually exist. Graphics-only
+        # and alternate-body-only libraries do not establish a default view.
+        if not units and any(
+            (m := re.search(r"_(\d+)_(\d+)$", str(sub[1])))
+            and int(m[1]) == 0 and int(m[2]) in (0, 1)
+            and all_nodes(sub, "pin")
+            for sub in all_nodes(lib, "symbol")
+        ):
+            units = {1}
         if set(component.get("units", [1])) != units or unit not in units:
             raise ValueError(
                 f"{ref}: multi-unit symbol requires explicit, complete units {sorted(units)}"

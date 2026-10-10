@@ -15,6 +15,10 @@ They do not select ICs, infer missing connections, or optimize arbitrary boards.
   Symbol inheritance is resolved from the selected `.kicad_sym` library.
   Multi-unit components require an explicit complete `units` list (e.g. `[1,2,3]`)
   and placements keyed `U1:1`, `U1:2`, `U1:3`. Physical net pins remain `U1.number`.
+  A single view with physical pins only in common unit 0 uses implicit unit 1;
+  its cached unit numbering remains unchanged. This applies only to common
+  physical pins in default body styles 0/1, not graphics-only or alternate-only
+  symbols. The complete physical-pin intent is still required.
 - Separate physical pin IDs `reference.number` and named electrical nets.
   Every real pin must appear exactly once in a net or `no_connect`.
 - Explicit placements, optional horizontal rails, visible local wires, and
@@ -160,6 +164,22 @@ clearance, wires through bodies, Reference/Value/labels including same-owner
 collisions, text versus pin legs/wires, page/title keepouts, off-grid electrical
 anchors, floating labels/NC markers/junctions, orphan endpoints, duplicate wires,
 undotted crossings and cross-net contact when pin intent is supplied.
+
+Top-level annotation polylines are covered only for explicit finite positive
+width, default stroke, finite nonzero segments and no fill (omitted or `none`).
+Checks follow each ink segment and half-width round-cap envelope, not the
+empty interior of an outline or a diagonal's enclosing box. Text/body and
+page/title collisions are findings within the conservative bounds model.
+Text envelopes are conservative estimates: a candidate ink/text intersection
+is a warning with `REVIEW`, never an automatic claim that native glyphs collide.
+Inspect each candidate in the actual render, recording real obstruction as
+REWORK_REQUIRED and a clear glyph gap as an individual false positive. A
+warning does not become automated PASS through manual classification.
+Crossing an electrical wire or pin leg is a visual warning requiring native
+inspection; annotation ink never creates a net contact or electrical anchor.
+Unknown properties, fills, dash styles, implicit/zero widths and malformed
+points retain coverage gaps. Hierarchical frames and other unsupported sheet
+graphics remain separate gaps.
 
 `PASS` means no finding within the model. `FAIL` is a detected defect;
 `INSUFFICIENT` is unsupported geometry or missing cached symbols; `REVIEW` is a
