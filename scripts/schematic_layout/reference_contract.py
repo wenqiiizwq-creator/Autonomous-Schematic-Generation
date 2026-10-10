@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
-from .design_change import read_native
+from .design_change import read_native, UnqualifiedPinlessObjects
 
 
 def _keys(obj, required, optional=()):
@@ -36,7 +36,16 @@ def verify_reference(netlist, contract, base, *, source_root=None, source_roles=
         raise ValueError("Invalid reference contract collections")
     context = {k: v for k, v in dict(source_root=source_root, source_roles=source_roles,
                                     project=project).items() if v is not None}
-    native = read_native(netlist, **context)
+    native_errors = []
+    unqualified = []
+    try:
+        native = read_native(netlist, **context)
+    except UnqualifiedPinlessObjects as exc:
+        # All structural/identity/role-evidence checks ran before this exception.
+        # Keep whole-input FAIL; local source-bound diagnostics cannot qualify it.
+        native = exc.diagnostic_native
+        unqualified = list(exc.references)
+        native_errors = [f"Component {ref} has no exported physical pins" for ref in unqualified]
     root = ET.parse(netlist).getroot()
     # KiCad node pinfunction may be a generated identifier (e.g. STAT_1).
     # Resolve the physical name from the exact library definition, never by
@@ -47,7 +56,7 @@ def verify_reference(netlist, contract, base, *, source_root=None, source_roles=
         library_parts.setdefault((part.get("lib"), part.get("part")), []).append(part)
     node_types = {f'{n.get("ref")}.{n.get("pin")}': n.get("pintype", "").removesuffix("+no_connect")
                   for net in root.findall("nets/net") for n in net.findall("node")}
-    sources, checks, errors, gaps = {}, {}, [], []
+    sources, checks, errors, gaps = {}, {}, native_errors, []
     base = Path(base).resolve()
     for sid, s in contract["sources"].items():
         _text(sid, "sources ID")
@@ -209,4 +218,7 @@ def verify_reference(netlist, contract, base, *, source_root=None, source_roles=
             "scope": "Declared source hashes, full pin maps and native topology/population facts only; stage semantics and scope completeness require independent review.",
             "netlist_sha256": native["sha256"], "contract_sha256": hashlib.sha256(json.dumps(contract, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
             "sources": sources, "pin_maps": pin_results, "checks": checks, "features": features, "errors": errors, "coverage_gaps": gaps,
+            "native_qualification": {"status": "FAIL" if native_errors else "PASS",
+                                     "unqualified_zero_pin_objects": unqualified,
+                                     "scope": "Whole-native qualification remains failed when objects are unqualified; local fact results are diagnostics only in that case."},
             "unverified": ["Manufacturer authority and interpretation of source text", "Adequacy of declared core/feature scope and stages", "Footprint mechanical dimensions", "Transfer functions, load and transient margins", "DNP alternatives and fitted zero-ohm graph equivalence", "Native visual review and physical validation"]}

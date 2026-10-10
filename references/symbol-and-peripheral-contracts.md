@@ -149,6 +149,13 @@ identity can independently FAIL even when its metadata has a coverage gap.
 Every library physical pin, including unused units, NC and EP, must be in the
 contract; omission from both the nodes and contract cannot hide a library pin.
 Library pins without a physical number remain a metadata coverage gap.
+
+An unqualified zero-pin object still makes whole-native qualification FAIL.
+The reference report retains source-bound pin/identity/topology diagnostics for
+the structurally parsed remainder so an unrelated object cannot hide a local
+pin defect. Check `native_qualification` and top-level `errors`: local PASS
+entries never qualify a failed input. Malformed XML, duplicate physical
+assignments and invalid source-role evidence remain hard rejections.
 | `checks` | Unique `id`, `kind`, source/locator. `component` asserts exact value/footprint/library/DNP. `same_net` and `distinct_nets` assert at least two unique `reference.pin` endpoints against native partitions. |
 | `features` | Unique ID, boundary, source/locator and nonempty stages. Each stage needs ID, role, real fitted references and check IDs. Missing/DNP required references fail. Review whether the listed references and checks actually implement the stated role. |
 

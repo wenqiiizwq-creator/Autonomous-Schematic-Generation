@@ -17,6 +17,18 @@ class NativeEvidenceGap(ValueError):
     """Source coverage cannot establish a native component's qualification."""
 
 
+class UnqualifiedPinlessObjects(ValueError):
+    """Strict rejection with structurally parsed facts for local diagnostics only.
+
+    This is deliberately not NativeEvidenceGap: consumers must retain FAIL,
+    never accept these facts as qualified connectivity or infer object roles.
+    """
+    def __init__(self, references, diagnostic_native):
+        self.references = tuple(references)
+        self.diagnostic_native = diagnostic_native
+        super().__init__(f"Component {self.references[0]} has no exported physical pins")
+
+
 def native_inventory(path):
     """Independent export diagnostics, never electrical qualification.
 
@@ -126,15 +138,17 @@ def read_native(path, *, source_root=None, source_roles=None, project=None):
                 raise ValueError(f"Pinless evidence contradicts exported pins for {ref}")
             pinless[ref] = {"status": "NA", "role": item["role"],
                             "reason": "Hash-bound source role and fully resolved pinless cache"}
-    for ref in components:
-        if not any(p.startswith(ref + ".") for p in pin_nets):
-            if ref not in pinless and ref not in pinless_gaps:
-                raise ValueError(f"Component {ref} has no exported physical pins")
+    unqualified = [ref for ref in components
+                   if not any(p.startswith(ref + ".") for p in pin_nets)
+                   and ref not in pinless and ref not in pinless_gaps]
+    native = {"sha256": hashlib.sha256(raw).hexdigest(), "components": components,
+              "partitions": partitions, "pin_nets": pin_nets, "named": named,
+              "pinless_objects": pinless, "native_inventory": native_inventory(path)}
+    if unqualified:
+        raise UnqualifiedPinlessObjects(unqualified, native)
     if pinless_gaps:
         raise NativeEvidenceGap("; ".join(f"Component {ref}: {reason}" for ref, reason in sorted(pinless_gaps.items())))
-    return {"sha256": hashlib.sha256(raw).hexdigest(), "components": components,
-            "partitions": partitions, "pin_nets": pin_nets, "named": named,
-            "pinless_objects": pinless, "native_inventory": native_inventory(path)}
+    return native
 
 
 def _identity(descriptor):
