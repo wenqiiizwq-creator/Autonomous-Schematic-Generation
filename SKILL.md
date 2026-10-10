@@ -128,6 +128,16 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 - 新设计要求 ERC 零违规。重画工程时保留基线和最终两份原始 ERC，逐条确认没有新增违规，并披露继承的问题。
 - `geometry` 为 INSUFFICIENT 时（例如根页含层次图框），说明该页超出检查器覆盖范围，必须在渲染图上核对。
 - 失败时修改相应页面脚本，在新的运行目录重新生成并验证。不得为了降低计数而加 PWR_FLAG、加排除项或改引脚类型。
+- 唯一受控例外：只由连接器引入的电源或地（板上没有电源输出脚驱动），在板级意图中逐网声明
+  `"external_supply": [{"net", "pin": "连接器位号.脚号", "reason"}]`，页面脚本用 `Sheet.power_flag()` 在该网上放一个
+  PWR_FLAG。`external_supply` 门禁核对：每个 PWR_FLAG 都在已声明的网上、每个声明网恰好一个、声明的连接器脚在该网上、
+  该网没有板上 power_out 驱动。未声明的网不得放 PWR_FLAG。连接器须是 `Connector` / `Connector_*` 库，或
+  自定义器件的 `fields.ComponentRole="connector"`；原生器件必须存在且与意图身份、角色一致，声明脚及完整库引脚表必须都是
+  passive。自定义连接器的机械角色仍需原厂资料/手册独审；角色字段只声明结构，不能证明器件真实性。门禁按缓存的原生
+  power/power_out 标记识别所有 namespace 的旗标，缓存缺失或继承无法解析记 INSUFFICIENT。
+- `symbol_integrity` 报告的 `unnamed_pins` 列出"同一符号里其他脚有名字、某脚名字为空或 `~`"的脚（例如 KiCad 运放符号
+  LM358、AD8494 的输出脚按库惯例不写名字）。它只作诊断、不影响门禁；这些脚导出网表时没有引脚功能名，
+  核心器件要在参考合同里按数据手册名字逐脚绑定，并在交给 schematic-review 的说明中列出。
 
 ### 7. 渲染目检
 

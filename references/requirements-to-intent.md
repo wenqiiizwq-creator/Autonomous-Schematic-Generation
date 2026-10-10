@@ -77,3 +77,15 @@
 
 意图、追溯表、合同、计算和 OPEN 清单与原理图放在同一版本目录；出图验证通过后，
 连同 `verify_schematic.py` 的 `summary.json` 一起交给 `schematic-review` 做完整电气审查。
+
+### 连接器角色与外部供电
+
+两触点自定义连接器在 `fields.ComponentRole` 写 `connector`，并在现有器件合同中绑定原厂资料位置与实际接触脚。
+该字段让 `Sheet` 使用锚点画法，并供外供审计核对意图/原生角色一致；它不是机械身份或电气额定值的证明。
+常规 `Connector` / `Connector_*` 库已有显式连接器角色；普通 R/C 的二端分类不变。
+
+板上没有 power_out 驱动、经连接器引入的电源/回路，逐网声明
+`external_supply: [{"net": "VCC", "pin": "J1.1", "reason": "主机引入电源，见器件合同"}]`。
+用 `Sheet.power_flag()` 放每网一个标记。审计验证精确身份、装配状态与整个连接器引脚表及声明触点的 passive 类型，
+并检查未声明网、重复标记和板上电源输出。原厂来源含义、供电能力、保护和完整性另交 SR。
+核心引脚参考合同的 names/types 不接受空、空白或 `~` 别名；显式未分配的空 footprint 仍合法。

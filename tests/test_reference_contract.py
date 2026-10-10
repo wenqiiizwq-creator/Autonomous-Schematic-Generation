@@ -27,6 +27,28 @@ class ReferenceContractTests(unittest.TestCase):
     def mutate(self, action):
         tree = ET.parse(self.net); action(tree.getroot()); tree.write(self.net)
 
+    def test_blank_or_tilde_alias_reports_physical_pin_and_field(self):
+        for alias in ('', ' ', '~', ' ~ '):
+            with self.subTest(alias=alias):
+                contract=copy.deepcopy(self.contract)
+                contract['pin_maps']['U1']['pins']['1']['names'].append(alias)
+                with self.assertRaisesRegex(ValueError,'U1.*1.*names'):
+                    verify_reference(self.net,contract,self.base)
+
+    def test_empty_identity_and_source_text_report_precise_context(self):
+        for field in ('mpn','value','lib_id'):
+            contract=copy.deepcopy(self.contract);contract['pin_maps']['U1']['identity'][field]=' '
+            with self.assertRaisesRegex(ValueError,'U1.*'+field):verify_reference(self.net,contract,self.base)
+        contract=copy.deepcopy(self.contract);contract['sources']['demo']['revision']=''
+        with self.assertRaisesRegex(ValueError,'source demo.revision'):verify_reference(self.net,contract,self.base)
+        contract=copy.deepcopy(self.contract);contract['pin_maps']['U1']['locator']=''
+        with self.assertRaisesRegex(ValueError,'U1.*locator'):verify_reference(self.net,contract,self.base)
+
+    def test_explicit_empty_footprint_remains_valid(self):
+        self.contract['pin_maps']['U1']['identity']['footprint']=''
+        self.mutate(lambda r: setattr(r.find("components/comp[@ref='U1']/footprint"),'text',''))
+        self.assertEqual(self.audit()['pin_maps']['U1']['status'],'PASS')
+
     def test_declared_facts_pass_without_claiming_qualification(self):
         r = self.audit()
         self.assertEqual(r["status"], "PASS", r)

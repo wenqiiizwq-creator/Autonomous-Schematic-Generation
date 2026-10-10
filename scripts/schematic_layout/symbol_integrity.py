@@ -133,6 +133,27 @@ def attachment_rows(lib, unit, style, tolerance=0.16):
     return rows, gaps
 
 
+def unnamed_pin_rows(rows):
+    """Pins left unnamed (empty or ``~``) in a symbol whose other pins are named.
+
+    Diagnostic only: KiCad op-amp symbols (LM358, AD8494) leave outputs blank by
+    convention, so this cannot fail the gate. The native XML then carries no pin
+    function; the reference contract must bind such a pin to its datasheet name.
+    Symbols with no names at all (R, C) are not listed.
+    """
+    by_ref = {}
+    for r in rows:
+        by_ref.setdefault(r["reference"], []).append(r)
+    errors = []
+    for ref, pins in sorted(by_ref.items()):
+        unnamed = sorted({p["pin"] for p in pins if p["name"] in ("", "~")})
+        if unnamed and len(unnamed) < len({p["pin"] for p in pins}):
+            errors.extend({"kind": "unnamed_pin", "reference": ref, "pin": pin,
+                           "reason": "other pins of this symbol are named; bind it to the datasheet name in the reference contract"}
+                          for pin in unnamed)
+    return errors
+
+
 def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0.16, *, source_roles=None):
     root = Path(root).resolve()
     context = NativeHierarchy(root, project)
@@ -275,4 +296,5 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
                 "selected_context_reference_count": hierarchy["component_count"],
                 "missing_selected_context_count": len(context.missing_symbol_annotations)},
             "hidden_power": {"status": hidden_power_status, "pins": hidden_power_rows},
+            "unnamed_pins": {"status": "DIAGNOSTIC_ONLY", "pins": unnamed_pin_rows(rows)},
             "native_pin_coverage": native_result, "errors": errors, "coverage_gaps": sorted(set(gaps)), "pins": rows}

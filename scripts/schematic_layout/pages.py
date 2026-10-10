@@ -64,6 +64,10 @@ def page_intents(board, field="Circuit", page_of=None, rails=()):
                      for n in local],
             "no_connect": [p for p in board.get("no_connect", []) if pages[p.rsplit(".", 1)[0]] == page],
         }
+        supplies = [copy.deepcopy(d) for d in board.get("external_supply", [])
+                    if pages.get(str(d.get("pin", "")).rsplit(".", 1)[0]) == page]
+        if supplies:  # The flag goes on the page of the declared connector pin.
+            intent["external_supply"] = supplies
         external = sorted(n["name"] for n in local if n["name"] not in rails
                           and any(pages[p.rsplit(".", 1)[0]] != page for p in n["pins"]))
         names = {n["name"] for n in local}

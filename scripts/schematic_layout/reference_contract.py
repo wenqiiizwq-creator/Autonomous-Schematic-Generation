@@ -17,9 +17,9 @@ def _keys(obj, required, optional=()):
         raise ValueError(f"Expected fields {sorted(required)}, optional {sorted(optional)}")
 
 
-def _text(s):
+def _text(s, context="text"):
     if not isinstance(s, str) or not s.strip():
-        raise ValueError("Expected nonempty text")
+        raise ValueError(f"{context}: Expected nonempty text")
     return s
 
 
@@ -48,10 +48,10 @@ def verify_reference(netlist, contract, base):
     sources, checks, errors, gaps = {}, {}, [], []
     base = Path(base).resolve()
     for sid, s in contract["sources"].items():
-        _text(sid)
+        _text(sid, "sources ID")
         _keys(s, {"path", "sha256", "url", "document", "revision"})
-        for v in s.values():
-            _text(v)
+        for key, v in s.items():
+            _text(v, f"source {sid}.{key}")
         if not re.fullmatch(r"[0-9a-f]{64}", s["sha256"]):
             raise ValueError("Source SHA256 must be a lowercase 64-digit digest")
         path = (base / s["path"]).resolve()
@@ -63,10 +63,11 @@ def verify_reference(netlist, contract, base):
             record.update(status="PASS" if actual == s["sha256"] else "FAIL", actual_sha256=actual)
         sources[sid] = record
 
-    def evidence(item):
-        _text(item["locator"])
+    def evidence(item, context):
+        _text(item["locator"], f"{context}.locator")
+        _text(item["source"], f"{context}.source")
         if item["source"] not in sources:
-            raise ValueError("Unknown source ID")
+            raise ValueError(f"{context}.source: Unknown source ID {item['source']}")
         return sources[item["source"]]["status"]
 
     pin_results = {}
@@ -76,12 +77,12 @@ def verify_reference(netlist, contract, base):
         for key, v in spec["identity"].items():
             if key == "footprint" and v == "":
                 continue  # Explicitly unassigned at schematic stage; still compared exactly below.
-            _text(v)
+            _text(v, f"{ref}.identity.{key}")
         if not isinstance(spec["pins"], dict) or not spec["pins"]:
             raise ValueError("Pin map must enumerate every physical pin, including NC/EP")
         failures = []
         pin_gaps = []
-        basis = evidence(spec)
+        basis = evidence(spec, ref)
         component = native["components"].get(ref)
         if component is None:
             failures.append("Component absent")
@@ -108,13 +109,13 @@ def verify_reference(netlist, contract, base):
             if unmapped:
                 failures.append({"library_pins_missing_from_contract": sorted(unmapped)})
         for number, expected in spec["pins"].items():
-            _text(number)
+            _text(number, f"{ref}.physical pin")
             _keys(expected, {"names", "types"})
             for field, aliases in expected.items():
                 if not isinstance(aliases, list) or not aliases or any(not isinstance(x, str) for x in aliases) or len(set(aliases)) != len(aliases):
-                    raise ValueError("Pin names/types must be explicit nonempty alias lists")
-                if field == "types" and any(not x for x in aliases):
-                    raise ValueError("Pin electrical types cannot be blank")
+                    raise ValueError(f"{ref} physical pin {number} {field}: explicit nonempty unique alias list required")
+                if any(not x.strip() or x.strip() == "~" for x in aliases):
+                    raise ValueError(f"{ref} physical pin {number} {field}: blank or tilde alias forbidden")
             pins = definitions.get(number, [])
             if len(pins) != 1 or "name" not in pins[0].attrib or not pins[0].get("type"):
                 pin_gaps.append({"pin": number, "reason": "Missing, duplicate or incomplete library pin definition"})
@@ -141,10 +142,10 @@ def verify_reference(netlist, contract, base):
         if not isinstance(c, dict) or c.get("kind") not in {"component", "same_net", "distinct_nets"}:
             raise ValueError("Unknown peripheral check kind")
         _keys(c, common | ({"ref", "expected"} if c["kind"] == "component" else {"pins"}))
-        cid = _text(c["id"])
+        cid = _text(c["id"], "check.id")
         if cid in checks:
             raise ValueError("Duplicate check ID")
-        basis = evidence(c)
+        basis = evidence(c, f"check {cid}")
         failures = []
         if c["kind"] == "component":
             _keys(c["expected"], {"value", "footprint", "lib_id", "dnp"})
@@ -172,16 +173,16 @@ def verify_reference(netlist, contract, base):
     features = {}
     for f in contract["features"]:
         _keys(f, {"id", "boundary", "source", "locator", "stages"})
-        fid = _text(f["id"])
-        _text(f["boundary"])
+        fid = _text(f["id"], "feature.id")
+        _text(f["boundary"], f"feature {fid}.boundary")
         if fid in features or not isinstance(f["stages"], list) or not f["stages"]:
             raise ValueError("Duplicate feature or empty stages")
-        basis = evidence(f)
+        basis = evidence(f, f"feature {fid}")
         stage_ids, stage_results = set(), []
         for stage in f["stages"]:
             _keys(stage, {"id", "role", "refs", "checks"})
-            sid = _text(stage["id"])
-            _text(stage["role"])
+            sid = _text(stage["id"], f"feature {fid}.stage.id")
+            _text(stage["role"], f"feature {fid}.stage {sid}.role")
             if sid in stage_ids or any(not isinstance(stage[k], list) or not stage[k] or any(not isinstance(x, str) or not x for x in stage[k]) or len(set(stage[k])) != len(stage[k]) for k in ("refs", "checks")):
                 raise ValueError("Stage needs unique ID and nonempty refs/checks")
             stage_ids.add(sid)

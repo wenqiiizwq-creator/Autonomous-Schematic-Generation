@@ -88,7 +88,10 @@ in addition to the electrical and geometry checks below.
   text extents after writing, including native rotation behavior.
 - Add PWR_FLAG only where a justified source drives a power net. Its geometry
   does not establish source capability; verify native ERC and the actual power
-  topology. Avoid gratuitous flags used to suppress real errors.
+  topology. Avoid gratuitous flags used to suppress real errors. In generated
+  designs the only flags are the declared connector-fed supplies
+  (`external_supply` in the intent, drawn with `Sheet.power_flag()`); the
+  `external_supply` gate rejects any other flag.
 
 ### Version-specific connectivity facts
 

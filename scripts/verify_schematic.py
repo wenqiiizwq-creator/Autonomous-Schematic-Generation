@@ -3,8 +3,9 @@
 
 Exports native ERC, KiCad XML netlist and PDF from the root sheet, then runs:
 intent partitions and component identity, hierarchy/PDF audit, symbol
-integrity, the readability gate and geometry QA on every active sheet, and
-optionally a reference contract and an electrical change contract. All reports
+integrity, the readability gate and geometry QA on every active sheet, the
+declared external-supply/PWR_FLAG check when the intent declares one or a flag
+is drawn, and optionally a reference contract and an electrical change contract. All reports
 and ``summary.json`` go into a fresh output directory.
 
 ``AUTOMATED_PASS`` covers only these gates. Native render review of every page
@@ -20,6 +21,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from schematic_layout.external_supply import audit_external_supply  # noqa: E402
 from schematic_layout.native import compare_netlist, find_cli  # noqa: E402
 from schematic_layout.pages import normalize  # noqa: E402
 
@@ -139,6 +141,15 @@ def main():
     gates["geometry"] = {"status": worst[0] if worst else "PASS", "sheets": geometry}
     if gaps:
         gates["geometry"]["coverage_gaps"] = gaps
+
+    if xml.is_file():
+        try:
+            supply = audit_external_supply(args.root, sheets, intent, xml, cli, out / "external-supply")
+        except (ValueError, OSError) as exc:
+            supply = {"status": "FAIL", "error": str(exc)}
+        if supply["status"] != "NOT_APPLICABLE":
+            write(out / "external-supply.json", supply)
+            gates["external_supply"] = {"status": supply["status"], "errors": len(supply.get("errors", []))}
 
     if args.reference_contract:
         report = out / "reference-contract.json"

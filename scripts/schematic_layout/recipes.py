@@ -14,6 +14,7 @@ audits the drawing against them; a deviation needs a recorded reason.
 import copy
 import math
 
+from .component_role import is_connector
 from .field_placer import FieldSpec, autoplace_fields
 from .generate import Libraries, library_dirs, make_root, pin_clipped_body, pin_net_map
 from .geometry import Box, TextField, text_extent
@@ -27,6 +28,12 @@ G = 1.27
 UP, DOWN, LEFT, RIGHT = (0, -1), (0, 1), (-1, 0), (1, 0)
 ORIENTATIONS = [(0, ""), (90, ""), (180, ""), (270, ""), (0, "y"), (90, "y"), (180, "y"), (270, "y")]
 UPRIGHT = [(0, ""), (0, "y")]
+FLAG_SYMBOL = "power:PWR_FLAG"
+
+
+def flag_value(symbol, net):
+    """Value text of a power symbol: the net it names, or PWR_FLAG for a flag."""
+    return "PWR_FLAG" if symbol == FLAG_SYMBOL else net
 
 
 def pt(p):
@@ -114,6 +121,7 @@ class Sheet:
         self.pins = {}
         self.segments = []
         self.powers = []
+        self.flags = []
         self.labels = []
         self.names = []
         self.notes = []
@@ -129,7 +137,7 @@ class Sheet:
 
     # ----- outline rules --------------------------------------------------
     def _is_anchor(self, ref):
-        return len(self._shape(ref)[0]) >= 3 or self.components[ref]["lib_id"].startswith("Connector")
+        return len(self._shape(ref)[0]) >= 3 or is_connector(self.components[ref])
 
     def _suggest(self):
         """Propose a role for every part and a label role for every net."""
@@ -505,8 +513,23 @@ class Sheet:
                 start = self.wire(target, add(start, pd, n))
         end = add(start, d, length)
         self.wire(start, end, net=net)
-        self.powers.append((net, symbol, end))
+        if symbol == FLAG_SYMBOL:
+            self.flags.append((net, symbol, end))
+        else:
+            self.powers.append((net, symbol, end))
         return end
+
+    def power_flag(self, target, length=2):
+        """PWR_FLAG on a connector-fed supply declared in ``intent["external_supply"]``.
+
+        The flag names no net and is checked by the external-supply gate; put it
+        on the declared connector pin's net, once per declared net.
+        """
+        net = self._net(target)
+        declared = {d.get("net") for d in self.intent.get("external_supply", [])}
+        if net not in declared:
+            raise ValueError(f"{net} is not declared in external_supply; PWR_FLAG only marks declared connector-fed nets")
+        return self.power(target, symbol=FLAG_SYMBOL, net=net, length=length)
 
     def label(self, target, kind="global", length=3, outward=None, net=None, font=None, reason=None):
         """Label at a wire end extending ``outward`` (a pin's own direction by default).
@@ -547,7 +570,8 @@ class Sheet:
         """Split same-net branches; reject any contact between different nets."""
         raw = sorted(set((n, *sorted((a, b))) for n, a, b in self.segments))
         pins = [(self.nets.get(pid), q) for pid, (q, _) in self.pins.items()]
-        anchors = pins + [(l["net"], l["at"]) for l in self.labels] + [(n, e) for n, _, e in self.powers]
+        anchors = (pins + [(l["net"], l["at"]) for l in self.labels]
+                   + [(n, e) for n, _, e in self.powers + self.flags])
         crossings = []
         for i, (n, a, b) in enumerate(raw):
             for m, c, d in raw[:i]:
@@ -667,11 +691,11 @@ class Sheet:
                  for q in set(dots) | {q for q, _ in self.pins.values()}]
         # Power symbols: body plus Value field.
         powers = []
-        for net, symbol, end in self.powers:
+        for net, symbol, end in self.powers + self.flags:
             lib, body, down = self._power_shape(symbol)
             b = Box(body.x_min + end[0], body.y_min + end[1], body.x_max + end[0], body.y_max + end[1])
             value_at = pt((end[0], b.y_max + 0.9 if down else b.y_min - 0.9))
-            vbox = TextField(net, *value_at, 0, 1.0).box()
+            vbox = TextField(flag_value(symbol, net), *value_at, 0, 1.0).box()
             for box in (b, vbox):
                 if foreign(box, net) or any(box.overlaps(o) for o in obstacles) or not box.inside(page):
                     raise ValueError(f"{net} rail symbol at {end} collides; change the recipe direction or length")
@@ -760,17 +784,24 @@ class Sheet:
         present = {str(n[1]) for n in all_nodes(cache, "symbol")}
         template = next((first(s, "instances") for s in all_nodes(root, "symbol") if first(s, "instances")), None)
         hidden = lambda: form("effects", form("font", form("size", 1.27, 1.27)), form("hide", Atom("yes")))
+        flag_count = 0
         for k, (net, symbol, end, lib, value_at) in enumerate(powers):
             if symbol not in present:
                 cache.append(copy.deepcopy(lib))
                 present.add(symbol)
-            ref = f"#PWR{self.power_ref_start + k:03d}"
+            if symbol == FLAG_SYMBOL:
+                flag_count += 1
+                ref = "#FLG" + uid("flag-reference:" + name + ":" + net + ":" + repr(end)).replace("-", "")
+                if ref in self.components:
+                    raise ValueError(f"Power flag reference collides with component {ref}")
+            else:
+                ref = f"#PWR{self.power_ref_start + k - flag_count:03d}"
             numbers = [str(value(p, "number")) for s in all_nodes(lib, "symbol") for p in all_nodes(s, "pin")]
             sym = [Atom("symbol"), form("lib_id", symbol), form("at", *end, 0), form("unit", 1),
                    form("in_bom", Atom("no")), form("on_board", Atom("no")), form("dnp", Atom("no")),
                    form("uuid", uid("power:" + net + ":" + repr(end))),
                    form("property", "Reference", ref, form("at", *end, 0), hidden()),
-                   form("property", "Value", net, form("at", *value_at, 0),
+                   form("property", "Value", flag_value(symbol, net), form("at", *value_at, 0),
                         form("effects", form("font", form("size", 1.0, 1.0)))),
                    form("property", "Footprint", "", form("at", *end, 0), hidden()),
                    form("property", "Datasheet", "", form("at", *end, 0), hidden()),
