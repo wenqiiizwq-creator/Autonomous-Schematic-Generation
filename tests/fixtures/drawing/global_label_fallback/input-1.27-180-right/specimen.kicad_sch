@@ -1,0 +1,1 @@
+(kicad_sch (version 20250114) (generator "eeschema") (generator_version "10.0") (uuid "42141b06-0b0d-4f9a-8c5f-9b5d86b393b5") (paper "A4") (lib_symbols) (global_label "NET_A" (shape input) (at 80 50 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "c61d42b5-91fa-44da-a5f3-649e32aa223f")))

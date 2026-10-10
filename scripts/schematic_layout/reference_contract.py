@@ -23,7 +23,7 @@ def _text(s, context="text"):
     return s
 
 
-def verify_reference(netlist, contract, base):
+def verify_reference(netlist, contract, base, *, source_root=None, source_roles=None, project=None):
     _keys(contract, {"schema_version", "scope", "sources", "pin_maps", "checks", "features"})
     if contract["schema_version"] != 1:
         raise ValueError("Unsupported reference contract version")
@@ -34,7 +34,9 @@ def verify_reference(netlist, contract, base):
             raise ValueError("Scope must declare nonempty unique core_refs and feature_ids")
     if not isinstance(contract["sources"], dict) or not isinstance(contract["pin_maps"], dict) or not isinstance(contract["checks"], list) or not isinstance(contract["features"], list):
         raise ValueError("Invalid reference contract collections")
-    native = read_native(netlist)
+    context = {k: v for k, v in dict(source_root=source_root, source_roles=source_roles,
+                                    project=project).items() if v is not None}
+    native = read_native(netlist, **context)
     root = ET.parse(netlist).getroot()
     # KiCad node pinfunction may be a generated identifier (e.g. STAT_1).
     # Resolve the physical name from the exact library definition, never by

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "project": "specimen",
+  "file_sha256": {
+    "specimen.kicad_sch": "37f729a52ca4fce2b148394cdf29747d3f63a61d2b54254284a39c9d632a651f"
+  },
+  "native_xml_sha256": "47fdcb451f7afc30a9dd244e1019312f248c338d39dcd9d08ed5ae1728d16764",
+  "objects": [
+    {
+      "reference": "Z7",
+      "instance": "/48ef4151-5749-42f8-8c08-9622047c4208",
+      "symbol_uuid": "af09e535-a71b-494f-8869-f28ea277e98c",
+      "lib_id": "Neutral:Marker",
+      "lib_sha256": "5e6d38030558141887f718c5e23c1fa3cc3112a409339f28cc168919daa8fb27",
+      "source_properties": {
+        "Reference": "Z7",
+        "Value": "Marker",
+        "Custom": "Exact custom",
+        "MPN": "Exact-N1",
+        "Description": "Exact description"
+      },
+      "source_flags": {
+        "exclude_from_sim": "no",
+        "in_bom": "yes",
+        "on_board": "yes",
+        "dnp": "no"
+      },
+      "role": "mechanical",
+      "native_identity": {
+        "value": "Marker",
+        "footprint": "",
+        "datasheet": "",
+        "lib_id": "Neutral:Marker",
+        "dnp": false,
+        "fields": {
+          "Custom": "Exact custom",
+          "MPN": "Exact-N1",
+          "Footprint": "",
+          "Datasheet": "",
+          "Description": "Exact description"
+        }
+      }
+    }
+  ]
+}

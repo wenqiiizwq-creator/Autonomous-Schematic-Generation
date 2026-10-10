@@ -56,6 +56,9 @@ def main():
     ap.add_argument("--reference-contract", type=Path)
     ap.add_argument("--source-role-contract", type=Path, help="Reviewed hash-bound pinless mechanical/documentation roles")
     ap.add_argument("--baseline-xml", type=Path, help="baseline native XML for an electrical change")
+    ap.add_argument("--baseline-source-root", type=Path, help="Source for the separately reviewed baseline roles")
+    ap.add_argument("--baseline-source-role-contract", type=Path)
+    ap.add_argument("--baseline-project", help="Selected baseline annotation project")
     ap.add_argument("--change-contract", type=Path)
     ap.add_argument("--preflight", type=Path, help="design-preflight.json for an electrical change")
     ap.add_argument("--project", help="native project annotation name; defaults to the root file stem")
@@ -65,6 +68,10 @@ def main():
         ap.error("Output directory is not empty; use a fresh run directory")
     if bool(args.baseline_xml) != bool(args.change_contract):
         ap.error("--baseline-xml and --change-contract go together")
+    if bool(args.baseline_source_root) != bool(args.baseline_source_role_contract):
+        ap.error("--baseline-source-root and --baseline-source-role-contract go together")
+    if (args.baseline_source_root and not args.baseline_xml) or (args.baseline_project and not args.baseline_source_root):
+        ap.error("Baseline source context requires the baseline XML and role pair")
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     gates, commands = {}, []
@@ -153,12 +160,20 @@ def main():
 
     if args.reference_contract:
         report = out / "reference-contract.json"
-        tool("verify_reference_contract.py", xml, args.reference_contract, "--out", report)
+        extra = ["--source-root", args.root, *roles, *project] if roles else []
+        tool("verify_reference_contract.py", xml, args.reference_contract, *extra, "--out", report)
         gates["reference_contract"] = {"status": status_of(report)}
 
     if args.change_contract:
         report = out / "design-change.json"
         extra = ["--preflight", args.preflight, "--artifact-root", args.root.resolve().parent] if args.preflight else []
+        if roles:
+            extra += ["--source-root", args.root, *roles, *project]
+        if args.baseline_source_root:
+            extra += ["--baseline-source-root", args.baseline_source_root,
+                      "--baseline-source-role-contract", args.baseline_source_role_contract]
+            if args.baseline_project:
+                extra += ["--baseline-project", args.baseline_project]
         tool("verify_design_change.py", args.baseline_xml, xml, args.change_contract, *extra, "--out", report)
         gates["design_change"] = {"status": status_of(report)}
         if not args.preflight:

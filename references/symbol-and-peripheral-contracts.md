@@ -223,6 +223,11 @@ hashes, export identity agreement with source properties, and absence of pins
 across every resolved cached unit/style. Native XML additionally must match the
 contract hash, descriptor, symbol UUID and sheet path. A stale hash or incorrect
 identity fails. No missing annotation may borrow another project's reference.
+Raw `source_properties` remain exact. For export identity only, KiCad's exact
+`~` empty marker becomes `""` in named fields, including custom fields; Reference
+and Value remain literal. Only absent Footprint, Datasheet and Description have
+empty native defaults. Missing custom fields, whitespace and nonempty text are
+not aliases. This does not normalize physical pin names in reference contracts.
 
 ```sh
 python3 scripts/audit_project.py board.kicad_sch --netlist native.xml \
@@ -233,16 +238,37 @@ python3 scripts/verify_schematic.py board.kicad_sch --intent electrical-intent.j
   --source-role-contract source-role-contract.json --out new-verification
 ```
 
-The option is forwarded only to hierarchy and symbol audits. It does not waive
-ERC, electrical intent, peripheral contracts or electrical-change verification.
+The option is forwarded to hierarchy, symbol, reference-contract and candidate
+change audits. Each consumer still compares full electrical identities and pins.
+For a change, provide the baseline's own `--baseline-source-root` and
+`--baseline-source-role-contract` (and `--baseline-project` when needed);
+candidate evidence cannot substitute for baseline evidence.
 `verify_schematic.py` exports a fresh XML: timestamp or other byte changes make an
-older XML hash stale and require review/rebinding before symbol qualification.
+older XML hash stale and require independent review/rebinding before qualification.
+It never creates, updates or infers a role contract. Preserve the failed original
+run. After reviewing the new export, run the read-only consumers on that exact XML:
+
+```sh
+python3 scripts/verify_reference_contract.py native.xml reference-contract.json \
+  --source-root board.kicad_sch --source-role-contract reviewed-roles.json --out new-reference.json
+python3 scripts/verify_design_change.py old.xml native.xml design-change.json \
+  --baseline-source-root old/board.kicad_sch --baseline-source-role-contract old/reviewed-roles.json \
+  --source-root board.kicad_sch --source-role-contract reviewed-roles.json --out new-change.json
+```
+
+These read-only checks do not replace a fresh whole-delivery verification or SR
+release decision. Missing evidence retains strict zero-pin rejection; wrong
+source/cache/XML hashes, annotations, identities or hidden pins still fail.
 The read-only Python API is `read_native(xml, source_root=root,
 source_roles=contract, project=selected_project)`; without a contract its existing
 strict rejection of zero-pin components remains. `native_inventory(xml)` and the
 audit reports separately retain XML component/node occurrence counts and the
 zero-endpoint list even when strict parsing fails. Those diagnostics neither
 qualify a component nor resolve selected-annotation coverage gaps.
+`verify_reference(..., source_root=..., source_roles=..., project=...)` uses that
+same context. `verify_change` has separate `before_source_root/before_source_roles/
+before_project` and `after_source_root/after_source_roles/after_project` keyword
+arguments; there is no automatic context reuse or hash rebinding.
 
 Remove a required part, change a value/package, make it DNP, move a return, short
 distinct rails and remove a declared stage. Each affected check must reject the

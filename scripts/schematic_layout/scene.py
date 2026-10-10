@@ -433,10 +433,18 @@ def read_scene(root):
             if kind == "global_label":
                 style = (f.angle % 360, f.justify)
                 if style not in GLOBAL_LABEL_STYLES:
-                    # Preserve the former text estimate at its actual native
-                    # angle/justify. An unknown outline has no qualified
-                    # direction: guessing RIGHT and unioning four outlines
-                    # creates fictitious obstacles. Coverage remains open.
+                    font = first(first(n, "effects", []), "font", [])
+                    size = first(font, "size", [None, 1.27, 1.27])
+                    # Native 10.0.6 renders these default-font fallback styles
+                    # readable, retaining justification (180->0, 270->90).
+                    # This fixes text direction only; no outline is qualified.
+                    if (f.angle in (180, 270) and f.justify in
+                            (frozenset({"left"}), frozenset({"right"})) and
+                            f.font_mm in (1.0, 1.27) and float(size[1]) == float(size[2]) and
+                            not f.bold and "italic" not in font and value(font, "face") in (None, "") and
+                            value(font, "thickness") in (None, "0", 0) and
+                            str(value(n, "shape")) in ("input", "passive")):
+                        scene.labels[-1] = (kind, replace(f, angle=f.angle % 180))
                     scene.gaps.append("Global label angle/justify direction needs native review")
                     continue
                 outward = GLOBAL_LABEL_STYLES[style]

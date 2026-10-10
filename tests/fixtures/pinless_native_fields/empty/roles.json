@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "project": "specimen",
+  "file_sha256": {
+    "specimen.kicad_sch": "18f5a5bfe3fcb1c78dd8e36088037d75346af37fcd458ece624287b511370574"
+  },
+  "native_xml_sha256": "7a179fa4fe79650ab3dacad8832b7ac9964b7cc486cb6d3f3198c5bf7f58e6c3",
+  "objects": [
+    {
+      "reference": "Z7",
+      "instance": "/87c381c0-95b1-4b32-8c76-edc65e5865eb",
+      "symbol_uuid": "4f370613-9f99-4d4d-809c-c551ddeb9a93",
+      "lib_id": "Neutral:Marker",
+      "lib_sha256": "5e6d38030558141887f718c5e23c1fa3cc3112a409339f28cc168919daa8fb27",
+      "source_properties": {
+        "Reference": "Z7",
+        "Value": "Marker",
+        "Footprint": "",
+        "Datasheet": ""
+      },
+      "source_flags": {
+        "exclude_from_sim": "no",
+        "in_bom": "yes",
+        "on_board": "yes",
+        "dnp": "no"
+      },
+      "role": "mechanical",
+      "native_identity": {
+        "value": "Marker",
+        "footprint": "",
+        "datasheet": "",
+        "lib_id": "Neutral:Marker",
+        "dnp": false,
+        "fields": {
+          "Footprint": "",
+          "Datasheet": "",
+          "Description": ""
+        }
+      }
+    }
+  ]
+}

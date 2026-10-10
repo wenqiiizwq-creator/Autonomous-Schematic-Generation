@@ -104,10 +104,17 @@ def validate_pinless_roles(context, contract):
             errors.append(f"Source-role native identity/properties mismatch: {item['reference']}")
             continue
         identity, props = item["native_identity"], properties(sym)
-        if (any(identity[k] != props.get(p, "") for k, p in
+        # KiCad exports an exact '~' as empty in named fields, but preserves
+        # Reference/Value literally. Only these standard fields have native
+        # empty defaults; an absent custom field is never an empty assertion.
+        exported_props = {k: ("" if v == "~" and k not in ("Reference", "Value") else v)
+                          for k, v in props.items()}
+        for standard in ("Footprint", "Datasheet", "Description"):
+            exported_props.setdefault(standard, "")
+        if (any(identity[k] != exported_props.get(p, "") for k, p in
                 (("value", "Value"), ("footprint", "Footprint"), ("datasheet", "Datasheet"))) or
                 identity["lib_id"] != lid or identity["dnp"] != (value(sym, "dnp", "no") == "yes") or
-                any(props.get(k) != v for k, v in identity["fields"].items())):
+                any(exported_props.get(k) != v for k, v in identity["fields"].items())):
             errors.append(f"Source-role export identity contradicts source: {item['reference']}")
             continue
         libs = [l for l in all_nodes(first(context.tree_for(page), "lib_symbols", []), "symbol") if str(l[1]) == lid]

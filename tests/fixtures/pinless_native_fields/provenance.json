@@ -1,0 +1,5 @@
+{
+  "origin": "Independently authored neutral zero-pin marker, not a third-party circuit",
+  "exporter": "KiCad 10.0.6",
+  "scope": "Exact tilde/empty/absent field export semantics; source properties and cached zero-pin role remain hash bound. Value tilde literal; no custom missing defaults."
+}

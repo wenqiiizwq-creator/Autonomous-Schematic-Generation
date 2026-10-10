@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<export version="E">
+  <design>
+    <source>/tmp/codex-work/asg-calib-10/round-07/native-field-probes-v3/description-empty/specimen.kicad_sch</source>
+    <date>2026-10-10T16:53:25</date>
+    <tool>Eeschema 10.0.6</tool>
+    <sheet number="1" name="/" tstamps="/">
+      <title_block>
+        <title/>
+        <company/>
+        <rev/>
+        <date/>
+        <source>specimen.kicad_sch</source>
+        <comment number="1" value=""/>
+        <comment number="2" value=""/>
+        <comment number="3" value=""/>
+        <comment number="4" value=""/>
+        <comment number="5" value=""/>
+        <comment number="6" value=""/>
+        <comment number="7" value=""/>
+        <comment number="8" value=""/>
+        <comment number="9" value=""/>
+      </title_block>
+    </sheet>
+  </design>
+  <components>
+    <comp ref="Z7">
+      <value>Marker</value>
+      <fields>
+        <field name="Custom"/>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Neutral" part="Marker" description=""/>
+      <property name="Custom" value=""/>
+      <property name="Sheetname" value="根目录"/>
+      <property name="Sheetfile" value="../../../../../../../tmp/codex-work/asg-calib-10/round-07/native-field-probes-v3/description-empty/specimen.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>f7e7bd6a-5fb4-4c6a-8d6a-a6763b3eafdb</tstamps>
+      <units>
+        <unit name="A">
+          <pins/>
+        </unit>
+      </units>
+    </comp>
+  </components>
+  <libparts>
+    <libpart lib="Neutral" part="Marker">
+      <fields>
+        <field name="Reference">Z</field>
+        <field name="Value">Marker</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+    </libpart>
+  </libparts>
+  <libraries/>
+  <nets/>
+</export>

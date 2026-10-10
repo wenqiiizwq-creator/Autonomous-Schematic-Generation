@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "project": "specimen",
+  "file_sha256": {
+    "specimen.kicad_sch": "5a6a6baa4a87ef555ed90eadaabead86d87ff13becc3d18b9b02ad59324a9d30"
+  },
+  "native_xml_sha256": "80f12d8f8f5a7ebb016bcc3e581d5fab21d3db9729aa62443bcbdc71ed0283e5",
+  "objects": [
+    {
+      "reference": "Z7",
+      "instance": "/e7b8be45-e54d-4b62-bdb3-e6ed103c7086",
+      "symbol_uuid": "5e00fd5c-ec74-4c48-9500-f6dd698dbfb2",
+      "lib_id": "Neutral:Marker",
+      "lib_sha256": "5e6d38030558141887f718c5e23c1fa3cc3112a409339f28cc168919daa8fb27",
+      "source_properties": {
+        "Reference": "Z7",
+        "Value": "Marker",
+        "Footprint": "Neutral:Marker",
+        "Datasheet": "https://example.invalid/data.pdf",
+        "Description": "Known description",
+        "Custom": "~"
+      },
+      "source_flags": {
+        "exclude_from_sim": "no",
+        "in_bom": "yes",
+        "on_board": "yes",
+        "dnp": "no"
+      },
+      "role": "mechanical",
+      "native_identity": {
+        "value": "Marker",
+        "footprint": "Neutral:Marker",
+        "datasheet": "https://example.invalid/data.pdf",
+        "lib_id": "Neutral:Marker",
+        "dnp": false,
+        "fields": {
+          "Custom": "",
+          "Footprint": "Neutral:Marker",
+          "Datasheet": "https://example.invalid/data.pdf",
+          "Description": "Known description"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,949 @@
+{
+  "scope": "Observed default-font NET_A polygon and stroke-glyph bounds, 32 native KiCad10.0.6 exports. No checker changed. Unknown styles retain raw gaps; this calibration does not establish all strings/fonts.",
+  "cases": [
+    {
+      "case": "input-1.0-0-left",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 0,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.9235,
+        86.3348,
+        51.0765
+      ],
+      "raw_box": [
+        80.0,
+        49.5,
+        85.25,
+        50.5
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "166899355c67118a0a60efee141969826c54913b3c4be50b527c599283a7dc95"
+    },
+    {
+      "case": "input-1.0-0-right",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 0,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        73.6652,
+        48.9235,
+        80.0762,
+        51.0765
+      ],
+      "raw_box": [
+        71.6728,
+        48.4228,
+        80.0772,
+        51.5772
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "d840e177e674cd828adc5598580c37b211f5a8e4c2ce6befec200e3913b8c49d"
+    },
+    {
+      "case": "input-1.0-90-left",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 90,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        43.6652,
+        81.0765,
+        50.0762
+      ],
+      "raw_box": [
+        78.4228,
+        41.6728,
+        81.5772,
+        50.0772
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "f5efdaea20d11ab2d83d99fa94f53863c254ce385dd1e44ea3658c85e0096489"
+    },
+    {
+      "case": "input-1.0-90-right",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 90,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        49.9238,
+        81.0765,
+        56.3348
+      ],
+      "raw_box": [
+        79.5,
+        50.0,
+        80.5,
+        55.25
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "8c5ade0bf1bf2a9d7a3687b5a5d9e297d7c1cbb257303ddd6afdb9ae84744dcc"
+    },
+    {
+      "case": "input-1.0-180-left",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 180,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.9235,
+        86.3348,
+        51.0765
+      ],
+      "raw_box": [
+        79.9228,
+        48.4228,
+        88.3272,
+        51.5772
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "387ac14d5f74a63f505efc640b31ffed408aa91ef2694c69e15dd60af0724864"
+    },
+    {
+      "case": "input-1.0-180-right",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 180,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        73.6652,
+        48.9235,
+        80.0762,
+        51.0765
+      ],
+      "raw_box": [
+        80.0,
+        49.5,
+        85.25,
+        50.5
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "778951898061b09fcf5cebd517c2931fbaae1c5ed5f5f54716de87b16b9f1478"
+    },
+    {
+      "case": "input-1.0-270-left",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 270,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        43.6652,
+        81.0765,
+        50.0762
+      ],
+      "raw_box": [
+        79.5,
+        50.0,
+        80.5,
+        55.25
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "7c11adf6d04a0cdd675ff73dcb2092d8ee436635fb7e9fabf616097ad17b182e"
+    },
+    {
+      "case": "input-1.0-270-right",
+      "shape": "input",
+      "font": 1.0,
+      "angle": 270,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        49.9238,
+        81.0765,
+        56.3348
+      ],
+      "raw_box": [
+        78.4228,
+        49.9228,
+        81.5772,
+        58.3272
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "8c5ade0bf1bf2a9d7a3687b5a5d9e297d7c1cbb257303ddd6afdb9ae84744dcc"
+    },
+    {
+      "case": "input-1.27-0-left",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 0,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.6534,
+        88.0249,
+        51.3466
+      ],
+      "raw_box": [
+        80.0,
+        49.365,
+        86.6675,
+        50.635
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "8b772d036134c08eb28be1800707b204fd62fe28ae23650a8ff79cc0cad1f6da"
+    },
+    {
+      "case": "input-1.27-0-right",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 0,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        71.9751,
+        48.6534,
+        80.0762,
+        51.3466
+      ],
+      "raw_box": [
+        70.2553,
+        48.4228,
+        80.0772,
+        51.5772
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "7f886cc510bc1fabc59f8a55ea5e4900ba633c16e6e49b6f8c96639973131ccf"
+    },
+    {
+      "case": "input-1.27-90-left",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 90,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        41.9751,
+        81.3466,
+        50.0762
+      ],
+      "raw_box": [
+        78.4228,
+        40.2553,
+        81.5772,
+        50.0772
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "27abcdd161e99c98cc1a2b8f92d2754bba5a10697c783379e04027e623808183"
+    },
+    {
+      "case": "input-1.27-90-right",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 90,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        49.9238,
+        81.3466,
+        58.0249
+      ],
+      "raw_box": [
+        79.36500000000001,
+        50.0,
+        80.63499999999999,
+        56.667500000000004
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "0a9ea3a644623d4cadef6ea02f37d9c77a81d7a4a2e93e0c2dba1c1fb8967155"
+    },
+    {
+      "case": "input-1.27-180-left",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 180,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.6534,
+        88.0249,
+        51.3466
+      ],
+      "raw_box": [
+        79.9228,
+        48.4228,
+        89.7447,
+        51.5772
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "9c1e983c6c6156a7461f16b868a1641d3d8790770c6004d82939b7b184222364"
+    },
+    {
+      "case": "input-1.27-180-right",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 180,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        71.9751,
+        48.6534,
+        80.0762,
+        51.3466
+      ],
+      "raw_box": [
+        80.0,
+        49.365,
+        86.6675,
+        50.635
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "7f886cc510bc1fabc59f8a55ea5e4900ba633c16e6e49b6f8c96639973131ccf"
+    },
+    {
+      "case": "input-1.27-270-left",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 270,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        41.9751,
+        81.3466,
+        50.0762
+      ],
+      "raw_box": [
+        79.36500000000001,
+        50.0,
+        80.63499999999999,
+        56.667500000000004
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "456063bd8e6d634bbbd2263907353c09d094da31102765e35134e09ac30c952f"
+    },
+    {
+      "case": "input-1.27-270-right",
+      "shape": "input",
+      "font": 1.27,
+      "angle": 270,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        49.9238,
+        81.3466,
+        58.0249
+      ],
+      "raw_box": [
+        78.4228,
+        49.9228,
+        81.5772,
+        59.7447
+      ],
+      "raw_coverage_gaps": [
+        "Global label native coverage gap: shape"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [
+        "shape"
+      ],
+      "svg_sha256": "a479c9c839120f18aeeaee4045a77da8f635521558392257a666a38161ad12e1"
+    },
+    {
+      "case": "passive-1.0-0-left",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 0,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.9235,
+        85.4598,
+        51.0765
+      ],
+      "raw_box": [
+        80.0,
+        49.5,
+        85.25,
+        50.5
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "aabc7f8258929fca755331e873574e130cd51d9c9c3ffb807c4d904e87eb8e1b"
+    },
+    {
+      "case": "passive-1.0-0-right",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 0,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        74.5402,
+        48.9235,
+        80.0762,
+        51.0765
+      ],
+      "raw_box": [
+        72.31059527559056,
+        48.9228,
+        80.0772,
+        51.0772
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "32691380d1acd4ffd6ee016161cccdd5cb207c7a3cffced5fb6c53057b4a1f7c"
+    },
+    {
+      "case": "passive-1.0-90-left",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 90,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        44.5402,
+        81.0765,
+        50.0762
+      ],
+      "raw_box": [
+        78.9228,
+        42.31059527559055,
+        81.0772,
+        50.0772
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "76457495eee54a81367f594a1af84f26d198b4fd15dc2f737fcd6ab01b504f6a"
+    },
+    {
+      "case": "passive-1.0-90-right",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 90,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        49.9238,
+        81.0765,
+        55.4598
+      ],
+      "raw_box": [
+        79.5,
+        50.0,
+        80.5,
+        55.25
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "f7f5f1f336254da94a66c9ed9869cfae5cb5f51b2c64926696b0c739ede52a80"
+    },
+    {
+      "case": "passive-1.0-180-left",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 180,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.9235,
+        85.4598,
+        51.0765
+      ],
+      "raw_box": [
+        79.9228,
+        48.9228,
+        87.68940472440944,
+        51.0772
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "640b05d5d0044a8e9235a9c8b4df15b935fe9b80b6bdbad9f1fa8855da924d2c"
+    },
+    {
+      "case": "passive-1.0-180-right",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 180,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        74.5402,
+        48.9235,
+        80.0762,
+        51.0765
+      ],
+      "raw_box": [
+        80.0,
+        49.5,
+        85.25,
+        50.5
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "6c01c5547312efe22b7edd4aec54d6b26baac1f432fd7b79ade393515b9479c8"
+    },
+    {
+      "case": "passive-1.0-270-left",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 270,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        44.5402,
+        81.0765,
+        50.0762
+      ],
+      "raw_box": [
+        79.5,
+        50.0,
+        80.5,
+        55.25
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "12f562b1cbf9c68963b5f22feab419eb7943036dc8164327f4f61ce4dabeddce"
+    },
+    {
+      "case": "passive-1.0-270-right",
+      "shape": "passive",
+      "font": 1.0,
+      "angle": 270,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.9235,
+        49.9238,
+        81.0765,
+        55.4598
+      ],
+      "raw_box": [
+        78.9228,
+        49.9228,
+        81.0772,
+        57.68940472440945
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "f7f5f1f336254da94a66c9ed9869cfae5cb5f51b2c64926696b0c739ede52a80"
+    },
+    {
+      "case": "passive-1.27-0-left",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 0,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.6534,
+        86.9136,
+        51.3466
+      ],
+      "raw_box": [
+        80.0,
+        49.365,
+        86.6675,
+        50.635
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "cf80cbc37afc62d246d1e17ca3cca0174fba201c03f6868d502cb69ea59ffac7"
+    },
+    {
+      "case": "passive-1.27-0-right",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 0,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        73.0864,
+        48.6534,
+        80.0762,
+        51.3466
+      ],
+      "raw_box": [
+        70.2553,
+        48.6528,
+        80.0772,
+        51.3472
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "7e8cca4c46f9976f79be1c69422686c2d709a1d62e7017f8a499ae7ca37594d4"
+    },
+    {
+      "case": "passive-1.27-90-left",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 90,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        43.0864,
+        81.3466,
+        50.0762
+      ],
+      "raw_box": [
+        78.6528,
+        40.2553,
+        81.3472,
+        50.0772
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "f3ca613d9ad685ea52751d8f221409388585588c4215e69cd8dbe82d12cb60ab"
+    },
+    {
+      "case": "passive-1.27-90-right",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 90,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        49.9238,
+        81.3466,
+        56.9136
+      ],
+      "raw_box": [
+        79.36500000000001,
+        50.0,
+        80.63499999999999,
+        56.667500000000004
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "5c24acb7b21eb1658683bb0cd4d6e213121d712df3855e35a9214555db3c1ec4"
+    },
+    {
+      "case": "passive-1.27-180-left",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 180,
+      "justify": "left",
+      "native_outward": [
+        1,
+        0
+      ],
+      "native_ink_bounds": [
+        79.9238,
+        48.6534,
+        86.9136,
+        51.3466
+      ],
+      "raw_box": [
+        79.9228,
+        48.6528,
+        89.7447,
+        51.3472
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "f6a18fe4f89426f917fe4aadc236541484e7f312ba1db389fbd49be2bbec0343"
+    },
+    {
+      "case": "passive-1.27-180-right",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 180,
+      "justify": "right",
+      "native_outward": [
+        -1,
+        0
+      ],
+      "native_ink_bounds": [
+        73.0864,
+        48.6534,
+        80.0762,
+        51.3466
+      ],
+      "raw_box": [
+        80.0,
+        49.365,
+        86.6675,
+        50.635
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "7e8cca4c46f9976f79be1c69422686c2d709a1d62e7017f8a499ae7ca37594d4"
+    },
+    {
+      "case": "passive-1.27-270-left",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 270,
+      "justify": "left",
+      "native_outward": [
+        0,
+        -1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        43.0864,
+        81.3466,
+        50.0762
+      ],
+      "raw_box": [
+        79.36500000000001,
+        50.0,
+        80.63499999999999,
+        56.667500000000004
+      ],
+      "raw_coverage_gaps": [
+        "Global label angle/justify direction needs native review"
+      ],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "f41037d91d465319bf712e7f65ba3bf1d3f7dee0303c18238effdd6bef4b3404"
+    },
+    {
+      "case": "passive-1.27-270-right",
+      "shape": "passive",
+      "font": 1.27,
+      "angle": 270,
+      "justify": "right",
+      "native_outward": [
+        0,
+        1
+      ],
+      "native_ink_bounds": [
+        78.6534,
+        49.9238,
+        81.3466,
+        56.9136
+      ],
+      "raw_box": [
+        78.6528,
+        49.9228,
+        81.3472,
+        59.7447
+      ],
+      "raw_coverage_gaps": [],
+      "model_with_observed_direction_contains_native_ink": true,
+      "observed_model_gaps": [],
+      "svg_sha256": "951fd9b7b2e5369d5858547d249053fe76604e276f056846552e9f1902eca0a4"
+    }
+  ]
+}

@@ -163,18 +163,30 @@ class PinlessEvidenceTests(unittest.TestCase):
             self.assertNotEqual(subprocess.run(argv, capture_output=True).returncode, 0)
             contractfile.write_text(json.dumps(self.contract))
 
-    def test_one_shot_cli_only_forwards_roles_to_hierarchy_and_symbols(self):
+    def test_one_shot_cli_forwards_explicit_roles_without_rebinding(self):
         spec = importlib.util.spec_from_file_location('pinless_verify_cli', ROOT / 'scripts/verify_schematic.py')
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         calls = []
         def tool(name, *args):
             calls.append((name, [str(x) for x in args]))
             output = Path(args[-1]); output.write_text(json.dumps({'status': 'PASS', 'file_sha256': {self.root.name: sha(self.root)}}))
-        argv = ['verify_schematic.py', str(self.root), '--intent', str(self.base / 'intent.json'), '--source-role-contract', str(self.base / 'roles.json'), '--out', str(self.base / 'run')]
+        argv = ['verify_schematic.py', str(self.root), '--intent', str(self.base / 'intent.json'),
+                '--source-role-contract', str(self.base / 'roles.json'),
+                '--reference-contract', str(self.base / 'reference.json'),
+                '--baseline-xml', str(self.xml), '--change-contract', str(self.base / 'change.json'),
+                '--baseline-source-root', str(self.root),
+                '--baseline-source-role-contract', str(self.base / 'baseline-roles.json'),
+                '--baseline-project', 'board', '--out', str(self.base / 'run')]
         with patch.object(sys, 'argv', argv), patch.object(module, 'find_cli', return_value='fake-kicad'), patch.object(module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '10.0.6', '')), patch.object(module, 'tool', side_effect=tool):
             module.main()
         recipients = {name for name, args in calls if '--source-role-contract' in args}
-        self.assertEqual(recipients, {'audit_project.py', 'audit_symbol_integrity.py'})
+        self.assertEqual(recipients, {'audit_project.py', 'audit_symbol_integrity.py',
+                                     'verify_reference_contract.py', 'verify_design_change.py'})
+        change_args = next(args for name, args in calls if name == 'verify_design_change.py')
+        self.assertIn('--baseline-source-role-contract', change_args)
+        self.assertIn(str(self.base / 'baseline-roles.json'), change_args)
+        self.assertIn(str(self.base / 'roles.json'), change_args)
+        self.assertFalse((self.base / 'roles.json').exists())  # CLI never creates/rebinds roles.
 
 
 if __name__ == '__main__':

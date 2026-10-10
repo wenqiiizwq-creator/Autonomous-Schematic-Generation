@@ -149,7 +149,9 @@ def _identity(descriptor):
     return descriptor
 
 
-def verify_change(before_path, after_path, contract):
+def verify_change(before_path, after_path, contract, *, before_source_root=None,
+                  before_source_roles=None, before_project=None, after_source_root=None,
+                  after_source_roles=None, after_project=None):
     allowed = {"schema_version", "baseline_sha256", "remove_components", "add_components", "component_changes", "replace_partitions", "named_nets", "same_net", "distinct_net"}
     if not isinstance(contract, dict) or set(contract) - allowed or contract.get("schema_version") != 1:
         raise ValueError("Unknown contract field or unsupported schema_version")
@@ -159,7 +161,11 @@ def verify_change(before_path, after_path, contract):
     for key in ["remove_components", "replace_partitions", "same_net", "distinct_net"]:
         if not isinstance(contract.get(key, []), list):
             raise ValueError(f"{key} must be a list")
-    old, new = read_native(before_path), read_native(after_path)
+    def context(root, roles, project):
+        return {k: v for k, v in dict(source_root=root, source_roles=roles,
+                                      project=project).items() if v is not None}
+    old = read_native(before_path, **context(before_source_root, before_source_roles, before_project))
+    new = read_native(after_path, **context(after_source_root, after_source_roles, after_project))
     if "baseline_sha256" in contract and contract["baseline_sha256"] != old["sha256"]:
         raise ValueError("Baseline SHA256 does not match the frozen contract")
     expected_components = {r: dict(v) for r, v in old["components"].items()}
