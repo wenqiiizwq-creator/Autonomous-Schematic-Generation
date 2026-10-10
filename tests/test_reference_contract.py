@@ -61,7 +61,7 @@ class ReferenceContractTests(unittest.TestCase):
         self.assertEqual(r["checks"]["bypass-high"]["status"], "PASS")
 
     def test_names_need_explicit_aliases_not_global_punctuation_stripping(self):
-        self.mutate(lambda r: r.find("nets/net/node[@ref='U1'][@pin='5']").set("pinfunction", "VCC_5"))
+        self.mutate(lambda r: r.find("libparts/libpart/pins/pin[@num='5']").set("name", "VCC_5"))
         self.assertEqual(self.audit()["status"], "FAIL")
         self.contract["pin_maps"]["U1"]["pins"]["5"]["names"].append("VCC_5")
         self.assertEqual(self.audit()["status"], "PASS")

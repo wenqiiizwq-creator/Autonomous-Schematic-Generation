@@ -4,6 +4,13 @@
 <comp ref="C1"><value>100nF</value><footprint>Demo:C_0603</footprint><libsource lib="Device" part="C"/></comp>
 <comp ref="J1"><value>HEADER</value><footprint>Demo:Header4</footprint><libsource lib="Connector" part="Conn_01x04"/></comp>
 </components>
+<libparts><libpart lib="Demo" part="Probe5"><pins>
+<pin num="1" name="IN" type="input"/>
+<pin num="2" name="GND" type="power_in"/>
+<pin num="3" name="OUT" type="output"/>
+<pin num="4" name="EN" type="input"/>
+<pin num="5" name="VCC" type="power_in"/>
+</pins></libpart></libparts>
 <nets>
 <net code="1" name="IN"><node ref="U1" pin="1" pinfunction="IN" pintype="input"/><node ref="J1" pin="1" pintype="passive"/></net>
 <net code="2" name="GND"><node ref="U1" pin="2" pinfunction="GND" pintype="power_in"/><node ref="C1" pin="2" pintype="passive"/><node ref="J1" pin="2" pintype="passive"/></net>

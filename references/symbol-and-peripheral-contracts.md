@@ -137,7 +137,18 @@ expected results does not establish correctness.
 | --- | --- |
 | `scope.core_refs`, `scope.feature_ids` | Independent lists to cover. Empty scopes are rejected; missing mappings/features are INSUFFICIENT. Reconcile with page inventory and requirements: the tool cannot discover every required function. |
 | `sources` | ID maps to `path`, SHA256, primary `url`, `document`, `revision`. Paths resolve relative to the contract, or can be absolute. Changed bytes FAIL; absent files are INSUFFICIENT. Authority and source interpretation still require review. |
-| `pin_maps` | Reference maps to exact `identity` (`value`, `mpn`, `footprint`, `lib_id`), source/locator, and complete numbered `pins` with explicit `names`/`types` alias lists. Uses nonempty native MPN field, otherwise exact native Value; a generic Value is not an MPN substitute. |
+| `pin_maps` | Reference maps to exact `identity` (`value`, `mpn`, `footprint`, `lib_id`), source/locator, and complete numbered `pins` with explicit `names`/`types` alias lists. `footprint` may be the empty string at schematic stage, meaning explicitly unassigned; it must still match the native field exactly and is never a wildcard for an assigned footprint. Other identity fields remain nonempty. Uses nonempty native MPN field, otherwise exact native Value; a generic Value is not an MPN substitute. |
+
+Native pin names/types come from the component's exact `libsource` → unique
+`libparts/libpart` → unique physical pin number. A node's `pinfunction` can be a
+generated identifier such as `STAT_1`; do not strip its suffix or treat it as the
+manufacturer pin name. Genuine names such as `Pin_1` remain exact. Missing or
+ambiguous library pin metadata is INSUFFICIENT; mismatched names/types and
+contradictory native node electrical types remain FAIL. A missing component
+identity can independently FAIL even when its metadata has a coverage gap.
+Every library physical pin, including unused units, NC and EP, must be in the
+contract; omission from both the nodes and contract cannot hide a library pin.
+Library pins without a physical number remain a metadata coverage gap.
 | `checks` | Unique `id`, `kind`, source/locator. `component` asserts exact value/footprint/library/DNP. `same_net` and `distinct_nets` assert at least two unique `reference.pin` endpoints against native partitions. |
 | `features` | Unique ID, boundary, source/locator and nonempty stages. Each stage needs ID, role, real fitted references and check IDs. Missing/DNP required references fail. Review whether the listed references and checks actually implement the stated role. |
 

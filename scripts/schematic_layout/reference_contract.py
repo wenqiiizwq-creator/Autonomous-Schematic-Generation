@@ -36,8 +36,15 @@ def verify_reference(netlist, contract, base):
         raise ValueError("Invalid reference contract collections")
     native = read_native(netlist)
     root = ET.parse(netlist).getroot()
-    metadata = {f'{n.get("ref")}.{n.get("pin")}': {"name": n.get("pinfunction", ""), "type": n.get("pintype", "").removesuffix("+no_connect")}
-                for net in root.findall("nets/net") for n in net.findall("node") if not n.get("ref", "").startswith("#")}
+    # KiCad node pinfunction may be a generated identifier (e.g. STAT_1).
+    # Resolve the physical name from the exact library definition, never by
+    # removing punctuation or a numeric suffix from that identifier.
+    components_xml = {c.get("ref"): c for c in root.findall("components/comp")}
+    library_parts = {}
+    for part in root.findall("libparts/libpart"):
+        library_parts.setdefault((part.get("lib"), part.get("part")), []).append(part)
+    node_types = {f'{n.get("ref")}.{n.get("pin")}': n.get("pintype", "").removesuffix("+no_connect")
+                  for net in root.findall("nets/net") for n in net.findall("node")}
     sources, checks, errors, gaps = {}, {}, [], []
     base = Path(base).resolve()
     for sid, s in contract["sources"].items():
@@ -66,11 +73,14 @@ def verify_reference(netlist, contract, base):
     for ref, spec in contract["pin_maps"].items():
         _keys(spec, {"identity", "source", "locator", "pins"})
         _keys(spec["identity"], {"value", "mpn", "footprint", "lib_id"})
-        for v in spec["identity"].values():
+        for key, v in spec["identity"].items():
+            if key == "footprint" and v == "":
+                continue  # Explicitly unassigned at schematic stage; still compared exactly below.
             _text(v)
         if not isinstance(spec["pins"], dict) or not spec["pins"]:
             raise ValueError("Pin map must enumerate every physical pin, including NC/EP")
         failures = []
+        pin_gaps = []
         basis = evidence(spec)
         component = native["components"].get(ref)
         if component is None:
@@ -81,6 +91,22 @@ def verify_reference(netlist, contract, base):
         if actual != set(spec["pins"]):
             failures.append({"missing_from_contract": sorted(actual - spec["pins"].keys()),
                              "missing_from_native": sorted(spec["pins"].keys() - actual)})
+        definitions = {}
+        comp_xml = components_xml.get(ref)
+        libsources = comp_xml.findall("libsource") if comp_xml is not None else []
+        parts = library_parts.get((libsources[0].get("lib"), libsources[0].get("part")), []) if len(libsources) == 1 else []
+        if len(libsources) != 1 or len(parts) != 1:
+            pin_gaps.append("Pin metadata requires one libsource and one matching libpart")
+        else:
+            for pin in parts[0].findall("pins/pin"):
+                number = pin.get("num")
+                if not number:
+                    pin_gaps.append("Library pin lacks its physical number")
+                    continue
+                definitions.setdefault(number, []).append(pin)
+            unmapped = set(definitions) - spec["pins"].keys()
+            if unmapped:
+                failures.append({"library_pins_missing_from_contract": sorted(unmapped)})
         for number, expected in spec["pins"].items():
             _text(number)
             _keys(expected, {"names", "types"})
@@ -89,11 +115,23 @@ def verify_reference(netlist, contract, base):
                     raise ValueError("Pin names/types must be explicit nonempty alias lists")
                 if field == "types" and any(not x for x in aliases):
                     raise ValueError("Pin electrical types cannot be blank")
-            observed = metadata.get(ref + "." + number)
-            if observed and (observed["name"] not in expected["names"] or observed["type"] not in expected["types"]):
+            pins = definitions.get(number, [])
+            if len(pins) != 1 or "name" not in pins[0].attrib or not pins[0].get("type"):
+                pin_gaps.append({"pin": number, "reason": "Missing, duplicate or incomplete library pin definition"})
+                continue
+            observed = {"name": pins[0].get("name"), "type": pins[0].get("type")}
+            if observed["name"] not in expected["names"] or observed["type"] not in expected["types"]:
                 failures.append({"pin": number, "actual": observed, "expected": expected})
-        pin_results[ref] = {"status": "FAIL" if failures or basis == "FAIL" else basis,
-                            "source": spec["source"], "locator": spec["locator"], "failures": failures}
+            node_type = node_types.get(ref + "." + number)
+            if not node_type:
+                pin_gaps.append({"pin": number, "reason": "Missing native node electrical type"})
+            elif node_type != observed["type"]:
+                failures.append({"pin": number, "node_type": node_type, "library_type": observed["type"]})
+        if pin_gaps:
+            gaps.append({"kind": "native_pin_metadata", "reference": ref, "details": pin_gaps})
+        pin_results[ref] = {"status": "FAIL" if failures or basis == "FAIL" else "INSUFFICIENT" if pin_gaps else basis,
+                            "source": spec["source"], "locator": spec["locator"], "failures": failures,
+                            "coverage_gaps": pin_gaps}
     if set(scope["core_refs"]) != set(pin_results):
         gaps.append({"kind": "core_scope_mismatch", "missing": sorted(set(scope["core_refs"]) - pin_results.keys()),
                      "undeclared": sorted(pin_results.keys() - set(scope["core_refs"]))})
