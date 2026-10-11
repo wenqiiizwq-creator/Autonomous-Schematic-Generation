@@ -244,6 +244,44 @@ def placed_field(field, symbol_angle, mirror):
     return replace(field, angle=angle, justify=frozenset(just))
 
 
+def _instance_reference(root, node, property_ref, unit):
+    """Bind a root annotation only when every matching project agrees.
+
+    A reused child sheet needs its project/full path context. Property-only
+    and unanimous property/annotation references are identifier compatibility
+    cases, not proof of the active native hierarchy or project context.
+    """
+    instances = first(node, "instances")
+    if instances is None:
+        return property_ref, None
+    records = []
+    try:
+        for project in all_nodes(instances, "project"):
+            if len(project) < 2 or not str(project[1]).strip():
+                raise ValueError("missing project identity")
+            for path in all_nodes(project, "path"):
+                ref = value(path, "reference", "")
+                annotation_unit = int(value(path, "unit"))
+                if (not str(ref).strip() or len(path) < 2
+                        or not str(path[1]).strip() or annotation_unit < 1):
+                    raise ValueError("incomplete annotation")
+                records.append((str(path[1]), str(ref), annotation_unit))
+    except (ValueError, TypeError, IndexError):
+        return property_ref, f"{property_ref}: invalid instance annotation; native context review required"
+    root_uuid = str(value(root, "uuid", ""))
+    if not root_uuid.strip():
+        return property_ref, f"{property_ref}: missing root UUID for instance annotation; native context review required"
+    selected = [r for r in records if root_uuid and r[0] == "/" + root_uuid]
+    bindings = {(ref, u) for _, ref, u in selected}
+    if len(bindings) == 1:
+        ref, annotation_unit = next(iter(bindings))
+        if annotation_unit == unit:
+            return ref, None
+    if not selected and records and {(r, u) for _, r, u in records} == {(property_ref, unit)}:
+        return property_ref, None
+    return property_ref, f"{property_ref}: ambiguous/unbound instance reference or unit; project/full sheet path review required"
+
+
 def read_scene(root):
     if root[0] != "kicad_sch":
         raise ValueError("Expected kicad_sch")
@@ -301,6 +339,9 @@ def read_scene(root):
             (str(p[2]) for p in all_nodes(node, "property") if p[1] == "Reference"), "?"
         )
         unit = int(value(node, "unit", 1))
+        ref, annotation_gap = _instance_reference(root, node, ref, unit)
+        if annotation_gap:
+            scene.gaps.append(annotation_gap)
         body_style = int(value(node, "body_style", value(node, "convert", 1)))
         at = xy(node)
         angle = float(first(node, "at")[3])
@@ -420,7 +461,7 @@ def read_scene(root):
         fields = []
         for p in all_nodes(node, "property"):
             if not is_hidden(p) and p[2]:
-                f = text_field(p, text=str(p[2]))
+                f = text_field(p, text=ref if p[1] == "Reference" else str(p[2]))
                 # KiCad field stored orientation is combined with the symbol's
                 # rotation. Horizontal fields on a 90/270-degree symbol must
                 # be written at 90 degrees (native-render regression).

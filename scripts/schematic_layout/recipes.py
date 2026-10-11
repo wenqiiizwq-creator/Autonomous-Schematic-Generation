@@ -493,7 +493,11 @@ class Sheet:
         net = net or self._net(target)
         symbol = symbol or self.rails.get(net) or "power:GND"
         if not symbol.startswith("power:"):
-            raise ValueError("Rail symbols must come from the power library")
+            raise ValueError(
+                f"{target!r} on {net}: invalid rail symbol {symbol!r}. "
+                "Rail symbols must come from the power library; use rail=True "
+                "for the declared rail, or a full power: library identifier."
+            )
         _, shape, down = self._power_shape(symbol)
         d = DOWN if down else UP
         start = self.point(target)
@@ -619,9 +623,22 @@ class Sheet:
         pieces = {}
         for i, (n, _, _) in enumerate(segments):
             pieces.setdefault(n, set()).add(find(i))
+        def locations(net, roots):
+            result = []
+            for piece in sorted(roots):
+                lines = [(a, b) for i, (n, a, b) in enumerate(segments)
+                         if n == net and find(i) == piece]
+                points = sorted({q for line in lines for q in line})
+                pins = sorted(pid for pid, (q, _) in self.pins.items()
+                              if self.nets.get(pid) == net
+                              and any(on_segment(q, a, b) for a, b in lines))
+                result.append({"pins": pins, "endpoints": points})
+            return result
         broken = sorted(n for n, s in pieces.items() if len(s) > 1 and n not in named)
         if broken:
-            raise ValueError(f"Nets drawn in separate pieces without a label or rail: {broken}")
+            detail = {n: locations(n, pieces[n]) for n in broken}
+            raise ValueError(f"Nets drawn in separate pieces without a label or rail: {broken}; "
+                             f"pieces={detail}. Join intended endpoints or name each piece with its net label/rail.")
         # A labelled net with separate pieces needs its name on every piece.
         for n, s in pieces.items():
             if len(s) > 1:
@@ -629,7 +646,9 @@ class Sheet:
                 marked = {find(i) for i, (m, a, b) in enumerate(segments) if m == n
                           and any(on_segment(q, a, b) for q in ends)}
                 if marked != s:
-                    raise ValueError(f"{n}: a separate piece carries no label or rail symbol")
+                    raise ValueError(f"{n}: a separate piece carries no label or rail symbol; "
+                                     f"unmarked pieces={locations(n, s - marked)}. "
+                                     "Join intended endpoints or name each piece with its net label/rail.")
 
     def build(self, name="sheet", draft=False):
         """Native sheet root and a report (decisions, crossings, readability).

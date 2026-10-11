@@ -189,6 +189,23 @@ mode, polarity, default state and active-level reference rails. Qualify
 tolerance, effective capacitance, common-mode range, timing, startup/fault/backup
 states, thermal and load margins separately.
 
+For every mandatory external selection parameter, record its recommended
+MIN/MAX window and applicable table/footnote, then bound the populated part's
+tolerance and temperature drift over the required operating range. Nominal
+value, absolute rating and an application figure do not close that window.
+A supported allowed corner outside the required window fails the guarantee;
+missing conditions remain OPEN. This is a peripheral-contract obligation, not
+proof that every physical unit fails or that an arithmetic tool is defective.
+
+Build the state table from each real supply source, assembly, switch and
+independently powered counterpart. Trace persistent sources into each unpowered
+pin, including non-failsafe inputs, injection and backfeed paths, with applicable
+pin limits and isolation evidence. Common ground, equal nominal logic voltage
+and startup high-impedance do not establish a shared physical supply or OFF-state
+isolation. Bind each page's state paths and required peripherals to contract
+check IDs and OPEN closure conditions; native netlist agreement closes only
+the connection assertions.
+
 ## Close with negative tests and independent evidence
 
 ### Intentional pinless native objects
