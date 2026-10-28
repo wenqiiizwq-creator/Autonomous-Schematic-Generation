@@ -146,6 +146,33 @@ class PerformanceTests(unittest.TestCase):
         self.record['components'][0]['requirements'][1]['value'] = 1.5
         self.assertTrue(any('stale' in e for e in cr.audit(projected, self.record, self.root)['errors']))
 
+    def add_nominal(self, parameter, value, unit):
+        req = copy.deepcopy(self.record['components'][0]['requirements'][0])
+        req.update(parameter=parameter, op='eq', value=value, unit=unit)
+        self.record['components'][0]['requirements'].append(req)
+        self.record['components'][0]['required_parameters'].append(parameter)
+
+    def test_exact_resistance_generates_nominal_from_single_source(self):
+        self.add_nominal('resistance', 100, 'ohm')
+        self.intent['components'][0]['value'] = '220R'
+        projected = self.project()
+        self.assertEqual('100R', projected['components'][0]['value'])
+        self.assertEqual([], cr.audit(projected, self.record, self.root)['errors'])
+
+    def test_nominal_tampering_is_rejected_even_with_consistent_fields(self):
+        self.add_nominal('resistance', 100, 'ohm')
+        projected = self.project()
+        projected['components'][0]['value'] = '220R'
+        self.assertTrue(any('nominal Value' in e for e in cr.audit(projected, self.record, self.root)['errors']))
+
+    def test_capacitor_and_inductor_exact_nominals_are_projected(self):
+        for kind, parameter, value, unit, expected in [('capacitor', 'capacitance', 100, 'nF', '100nF'),
+                                                      ('inductor', 'inductance', 10, 'uH', '10uH')]:
+            entry = {'kind': kind, 'requirements': [{'parameter': parameter, 'op': 'eq', 'value': value, 'unit': unit}]}
+            self.assertEqual(expected, cr.nominal_value(entry))
+            entry['requirements'][0]['op'] = 'ge'
+            self.assertIsNone(cr.nominal_value(entry))  # effective/capability bounds do not rename the nominal
+
     def test_typical_or_model_cannot_be_guarantee(self):
         intent, record = fixture(self.root, True)
         record['components'][0]['selection']['properties'][0]['basis'] = 'typical'

@@ -103,6 +103,8 @@ Python API 位于 `scripts/schematic_layout/component_requirements.py`。准备�
 `by_spec` 的受控保证保留在记录中，正式MPN保持空，图面明确标为“受控规格采购已核实”。
 `Performance` 是可见属性，其余是供 XML 比对的结构字段。候选原厂手册即使只用于了解性能，也保留来源而不强制绑定该料号。
 `Value` 对合同器件保留标称值，容差/功率等要求写在可见性能标注中；旧无合同器件仍执行原有值/规格规则。
+合同以 `eq` 定义 `resistance/capacitance/inductance` 时，`project` 同时生成对应阻值/容量/电感量的 `Value`，审核检查它与合同一致；
+有效容量下限或脉冲能力等性能边界不改写标称值。没有在合同中定义精确标称值的，沿用设计网表的标称定义。
 连续功率统一使用参数 `power`、`rated_power` 或 `continuous_power`，单位 W/mW；原有功率应力审计读取这个最低采购额定，
 不会把脉冲峰值功率误当连续额定。BOM同时保留Footprint与实际Kind/Category，不能从R前缀给MOV套电阻分类。
 图面用中文标出“容差要求”“单次脉冲耐受能量要求”和“型号未定/候选待核/型号已核准”，内部参数名保留供追溯。

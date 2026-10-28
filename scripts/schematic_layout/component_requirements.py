@@ -131,6 +131,33 @@ def fields_for(entry, record_hash):
     return dict(zip(FIELDS, (spec, entry['procurement']['mode'], selected['status'], actual, record_hash, visible)))
 
 
+def nominal_value(entry):
+    """Project an exact electrical nominal when the contract defines one.
+
+    Bounds on effective capacity, pulse capability, etc. do not rename the
+    nominal. Designs without an exact nominal requirement retain their IR value.
+    """
+    parameters = {'resistor': 'resistance', 'capacitor': 'capacitance', 'inductor': 'inductance'}
+    for req in entry.get('requirements', []):
+        if req.get('parameter') != parameters.get(entry.get('kind')) or req.get('op') != 'eq':
+            continue
+        value, unit = req['value'], req['unit']
+        if entry['kind'] == 'resistor':
+            scales = {'ohm': 1, 'Ω': 1, 'kohm': 1000, 'kΩ': 1000, 'Mohm': 1e6, 'MΩ': 1e6,
+                      'mohm': .001, 'mΩ': .001}
+            if unit in scales:
+                ohms = value * scales[unit]
+                if abs(ohms) >= 1e6:
+                    return f'{ohms / 1e6:g}M'
+                if abs(ohms) >= 1000:
+                    return f'{ohms / 1000:g}k'
+                return format(ohms, '.12f').rstrip('0').rstrip('.') + 'R'
+        elif ((entry['kind'] == 'capacitor' and unit in ('F', 'mF', 'uF', 'µF', 'nF', 'pF'))
+              or (entry['kind'] == 'inductor' and unit in ('H', 'mH', 'uH', 'µH', 'nH'))):
+            return f'{value:g}{unit}'
+    return None
+
+
 def entry_errors(entry, comp=None):
     """Structural validation only; evidence and pin/safety context are checked by audit()."""
     errors = []
@@ -316,6 +343,9 @@ def project(intent, record, root, inputs=None):
             continue
         entry = entries[comp['ref']]
         comp['performance_contract'] = copy.deepcopy(entry)
+        nominal = nominal_value(entry)
+        if nominal is not None:
+            comp['value'] = nominal
         comp.setdefault('fields', {}).update(fields_for(entry, sha))
         selection = entry['selection']
         if selection['status'] == 'qualified':
@@ -376,6 +406,9 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
         expected[ref] = fields
         if comp.get('performance_contract') != entry:
             errors.append(f'{ref}: stale/missing projected performance contract')
+        nominal = nominal_value(entry)
+        if nominal is not None and comp.get('value') != nominal:
+            errors.append(f'{ref}: nominal Value differs from exact performance requirement')
         for k, v in fields.items():
             if str(comp.get('fields', {}).get(k, '')) != v:
                 errors.append(f'{ref}: stale IR field {k}')
