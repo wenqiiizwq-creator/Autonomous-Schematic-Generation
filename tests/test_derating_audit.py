@@ -2,6 +2,7 @@
 project's level; a stress over the derated value but within the rating passes with a stress risk and an improvement, one
 over the rating fails; only the stresses written are checked, and a stress against a rating that names no rule is a hint;
 the level is a requirement and says where it was decided."""
+import ast
 import json
 from pathlib import Path
 import sys
@@ -10,7 +11,10 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import audit_design_closure as adc
 from audit_design_closure import audit, sha256
+
+SR_PASSIVE = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'scripts' / 'checkers' / 'passive_stress.py'
 
 
 def setUpModule():
@@ -178,6 +182,55 @@ class DeratingAuditTests(unittest.TestCase):
     def test_a_common_part_is_not_checked_one_by_one(self):
         errors = [e['item'] for e in self.run_audit()['errors']]
         self.assertFalse(any(e.startswith('C1') for e in errors), errors)
+
+    def add_resistor(self, value, watts, footprint='Resistor_SMD:R_0603_1608Metric'):
+        intent = json.loads(self.intent.read_text())
+        intent['components'].append({'ref': 'R1', 'lib_id': 'Device:R', 'value': value, 'footprint': footprint})
+        self.intent.write_text(json.dumps(intent))
+        self.record['intent_sha256'] = sha256(self.intent)
+        self.record['requirements'][0]['refs'].append('R1')
+        self.record['calculations'].append({
+            'id': 'C-R1', 'requirements': ['R1'], 'evidence': ['E1'], 'refs': ['R1'], 'coverage': 'bounded',
+            'conclusion': 'supported', 'rests_on': None, 'omitted_terms': [],
+            'parameters': [{'name': 'Vin', 'value': 373, 'unit': 'V', 'basis': 'requirement', 'source': 'req:R1'}],
+            'checks': [{'name': '电阻功耗', 'value': watts, 'operator': '<=', 'limit': 0.1, 'unit': 'W', 'ref': 'R1',
+                        'limit_basis': 'derived'}]})
+
+    def test_a_resistor_whose_power_matters_writes_its_rating(self):
+        # III level: 0603's weakest part 1/16 W × 0.5 × 0.8 = 0.025 W; 0.05 W matters and needs ≥ 0.0625 W written.
+        self.add_resistor('1k/1%', 0.05)
+        errors = [e for e in self.run_audit()['errors'] if e['code'] == 'resistor_power_rating_missing']
+        self.assertEqual(1, len(errors), self.run_audit()['errors'])
+        self.assertIn('0.0625 W', errors[0]['item'])
+
+    def test_a_written_rating_or_a_small_power_needs_nothing(self):
+        self.add_resistor('1k/1%/0.125W', 0.05)
+        self.assertNotIn('resistor_power_rating_missing', self.codes())
+        self.setUp()
+        self.add_resistor('1k/1%', 0.02)          # below 0.025 W the weakest 0603 part is enough
+        self.assertNotIn('resistor_power_rating_missing', self.codes())
+
+    def test_a_resistor_without_a_footprint_is_judged_as_0402(self):
+        self.add_resistor('1k/1%', 0.03, footprint='')   # 0402 1/16 W too: 0.03 > 0.025
+        self.assertIn('resistor_power_rating_missing', self.codes())
+        self.setUp()
+        self.add_resistor('1k/1%', 0.03, footprint='Resistor_SMD:R_1206_3216Metric')   # 0.125 × 0.5 × 0.8 = 0.05
+        self.assertNotIn('resistor_power_rating_missing', self.codes())
+
+    @unittest.skipUnless(SR_PASSIVE.is_file(), 'schematic-review not installed')
+    def test_the_floors_are_schematic_reviews(self):
+        found = {}
+        for node in ast.parse(SR_PASSIVE.read_text(encoding='utf-8')).body:
+            if isinstance(node, ast.Assign):
+                names = [t.id for t in node.targets if isinstance(t, ast.Name)] or [
+                    e.id for t in node.targets if isinstance(t, ast.Tuple) for e in t.elts]
+                values = node.value.elts if isinstance(node.value, ast.Tuple) and len(names) > 1 else [node.value]
+                for name, value in zip(names, values):
+                    if name in ('RESISTOR_FLOORS', 'WEAKEST_SHARE', 'UNSET_POWER_SHARE', 'ASSUMED_PACKAGE'):
+                            found[name] = eval(compile(ast.Expression(value), str(SR_PASSIVE), 'eval'))
+        self.assertEqual({k: v[0] for k, v in found['RESISTOR_FLOORS'].items()}, adc.RESISTOR_FLOORS)
+        self.assertEqual((found['WEAKEST_SHARE'], found['UNSET_POWER_SHARE'], found['ASSUMED_PACKAGE']),
+                         (adc.WEAKEST_SHARE, adc.UNSET_POWER_SHARE, adc.ASSUMED_PACKAGE))
 
     def test_derating_needs_a_layered_record(self):
         self.record['parameter_version'] = 1

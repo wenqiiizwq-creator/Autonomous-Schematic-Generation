@@ -8,6 +8,19 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 功耗要考虑的电阻写额定功率 (2026-10-27)
+
+用户：“照道理来说，在设计的时候，如果要考虑功耗，不仅要考虑阻值和精度，还需要写上功率等级，作为给以后的约束。ASG里面就要这样来做，
+SR同样要审核这一点”。SR 的无源应力预判已要求：最坏功耗超过按已写字段能买到的最弱件（封装最弱档的一半）的降额值、BOM 又没写额定功率的电阻，
+写 BOM 约束“额定功率 ≥ 应力 ÷ RES-SMD-P”或判 FAIL。ASG 照同一判据设计：`audit_derating` 对 `ref` 为电阻、单位 W/mW 的功耗检查，
+按封装（没封装按 0402）最弱档 × 0.5 × 本级 RES-SMD-P（等级未定 0.5）判功耗是否要考虑，要考虑而 `value` 和字段都没写额定功率的记
+`resistor_power_rating_missing`，给出最低额定；`value` 写成 `阻值/公差/额定功率`。封装最弱档表与份额抄自 SR `passive_stress.py`，
+测试 `test_the_floors_are_schematic_reviews` 核对两边一致。审计只看得到写成检查的功耗，文档要求设计时算轨上和高压电阻的最坏功耗。
+
+- Event: user:2026-10-27
+- Causes: rule_not_enforced 1
+- Changed: scripts/audit_design_closure.py, tests/test_derating_audit.py, references/design-closure.md, references/requirements-to-intent.md, docs/improvement-ledger.md
+
 ## IC 角色线索对齐 schematic-review：linearregulator (2026-10-27)
 
 SR 在 7b49463 给 IC 角色线索加了 `linearregulator`，ASG 的器件类型对齐测试（`test_quotes_name_the_same_kinds_in_both_skills`）

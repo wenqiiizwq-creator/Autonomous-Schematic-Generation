@@ -78,6 +78,16 @@ FILE_DECISIONS = ('UPDATED', 'KEPT')
 DERATING_RULES = Path(__file__).resolve().parent.parent / 'references' / 'derating-rules.json'
 DERATING_SOURCE = re.compile(r'^(req:|clarification:)(\S+)$')
 RATING_SOURCE = re.compile(r'^(datasheet:.+#p\d+|req:\S+|calc:\S+)$')
+# A resistor whose power matters carries its power rating (user 2026-10-27: 设计时考虑功耗，除阻值和精度外还要写上功率等级，
+# 作为给以后的约束). Mirrors schematic-review's passive_stress: the weakest part the written fields allow is half the
+# package's commodity floor (RG1005 0.032 W), derated by the level's RES-SMD-P value (0.5 with no level); a part without
+# a footprint is judged as 0402.
+RESISTOR_FLOORS = {'0201': 0.05, '0402': 1 / 16, '0603': 1 / 16, '0805': 0.1,
+                   '1206': 0.125, '1210': 0.25, '2010': 0.5, '2512': 1.0}
+WEAKEST_SHARE, UNSET_POWER_SHARE, ASSUMED_PACKAGE = 0.5, 0.5, '0402'
+RESISTOR_PACKAGE = re.compile(r'^Resistor_SMD:R_(0201|0402|0603|0805|1206|1210|2010|2512)_', re.I)
+WATTS = re.compile(r'^(\d+(?:\.\d+)?)\s*(m?)W$')
+SEGMENT_SPLIT = re.compile(r'[/，,；;、\s]+')
 
 
 def text(value):
@@ -391,6 +401,27 @@ def load_derating(path=DERATING_RULES):
     return {r['id']: r for r in spec['rules']}, spec
 
 
+def written_power(comp):
+    """The power rating a resistor's value or a field writes as a segment of its own (620/1%/0.125W, 250mW), or None."""
+    found = set()
+    for value in [comp.get('value')] + list(part_classes.fields(comp).values()):
+        for segment in SEGMENT_SPLIT.split(str(value or '')):
+            m = WATTS.match(segment)
+            if m:
+                found.add(float(m.group(1)) / (1000 if m.group(2) else 1))
+    return found.pop() if len(found) == 1 else None
+
+
+def power_rating_needed(comp, watts, share):
+    """The minimum power rating a resistor must write (worst power ÷ the level's RES-SMD-P value), when its power
+    matters and it writes none; otherwise None."""
+    m = RESISTOR_PACKAGE.match(str(comp.get('footprint') or ''))
+    floor = RESISTOR_FLOORS[m.group(1) if m else ASSUMED_PACKAGE]
+    if written_power(comp) is not None or watts <= floor * WEAKEST_SHARE * share:
+        return None
+    return watts / share
+
+
 def derated_limit(rule, level, rating):
     """The limit a rule sets at this level, or None when the measure has no single number to compare.
     A ratio of a negative rating is the allowed magnitude (R8)."""
@@ -422,6 +453,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
         error('derating_level_without_source', 'derating.source: req:<需求编号>，或 clarification:<用户暂缓的需求澄清>')
     comps = {c['ref']: c for c in intent.get('components') or []}
     ruled = {k for r in rules.values() for k in r['kinds']}
+    share = rules['RES-SMD-P']['values'][level] if level else UNSET_POWER_SHARE
     risks, hints = [], []
     for key, row in calculations.items():
         for c in row.get('checks') or []:
@@ -429,6 +461,12 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                 continue
             where, ref = '%s:%s' % (key, c.get('name')), c.get('ref')
             kind = part_classes.kind_of(comps[ref])[0] if ref in comps else None
+            if kind == 'resistor' and c.get('unit') in ('W', 'mW') and finite(c.get('value')):
+                need = power_rating_needed(comps[ref], abs(c['value']) / (1000 if c['unit'] == 'mW' else 1), share)
+                if need is not None:
+                    error('resistor_power_rating_missing', '%s：%s 的功耗要考虑，值写成 阻值/公差/额定功率（如 620/1%%/0.125W），'
+                          '额定功率取 ≥ %.4g W 的标准档（%s）' % (where, ref, need, '应力 ÷ %s 级 RES-SMD-P %g' % (level, share)
+                                                               if level else '降额等级未定，取应力 2 倍'))
             if not text(c.get('derating_rule')):
                 if c.get('rating') is not None and kind in ruled:
                     hints.append('derating_rule_available %s：%s 是%s，降额规范有这类器件的规则' % (where, ref, kind))
