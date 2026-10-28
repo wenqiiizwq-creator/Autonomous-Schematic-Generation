@@ -30,6 +30,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from schematic_layout.component_requirements import artifact_audit
+
 HERE = Path(__file__).resolve().parent
 KICAD_FILES = ('*.kicad_sch', '*.kicad_pro', '*.kicad_prl', '*.kicad_sym', 'sym-lib-table', 'netlist.xml', 'schematic.pdf')
 # Records a delivery folder never hashes as its own inputs.
@@ -153,6 +155,12 @@ def deliver(root, log=print):
         for i, cmd in enumerate(config.get('prepare') or [], 1):
             run(fill(cmd, root, work / ('prepare-%d' % i)), root, '准备 %d' % i)
             step('准备 %d' % i, 'DONE')
+
+        # Preparation projects the single source into IR/BOM. This check is
+        # read-only and runs before generation; verification checks native exports.
+        performance = artifact_audit(root, json.loads(intent.read_text(encoding='utf-8')))
+        if performance['status'] != 'NOT_CHECKED':
+            step('器件性能预检', performance['status'])
 
         audit = record / 'design-closure-audit.json'
         audit.unlink(missing_ok=True)

@@ -678,6 +678,30 @@ class Sheet:
     def text(self, text, at, font=1.27):
         self.notes.append({"text": text, "at": list(pt(at)), "font_mm": font})
 
+    def performance_notes(self, at, refs=None, font=1.27, width=82):
+        """Place same-page contract notes at a planned free annotation anchor.
+
+        Content comes only from project()'s contract snapshot; normal scene QA
+        checks the generated text as obstacles. The native gate binds it back
+        to the source record and actual PDF, including status and conditions.
+        """
+        import textwrap
+        from .component_requirements import note_lines
+        chosen = set(refs) if refs is not None else set(self.components)
+        unknown = chosen - set(self.components)
+        if unknown:
+            raise ValueError(f'Performance note references outside this page: {sorted(unknown)}')
+        lines = []
+        for ref, comp in self.components.items():
+            entry = comp.get('performance_contract')
+            if ref in chosen and entry and entry.get('display') == 'note':
+                for line in note_lines(entry):
+                    lines.extend(textwrap.wrap(line, width=width, break_long_words=False,
+                                               break_on_hyphens=False) or [''])
+                lines.append('')
+        if lines:
+            self.text('\n'.join(lines).rstrip(), at, font)
+
     # ----- build ----------------------------------------------------------
     def _segments(self):
         """Split same-net branches; reject any contact between different nets."""

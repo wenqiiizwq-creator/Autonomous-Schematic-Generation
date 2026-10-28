@@ -19,6 +19,7 @@ from audit_design_closure import calculation_basis, severity_of, vendor_items_of
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
+from schematic_layout.component_requirements import package_audit, DEFINITIONS, SELECTIONS  # noqa: E402
 
 REPORT = '设计报告.md'
 SEVERITIES = ('P0', 'P1', 'P2', 'P3')
@@ -41,6 +42,7 @@ GATES = OrderedDict([
     ('external_supply', '外部供电声明'),
     ('reference_contract', '外围电路按手册核对'),
     ('design_change', '改动与预期一致'),
+    ('component_requirements', '器件性能要求、选型状态及图面/BOM一致性'),
 ])
 GATE_RESULTS = OrderedDict([('PASS', '通过（PASS）'), ('FAIL', '没通过（FAIL）'),
                             ('INSUFFICIENT', '资料不足（INSUFFICIENT）'), ('CONDITIONAL', '有条件通过')])
@@ -701,6 +703,10 @@ def render(root, notes=None, title=None):
         if problem:
             problems.append(problem)
     intent = data['electrical-intent.json'] or {}
+    # Recompute against the current package, never trust a previously saved PASS.
+    performance = package_audit(root, intent)
+    if performance['status'] == 'FAIL':
+        problems += ['器件性能要求：' + e for e in performance['errors']]
     closure = data['design-closure.json'] or {}
     audit = data['design-closure-audit.json'] or {}
     summary = data['summary.json'] or {}
@@ -816,6 +822,16 @@ def render(root, notes=None, title=None):
         '%s %d 项' % (label, gate_counts.get(key, 0)) for key, label in GATE_RESULTS.items()
         if key != 'CONDITIONAL' or gate_counts.get(key))))
     out.append('- **图面审阅**：%s。' % VISUAL.get(visual.get('status'), '没有记录'))
+    if performance['status'] == 'NOT_CHECKED':
+        out.append('- **器件性能流程**：旧记录未检查（NOT_CHECKED）。')
+    else:
+        define_counts = Counter(performance.get('definition', {}).values())
+        select_counts = Counter(performance.get('selection', {}).values())
+        out.append('- **器件性能流程**：%s；%s；%s。' % (
+            {'PASS': '通过', 'FAIL': '不通过', 'INCOMPLETE': '未完成'}.get(performance['status'], performance['status']),
+            '、'.join('%s %d 项' % (DEFINITIONS[k], n) for k, n in define_counts.items()) or '无专项性能项',
+            '、'.join('%s %d 项' % (SELECTIONS[k], n) for k, n in select_counts.items()) or '无专项选型项'))
+        out.extend('- **性能未关闭项**：%s。' % cell(p) for p in performance['pending'])
     out.append('- **需求**：共 %d 条。%s。' % (len(requirements), '，'.join(
         '%s %d 条' % (label, req_counts.get(key, 0)) for key, label in REQUIREMENTS.items())))
     if layered:
@@ -862,6 +878,8 @@ def render(root, notes=None, title=None):
         out.append('- **收到的审查意见**：%d 条。%s。' % (len(items), '，'.join(
             '%s %d 条' % (label, reply_counts[key]) for key, (label, _) in RESPONSES.items() if reply_counts.get(key))))
     missing = []
+    if performance['status'] not in ('PASS', 'NOT_CHECKED'):
+        missing.append('器件性能定义、选型或原生图面核对尚未完成：%s' % performance['status'])
     failed = [label for _, label, status in shown if status == 'FAIL']
     short = [label for _, label, status in shown if status not in ('PASS', 'FAIL', 'CONDITIONAL')]
     if failed:

@@ -103,7 +103,8 @@ POWER_TIERS = ((3.0, 0.22, 1e6, 1.0, 250), (3.0, 0.1, 27e3, 5.0, 250), (8.4, 0.1
 
 
 def spec_text(comp):
-    return '%s %s %s' % (comp.get('value') or '', fields(comp).get('Specification') or '', fields(comp).get('Rating') or '')
+    return '%s %s %s %s' % (comp.get('value') or '', fields(comp).get('Specification') or '',
+                            fields(comp).get('Rating') or '', fields(comp).get('RequirementSpec') or '')
 
 
 def ohms(value):
@@ -149,6 +150,9 @@ def category(comp, kind=None):
     if text(declared):
         if known and declared not in known:
             return None, 'fields.Category 写的 %s 不是%s的子类（可选：%s）' % (declared, KINDS[kind].title, '、'.join(known))
+        if ((declared.startswith(R_CAT) and kind != 'resistor')
+                or (declared.startswith(C_CAT) and kind != 'capacitor')):
+            return None, 'fields.Category 与实际器件类型 %s 不一致，不能按位号前缀套电阻/电容模板' % kind
         return declared, None
     filed = datasheet_category(comp)
     if filed and (not known or filed in known):
@@ -283,7 +287,8 @@ def part_class(comp, ctx=None):
         return SPECIAL
     if kind == 'capacitor' and category(comp, kind)[0] == SAFETY_C:
         return SPECIAL
-    if special_spec(comp, kind):
+    from .component_requirements import spec_procurement
+    if special_spec(comp, kind) and not spec_procurement(comp):
         return SPECIAL
     if kind in ('connector', 'relay') and high:
         return SPECIAL
@@ -478,7 +483,7 @@ def audit_identity(intent, bases, touched=None):
                 elif status != 'VERIFIED':
                     lack.append(detail if status == 'MISSING' else '核对通过的类型声明（%s：%s）' % (status, detail))
         else:
-            rating = '%s %s %s' % (comp.get('value') or '', fields(comp).get('Specification') or '', fields(comp).get('Rating') or '')
+            rating = spec_text(comp)
             if kind == 'capacitor' and not VOLTAGE.search(rating):
                 lack.append('耐压（写在值或 fields.Specification 里）')
             if kind in ('inductor', 'common_mode_choke', 'coupled_inductor') and not CURRENT.search(rating):

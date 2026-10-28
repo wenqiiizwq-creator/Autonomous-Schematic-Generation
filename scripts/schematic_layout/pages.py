@@ -67,6 +67,8 @@ def page_intents(board, field="Circuit", page_of=None, rails=()):
                      for n in local],
             "no_connect": [p for p in board.get("no_connect", []) if pages[p.rsplit(".", 1)[0]] == page],
         }
+        if 'component_requirements_version' in board:
+            intent['component_requirements_version'] = board['component_requirements_version']
         supplies = [copy.deepcopy(d) for d in board.get("external_supply", [])
                     if pages.get(str(d.get("pin", "")).rsplit(".", 1)[0]) == page]
         if supplies:  # The flag goes on the page of the declared connector pin.

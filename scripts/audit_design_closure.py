@@ -403,6 +403,16 @@ def load_derating(path=DERATING_RULES):
 
 def written_power(comp):
     """The power rating a resistor's value or a field writes as a segment of its own (620/1%/0.125W, 250mW), or None."""
+    contract = comp.get('performance_contract')
+    if isinstance(contract, dict):
+        powers = [r['value'] / (1000 if r['unit'] == 'mW' else 1)
+                  for r in contract.get('requirements', []) if isinstance(r, dict)
+                  and r.get('parameter') in ('power', 'rated_power', 'continuous_power')
+                  and r.get('op') == 'ge' and r.get('unit') in ('W', 'mW')
+                  and isinstance(r.get('value'), (int, float)) and not isinstance(r['value'], bool)
+                  and math.isfinite(r['value']) and r['value'] > 0]
+        if len(powers) == 1:
+            return powers[0]
     found = set()
     for value in [comp.get('value')] + list(part_classes.fields(comp).values()):
         for segment in SEGMENT_SPLIT.split(str(value or '')):

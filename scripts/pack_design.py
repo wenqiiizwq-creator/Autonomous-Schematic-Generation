@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import audit  # noqa: E402
 from find_parts import DEFAULT_WIKI, library_index, locate_file  # noqa: E402
 from render_design_report import REPORT, render  # noqa: E402
+from schematic_layout.component_requirements import package_audit  # noqa: E402
 
 TOP = (REPORT, '原理图', '设计资料', 'record')
 SCHEMATIC = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
@@ -192,7 +193,11 @@ def check(root, inputs=(), previous=None):
     intent, closure = record / 'electrical-intent.json', record / 'design-closure.json'
     if intent.is_file():
         try:
-            errors += ['design documents: ' + e for e in document_refs(root, json.loads(intent.read_text(encoding='utf-8')))]
+            intent_data = json.loads(intent.read_text(encoding='utf-8'))
+            errors += ['design documents: ' + e for e in document_refs(root, intent_data)]
+            performance = package_audit(root, intent_data)
+            if performance['status'] == 'FAIL':
+                errors += ['component requirements: ' + e for e in performance['errors']]
         except ValueError as error:
             errors.append('electrical-intent.json cannot be read: %s' % error)
     if intent.is_file() and closure.is_file():

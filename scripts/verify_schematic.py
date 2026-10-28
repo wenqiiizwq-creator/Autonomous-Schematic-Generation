@@ -34,6 +34,7 @@ from schematic_layout.sexpr import parse, all_nodes  # noqa: E402
 from schematic_layout.scene import read_scene  # noqa: E402
 from schematic_layout.qa import check_scene  # noqa: E402
 from schematic_layout.system_block import audit_system_block  # noqa: E402
+from schematic_layout.component_requirements import artifact_audit  # noqa: E402
 
 
 def write(path, data):
@@ -74,6 +75,7 @@ def main():
     ap.add_argument("--project", help="native project annotation name; defaults to the root file stem")
     ap.add_argument("--cli", help="kicad-cli path")
     ap.add_argument("--native-geometry", action="store_true", help="Also qualify native pin-name geometry on a standalone page; hierarchy roots enable the finite native channel automatically")
+    ap.add_argument('--bom', type=Path, help='current canonical BOM; defaults to root schematic directory/BOM.csv')
     args = ap.parse_args()
     if args.out.exists() and any(args.out.iterdir()):
         ap.error("Output directory is not empty; use a fresh run directory")
@@ -113,8 +115,17 @@ def main():
     else:
         gates["erc"] = {"status": "INSUFFICIENT", "reason": "ERC report not written"}
 
+    intent = normalize(json.loads(args.intent.read_text(encoding="utf-8")))
+    artifact_root = args.artifact_root or args.root.parent
+    performance = artifact_audit(artifact_root, intent, schematic=args.root, xml=xml, pdf=pdf,
+                                 bom=args.bom or args.root.parent / 'BOM.csv', project_name=args.project,
+                                 inputs=dict(item.split('=', 1) for item in args.input) if args.input else None)
+    write(out / 'component-requirements-check.json', performance)
+    if performance['status'] != 'NOT_CHECKED':
+        gates['component_requirements'] = {'status': performance['status'],
+                                          'errors': len(performance['errors']),
+                                          'pending': len(performance['pending'])}
     if xml.is_file():
-        intent = normalize(json.loads(args.intent.read_text(encoding="utf-8")))
         try:
             result = compare_netlist(xml, intent)
         except (ValueError, ET.ParseError) as exc:   # an unreadable export says so; the other gates still run

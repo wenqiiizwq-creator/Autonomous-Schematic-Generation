@@ -306,7 +306,9 @@ def make_root(intent, layout, name, dirs=()):
                 props[field] = str(text)
         for field, text in props.items():
             effects = form("effects", form("font", form("size", 1.27, 1.27)))
-            if field not in ("Reference", "Value"):
+            if field not in ("Reference", "Value") and not (
+                    field == 'Performance' and intent.get('component_requirements_version') == 1
+                    and component.get('performance_contract')):
                 effects.append(form("hide", Atom("yes")))
             sym.append(form("property", field, text, form("at", *at, 0), effects))
         sym.append(

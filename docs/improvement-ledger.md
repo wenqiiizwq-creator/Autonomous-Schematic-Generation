@@ -9,6 +9,21 @@ entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Appr
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
+## 将器件性能要求固化到计算、选型、出图和交付流程 (2026-10-28)
+
+用户批准流程草案后实施：P3与任务2.2–2.4先由用途/工况定义可采购性能，再核实候选，按规格采购与必须绑定型号分开。
+新增版本化性能记录、用途分组筛选、来源哈希/定位、要求与保证值的独立字段、显式IR/BOM投影；候选不得写正式MPN。
+受控规格及其保证已核实时用by_spec完成规格采购核实，不强迫绑定订货号；只有自拟要求而无受控保证的仍保留未选料。
+图面显示完整短规格或同页索引与技术注释，原生PDF/XML/可见属性/BOM共同核对；准备、验证、报告及打包使用同一记录。
+保留旧记录未检查状态、核心器件/安全/认证/曲线绑定要求及共享应力规范。补测公差不等式、J公差误写、MOV类别、待计算、
+候选冒充核准、隐藏字段、同页注释、过期计算/BOM与典型值误作保证等失败路径，包含真实KiCad导出。
+
+- Event: user:2026-10-28
+- Approved: user:2026-10-28
+- Outline: 07ee30fe07332d10
+- Causes: rule_not_enforced 1, rule_wrong 1
+- Changed: SKILL.md, references/component-requirements.md, references/part-roles.md, references/requirements-to-intent.md, references/requirement-clarifications.md, references/delivery-report.md, scripts/audit_component_requirements.py, scripts/audit_design_closure.py, scripts/deliver.py, scripts/pack_design.py, scripts/render_design_report.py, scripts/verify_schematic.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/generate.py, scripts/schematic_layout/pages.py, scripts/schematic_layout/part_classes.py, scripts/schematic_layout/recipes.py, tests/test_component_requirements.py, docs/improvement-ledger.md
+
 ## R8独立审查后的宽范围偏置与身份核对案例 (2026-10-28)
 
 补入高压Buck、VCC低电流指示、比较器高有效FAULT、反向保护LDO与SR隔离二极管的参考做法；记录线感知门限与两档反馈耦合、J公差和MOV身份三个判断案例。合成测试仅复现数字/分区/身份，不将文档存在等同电气证明；不改纲要或判定门槛。
