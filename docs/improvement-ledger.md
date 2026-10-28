@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+
+## R8独立审查后的宽范围偏置与身份核对案例 (2026-10-28)
+
+补入高压Buck、VCC低电流指示、比较器高有效FAULT、反向保护LDO与SR隔离二极管的参考做法；记录线感知门限与两档反馈耦合、J公差和MOV身份三个判断案例。合成测试仅复现数字/分区/身份，不将文档存在等同电气证明；不改纲要或判定门槛。
+
+- Event: review:SR-20261028-R8-从头审查-61166f3/F-001, review:SR-20261028-R8-从头审查-61166f3/F-002, review:SR-20261028-R8-从头审查-61166f3/F-004, review:SR-20261028-R8-从头审查-61166f3/F-005, review:SR-20261028-R8-从头审查-61166f3/F-006
+- Causes: judgment 5
+- Changed: references/circuit-patterns/reviewed-bias-and-latch.md, tests/test_bias_latch_cases.py, docs/improvement-ledger.md
+
 ## 功耗要考虑的电阻写额定功率 (2026-10-27)
 
 用户：“照道理来说，在设计的时候，如果要考虑功耗，不仅要考虑阻值和精度，还需要写上功率等级，作为给以后的约束。ASG里面就要这样来做，
