@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import calculation_basis, severity_of, vendor_items_of  # noqa: E402
+from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
@@ -833,6 +833,10 @@ def render(root, notes=None, title=None):
             '、'.join('%s %d 项' % (SELECTIONS[k], n) for k, n in select_counts.items()) or '无专项选型项'))
         out.extend('- **性能未关闭项**：%s。' % cell(p) for p in performance['pending'])
         out.extend('- **样件验收（外部，不挡交付，未定型）**：%s。' % cell(p) for p in performance.get('acceptance') or [])
+        if performance.get('procurement'):
+            out.append('- **按 BOM 规格转交采购（外部，不挡交付）**：%d 颗，采购按 BOM 的 RequirementSpec 找料并核对保证值。'
+                       % len(performance['procurement']))
+        out.extend('- **性能要求提示**：%s。' % cell(h) for h in performance.get('hints') or [])
     out.append('- **需求**：共 %d 条。%s。' % (len(requirements), '，'.join(
         '%s %d 条' % (label, req_counts.get(key, 0)) for key, label in REQUIREMENTS.items())))
     if layered:
@@ -861,9 +865,11 @@ def render(root, notes=None, title=None):
         out.append('- **计算**：共 %d 项，记录是 parameter_version 1，结论没有按依据分层。' % len(calculations))
     old = (['parameter_version 2（检查门槛的出处、每条需求有没有检查没核对）'] if closure.get('parameter_version') == 2 else []) + \
           (['gap_version 1（外部资料缺口没有分类）'] if closure.get('gap_version') == 1 and open_external else []) + \
-          (['没有 derating_version（器件应力没有按降额等级核对）'] if closure and layered and 'derating_version' not in closure else [])
+          (['没有 derating_version（器件应力没有按降额等级核对）'] if closure and layered and 'derating_version' not in closure else []) + \
+          (['没有 uncertainty_version（工程估计的余量没有对不确定度核对）'] if closure and layered and 'uncertainty_version' not in closure else [])
     if old:
-        out.append('- **记录版本**：%s。新设计按 parameter_version 3、gap_version 2、derating_version 1 写。' % '；'.join(old))
+        out.append('- **记录版本**：%s。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1 写。'
+                   % '；'.join(old))
     derating = audit.get('derating') if isinstance(audit.get('derating'), dict) else None
     if derating:
         risks, hints = derating.get('stress_risks') or [], derating.get('hints') or []
@@ -871,6 +877,9 @@ def render(root, notes=None, title=None):
             LEVEL_NAMES.get(derating.get('level'), '未定'), derating.get('source') or '没有写来源',
             '合格但有风险（应力）%d 处，见“应力风险”。' % len(risks) if risks else '写出的应力都在降额值以内。',
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
+    margins = audit.get('estimate_margins') if isinstance(audit.get('estimate_margins'), list) else []
+    if margins:
+        out.append('- **估计余量**：%d 处检查的余量小于所依赖工程估计的不确定度，合格但有风险，见“余量不足以覆盖估计误差”。' % len(margins))
     if clarifications:
         asked = Counter((q.get('answer') or {}).get('decision') for q in clarifications)
         out.append('- **需求澄清**：问过用户 %d 个问题。%s。' % (len(clarifications), '，'.join(
@@ -1036,6 +1045,7 @@ def render(root, notes=None, title=None):
                           ('需求澄清', w.get('clarification')),
                           ('设计假设', w.get('assumption')), ('本版进展', w.get('progress')),
                           ('处理措施', w.get('action')),
+                          ('改设计候选（须用户批准后实施）', w.get('redesign')),
                           ('责任方', w.get('owner')), ('替代方案', w.get('fallback')),
                           ('前置项', '、'.join(w.get('blocked_by') or [])),
                           ('关联需求', '、'.join(w.get('requirements') or [])))
@@ -1083,6 +1093,25 @@ def render(root, notes=None, title=None):
                                             cell(w.get('action') or '')))
         out.append('')
 
+    # A calculation that misses its target leads the calculation tables, with the terms it sums (R10 ENERGY was listed
+    # only as a work item; user 2026-10-28: 先改前四条).
+    failed = [c for c in calculations if (tier.get(c.get('id')) if layered else c.get('conclusion')) == 'failed']
+    if failed:
+        out += ['## 不满足的计算', '',
+                '这些计算算出的值没达到门槛，设计未完成。“最好情景”是各项取有利端仍不满足，等资料关不掉，要改设计；'
+                '改设计候选须用户批准后实施。', '',
+                '| 计算 | 涉及的需求 | 不满足的检查：值与门槛 | 最大的分项 | 改设计候选 | 对应待办 |', '|---|---|---|---|---|---|']
+        for c in failed:
+            items = [w for w in open_work if c.get('id') in (w.get('calculations') or [])]
+            terms = sorted((t for t in c.get('contributors') or [] if isinstance(t, dict) and isinstance(t.get('value'), (int, float))),
+                           key=lambda t: -abs(t['value']))[:5]
+            out.append('| %s | %s | %s | %s | %s | %s |' % (
+                c.get('id'), '、'.join(c.get('requirements') or []),
+                cell('；'.join(check_text(k) + ('（最好情景）' if k.get('scenario') == 'best' else '') for k in failing_checks(c))),
+                cell('；'.join('%s %s %s' % (t.get('name'), num(t['value']), t.get('unit') or '') for t in terms)),
+                cell('；'.join(w['redesign'] for w in items if text(w.get('redesign')))), '、'.join(w['id'] for w in items)))
+        out.append('')
+
     for key in ('vendor_data', 'user_deferred', 'estimate') if layered else ():
         group = [c for c in calculations if tier.get(c.get('id')) == key]
         if not group:
@@ -1124,6 +1153,17 @@ def render(root, notes=None, title=None):
             out.append('| %s | %s | %s | %s / %s / %s %s | %s |' % (d['calculation'], d.get('ref') or '', d['rule'], num(d.get('value')),
                                                               num(d.get('limit')), num(d.get('rating')), d.get('unit') or '',
                                                               cell(d.get('improvement') or '')))
+        out.append('')
+    if margins:
+        out += ['## 余量不足以覆盖估计误差', '',
+                '这些检查满足门槛，但余量小于所依赖工程估计的不确定度：合格但有风险，不挡交付；加大余量或把估计收紧。'
+                '降额检查的余量对额定算，不和降额值叠加（derating-rules.md R12）。', '',
+                '| 计算 | 检查 | 值 / 门槛 | 余量 / 不确定度 | 改进 |', '|---|---|---|---|---|']
+        for m in margins:
+            out.append('| %s | %s | %s / %s%s %s | %.2g%% / %.2g%% | %s |' % (
+                m['calculation'], cell(m.get('check') or ''), num(m.get('value')), num(m.get('limit')),
+                '（额定）' if m.get('against') == 'rating' else '', m.get('unit') or '', m['margin'] * 100,
+                m['uncertainty'] * 100, cell(m.get('improvement') or '')))
         out.append('')
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:

@@ -26,11 +26,19 @@
 | `required_parameters` | 工况分析识别出的参数名；完整定义逐项覆盖 |
 | `requirements[]` | `parameter`, `op: eq/le/ge`, 有限数值 `value`, `unit`, `conditions`, `basis`, `source` |
 | `procurement` | `mode: spec/mpn/design_sheet` 与 `reason`；由物理引脚、行为、认证或不可替代曲线决定绑定时列 `binding_dependencies`，必须选 `mpn`；`design_sheet` 只用于带 `fields.DesignSheet` 的定制磁件 |
-| `selection` | `status: not_selected/candidate/qualified/by_spec/by_design_sheet`；候选与型号已核准时附 `mpn` 和选料途径 `route`；已核准另有 `properties[]`；受控规格核实用 `by_spec`；定制磁件按设计单核实用 `by_design_sheet` |
+| `selection` | `status: not_selected/candidate/qualified/by_spec/by_bom_spec/by_design_sheet`；候选与型号已核准时附 `mpn` 和选料途径 `route`；已核准另有 `properties[]`；受控规格核实用 `by_spec`；按 BOM 规格转交采购用 `by_bom_spec`；定制磁件按设计单核实用 `by_design_sheet` |
 | `display` | `inline`：完整要求显示在元件旁；`note`：元件旁显示“要求见 CR-位号”，同页生成完整技术注释 |
 
 比较对象是采购性能：`power ge 3 W` 表示额定功率至少 3 W；`tolerance le 5 %` 表示容差不得大于 5%。
 要求值、实际工作应力、额定值和降额后的可用值不能互相覆盖。共享应力规范的“超降额未超额定列风险”判法不变。
+
+**只写起约束作用的要求，数值取 2–3 位有效数字**（R10：110 颗器件都写了工作电压，有 R503 ≥ 0.063125 V 这样的值；
+用户 2026-10-28：先改前四条）。电压、脉冲等参数只在最坏值超过最弱常用件额定的降额值时才写，判据同
+[design-closure.md](design-closure.md) 的“电阻写额定功率”：电阻的工作电压要求不到封装最弱常用件耐压的一半
+（0201 15 V、0402 25 V、0603 50 V、0805 100 V、1206 150 V、1210/2010/2512 200 V；没写封装按 0402，与 schematic-review 一致）
+时不起约束作用，审核结果 `hints` 给提示。`le`/`ge` 的数值超过 3 位有效数字记错，按保守方向取整：下限向上、上限向下
+（`conservative(value, op)`，如 0.063125 → 0.0632、466.69 → 467）。同一句波形或漂移条件出现在 3 颗以上器件时 `hints` 给提示：
+按各自工况写，确实相同的保留。提示不挡交付，报告结论一节每类一行。
 
 `conditions` 为非空的“条件名: 具体条件字符串”对象，不能用 TBD/待确认表示完整定义。脉冲参数名以 `pulse_` 开头，
 条件至少包括 `waveform`、`duration`、`repetition`、`temperature`、`drift`，漂移条件同时写累计次数。
@@ -75,7 +83,14 @@
 来源，其余来源留在引用的受控标准/AVL及证据中。没有核实来源时可带完整规格继续条件出图，报告仍列选型未关闭。
 受控标准料已有经核实的保证和可采购来源时，`selection.status: by_spec`，写 `standard_id` 与 `route`，
 逐项 `properties` 引用 `kind: controlled_standard` 的受控保证文件，保持 MPN 为空。这样可完成规格采购核实，
-不会因为未绑定某一家订货号永远判未完成；没有受控保证的自拟采购要求仍是 `not_selected`，不能冒充标准料已经合格。
+不会因为未绑定某一家订货号永远判未完成。
+
+没有企业受控标准料号的常规件（`procurement.mode: spec`，性能定义完整），算出的要求写进 BOM 规格就是给采购的约束
+（用户 2026-10-27：功率等级作为给以后的约束；2026-10-28：先改前四条），写 `selection.status: by_bom_spec`（BOM规格已写全），
+不写 `mpn`、`standard_id`、`properties`。原生核对时，每条要求的参数、方向和数值都要在本次导出 BOM 与 XML 的
+`RequirementSpec` 里找到（缺了记错），满足即选型关闭。采购按规格找料、核对保证值是转交事项：审核结果 `procurement` 列出这些位号，
+报告结论一节只写一行总数，不挡交付；没有本次 BOM/XML 时合并成一条未关闭项。`not_selected` 留给要求还没写进 BOM、
+或要靠具体型号保证的件。
 
 定制磁件（变压器、PFC 电感、共模扼流圈等，设计网表写 `fields.DesignSheet`）由自己的磁件设计单定义，`procurement.mode: design_sheet`。
 设计单还没写到能逐项回答性能要求时是 `not_selected`；核实后写 `selection.status: by_design_sheet`、`sheet_id`（设计单编号），
@@ -116,7 +131,9 @@ Python API 位于 `scripts/schematic_layout/component_requirements.py`。准备�
 有效容量下限或脉冲能力等性能边界不改写标称值。没有在合同中定义精确标称值的，沿用设计网表的标称定义。
 连续功率统一使用参数 `power`、`rated_power` 或 `continuous_power`，单位 W/mW；原有功率应力审计读取这个最低采购额定，
 不会把脉冲峰值功率误当连续额定。BOM同时保留Footprint与实际Kind/Category，不能从R前缀给MOV套电阻分类。
-图面用中文标出“容差要求”“单次脉冲耐受能量要求”和“型号未定/候选待核/型号已核准”，内部参数名保留供追溯。
+图面只印“参数 比较符 数值 单位”（如“单次脉冲耐受能量 >= 1 J”）和“型号未定/候选待核/型号已核准/BOM规格已写全”等状态；
+条件留在记录和 BOM 的 `RequirementSpec` 里（R10：整段条件印在图上，被旁边 PWR_FLAG 的文字插断后核对误报）。
+PDF 核对逐条短标签进行，不要求整段注释连续出现；没找到时写明页号和标签。
 不要再增加含义不明的 `Tolerance` 列；明确区分 `RequirementSpec` 的上限和 `SelectedSpec` 的已核准实际值。
 
 `verify_schematic.py --artifact-root <交付目录>` 自动读取源记录，BOM默认为根图同目录 `BOM.csv`，也可显式 `--bom`。

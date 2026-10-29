@@ -60,6 +60,7 @@ LIMIT_BASES = ('requirement', 'guaranteed', 'typical', 'standard', 'derived', 'm
 # vendor-data item, leaves it resting on the vendor; an engineering model or a term not calculated
 # leaves it resting on ASG's own estimate; otherwise the design holds.
 VENDOR_BASES, ESTIMATE_BASES = ('typical', 'unspecified'), ('model',)
+SCENARIOS = ('best', 'worst', 'nominal')
 OMISSION_KINDS = ('not_calculated', 'verify_by_test')
 DATASHEET = re.compile(r'^datasheet:.+#p\d+$')
 # Where a data gap was found (gap_version 1): a datasheet page, a review item or a user decision.
@@ -153,6 +154,29 @@ def derating_deviation(c):
     return bool(text(c.get('derating_rule')) and holds(c) is False and holds(c, 'rating') is True)
 
 
+def failing_checks(row):
+    """The checks of a calculation that miss their limit, a derating deviation within its rating aside."""
+    return [c for c in row.get('checks') or [] if isinstance(c, dict) and holds(c) is False and not derating_deviation(c)]
+
+
+def estimate_margin(c, uncertainty):
+    """(margin, reference) of a check that holds, as a share of what it is compared with, when the margin is smaller
+    than the uncertainty of the engineering estimates it rests on; otherwise None. A derating check's margin is taken to
+    its rating, its derated limit being the one allowance already (derating-rules.md R12)."""
+    if not uncertainty or holds(c) is not True or c.get('operator') == '==':
+        return None
+    key = 'rating' if text(c.get('derating_rule')) else 'limit'
+    if key == 'rating' and (not finite(c.get('rating')) or c['operator'] not in ('<=', '<')):
+        return None
+    reference = c[key]
+    if not reference:
+        return None
+    value = abs(c['value']) if key == 'rating' else c['value']
+    margin = ((abs(reference) - value) if key == 'rating' else
+              (reference - value) if c['operator'] in ('<=', '<') else (value - reference)) / abs(reference)
+    return (margin, key) if margin < uncertainty else None
+
+
 def calculation_basis(row, vendor_items=(), deferred_items=()):
     """(conclusion, rests_on, reasons) a parameter_version 2 calculation follows to.
 
@@ -161,7 +185,7 @@ def calculation_basis(row, vendor_items=(), deferred_items=()):
     A stress over the derated value but within the rating passes with a stress risk; it neither fails nor conditions.
     """
     checks = [c for c in row.get('checks') or [] if isinstance(c, dict)]
-    failing = [c.get('name') for c in checks if holds(c) is False and not derating_deviation(c)]
+    failing = [c.get('name') for c in failing_checks(row)]
     if failing:
         return 'failed', None, failing
     params = [p for p in row.get('parameters') or [] if isinstance(p, dict)]
@@ -617,12 +641,26 @@ def audit_calculation_v2(key, row, work, vendor_items, deferred_items, derived, 
             if c['side'] not in WINDOW_SIDES:
                 error('schema', where + ':side must be no_false_trip or protection')
             sides.add(c['side'])
+        if c.get('scenario') is not None and c['scenario'] not in SCENARIOS:
+            error('schema', where + ':scenario must be best, worst or nominal')
     if row.get('kind') == 'threshold':
         for side in WINDOW_SIDES:
             if side not in sides:
                 error('threshold_window_incomplete', key + ':' + side)
     elif row.get('kind') is not None:
         error('schema', key + ':kind must be threshold when present')
+    contributors = row.get('contributors')
+    if contributors is not None and (not isinstance(contributors, list) or not all(
+            isinstance(t, dict) and text(t.get('name')) and finite(t.get('value')) and isinstance(t.get('unit'), str)
+            for t in contributors)):
+        error('schema', key + ':contributors is a list of {name, value, unit}')
+    # R10 ENERGY: even the favourable end of the loss ranges missed the target, so no datasheet can close it; the work
+    # item proposes a design change (user 2026-10-28: 先改前四条), which is the user's to approve.
+    if any(c.get('scenario') == 'best' for c in failing_checks(row)) and not any(
+            w.get('stage') == 'design' and w.get('status') == 'open' and key in (w.get('calculations') or [])
+            and text(w.get('redesign')) for w in work.values()):
+        error('best_case_failed_without_redesign', '%s：最好情景也不满足，要有一件 design 待办在 calculations 里写它，'
+              '并在 redesign 写改设计的候选（改什么、预计效果），由用户批准' % key)
     conclusion, rests_on, reasons = calculation_basis(row, vendor_items, deferred_items)
     derived[key] = {'conclusion': conclusion, 'rests_on': rests_on, 'reasons': reasons}
     if (row.get('conclusion'), row.get('rests_on')) != (conclusion, rests_on):
@@ -633,6 +671,40 @@ def audit_calculation_v2(key, row, work, vendor_items, deferred_items, derived, 
         error('coverage_not_derived', '%s: 写的 %s，按遗漏项是 %s' % (key, row.get('coverage'), coverage))
     if conclusion == 'failed':
         need('calculation_failed', key)
+
+
+def audit_estimate_margins(calculations, error):
+    """uncertainty_version 1 (user 2026-10-28: 先改前四条; 判风险): each engineering estimate writes its relative
+    uncertainty; a check resting on estimates whose margin is smaller than the largest of them passes with a margin
+    risk and an improvement, like a stress risk."""
+    risks = []
+    for key, row in calculations.items():
+        found = []
+        for p in row.get('parameters') or []:
+            if isinstance(p, dict) and p.get('basis') in ESTIMATE_BASES:
+                u = p.get('uncertainty')
+                if not finite(u) or not 0 < u < 1:
+                    error('model_without_uncertainty', '%s:%s：工程估计写 uncertainty（相对值，0–1，如 0.1 即 ±10%%）'
+                          % (key, p.get('name')))
+                else:
+                    found.append(u)
+        for c in row.get('checks') or []:
+            if not isinstance(c, dict):
+                continue
+            if c.get('uncertainty') is not None and not (finite(c['uncertainty']) and 0 <= c['uncertainty'] < 1):
+                error('schema', '%s:%s：uncertainty 是 0–1 的相对值' % (key, c.get('name')))
+                continue
+            u = c['uncertainty'] if c.get('uncertainty') is not None else max(found, default=None)
+            hit = estimate_margin(c, u)
+            if hit is None:
+                continue
+            risks.append({'calculation': key, 'check': c.get('name'), 'value': c['value'], 'limit': c[hit[1]],
+                          'against': hit[1], 'unit': c.get('unit'), 'margin': hit[0], 'uncertainty': u,
+                          'improvement': c.get('improvement')})
+            if not text(c.get('improvement')):
+                error('estimate_margin_risk_without_improvement', '%s:%s：余量 %.2g%% 小于工程估计的不确定度 %.2g%%，'
+                      '写 improvement（加大余量，或把估计收紧到余量以内）' % (key, c.get('name'), hit[0] * 100, u * 100))
+    return risks
 
 
 def audit(record, intent_path, artifact_root, inputs=None):
@@ -853,6 +925,12 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'derating_version must be 1, with parameter_version 2 or 3')
         else:
             derating = audit_derating(record, intent, calculations, requirements, clarifications, error)
+    margins = None
+    if 'uncertainty_version' in record:
+        if record['uncertainty_version'] != 1 or version not in (2, 3):
+            error('schema', 'uncertainty_version must be 1, with parameter_version 2 or 3')
+        else:
+            margins = audit_estimate_margins(calculations, error)
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')
@@ -887,6 +965,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'calculation_basis': derived,
             'gaps': 'CHECKED' if gaps else 'NOT_CHECKED', 'citations': citations,
             'derating': derating if derating is not None else 'NOT_CHECKED',
+            'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),
             'downstream_handoffs': [k for k, v in work.items() if v.get('stage') in ('validation', 'pcb') and v.get('status') == 'handoff']}
 

@@ -8,6 +8,32 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## R10 暴露的四个问题：规格件关闭、要求收敛、不满足的计算、估计余量 (2026-10-28)
+
+SR 会话分析 ASG 生成的 100W PD R10，找到几类问题，用户选“先改前四条”。
+
+1. 按规格采购的常规阻容只有 `by_spec` 一条关闭途径，要企业受控标准料号，项目没有，114 颗里 109 颗永远“型号未定”，
+   结论铺了约 150 行。用户确认（“同意按此做”）新增 `by_bom_spec`（BOM规格已写全）：每条要求的参数、方向和数值都在本次导出
+   BOM 与 XML 的 `RequirementSpec` 里核到即关闭，不写 MPN、`standard_id`；找料与核对保证值列在审核结果 `procurement`，
+   报告只写一行总数，不挡交付。
+2. 性能要求套模板：110 颗都写了工作电压（R503 ≥ 0.063125 V），9 颗电阻共用同一句漂移条件，整段条件印在图上，
+   被 PWR_FLAG 文字插断后报 36 条英文误报。改为 `le`/`ge` 数值超过 3 位有效数字记错（`conservative` 按保守方向取整）；
+   电阻工作电压不到封装最弱常用件耐压一半、同一句波形/漂移条件出现在 3 颗以上时 `hints` 提示（耐压表抄自 SR
+   `passive_stress.py`，测试核对一致）；图面只印“参数 比较符 数值 单位”，条件留在记录和 BOM；PDF 逐条短标签核对，消息写中文。
+3. ENERGY 三档最好情景都不满足，报告两张计算表都没有它。报告新增“不满足的计算”放在计算表最前面，列不满足的检查、
+   `contributors` 最大几项和改设计候选；检查写 `scenario: best` 而不满足时，要有 design 待办写 `redesign`
+   （`best_case_failed_without_redesign`），改设计由用户批准。
+4. 靠工程估计过关的检查余量比估计误差还小（96.9 对 97.6 V）。用户选“判风险”：`uncertainty_version: 1` 下 `model` 参数写
+   `uncertainty`，余量占门槛比例小于它的检查合格但有风险，写 `improvement`，审计列 `estimate_margins`，报告单列一节；
+   降额检查的余量对额定算，不与降额值叠加（R12）。
+
+共用的 `derating-rules.md`、`derating-rules.json`、`stress-spec.md` 没改；ASG 纲要（SKILL.md）没改。
+另有四个程序错误本次不改（停产核对读磁件设计单、比较符写反、U501 选型理由、KiCad 10.0.7 支持）。
+
+- Event: user:2026-10-28
+- Causes: rule_missing 4
+- Changed: scripts/schematic_layout/component_requirements.py, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_component_requirements.py, tests/test_estimate_margins.py, tests/test_design_report.py, references/component-requirements.md, references/design-closure.md, references/delivery-report.md, docs/improvement-ledger.md
+
 
 ## 定制磁件按磁件设计单关闭选型 (2026-10-28)
 

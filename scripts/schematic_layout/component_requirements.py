@@ -21,7 +21,8 @@ FIELDS = ('RequirementSpec', 'ProcurementMode', 'SelectionStatus', 'SelectedSpec
 OPS = {'eq': '=', 'le': '<=', 'ge': '>='}
 DEFINITIONS = {'complete': '性能定义完整', 'pending': '性能待计算'}
 SELECTIONS = {'not_selected': '型号未定', 'candidate': '候选待核', 'qualified': '型号已核准',
-              'by_spec': '受控规格采购已核实', 'by_design_sheet': '设计单定制已核实'}
+              'by_spec': '受控规格采购已核实', 'by_design_sheet': '设计单定制已核实',
+              'by_bom_spec': 'BOM规格已写全'}
 # Selections whose properties are checked one by one and that close the selection.
 CLOSED = ('qualified', 'by_spec', 'by_design_sheet')
 PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额定功率',
@@ -31,6 +32,16 @@ PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额
               'working_voltage': '工作耐压', 'overload_voltage': '过载耐压',
               'capacitance': '容量', 'effective_capacitance': '有效容量',
               'inductance': '电感量', 'current': '额定电流', 'drift': '漂移'}
+# A spec-bought common part closes once each requirement is in its exported BOM/XML RequirementSpec; finding the part
+# and checking its guarantees is handed to procurement (user 2026-10-28: 先改前四条; 同意按此做).
+BOM_SPEC = 'by_bom_spec'
+# Commodity chip-resistor floor voltages (V), mirroring schematic-review passive_stress RESISTOR_FLOORS: a working
+# voltage within half the package's weakest part constrains nothing (SR passes it with no rating written).
+RESISTOR_VOLTAGE_FLOORS = {'0201': 15.0, '0402': 25.0, '0603': 50.0, '0805': 100.0,
+                           '1206': 150.0, '1210': 200.0, '2010': 200.0, '2512': 200.0}
+VOLTAGE_SHARE, ASSUMED_PACKAGE = 0.5, '0402'
+RESISTOR_PACKAGE = re.compile(r'^Resistor_SMD:R_(0201|0402|0603|0805|1206|1210|2010|2512)_', re.I)
+BOILERPLATE_REFS, TEMPLATE_CONDITIONS = 3, ('waveform', 'drift')
 CONDITIONS = {'waveform': '波形', 'duration': '持续时间', 'repetition': '重复条件',
               'temperature': '温度', 'drift': '次数及允许漂移'}
 
@@ -107,6 +118,25 @@ def source_errors(source, root, guaranteed=False, inputs=None):
     return []
 
 
+def significant_digits(value):
+    mantissa = f'{abs(value):.15g}'.split('e')[0].replace('.', '').strip('0')
+    return len(mantissa)
+
+
+def conservative(value, op, digits=3):
+    """A bound rounded to ``digits`` significant digits in the safe direction: a lower bound up, an upper bound down."""
+    if value == 0 or op == 'eq':
+        return value
+    scale = 10 ** (math.floor(math.log10(abs(value))) - digits + 1)
+    step = math.ceil if op == 'ge' else math.floor
+    return float(f'{step(round(value / scale, 9)) * scale:.{digits}g}')
+
+
+def requirement_label(req):
+    """The drawing shows only 参数 比较符 数值 单位; conditions stay in the record and the BOM RequirementSpec."""
+    return f"{PARAMETERS.get(req['parameter'], req['parameter'])} {OPS[req['op']]} {req['value']:g} {req['unit']}"
+
+
 def requirement_line(req):
     conditions = '; '.join(f'{CONDITIONS.get(k, k)}={v}' for k, v in sorted(req.get('conditions', {}).items()))
     name = PARAMETERS.get(req['parameter'], req['parameter'])
@@ -115,7 +145,7 @@ def requirement_line(req):
 
 def note_lines(entry):
     header = f"CR-{entry['ref']}: {entry['purpose']} [{DEFINITIONS[entry['definition_status']]}; {SELECTIONS[entry['selection']['status']]}]"
-    lines = [header] + [requirement_line(r) for r in entry.get('requirements', [])]
+    lines = [header] + [requirement_label(r) for r in entry.get('requirements', [])]
     if entry['definition_status'] != 'complete':
         lines += ['PENDING / 待计算: ' + '; '.join(entry.get('gaps', []))]
     return lines
@@ -128,7 +158,8 @@ def fields_for(entry, record_hash):
     selected = entry.get('selection', {})
     actual = ' | '.join(f"{p['parameter']}={p['value']:g} {p['unit']}"
                         for p in selected.get('properties', [])) if selected.get('status') in CLOSED else ''
-    visible = (spec + f" [{SELECTIONS[selected['status']]}]" if entry.get('display') == 'inline'
+    labels = '; '.join(requirement_label(r) for r in entry.get('requirements', []))
+    visible = (labels + f" [{SELECTIONS[selected['status']]}]" if entry.get('display') == 'inline'
                else f"要求见 CR-{entry['ref']}")
     return dict(zip(FIELDS, (spec, entry['procurement']['mode'], selected['status'], actual, record_hash, visible)))
 
@@ -191,7 +222,10 @@ def entry_errors(entry, comp=None):
     if selection.get('status') == 'by_design_sheet' and (procurement.get('mode') != 'design_sheet'
             or not text(selection.get('sheet_id')) or text(selection.get('mpn'))):
         errors.append('by_design_sheet requires design_sheet procurement, the sheet_id and no vendor mpn')
-    if selection.get('status') in CLOSED and entry.get('definition_status') != 'complete':
+    if selection.get('status') == BOM_SPEC and (procurement.get('mode') != 'spec' or any(
+            selection.get(k) for k in ('mpn', 'standard_id', 'properties'))):
+        errors.append('by_bom_spec is a spec-bought part with no mpn, standard_id or properties: its BOM spec is the order')
+    if selection.get('status') in CLOSED + (BOM_SPEC,) and entry.get('definition_status') != 'complete':
         errors.append('cannot qualify a part before all required performance is defined')
     requirements = entry.get('requirements', [])
     if not isinstance(requirements, list):
@@ -217,6 +251,9 @@ def entry_errors(entry, comp=None):
         elif entry.get('definition_status') == 'complete' and any(
                 re.search(r'\bTBD\b|\bunknown\b|待定|待计算|待确认', v, re.I) for v in req['conditions'].values()):
             errors.append(f'{param}: unresolved conditions cannot define a complete requirement')
+        if req.get('op') in ('le', 'ge') and finite(req.get('value')) and significant_digits(req['value']) > 3:
+            errors.append(f"{param}: 下限/上限取 2–3 位有效数字，按保守方向取整（下限向上、上限向下）："
+                          f"{req['value']:g} 写成 {conservative(req['value'], req['op']):g}")
         if req.get('basis') not in ('calculation', 'requirement', 'standard', 'model'):
             errors.append(f'{param}: calculation/requirement/standard/model basis required')
         if text(param) and param.startswith('pulse_'):
@@ -359,7 +396,9 @@ def record_errors(record, intent, root, inputs=None):
             if req['basis'] == 'model':
                 pending.append(f"{ref}/{req['parameter']}：依赖工程估计")
         selection = entry['selection']
-        if selection['status'] not in CLOSED:
+        if selection['status'] == BOM_SPEC:
+            pass  # closed by the exported BOM/XML in audit()
+        elif selection['status'] not in CLOSED:
             pending.append(f"{ref}：{SELECTIONS[selection['status']]}，采购方式为" +
                            MODES[entry['procurement']['mode']])
         elif selection['status'] == 'by_design_sheet':
@@ -402,6 +441,40 @@ def record_errors(record, intent, root, inputs=None):
     if screened != set(comps):
         errors.append('purpose screening must cover every component: ' + str(sorted(set(comps) - screened)))
     return errors, pending
+
+
+def spec_gaps(entry, spec):
+    """The requirements whose parameter, direction and value a RequirementSpec text does not carry."""
+    return [requirement_label(r) for r in entry.get('requirements', [])
+            if compact(f"{r['parameter']}{OPS[r['op']]}{r['value']:g} {r['unit']}") not in compact(spec)]
+
+
+def requirement_hints(record, intent):
+    """Requirements that constrain nothing or repeat a template, written as review hints, not errors."""
+    comps = {c['ref']: c for c in intent.get('components', [])}
+    loose, shared = [], {}
+    for entry in record.get('components', []):
+        for req in entry.get('requirements', []):
+            if (entry.get('kind') == 'resistor' and req.get('parameter') == 'working_voltage' and req.get('op') == 'ge'
+                    and finite(req.get('value')) and req.get('unit') == 'V'):
+                m = RESISTOR_PACKAGE.match(str(comps.get(entry['ref'], {}).get('footprint') or ''))
+                floor = RESISTOR_VOLTAGE_FLOORS[m.group(1) if m else ASSUMED_PACKAGE]
+                if req['value'] <= floor * VOLTAGE_SHARE:
+                    loose.append(f"{entry['ref']}（{req['value']:g} V ≤ {floor * VOLTAGE_SHARE:g} V）")
+            if str(req.get('parameter', '')).startswith('pulse_') or req.get('parameter') == 'drift':
+                for key, value in (req.get('conditions') or {}).items():
+                    if key not in TEMPLATE_CONDITIONS:
+                        continue   # a shared duration or temperature is a plain condition, not a copied sentence
+                    shared.setdefault((key, ' '.join(str(value).split())), set()).add(entry['ref'])
+    hints = []
+    if loose:
+        hints.append('%d 颗电阻的工作电压要求不到封装最弱常用件耐压的一半，不起约束作用，可以不写：%s'
+                     % (len(loose), '、'.join(loose[:6]) + ('等' if len(loose) > 6 else '')))
+    for (key, value), refs in sorted(shared.items()):
+        if len(refs) >= BOILERPLATE_REFS:
+            hints.append('%d 颗器件的脉冲/漂移条件“%s”是同一句（%s）：按各自工况写，或确认确实相同'
+                         % (len(refs), value[:40], CONDITIONS.get(key, key)))
+    return hints
 
 
 def project(intent, record, root, inputs=None):
@@ -505,7 +578,7 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
             label = tolerance(comp.get('value', ''))
             if label is not None and 'tolerance' in actual and label != actual['tolerance']:
                 errors.append(f'{ref}: value tolerance disagrees with selected part')
-    native = 'NOT_CHECKED'
+    native, bom_checked = 'NOT_CHECKED', False
     if any(v is not None for v in (bom, xml, schematic, pdf)):
         native = 'CHECKED'
         if not all(v is not None and Path(v).is_file() for v in (bom, xml, schematic, pdf)):
@@ -538,6 +611,11 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
                     for k, v in dict(MPN=comps[ref].get('mpn', ''), **fields).items():
                         if xf.get(k, '') != v:
                             errors.append(f'{ref}: native XML {k} differs from contract')
+                    if entries[ref]['selection']['status'] == BOM_SPEC:
+                        for where, spec in (('BOM', by_ref.get(ref, {}).get('RequirementSpec', '')),
+                                            ('XML', xf.get('RequirementSpec', ''))):
+                            errors += [f'{ref}: {where} 规格没写出要求“{label}”' for label in spec_gaps(entries[ref], spec)]
+                bom_checked = True
                 errors2, gaps = drawing_errors(entries, expected, schematic, pdf, project_name)
                 errors += errors2
                 pending += gaps
@@ -549,8 +627,13 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
     # pending (user 2026-10-28: 按 A 实施).
     acceptance = [f"{ref}：样件按设计单 {e['selection']['sheet_id']} 验收" for ref, e in entries.items()
                   if e['selection']['status'] == 'by_design_sheet']
+    # Finding a part to the BOM spec and checking its guarantees is procurement's: handed over, not pending.
+    procurement = sorted(ref for ref, e in entries.items() if e['selection']['status'] == BOM_SPEC)
+    if procurement and not bom_checked:
+        pending.append(f'{len(procurement)} 颗按 BOM 规格采购的器件，规格未在本次导出的 BOM/XML 核实')
     return {'schema_version': VERSION, 'status': 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS',
-            'errors': errors, 'pending': pending, 'acceptance': acceptance, 'native': native, 'record_sha256': sha,
+            'errors': errors, 'pending': pending, 'acceptance': acceptance, 'procurement': procurement,
+            'hints': requirement_hints(record, intent), 'native': native, 'record_sha256': sha,
             'definition': {r: e['definition_status'] for r, e in entries.items()},
             'selection': {r: e['selection']['status'] for r, e in entries.items()}}
 
@@ -563,7 +646,7 @@ def drawing_errors(entries, expected, schematic, pdf, project_name=None):
     gaps = list(hierarchy.coverage_gaps)
     body = document_text(Path(pdf))
     if body is None:
-        gaps.append('PDF text unavailable: manual native render verification required')
+        gaps.append('PDF 文字读不出：图面性能标注要人工对照原生图核实')
     pdf_pages = body.split('\f') if body is not None else []
     found = set()
     for page in hierarchy.pages:
@@ -595,12 +678,12 @@ def drawing_errors(entries, expected, schematic, pdf, project_name=None):
         if body is None:
             continue  # native visibility/notes above remain checked without PDF text
         if not number.isdigit() or not 1 <= int(number) <= len(pdf_pages):
-            gaps.append(f"{page['path']}: cannot bind native page to PDF")
+            gaps.append(f"{page['path']}：原生图页对不上 PDF 页")
         else:
             rendered = compact(pdf_pages[int(number) - 1])
             for label in visible:
                 if compact(label) not in rendered:
-                    gaps.append(f"{page['path']}: visible specification not verified in PDF: {label}")
+                    gaps.append(f"{page['path']}：PDF 第 {number} 页没找到图面性能标注“{label}”")
     if found != set(entries):
         errors.append('performance references missing from active native hierarchy: ' + str(sorted(set(entries) - found)))
     return errors, gaps

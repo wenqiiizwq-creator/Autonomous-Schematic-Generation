@@ -281,6 +281,43 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('  - C1：依赖 待办 W-FW、没算：纹波电流', text)
         self.assertIn('| 计算结论：设计成立 / 依赖工程估计 / 依赖厂家资料 / 不满足 | 1 / 1 / 1 / 0 |', text)
 
+    def test_a_failed_calculation_leads_the_tables_with_its_terms_and_candidate(self):
+        # R10 ENERGY failed in every best case yet appeared only as a work item (user 2026-10-28: 先改前四条).
+        c1 = self.d.closure['calculations'][0]
+        c1.update(conclusion='failed', coverage='bounded', omitted_terms=[], contributors=[
+            {'name': '限流电阻', 'value': 6.4, 'unit': 'W'}, {'name': '检流电阻', 'value': 0.2, 'unit': 'W'},
+            {'name': '钳位电阻', 'value': 2.4, 'unit': 'W'}])
+        c1['checks'] = [{'name': '低损耗情景效率', 'value': 0.82, 'operator': '>=', 'limit': 0.835, 'unit': '1',
+                         'scenario': 'best'}, {'name': '输出纹波', 'value': 18, 'operator': '<=', 'limit': 30, 'unit': 'mV'}]
+        c2 = dict(c1, id='C2', conclusion='conditional', rests_on='estimate', contributors=None, checks=c1['checks'][1:],
+                  parameters=[{'name': 'eta', 'value': 0.9, 'unit': '1', 'basis': 'model', 'reason': '满载效率工程包络'}])
+        del c2['contributors']
+        self.d.closure['work_items'][0].update(calculations=['C1'], redesign='限流电阻启动后旁路，预计减少 6 W')
+        self.d.closure.update(parameter_version=2, calculations=[c1, c2])
+        self.d.write('design-closure.json', self.d.closure)
+        self.d.write('design-closure-audit.json', audit(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root))
+        text, _ = self.d.report()
+        failed = text.split('## 不满足的计算')[1].split('\n## ')[0]
+        self.assertLess(text.index('## 不满足的计算'), text.index('## 依赖工程估计的计算'))
+        self.assertIn('| C1 | R-OUT | 低损耗情景效率：0.82 ≥ 0.835 1（最好情景） | 限流电阻 6.4 W；钳位电阻 2.4 W；检流电阻 0.2 W '
+                      '| 限流电阻启动后旁路，预计减少 6 W | W-CALC、W-FW |', failed)
+        self.assertIn('- **改设计候选（须用户批准后实施）**：限流电阻启动后旁路，预计减少 6 W', text)
+
+    def test_margin_risks_bom_spec_handoff_and_requirement_hints_are_one_line_each(self):
+        self.d.write('design-closure-audit.json', dict(audit(
+            self.d.closure, self.d.record / 'electrical-intent.json', self.d.root), estimate_margins=[
+                {'calculation': 'C1', 'check': '正常峰值不误触发', 'value': 96.9, 'limit': 97.6, 'against': 'limit',
+                 'unit': 'V', 'margin': 0.0072, 'uncertainty': 0.1, 'improvement': '提高门槛'}]))
+        performance = {'status': 'PASS', 'errors': [], 'pending': [], 'native': 'CHECKED', 'procurement': ['R1', 'R2'],
+                       'hints': ['2 颗电阻的工作电压要求不到封装最弱常用件耐压的一半'], 'definition': {}, 'selection': {}}
+        with mock.patch('render_design_report.package_audit', return_value=performance):
+            text, _ = self.d.report()
+        self.assertIn('- **按 BOM 规格转交采购（外部，不挡交付）**：2 颗，采购按 BOM 的 RequirementSpec 找料并核对保证值。', text)
+        self.assertIn('- **性能要求提示**：2 颗电阻的工作电压要求不到封装最弱常用件耐压的一半。', text)
+        self.assertIn('- **估计余量**：1 处检查', text)
+        self.assertIn('| C1 | 正常峰值不误触发 | 96.9 / 97.6 V | 0.72% / 10% | 提高门槛 |',
+                      text.split('## 余量不足以覆盖估计误差')[1])
+
     def test_version_1_says_its_conclusions_are_not_layered(self):
         text, _ = self.d.report()
         self.assertIn('记录是 parameter_version 1，结论没有按依据分层', text)
@@ -323,7 +360,7 @@ class DesignReportTests(unittest.TestCase):
 
     def test_an_old_gap_record_is_named_in_the_conclusion(self):
         text, _ = self.d.report()
-        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1 写。', text)
+        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1 写。', text)
 
     def test_derating_level_and_stress_risks_are_reported(self):
         # stress-spec.md (user 2026-10-27): the level and every stress risk with its improvement are in the report.

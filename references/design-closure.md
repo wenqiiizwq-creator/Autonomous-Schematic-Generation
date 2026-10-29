@@ -117,6 +117,17 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     指向一件 `validation` 阶段的 `handoff` 待办，不影响结论和 `coverage`。指错记 `not_calculated_without_design_item` /
     `verify_by_test_without_validation_handoff`。`missing_guarantee` 不再必填，缺的保证由审计从参数里列出。
   - 需求：挂着不是设计成立的计算时，不能记 `design_supported`（`requirement_status_not_derived`）。
+  - **不满足的计算**（R10 ENERGY 三档最好情景都不满足，报告却只在待办里出现；用户 2026-10-28：先改前四条）：
+    结果由几项相加（损耗、误差预算）时写 `contributors`（每项 `{name, value, unit}`），报告列最大的几项。
+    检查在各项取有利端时算出的写 `scenario: "best"`（另有 `worst`、`nominal`）。最好情景也不满足，等厂家资料关不掉：
+    要有一件未关闭的 `design` 待办在 `calculations` 里写这条计算，并在 `redesign` 写改设计的候选（改什么、预计效果），
+    缺了记 `best_case_failed_without_redesign`。改设计本身由用户批准后实施，报告这样标注。
+  - **工程估计的不确定度**（`uncertainty_version: 1`，与 `parameter_version` 2 或 3 一起；R10：96.9 对 97.6 V、0.297 对 0.3 T
+    靠估计过关，余量比估计误差还小；用户 2026-10-28：判风险）：每个 `model` 参数写 `uncertainty`（相对值，0–1，0.1 即 ±10 %，
+    缺记 `model_without_uncertainty`）。用到它的检查，余量占门槛的比例小于计算里最大的 `uncertainty` 时（检查可写自己传播后的
+    `uncertainty` 代替），合格但有风险：结论照常推出，检查写 `improvement`（加大余量或收紧估计，缺记
+    `estimate_margin_risk_without_improvement`），审计在 `estimate_margins` 列出，报告“余量不足以覆盖估计误差”一节逐条列出，
+    不挡交付。降额检查的余量对额定算（R12：降额值已是这个量的那一份余量，不再叠加）；门槛为 0 或 `==` 的检查不比。
   - **`parameter_version: 3`**（新设计；R8，2026-10-27：“20 J 采购资格”“60 V 筛查值”这类自己定的门槛和手册额定、需求指标写法一样，
     成本目标写着“在选型记录中估算”却没算）。在版本 2 之上：
     - 每条 `checks` 写门槛的依据 `limit_basis` 和出处：`requirement`（`limit_source` 写 `req:<需求编号>`）、`guaranteed`/`typical`

@@ -2,6 +2,7 @@
 
 All part numbers and guarantees below are synthetic test data, not approved parts.
 """
+import ast
 import copy
 import csv
 import hashlib
@@ -20,6 +21,8 @@ from schematic_layout.part_classes import part_class, category, COMMON, SPECIAL,
 from schematic_layout.pages import page_intents
 from schematic_layout.recipes import Sheet, LEFT, RIGHT
 from schematic_layout.sexpr import all_nodes, dump, first, form, Atom
+
+SR_PASSIVE = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'scripts' / 'checkers' / 'passive_stress.py'
 
 
 def fixture(root, qualified=False, actual_tolerance=1):
@@ -262,6 +265,73 @@ class PerformanceTests(unittest.TestCase):
         self.record['screening'] = []
         with self.assertRaisesRegex(ValueError, 'screening must cover'):
             self.project()
+
+    def bom_spec(self):
+        self.record['components'][0]['selection'] = {'status': 'by_bom_spec'}
+
+    def test_a_spec_bought_part_closes_by_its_bom_spec_without_a_standard(self):
+        # user 2026-10-28: 先改前四条 — the written requirements are the order; finding the part is procurement's.
+        self.bom_spec()
+        projected = self.project()
+        self.assertNotIn('mpn', projected['components'][0])
+        self.assertEqual('by_bom_spec', projected['components'][0]['fields']['SelectionStatus'])
+        result = cr.audit(projected, self.record, self.root)
+        self.assertEqual([], result['errors'], result)
+        self.assertEqual(['R1'], result['procurement'])
+        # Without this export's BOM/XML the spec is unchecked: one line, not one per part.
+        self.assertEqual(['1 颗按 BOM 规格采购的器件，规格未在本次导出的 BOM/XML 核实'], result['pending'])
+
+    def test_bom_spec_is_only_for_complete_spec_bought_parts(self):
+        for selection, procurement, definition in (
+                ({'status': 'by_bom_spec', 'mpn': 'X1'}, 'spec', 'complete'),
+                ({'status': 'by_bom_spec', 'standard_id': 'S1'}, 'spec', 'complete'),
+                ({'status': 'by_bom_spec'}, 'mpn', 'complete'),
+                ({'status': 'by_bom_spec'}, 'spec', 'pending')):
+            entry = copy.deepcopy(self.record['components'][0])
+            entry.update(selection=selection, definition_status=definition, gaps=['calculate it'])
+            entry['procurement']['mode'] = procurement
+            self.assertTrue(cr.entry_errors(entry), (selection, procurement, definition))
+
+    def test_a_bound_has_two_or_three_significant_digits(self):
+        req = self.record['components'][0]['requirements'][1]
+        req['value'] = 1.0631254
+        errors, _ = cr.record_errors(self.record, self.intent, self.root)
+        self.assertTrue(any('有效数字' in e and '1.07' in e for e in errors), errors)
+        self.assertEqual((0.0632, 467.0, 0.86, 2.37, 5), (
+            cr.conservative(0.063125, 'ge'), cr.conservative(466.69, 'ge'), cr.conservative(0.8600289, 'le'),
+            cr.conservative(2.37, 'ge'), cr.conservative(5, 'le')))
+
+    def test_the_drawing_shows_the_bound_and_the_bom_keeps_the_conditions(self):
+        projected = self.project()
+        lines = cr.note_lines(self.record['components'][0])
+        self.assertIn('单次脉冲耐受能量 >= 1 J', lines)
+        self.assertFalse(any('exponential' in line for line in lines), lines)
+        self.assertIn('exponential', projected['components'][0]['fields']['RequirementSpec'])
+
+    def test_an_unconstraining_voltage_and_a_shared_pulse_condition_are_hinted(self):
+        entry = self.record['components'][0]
+        entry['requirements'].append(dict(parameter='working_voltage', op='ge', value=0.0632, unit='V',
+                                          conditions={'temperature': '25 degC'}, basis='calculation',
+                                          source=entry['requirements'][0]['source']))
+        hints = cr.requirement_hints(self.record, self.intent)
+        self.assertTrue(any('R1（0.0632 V ≤ 12.5 V）' in h for h in hints), hints)
+        self.assertFalse(any('同一句' in h for h in hints), hints)
+        for ref in ('R2', 'R3'):
+            self.intent['components'].append(dict(self.intent['components'][0], ref=ref))
+            self.record['components'].append(dict(copy.deepcopy(entry), ref=ref))
+        hints = cr.requirement_hints(self.record, self.intent)
+        self.assertTrue(any(h.startswith('3 颗器件的脉冲/漂移条件“<=1 % after 1000 pulses”') for h in hints), hints)
+        entry['requirements'][-1]['value'] = 60
+        self.intent['components'][0]['footprint'] = 'Resistor_SMD:R_0805_2012Metric'   # 100 V × 0.5
+        self.assertFalse(any('R1（' in h for h in cr.requirement_hints(self.record, self.intent)))
+
+    @unittest.skipUnless(SR_PASSIVE.is_file(), 'schematic-review not installed')
+    def test_the_voltage_floors_are_schematic_reviews(self):
+        found = {}
+        for node in ast.parse(SR_PASSIVE.read_text(encoding='utf-8')).body:
+            if isinstance(node, ast.Assign) and any(getattr(t, 'id', '') == 'RESISTOR_FLOORS' for t in node.targets):
+                found = eval(compile(ast.Expression(node.value), str(SR_PASSIVE), 'eval'))
+        self.assertEqual({k: v[1] for k, v in found.items()}, cr.RESISTOR_VOLTAGE_FLOORS)
 
     def test_pending_calculation_is_visible_not_complete(self):
         entry = self.record['components'][0]
@@ -536,6 +606,33 @@ class NativePerformanceTests(unittest.TestCase):
         self.assertEqual('INCOMPLETE', summary['gates']['component_requirements']['status'])
         self.assertEqual([], gate['errors'], gate)
         self.assertEqual('CHECKED', gate['native'], gate)
+
+    def test_a_bom_spec_part_passes_the_native_gate_and_is_handed_to_procurement(self):
+        self.record['components'][0]['selection'] = {'status': 'by_bom_spec'}
+        self.intent = cr.project(fixture(self.root)[0], self.record, self.root)
+        sheet = Sheet(self.intent)
+        sheet.place('R1', (50.8, 50.8), rotation=90)
+        sheet.label('R1.1', outward=LEFT)
+        sheet.label('R1.2', outward=RIGHT)
+        sheet.performance_notes((20.32, 90.17))
+        self.tree, _ = sheet.build('performance')
+        cr.write_bom(self.intent, self.bom)
+        self.export()
+        result = self.audit()
+        self.assertEqual(('PASS', 'CHECKED', ['R1']), (result['status'], result['native'], result['procurement']), result)
+        self.bom.write_text(self.bom.read_text(encoding='utf-8-sig').replace('tolerance<=5 %', 'tolerance<=6 %'),
+                            encoding='utf-8-sig')
+        self.assertIn('R1: BOM 规格没写出要求“容差 <= 5 %”', self.audit()['errors'])
+
+    def test_each_visible_label_is_found_in_the_pdf_even_when_other_text_cuts_the_note(self):
+        # R10: a PWR_FLAG beside a long note interleaved its text; each short label is checked on its own.
+        self.export()
+        body = cr.document_text(self.pdf)
+        with mock.patch.object(cr, 'document_text', return_value=body.replace('\n', '\nPWR_FLAG\n')):
+            self.assertEqual(('CHECKED', []), (self.audit()['native'], [p for p in self.audit()['pending'] if 'PDF' in p]))
+        with mock.patch.object(cr, 'document_text', return_value=body.replace('>=1J', '').replace('>= 1 J', '')):
+            gaps = [p for p in self.audit()['pending'] if 'PDF' in p]
+        self.assertTrue(gaps and all('PDF 第 1 页没找到图面性能标注' in g for g in gaps), gaps)
 
     def test_bom_cannot_reclassify_resistor_as_another_kind(self):
         self.export()
