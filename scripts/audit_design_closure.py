@@ -446,6 +446,36 @@ def derated_limit(rule, level, rating):
             'min_years': lambda: v, 'max_dvdt': lambda: v}.get(m, lambda: None)()
 
 
+# A check against a guaranteed rating that names no rule (stress-spec.md, 2026-10-28, user: 按推荐都做): the quantity is
+# the unit's, and rules of one kind are told apart by the part's identity, the "其他…" rule taking a part none names.
+# Mirrors schematic-review's derating.implied_ratio.
+UNIT_DIMENSIONS = (('current', re.compile(r'^[mµu]?A$')), ('voltage', re.compile(r'^[mk]?V$')), ('power', re.compile(r'^m?W$')))
+DIMENSION_WORDS = {'current': ('电流',), 'voltage': ('电压',), 'power': ('功率', '功耗')}
+TYPE_WORDS = {'USB 母座': re.compile(r'USB', re.I),
+              '器具耦合器': re.compile(r'耦合器|IEC ?60320|appliance coupler|\bC(?:5|6|7|8|13|14|15|16)\b', re.I)}
+
+
+def implied_rule(c, comp, kind, rules, level):
+    """(rule, derated) for a check of a stress against the part's guaranteed rating that names no rule, when exactly one
+    steady or worst-case ratio rule fits the part's kind and the unit's quantity and the stress is over the derated
+    value; else None. R8 (2026-10-28): VBUS 5 A against the connector's 5 A rating passed with zero margin."""
+    if not (level and kind and not text(c.get('derating_rule')) and c.get('limit_basis') == 'guaranteed'
+            and c.get('operator') in ('<=', '<') and finite(c.get('value')) and finite(c.get('limit')) and c['limit'] > 0):
+        return None
+    words = next((DIMENSION_WORDS[d] for d, pattern in UNIT_DIMENSIONS if pattern.match(str(c.get('unit') or '').strip())), ())
+    fits = [r for r in rules.values() if r['measure'] == 'ratio' and r['condition'] in ('worst', 'steady')
+            and kind in r['kinds'] and any(w in r['parameter'] for w in words)]
+    if len(fits) > 1:
+        identity = ' '.join(str(comp.get(k) or '') for k in ('mpn', 'value', 'lib_id'))
+        named = [r for r in fits if TYPE_WORDS.get(r['type']) and TYPE_WORDS[r['type']].search(identity)]
+        fits = named or [r for r in fits if r['type'].startswith('其他') and not any(
+            TYPE_WORDS.get(o['type']) and TYPE_WORDS[o['type']].search(identity) for o in fits)]
+    if len(fits) != 1:
+        return None
+    derated = c['limit'] * fits[0]['values'][level]
+    return (fits[0], derated) if c['value'] > derated else None
+
+
 def audit_derating(record, intent, calculations, requirements, clarifications, error, loaded=None):
     """derating_version 1, judged by stress-spec.md (user 2026-10-27): the level and where it was decided; each check that
     names a rule uses that rule's limit for the level; over the derated value but within the rating is a stress risk with
@@ -478,7 +508,16 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                           '额定功率取 ≥ %.4g W 的标准档（%s）' % (where, ref, need, '应力 ÷ %s 级 RES-SMD-P %g' % (level, share)
                                                                if level else '降额等级未定，取应力 2 倍'))
             if not text(c.get('derating_rule')):
-                if c.get('rating') is not None and kind in ruled:
+                implied = implied_rule(c, comps.get(ref) or {}, kind, rules, level)
+                if implied:
+                    rule, derated = implied
+                    risks.append({'calculation': key, 'check': c.get('name'), 'ref': ref, 'rule': rule['id'],
+                                  'value': c.get('value'), 'limit': derated, 'rating': c.get('limit'),
+                                  'unit': c.get('unit'), 'improvement': c.get('improvement')})
+                    if not text(c.get('improvement')):
+                        error('stress_risk_without_improvement', '%s：应力超过 %s 级 %s 的降额值 %g %s，写 improvement'
+                              '（换额定更高的件或降低应力）' % (where, level, rule['id'], derated, c.get('unit')))
+                elif c.get('rating') is not None and kind in ruled:
                     hints.append('derating_rule_available %s：%s 是%s，降额规范有这类器件的规则' % (where, ref, kind))
                 continue
             rule = rules.get(c['derating_rule'])

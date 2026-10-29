@@ -179,6 +179,55 @@ class DeratingAuditTests(unittest.TestCase):
         self.assertEqual(1, len(result['derating']['hints']))
         self.assertTrue(result['derating']['hints'][0].startswith('derating_rule_available C-VDS:漏源电压'))
 
+    def add_connector(self, lib_id, value, current=5, operator='<='):
+        intent = json.loads(self.intent.read_text())
+        intent['components'].append({'ref': 'J1', 'lib_id': lib_id, 'value': value})
+        self.intent.write_text(json.dumps(intent))
+        self.record['intent_sha256'] = sha256(self.intent)
+        self.record['requirements'][0]['refs'].append('J1')
+        self.record['calculations'].append({
+            'id': 'C-VBUS', 'requirements': ['R1'], 'evidence': ['E1'], 'refs': ['J1'], 'coverage': 'bounded',
+            'conclusion': 'supported', 'rests_on': None, 'omitted_terms': [],
+            'parameters': [{'name': 'Ivbus', 'value': current, 'unit': 'A', 'basis': 'requirement', 'source': 'req:R1'}],
+            'checks': [{'name': 'VBUS 电流', 'value': current, 'operator': operator, 'limit': 5, 'unit': 'A', 'ref': 'J1',
+                        'rating': 5, 'limit_basis': 'guaranteed', 'limit_source': 'datasheet:Datasheet/USB.pdf#p2'}]})
+        return self.record['calculations'][-1]['checks'][0]
+
+    def test_a_stress_against_a_rating_without_a_rule_is_judged_by_the_one_fitting_rule(self):
+        # R8 (2026-10-28): VBUS 5 A on a 5 A USB-C receptacle passed with zero margin; USB-I allows 90 % at III, 4.5 A.
+        check = self.add_connector('Connector:USB_C_Receptacle_USB2.0', 'USB_C_Receptacle')
+        self.assertIn('stress_risk_without_improvement', self.codes())
+        check['improvement'] = '换 6 A 母座或限流 4.5 A'
+        result = self.run_audit()
+        self.assertEqual('PASS', result['status'], result['errors'])
+        risk = result['derating']['stress_risks'][0]
+        self.assertEqual(('J1', 'USB-I', 5, 4.5, 5), (risk['ref'], risk['rule'], risk['value'], risk['limit'], risk['rating']))
+        self.assertFalse(any(h.startswith('derating_rule_available C-VBUS') for h in result['derating']['hints']))
+
+    def test_a_connector_no_type_names_takes_the_other_rule(self):
+        self.add_connector('Connector:Screw_Terminal_01x02', 'Screw_Terminal_01x02')['improvement'] = '换 10 A 端子'
+        risk = self.run_audit()['derating']['stress_risks'][0]
+        self.assertEqual(('CONN-I', 4.25), (risk['rule'], risk['limit']))
+
+    def test_within_the_implied_derated_value_is_only_a_hint(self):
+        self.add_connector('Connector:USB_C_Receptacle_USB2.0', 'USB_C_Receptacle', current=4)
+        result = self.run_audit()
+        self.assertEqual([], result['derating']['stress_risks'])
+        self.assertTrue(any(h.startswith('derating_rule_available C-VBUS') for h in result['derating']['hints']))
+
+    def test_a_named_rule_or_another_comparison_is_not_reinterpreted(self):
+        check = self.add_connector('Connector:USB_C_Receptacle_USB2.0', 'USB_C_Receptacle', current=4)
+        check.update(derating_rule='CONN-I', limit=4.25, limit_basis='standard',
+                     limit_source='standard:derating-rules#CONN-I', rating_source='datasheet:Datasheet/USB.pdf#p2')
+        result = self.run_audit()
+        self.assertNotIn('derating_limit_mismatch', {e['code'] for e in result['errors']})
+        self.assertEqual([], result['derating']['stress_risks'])     # 4 A within CONN-I's 4.25 A, USB-I not applied
+        for update in ({'limit_basis': 'requirement', 'limit_source': 'req:R1'}, {'operator': '>='}):
+            self.setUp()
+            check = self.add_connector('Connector:USB_C_Receptacle_USB2.0', 'USB_C_Receptacle')
+            check.update(update)
+            self.assertEqual([], self.run_audit()['derating']['stress_risks'], update)
+
     def test_a_common_part_is_not_checked_one_by_one(self):
         errors = [e['item'] for e in self.run_audit()['errors']]
         self.assertFalse(any(e.startswith('C1') for e in errors), errors)

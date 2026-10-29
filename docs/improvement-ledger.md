@@ -9,6 +9,18 @@ entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Appr
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
+## 没点名降额规则的额定比较按唯一适用的比例规则核 (2026-10-28)
+
+SR 审查 100W PD 板时，5 A 额定的 USB-C 母座跑满 5 A，以零余量判了通过，也没报应力风险；用户认可共用应力规范新加一条，
+要求 ASG 设计检查同样核（“这两件事也都推进做”）。`audit_derating` 对门槛是保证额定、没写 `derating_rule` 的检查，按器件
+类型和单位的量找唯一一条 worst/steady 的 `ratio` 规则（USB 母座、器具耦合器按身份区分，其余取“其他”），应力超过本级
+降额值即列为应力风险并要求 `improvement`，与点名规则一致；在降额值以内的照旧只出提示。行为照 SR 的 `implied_ratio`。
+补测 III 级 USB-C 5 A 走 USB-I（4.5 A）、接线端子走 CONN-I（4.25 A）、降额值以内只提示、点名规则与非额定比较不受影响。
+
+- Event: user:2026-10-28
+- Causes: rule_not_enforced 1
+- Changed: scripts/audit_design_closure.py, references/design-closure.md, tests/test_derating_audit.py, docs/improvement-ledger.md
+
 ## 将器件性能要求固化到计算、选型、出图和交付流程 (2026-10-28)
 
 用户批准流程草案后实施：P3与任务2.2–2.4先由用途/工况定义可采购性能，再核实候选，按规格采购与必须绑定型号分开。
