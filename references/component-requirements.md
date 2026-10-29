@@ -25,8 +25,8 @@
 | `definition_status` | `complete` 或 `pending`；缺计算不能写完整 |
 | `required_parameters` | 工况分析识别出的参数名；完整定义逐项覆盖 |
 | `requirements[]` | `parameter`, `op: eq/le/ge`, 有限数值 `value`, `unit`, `conditions`, `basis`, `source` |
-| `procurement` | `mode: spec/mpn` 与 `reason`；由物理引脚、行为、认证或不可替代曲线决定绑定时列 `binding_dependencies`，必须选 `mpn` |
-| `selection` | `status: not_selected/candidate/qualified/by_spec`；候选与型号已核准时附 `mpn` 和选料途径 `route`；已核准另有 `properties[]`；受控规格核实用 `by_spec` |
+| `procurement` | `mode: spec/mpn/design_sheet` 与 `reason`；由物理引脚、行为、认证或不可替代曲线决定绑定时列 `binding_dependencies`，必须选 `mpn`；`design_sheet` 只用于带 `fields.DesignSheet` 的定制磁件 |
+| `selection` | `status: not_selected/candidate/qualified/by_spec/by_design_sheet`；候选与型号已核准时附 `mpn` 和选料途径 `route`；已核准另有 `properties[]`；受控规格核实用 `by_spec`；定制磁件按设计单核实用 `by_design_sheet` |
 | `display` | `inline`：完整要求显示在元件旁；`note`：元件旁显示“要求见 CR-位号”，同页生成完整技术注释 |
 
 比较对象是采购性能：`power ge 3 W` 表示额定功率至少 3 W；`tolerance le 5 %` 表示容差不得大于 5%。
@@ -76,6 +76,15 @@
 受控标准料已有经核实的保证和可采购来源时，`selection.status: by_spec`，写 `standard_id` 与 `route`，
 逐项 `properties` 引用 `kind: controlled_standard` 的受控保证文件，保持 MPN 为空。这样可完成规格采购核实，
 不会因为未绑定某一家订货号永远判未完成；没有受控保证的自拟采购要求仍是 `not_selected`，不能冒充标准料已经合格。
+
+定制磁件（变压器、PFC 电感、共模扼流圈等，设计网表写 `fields.DesignSheet`）由自己的磁件设计单定义，`procurement.mode: design_sheet`。
+设计单还没写到能逐项回答性能要求时是 `not_selected`；核实后写 `selection.status: by_design_sheet`、`sheet_id`（设计单编号），
+逐项 `properties` 写 `basis: design_sheet`、数值、单位、条件和 `acceptance`（样件验收的测试方法与条件），来源 `kind: design_sheet`，
+路径就是该器件的 `fields.DesignSheet`，`quote` 必须落在标题写着本位号或设计单编号的那一节（一份 `磁件设计单.md` 写几颗磁件时，
+不能引到别的器件的数）。工具核对哈希、分节引文、数值单位、条件一致和大小关系；典型值不能当验收限。
+设计单是我方下给厂家的要求，不冒充厂家保证：核实后选型关闭，`project` 把 `sheet_id` 写成正式 MPN、设计单路径写进 Datasheet，
+审核结果另列 `acceptance`（样件按设计单验收），报告单列为外部项，不挡交付，也不宣布定型（用户 2026-10-28：按 A 实施）。
+拿到厂家承认书后，可改为 `mpn` 方式按厂家保证 `qualified`，MPN 换成厂家料号。
 
 ## 固定执行位置
 

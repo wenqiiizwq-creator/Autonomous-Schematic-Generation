@@ -73,7 +73,8 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
   这个器件就依赖该料号，设计网表要写它的 `mpn` 和同一份 `datasheet`（见 [design-closure.md](design-closure.md) 的参数与资料缺口）。
   需求指定了系列或料号的器件同样按特殊器件写，由任务 1.1 的需求追溯核对（脚本不判断需求原文）。
 - **定制磁件**（变压器、PFC 电感、共模扼流圈等按磁件设计单定制的器件）用 `fields.DesignSheet` 指向磁件设计单，代替 `datasheet` 和类型声明；
-  `mpn` 写设计单编号。
+  `mpn` 写设计单编号。有器件性能记录时按设计单定做（`procurement.mode: design_sheet`、`by_design_sheet`，见 [component-requirements.md](component-requirements.md)），
+  核实后由 `project` 写入设计单编号。
 - **改版与重画**：有 `record/change-contract.json` 时，只有本版新增或改动的器件缺料号、手册、类型声明或规格才算记录问题；从基线原样沿用的器件列入
   “设计完成状态”的未完成项，不拦打包。新设计没有基线，缺了就是记录问题。
 - “确切”指订货型号（如 BAT54HT1G、S3J-E3/57T），不是系列名；很多料号按编码表拼成，在手册正文里查不到原样，

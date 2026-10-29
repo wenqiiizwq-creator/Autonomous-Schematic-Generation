@@ -21,7 +21,9 @@ FIELDS = ('RequirementSpec', 'ProcurementMode', 'SelectionStatus', 'SelectedSpec
 OPS = {'eq': '=', 'le': '<=', 'ge': '>='}
 DEFINITIONS = {'complete': '性能定义完整', 'pending': '性能待计算'}
 SELECTIONS = {'not_selected': '型号未定', 'candidate': '候选待核', 'qualified': '型号已核准',
-              'by_spec': '受控规格采购已核实'}
+              'by_spec': '受控规格采购已核实', 'by_design_sheet': '设计单定制已核实'}
+# Selections whose properties are checked one by one and that close the selection.
+CLOSED = ('qualified', 'by_spec', 'by_design_sheet')
 PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额定功率',
               'rated_power': '额定功率', 'continuous_power': '连续额定功率',
               'pulse_energy': '单次脉冲耐受能量', 'pulse_power': '脉冲耐受功率',
@@ -125,7 +127,7 @@ def fields_for(entry, record_hash):
         spec += ' | PENDING / 待计算: ' + '; '.join(entry.get('gaps', []))
     selected = entry.get('selection', {})
     actual = ' | '.join(f"{p['parameter']}={p['value']:g} {p['unit']}"
-                        for p in selected.get('properties', [])) if selected.get('status') in ('qualified', 'by_spec') else ''
+                        for p in selected.get('properties', [])) if selected.get('status') in CLOSED else ''
     visible = (spec + f" [{SELECTIONS[selected['status']]}]" if entry.get('display') == 'inline'
                else f"要求见 CR-{entry['ref']}")
     return dict(zip(FIELDS, (spec, entry['procurement']['mode'], selected['status'], actual, record_hash, visible)))
@@ -173,16 +175,23 @@ def entry_errors(entry, comp=None):
     selection = entry.get('selection', {})
     if not isinstance(procurement, dict) or not isinstance(selection, dict):
         return errors + ['procurement and selection must be objects']
-    if procurement.get('mode') not in ('spec', 'mpn') or not text(procurement.get('reason')):
-        errors.append('procurement needs spec/mpn mode and reason')
+    if procurement.get('mode') not in ('spec', 'mpn', 'design_sheet') or not text(procurement.get('reason')):
+        errors.append('procurement needs spec/mpn/design_sheet mode and reason')
     if selection.get('status') not in SELECTIONS:
-        errors.append('selection status must be not_selected/candidate/qualified/by_spec')
+        errors.append('selection status must be not_selected/candidate/qualified/by_spec/by_design_sheet')
     if selection.get('status') in ('candidate', 'qualified') and not all(text(selection.get(k)) for k in ('mpn', 'route')):
         errors.append('selected/candidate part needs mpn and selection route')
     if selection.get('status') == 'by_spec' and (procurement.get('mode') != 'spec'
             or not all(text(selection.get(k)) for k in ('standard_id', 'route')) or text(selection.get('mpn'))):
         errors.append('by_spec requires controlled standard_id, route, spec procurement and no fixed mpn')
-    if selection.get('status') in ('qualified', 'by_spec') and entry.get('definition_status') != 'complete':
+    # A custom magnetic is defined by its own design sheet (user 2026-10-28: 按 A 实施): the sheet closes the selection
+    # and the sample acceptance stays an external item; a vendor approval sheet later qualifies it as an mpn part.
+    if procurement.get('mode') == 'design_sheet' and selection.get('status') not in ('not_selected', 'by_design_sheet'):
+        errors.append('design_sheet procurement is not_selected until its sheet is checked, then by_design_sheet')
+    if selection.get('status') == 'by_design_sheet' and (procurement.get('mode') != 'design_sheet'
+            or not text(selection.get('sheet_id')) or text(selection.get('mpn'))):
+        errors.append('by_design_sheet requires design_sheet procurement, the sheet_id and no vendor mpn')
+    if selection.get('status') in CLOSED and entry.get('definition_status') != 'complete':
         errors.append('cannot qualify a part before all required performance is defined')
     requirements = entry.get('requirements', [])
     if not isinstance(requirements, list):
@@ -221,7 +230,7 @@ def entry_errors(entry, comp=None):
     elif entry.get('definition_status') == 'complete' and set(needed) != seen:
         errors.append('complete definition must cover exactly required_parameters')
     if comp is not None:
-        from .part_classes import kind_of, part_class, KEY, SAFETY_C, category
+        from .part_classes import kind_of, part_class, KEY, SAFETY_C, category, MAGNETICS, design_sheet
         kind, conflict = kind_of(comp)
         if conflict or kind != entry.get('kind'):
             errors.append('contract kind contradicts native part kind: ' + str(conflict or kind))
@@ -235,6 +244,8 @@ def entry_errors(entry, comp=None):
                 or part_class(comp) == KEY or (kind == 'capacitor' and category(comp, kind)[0] == SAFETY_C)
                 or entry.get('binding_dependencies')):
             errors.append('pin/safety/approval/curve-dependent part needs mpn procurement')
+        if procurement.get('mode') == 'design_sheet' and (kind not in MAGNETICS or not design_sheet(comp)):
+            errors.append('design_sheet procurement is for a custom magnetic carrying fields.DesignSheet')
     return errors
 
 
@@ -246,6 +257,79 @@ def spec_procurement(comp):
                 and entry.get('procurement', {}).get('mode') == 'spec'
                 and entry.get('definition_status') == 'complete'
                 and not entry.get('binding_dependencies'))
+
+
+MODES = {'spec': '按规格', 'mpn': '按型号', 'design_sheet': '按设计单定做'}
+
+
+def property_errors(prop, req, quote, what):
+    """The quoted value and unit, the conditions and the requirement comparison of one selected property."""
+    errors = []
+    number = re.escape(f"{prop['value']:g}")
+    unit = str(prop.get('unit', ''))
+    units = {'ohm': ('ohm', 'Ω'), 'degC': ('degC', '°C')}.get(unit, (unit,))
+    pattern = r'(?<![\d.])' + number + r'(?:\.0+)?\s*(?:' + '|'.join(re.escape(u) for u in units) + r')(?![A-Za-z])'
+    if not re.search(pattern, quote):
+        errors.append(f'{what} value/unit not found together in quoted evidence')
+    if prop.get('conditions') != req['conditions'] or prop.get('unit') != req['unit']:
+        errors.append(f'{what} units/conditions do not match; qualification remains pending')
+    actual_value, limit = prop['value'], req['value']
+    if not {'eq': actual_value == limit, 'le': actual_value <= limit, 'ge': actual_value >= limit}[req['op']]:
+        errors.append(f'selected {what} does not meet requirement')
+    return errors
+
+
+HEADING = re.compile(r'^(#{1,6})\s+(.*)$')
+
+
+def sheet_section(body, names):
+    """The Markdown section whose heading names the part (its ref or sheet id), up to the next heading of its level
+    or higher; None when no heading names it. One 磁件设计单.md holds several parts, so a quote is read in its own."""
+    lines, start, level = body.splitlines(), None, 0
+    for i, line in enumerate(lines):
+        m = HEADING.match(line)
+        if not m:
+            continue
+        if start is not None and len(m.group(1)) <= level:
+            return '\n'.join(lines[start:i])
+        if start is None and any(re.search(r'(?<![A-Za-z0-9])' + re.escape(n) + r'(?![A-Za-z0-9])', m.group(2))
+                                 for n in names):
+            start, level = i, len(m.group(1))
+    return '\n'.join(lines[start:]) if start is not None else None
+
+
+def sheet_errors(ref, comp, selection, reqs, root, inputs=None):
+    """by_design_sheet: each requirement is answered once by the part's own design sheet (fields.DesignSheet), in the
+    section headed with its ref or sheet id, with the value and unit quoted, the requirement met under the same
+    conditions and the sample acceptance method written. The sheet is a requirement on the vendor, not a guarantee."""
+    from .part_classes import design_sheet
+    errors = []
+    properties = selection.get('properties', [])
+    actual = {p.get('parameter'): p for p in properties if isinstance(p, dict)}
+    if len(actual) != len(properties) or set(actual) != set(reqs):
+        errors.append(f'{ref}: design sheet must answer each required property exactly once')
+    sheet = Path(root, design_sheet(comp)).resolve()
+    body = document_text(sheet) if sheet.is_file() else None
+    section = sheet_section(body, (ref, selection['sheet_id'])) if body is not None else None
+    if section is None:
+        errors.append(f'{ref}: design sheet {design_sheet(comp)} has no section headed with {ref} or {selection["sheet_id"]}')
+    for param, req in reqs.items():
+        prop = actual.get(param, {})
+        if prop.get('basis') != 'design_sheet' or not finite(prop.get('value')) or not text(prop.get('acceptance')):
+            errors.append(f'{ref}/{param}: design sheet property needs basis design_sheet, a finite value and its acceptance test')
+            continue
+        source = prop.get('source') or {}
+        errors += [f'{ref}/{param}: {e}' for e in source_errors(source, root, inputs=inputs)]
+        if not isinstance(source, dict) or source.get('kind') != 'design_sheet' or not text(source.get('quote')) \
+                or Path(root, str(source.get('path', ''))).resolve() != sheet:
+            errors.append(f'{ref}/{param}: design sheet property cites the part\'s fields.DesignSheet with kind design_sheet and a quote')
+            continue
+        if section is not None and compact(source['quote']) not in compact(section):
+            errors.append(f'{ref}/{param}: quote not found in the {ref} section of the design sheet')
+        if re.search(r'\btypical\b|\btyp\.|典型|工程估计', source['quote'], re.I):
+            errors.append(f'{ref}/{param}: a typical value is no acceptance limit')
+        errors += [f'{ref}/{param}: {e}' for e in property_errors(prop, req, source['quote'], 'design sheet value')]
+    return errors
 
 
 def record_errors(record, intent, root, inputs=None):
@@ -275,9 +359,11 @@ def record_errors(record, intent, root, inputs=None):
             if req['basis'] == 'model':
                 pending.append(f"{ref}/{req['parameter']}：依赖工程估计")
         selection = entry['selection']
-        if selection['status'] not in ('qualified', 'by_spec'):
+        if selection['status'] not in CLOSED:
             pending.append(f"{ref}：{SELECTIONS[selection['status']]}，采购方式为" +
-                           ('按规格' if entry['procurement']['mode'] == 'spec' else '按型号'))
+                           MODES[entry['procurement']['mode']])
+        elif selection['status'] == 'by_design_sheet':
+            errors += sheet_errors(ref, comps[ref], selection, reqs, root, inputs)
         else:
             properties = selection.get('properties', [])
             actual = {p.get('parameter'): p for p in properties if isinstance(p, dict)}
@@ -293,18 +379,7 @@ def record_errors(record, intent, root, inputs=None):
                 if selection['status'] == 'by_spec' and (not isinstance(source, dict) or source.get('kind') != 'controlled_standard'):
                     errors.append(f'{ref}/{param}: by_spec qualification needs controlled standard guarantees')
                 quote = source.get('quote', '') if isinstance(source, dict) else ''
-                number = re.escape(f"{prop['value']:g}")
-                unit = str(prop.get('unit', ''))
-                units = {'ohm': ('ohm', 'Ω'), 'degC': ('degC', '°C')}.get(unit, (unit,))
-                pattern = r'(?<![\d.])' + number + r'(?:\.0+)?\s*(?:' + '|'.join(re.escape(u) for u in units) + r')(?![A-Za-z])'
-                if not re.search(pattern, quote):
-                    errors.append(f'{ref}/{param}: guarantee value/unit not found together in quoted evidence')
-                if prop.get('conditions') != req['conditions'] or prop.get('unit') != req['unit']:
-                    errors.append(f'{ref}/{param}: guarantee units/conditions do not match; qualification remains pending')
-                actual_value, limit = prop['value'], req['value']
-                fits = {'eq': actual_value == limit, 'le': actual_value <= limit, 'ge': actual_value >= limit}[req['op']]
-                if not fits:
-                    errors.append(f'{ref}/{param}: selected guarantee does not meet requirement')
+                errors += [f'{ref}/{param}: {e}' for e in property_errors(prop, req, quote, 'guarantee')]
     screened = set()
     for row in record.get('screening', []):
         if not isinstance(row, dict) or row.get('decision') not in ('standard', 'contract') or not text(row.get('reason')):
@@ -352,6 +427,10 @@ def project(intent, record, root, inputs=None):
             comp['mpn'] = selection['mpn']
             if selection.get('datasheet'):
                 comp['datasheet'] = selection['datasheet']
+        elif selection['status'] == 'by_design_sheet':
+            comp['mpn'] = selection['sheet_id']    # the sheet number is the order identity (part-roles.md)
+            from .part_classes import design_sheet
+            comp['datasheet'] = design_sheet(comp)
         else:
             comp.pop('mpn', None)  # candidate identity remains in the contract, never the orderable MPN
             comp.pop('datasheet', None)
@@ -413,7 +492,8 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
             if str(comp.get('fields', {}).get(k, '')) != v:
                 errors.append(f'{ref}: stale IR field {k}')
         selected = entry['selection']
-        expected_mpn = selected.get('mpn', '') if selected['status'] == 'qualified' else ''
+        expected_mpn = {'qualified': selected.get('mpn', ''), 'by_design_sheet': selected.get('sheet_id', '')}.get(
+            selected['status'], '')
         if (comp.get('mpn') or '') != expected_mpn:
             errors.append(f'{ref}: candidate is not a qualified BOM MPN, or selected MPN mismatch')
         # Legacy ambiguous tolerance columns must be resolved, not copied with a default.
@@ -465,8 +545,12 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
                     native = 'INSUFFICIENT'
             except (OSError, ValueError, ET.ParseError) as exc:
                 errors.append('native comparison could not read artifacts: ' + str(exc))
+    # Sample acceptance against a design sheet is the vendor's and the pilot run's, outside ASG's self-check: listed, not
+    # pending (user 2026-10-28: 按 A 实施).
+    acceptance = [f"{ref}：样件按设计单 {e['selection']['sheet_id']} 验收" for ref, e in entries.items()
+                  if e['selection']['status'] == 'by_design_sheet']
     return {'schema_version': VERSION, 'status': 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS',
-            'errors': errors, 'pending': pending, 'native': native, 'record_sha256': sha,
+            'errors': errors, 'pending': pending, 'acceptance': acceptance, 'native': native, 'record_sha256': sha,
             'definition': {r: e['definition_status'] for r, e in entries.items()},
             'selection': {r: e['selection']['status'] for r, e in entries.items()}}
 

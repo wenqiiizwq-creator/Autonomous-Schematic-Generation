@@ -50,6 +50,47 @@ def fixture(root, qualified=False, actual_tolerance=1):
     return intent, record
 
 
+SHEET = """# 磁件设计单
+
+## L1 PFC 电感（MS-L1-01）
+
+- 电感量 >= 320 uH @ 100 degC、5 A 直流偏置
+- 验收：LCR 100 kHz 叠加 5 A 直流，100 degC 下测
+
+## L2 共模电感（MS-L2-01）
+
+- 电感量 >= 900 uH @ 100 degC、5 A 直流偏置
+"""
+
+
+def magnetic_fixture(root):
+    """A custom PFC inductor defined by its own section of 设计资料/磁件设计单.md (synthetic values)."""
+    calc = root / 'calculation.txt'
+    calc.write_text('Synthetic calculation: PFC inductance at least 300 uH at 100 degC, 5 A bias.\n', encoding='utf-8')
+    (root / '设计资料').mkdir(exist_ok=True)
+    sheet = root / '设计资料' / '磁件设计单.md'
+    sheet.write_text(SHEET, encoding='utf-8')
+    digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+    conditions = {'temperature': '100 degC', 'bias': '5 A DC'}
+    req = dict(parameter='inductance', op='ge', value=300, unit='uH', conditions=conditions, basis='calculation',
+               source={'path': 'calculation.txt', 'sha256': digest(calc), 'locator': 'line 1'})
+    prop = dict(parameter='inductance', value=320, unit='uH', conditions=conditions, basis='design_sheet',
+                acceptance='LCR 100 kHz 叠加 5 A 直流，100 degC 下测',
+                source={'path': '设计资料/磁件设计单.md', 'sha256': digest(sheet), 'locator': 'L1 节', 'kind': 'design_sheet',
+                        'quote': '电感量 >= 320 uH @ 100 degC、5 A 直流偏置'})
+    entry = dict(ref='L1', kind='inductor', purpose='PFC boost inductor', definition_status='complete', display='note',
+                 required_parameters=['inductance'], requirements=[req],
+                 procurement={'mode': 'design_sheet', 'reason': 'custom wound to our design sheet'},
+                 selection={'status': 'by_design_sheet', 'sheet_id': 'MS-L1-01', 'properties': [prop]})
+    record = {'schema_version': 1, 'screening': [{'refs': ['L1'], 'decision': 'contract', 'reason': 'custom PFC inductor'}],
+              'components': [entry]}
+    intent = {'schema_version': 1, 'design_id': 'magnetic-fixture', 'title': 'Synthetic design sheet test',
+              'components': [{'ref': 'L1', 'lib_id': 'Device:L', 'value': '320uH',
+                              'fields': {'DesignSheet': '设计资料/磁件设计单.md'}}],
+              'nets': [{'name': 'A', 'pins': ['L1.1']}, {'name': 'B', 'pins': ['L1.2']}], 'no_connect': []}
+    return intent, record
+
+
 class PerformanceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -282,6 +323,80 @@ class PerformanceTests(unittest.TestCase):
             cr.project(intent, record, self.root)
 
 
+class DesignSheetTests(unittest.TestCase):
+    """A custom magnetic closes its selection on its own design sheet; the sample acceptance is listed apart
+    (user 2026-10-28: 按 A 实施)."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.intent, self.record = magnetic_fixture(self.root)
+
+    @property
+    def prop(self):
+        return self.record['components'][0]['selection']['properties'][0]
+
+    def errors(self):
+        return cr.record_errors(self.record, self.intent, self.root)[0]
+
+    def test_a_checked_design_sheet_closes_the_selection(self):
+        projected = cr.project(self.intent, self.record, self.root)
+        comp = projected['components'][0]
+        self.assertEqual(('MS-L1-01', '设计资料/磁件设计单.md'), (comp['mpn'], comp['datasheet']))
+        self.assertEqual('by_design_sheet', comp['fields']['SelectionStatus'])
+        self.assertIn('inductance=320 uH', comp['fields']['SelectedSpec'])
+        result = cr.audit(projected, self.record, self.root)
+        self.assertEqual('PASS', result['status'], result)
+        self.assertEqual(['L1：样件按设计单 MS-L1-01 验收'], result['acceptance'])
+        comp['mpn'] = 'VENDOR-123'
+        self.assertTrue(any('MPN mismatch' in e for e in cr.audit(projected, self.record, self.root)['errors']))
+
+    def test_the_quote_is_read_in_the_parts_own_section(self):
+        self.prop['source']['quote'] = '电感量 >= 900 uH @ 100 degC、5 A 直流偏置'     # L2's line
+        self.prop['value'] = 900
+        self.assertTrue(any('L1 section' in e for e in self.errors()), self.errors())
+        self.record['components'][0]['selection']['sheet_id'] = 'MS-L9'
+        self.intent['components'][0]['ref'] = self.record['components'][0]['ref'] = 'L9'
+        self.record['screening'][0]['refs'] = ['L9']
+        self.assertTrue(any('no section headed' in e for e in self.errors()), self.errors())
+
+    def test_the_sheet_value_meets_the_requirement_and_says_how_it_is_accepted(self):
+        self.record['components'][0]['requirements'][0]['value'] = 350
+        self.assertTrue(any('does not meet requirement' in e for e in self.errors()))
+        self.setUp()
+        self.prop.pop('acceptance')
+        self.assertTrue(any('acceptance test' in e for e in self.errors()))
+        self.setUp()
+        self.prop['basis'] = 'guaranteed'      # our own sheet is no vendor guarantee
+        self.assertTrue(any('basis design_sheet' in e for e in self.errors()))
+
+    def test_the_sheet_is_the_parts_own_and_unchanged(self):
+        other = self.root / '设计资料' / 'other.md'
+        other.write_text(SHEET, encoding='utf-8')
+        self.prop['source'].update(path='设计资料/other.md', sha256=hashlib.sha256(other.read_bytes()).hexdigest())
+        self.assertTrue(any("fields.DesignSheet" in e for e in self.errors()))
+        self.setUp()
+        (self.root / '设计资料' / '磁件设计单.md').write_text(SHEET + '\n改过\n', encoding='utf-8')
+        self.assertTrue(any('source changed' in e for e in self.errors()))
+
+    def test_only_a_custom_magnetic_is_bought_to_a_design_sheet(self):
+        del self.intent['components'][0]['fields']['DesignSheet']
+        self.assertTrue(any('custom magnetic' in e for e in self.errors()))
+        self.setUp()
+        self.record['components'][0]['selection'] = {'status': 'candidate', 'mpn': 'X', 'route': 'catalog'}
+        self.assertTrue(any('not_selected until' in e for e in self.errors()))
+        self.setUp()
+        self.record['components'][0]['procurement']['mode'] = 'mpn'
+        self.assertTrue(any('by_design_sheet requires' in e for e in self.errors()))
+
+    def test_an_unchecked_sheet_is_pending(self):
+        self.record['components'][0]['selection'] = {'status': 'not_selected'}
+        projected = cr.project(self.intent, self.record, self.root)
+        result = cr.audit(projected, self.record, self.root)
+        self.assertEqual('INCOMPLETE', result['status'], result)
+        self.assertEqual(['L1：型号未定，采购方式为按设计单定做'], result['pending'])
+
+
 class NativePerformanceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -345,6 +460,24 @@ class NativePerformanceTests(unittest.TestCase):
         self.assertEqual('PASS', result['status'], result)
         self.assertEqual('CHECKED', result['native'])
         self.assertNotIn('mpn', self.intent['components'][0])
+
+
+    def test_design_sheet_selection_passes_native_gate_with_sheet_number(self):
+        intent, self.record = magnetic_fixture(self.root)
+        self.intent = cr.project(intent, self.record, self.root)
+        sheet = Sheet(self.intent)
+        sheet.place('L1', (50.8, 50.8), rotation=90)
+        sheet.label('L1.1', outward=LEFT)
+        sheet.label('L1.2', outward=RIGHT)
+        sheet.performance_notes((20.32, 90.17))
+        self.tree, _ = sheet.build('performance')
+        cr.write_bom(self.intent, self.bom)
+        self.export()
+        result = self.audit()
+        self.assertEqual('PASS', result['status'], result)
+        self.assertEqual('CHECKED', result['native'])
+        row = next(csv.DictReader(self.bom.read_text(encoding='utf-8-sig').splitlines()))
+        self.assertEqual(('MS-L1-01', 'by_design_sheet'), (row['MPN'], row['SelectionStatus']))
 
     def test_hidden_property_is_not_visible_requirement(self):
         sym = all_nodes(self.tree, 'symbol')[0]

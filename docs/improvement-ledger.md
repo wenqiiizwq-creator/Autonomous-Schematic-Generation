@@ -9,6 +9,20 @@ entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Appr
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
+## 定制磁件按磁件设计单关闭选型 (2026-10-28)
+
+codex 应用 ASG 时反馈“磁件设计单状态尚未接通”：定制磁件的依据是自己的设计单，器件性能记录只有厂家/受控标准保证能核准，
+磁件永远停在候选待核；正式 MPN 只给已核准件，又与“定制磁件 mpn 写设计单编号”冲突。用户看过草案后选口径 A
+（“按 A 实施”）：新增采购方式 `design_sheet` 与状态 `by_design_sheet`，只用于带 `fields.DesignSheet` 的磁件；逐项核对设计单
+哈希、本位号/编号那一节里的引文、数值单位、条件、大小关系和样件验收方法；核实后选型关闭，设计单编号投影为 MPN，
+样件验收在审核结果 `acceptance` 和报告里单列为外部项，不挡交付、不宣布定型。纲要 P3 与 2.3 已写“设计单”，不改纲要。
+补测通过路径、引到别的磁件一节、无对应分节、数值不满足、缺验收方法、冒充厂家保证、换文件与改文件、非磁件、
+未核实时为未完成，以及 KiCad 原生导出后 BOM/XML/图面一致。
+
+- Event: user:2026-10-28
+- Causes: rule_not_enforced 1
+- Changed: scripts/schematic_layout/component_requirements.py, scripts/render_design_report.py, references/component-requirements.md, references/part-roles.md, tests/test_component_requirements.py, tests/test_design_report.py, docs/improvement-ledger.md
+
 ## 没点名降额规则的额定比较按唯一适用的比例规则核 (2026-10-28)
 
 SR 审查 100W PD 板时，5 A 额定的 USB-C 母座跑满 5 A，以零余量判了通过，也没报应力风险；用户认可共用应力规范新加一条，

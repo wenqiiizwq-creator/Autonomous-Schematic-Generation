@@ -122,6 +122,16 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('1 项图纸自动检查资料不足或未执行：图面几何（重叠、穿线）', text)
         self.assertIn('2 件未关闭项（设计未完成 1 件，外部资料缺口 1 件）', text)
 
+    def test_design_sheet_acceptance_is_listed_apart(self):
+        # A custom magnetic closed on its design sheet (user 2026-10-28: 按 A 实施): its sample acceptance is shown, not pending.
+        result = {'status': 'PASS', 'errors': [], 'pending': [], 'acceptance': ['L1：样件按设计单 MS-L1-01 验收'],
+                  'definition': {'L1': 'complete'}, 'selection': {'L1': 'by_design_sheet'}}
+        with mock.patch('render_design_report.package_audit', return_value=result):
+            text, _ = self.d.report()
+        self.assertIn('- **器件性能流程**：通过；性能定义完整 1 项；设计单定制已核实 1 项。', text)
+        self.assertIn('- **样件验收（外部，不挡交付，未定型）**：L1：样件按设计单 MS-L1-01 验收。', text)
+        self.assertNotIn('器件性能定义、选型或原生图面核对尚未完成', text)
+
     def test_one_todo_list_ordered_by_consequence(self):
         text, _ = self.d.report({'items': {'W-FW': '固件过压保护配置还没拿到。'}})
         section = text.split('## 未关闭项')[1].split('\n## ')[0]

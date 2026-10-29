@@ -832,6 +832,7 @@ def render(root, notes=None, title=None):
             '、'.join('%s %d 项' % (DEFINITIONS[k], n) for k, n in define_counts.items()) or '无专项性能项',
             '、'.join('%s %d 项' % (SELECTIONS[k], n) for k, n in select_counts.items()) or '无专项选型项'))
         out.extend('- **性能未关闭项**：%s。' % cell(p) for p in performance['pending'])
+        out.extend('- **样件验收（外部，不挡交付，未定型）**：%s。' % cell(p) for p in performance.get('acceptance') or [])
     out.append('- **需求**：共 %d 条。%s。' % (len(requirements), '，'.join(
         '%s %d 条' % (label, req_counts.get(key, 0)) for key, label in REQUIREMENTS.items())))
     if layered:
