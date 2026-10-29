@@ -8,6 +8,24 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## SOA 段系数并入降额规范；常规件 50% 预判门限删除 (2026-10-29)
+
+SR 里两处降额相关数字不在共用降额规范里：MOS 高温 SOA 段系数（恒功率段 100%、热不稳定段 80%）和常规件 50% 预判门限
+（等级未定取 2 倍应力，ASG `audit_design_closure.py` 的 `UNSET_POWER_SHARE` 照抄了这一条）。四份降额标准都没有 MOSFET
+安全工作区的降额值，SOA 段系数并入规范；50% 门限出自经验说法、比 RES-SMD-P/V 三级都严，删除。
+用户决定（“SOA段系数和常规件预判门限，需要并入到这个降额规范里面去…如果不合理的话就删掉”；“按方案改”）：
+
+1. 共用 `derating-rules.md/json` 新增“工程取值”`engineering_values`：`soa_segment_share`（user:2026-10-23）与 `unset_level`
+   （等级未定时常规件预判与 BOM 最低额定按 I 级，user:2026-10-29）；R11 改为不在本表和工程取值之外另乘系数。
+2. ASG 删除 `UNSET_POWER_SHARE`：等级未定时电阻最低额定功率按 `unset_level` 的 RES-SMD-P（0.7），不再取 2 倍；
+   等级缺失本身仍报 `derating_level_missing`。`design-closure.md` 同步。
+
+ASG 纲要（SKILL.md）没改。SR 侧同日条目记其余改动。
+
+- Event: user:2026-10-29 (SOA段系数和常规件预判门限，需要并入到这个降额规范里面去。常规件预判门限是否合理？如果不合理的话就删掉；按方案改)
+- Causes: knowledge_wrong 1, rule_not_enforced 1
+- Changed: references/derating-rules.md, references/derating-rules.json, references/design-closure.md, scripts/audit_design_closure.py, tests/test_derating_audit.py, tests/test_derating_rules.py, docs/improvement-ledger.md
+
 ## R10 暴露的四个问题：规格件关闭、要求收敛、不满足的计算、估计余量 (2026-10-28)
 
 SR 会话分析 ASG 生成的 100W PD R10，找到几类问题，用户选“先改前四条”。

@@ -84,6 +84,18 @@ class DeratingSpecTests(unittest.TestCase):
             self.assertTrue(path.is_file(), source['path'])
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), source['sha256'], key)
 
+    def test_engineering_values_are_approved_and_listed(self):
+        # Values the standards do not give (user 2026-10-29: SOA 段系数并入降额规范；等级未定按 I 级) live in the spec's
+        # 工程取值 table, each with its basis and the user's approval.
+        values = SPEC['engineering_values']
+        self.assertEqual(values['unset_level']['value'], 'I')
+        self.assertEqual(values['soa_segment_share']['value'], {'CONSTANT_POWER': 1.0, 'THERMAL_INSTABILITY': 0.8})
+        text = MD_PATH.read_text(encoding='utf-8')
+        for name, entry in values.items():
+            self.assertRegex(entry['approved'], r'^user:\d{4}-\d{2}-\d{2}$', name)
+            self.assertTrue(entry['basis'] and entry['applies'], name)
+            self.assertRegex(text, r'(?m)^\| `%s` \|.*\| %s \|$' % (name, entry['approved']), name)
+
     @unittest.skipUnless((SR / 'derating-rules.json').is_file(), 'schematic-review not installed')
     def test_schematic_review_holds_the_same_files(self):
         for name in ('derating-rules.json', 'derating-rules.md', 'stress-spec.md'):

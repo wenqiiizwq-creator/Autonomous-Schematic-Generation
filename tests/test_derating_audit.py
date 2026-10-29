@@ -259,6 +259,17 @@ class DeratingAuditTests(unittest.TestCase):
         self.add_resistor('1k/1%', 0.02)          # below 0.025 W the weakest 0603 part is enough
         self.assertNotIn('resistor_power_rating_missing', self.codes())
 
+    def test_without_a_level_the_power_rating_follows_level_i(self):
+        # 2026-10-29 (user: 删掉 2 倍，按降额规范取): no level takes the spec's unset_level, I (RES-SMD-P 0.7):
+        # 0603's weakest part 1/16 W × 0.5 × 0.7 = 0.021875 W < 0.023 W ≤ 0.025 W (level III)
+        self.add_resistor('1k/1%', 0.023)
+        self.assertNotIn('resistor_power_rating_missing', self.codes())
+        self.record['derating'] = {}
+        errors = [e for e in self.run_audit()['errors'] if e['code'] == 'resistor_power_rating_missing']
+        self.assertEqual(1, len(errors))
+        self.assertIn('0.03286 W', errors[0]['item'])
+        self.assertIn('降额等级未定按 I 级', errors[0]['item'])
+
     def test_a_resistor_without_a_footprint_is_judged_as_0402(self):
         self.add_resistor('1k/1%', 0.03, footprint='')   # 0402 1/16 W too: 0.03 > 0.025
         self.assertIn('resistor_power_rating_missing', self.codes())
@@ -275,11 +286,10 @@ class DeratingAuditTests(unittest.TestCase):
                     e.id for t in node.targets if isinstance(t, ast.Tuple) for e in t.elts]
                 values = node.value.elts if isinstance(node.value, ast.Tuple) and len(names) > 1 else [node.value]
                 for name, value in zip(names, values):
-                    if name in ('RESISTOR_FLOORS', 'WEAKEST_SHARE', 'UNSET_POWER_SHARE', 'ASSUMED_PACKAGE'):
+                    if name in ('RESISTOR_FLOORS', 'WEAKEST_SHARE', 'ASSUMED_PACKAGE'):
                             found[name] = eval(compile(ast.Expression(value), str(SR_PASSIVE), 'eval'))
         self.assertEqual({k: v[0] for k, v in found['RESISTOR_FLOORS'].items()}, adc.RESISTOR_FLOORS)
-        self.assertEqual((found['WEAKEST_SHARE'], found['UNSET_POWER_SHARE'], found['ASSUMED_PACKAGE']),
-                         (adc.WEAKEST_SHARE, adc.UNSET_POWER_SHARE, adc.ASSUMED_PACKAGE))
+        self.assertEqual((found['WEAKEST_SHARE'], found['ASSUMED_PACKAGE']), (adc.WEAKEST_SHARE, adc.ASSUMED_PACKAGE))
 
     def test_derating_needs_a_layered_record(self):
         self.record['parameter_version'] = 1

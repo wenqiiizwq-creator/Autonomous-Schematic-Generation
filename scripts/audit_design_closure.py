@@ -81,11 +81,11 @@ DERATING_SOURCE = re.compile(r'^(req:|clarification:)(\S+)$')
 RATING_SOURCE = re.compile(r'^(datasheet:.+#p\d+|req:\S+|calc:\S+)$')
 # A resistor whose power matters carries its power rating (user 2026-10-27: 设计时考虑功耗，除阻值和精度外还要写上功率等级，
 # 作为给以后的约束). Mirrors schematic-review's passive_stress: the weakest part the written fields allow is half the
-# package's commodity floor (RG1005 0.032 W), derated by the level's RES-SMD-P value (0.5 with no level); a part without
-# a footprint is judged as 0402.
+# package's commodity floor (RG1005 0.032 W), derated by the level's RES-SMD-P value (with no level, the spec's
+# engineering value unset_level; user 2026-10-29: 删掉 2 倍，按降额规范取); a part without a footprint is judged as 0402.
 RESISTOR_FLOORS = {'0201': 0.05, '0402': 1 / 16, '0603': 1 / 16, '0805': 0.1,
                    '1206': 0.125, '1210': 0.25, '2010': 0.5, '2512': 1.0}
-WEAKEST_SHARE, UNSET_POWER_SHARE, ASSUMED_PACKAGE = 0.5, 0.5, '0402'
+WEAKEST_SHARE, ASSUMED_PACKAGE = 0.5, '0402'
 RESISTOR_PACKAGE = re.compile(r'^Resistor_SMD:R_(0201|0402|0603|0805|1206|1210|2010|2512)_', re.I)
 WATTS = re.compile(r'^(\d+(?:\.\d+)?)\s*(m?)W$')
 SEGMENT_SPLIT = re.compile(r'[/，,；;、\s]+')
@@ -505,7 +505,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
     names a rule uses that rule's limit for the level; over the derated value but within the rating is a stress risk with
     an improvement; only the stresses written are checked, and a stress compared with a rating that names no rule while
     the spec has rules for that kind is a hint."""
-    rules, _ = loaded or load_derating()
+    rules, spec = loaded or load_derating()
     info = record.get('derating') if isinstance(record.get('derating'), dict) else {}
     level = info.get('level')
     if level not in ('I', 'II', 'III'):
@@ -517,7 +517,8 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
         error('derating_level_without_source', 'derating.source: req:<需求编号>，或 clarification:<用户暂缓的需求澄清>')
     comps = {c['ref']: c for c in intent.get('components') or []}
     ruled = {k for r in rules.values() for k in r['kinds']}
-    share = rules['RES-SMD-P']['values'][level] if level else UNSET_POWER_SHARE
+    share_level = level or spec['engineering_values']['unset_level']['value']
+    share = rules['RES-SMD-P']['values'][share_level]
     risks, hints = [], []
     for key, row in calculations.items():
         for c in row.get('checks') or []:
@@ -529,8 +530,8 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                 need = power_rating_needed(comps[ref], abs(c['value']) / (1000 if c['unit'] == 'mW' else 1), share)
                 if need is not None:
                     error('resistor_power_rating_missing', '%s：%s 的功耗要考虑，值写成 阻值/公差/额定功率（如 620/1%%/0.125W），'
-                          '额定功率取 ≥ %.4g W 的标准档（%s）' % (where, ref, need, '应力 ÷ %s 级 RES-SMD-P %g' % (level, share)
-                                                               if level else '降额等级未定，取应力 2 倍'))
+                          '额定功率取 ≥ %.4g W 的标准档（应力 ÷ %s 级 RES-SMD-P %g%s）' % (
+                              where, ref, need, share_level, share, '' if level else '，降额等级未定按 %s 级' % share_level))
             if not text(c.get('derating_rule')):
                 implied = implied_rule(c, comps.get(ref) or {}, kind, rules, level)
                 if implied:

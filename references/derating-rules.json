@@ -4384,5 +4384,22 @@
    "crystal": "无源晶体（谐振器）",
    "oscillator": "有源晶振（振荡器模块）"
   }
+ },
+ "engineering_values": {
+  "unset_level": {
+   "value": "I",
+   "applies": "项目降额等级未定时，常规件应力预判与 BOM 最低额定按此等级取值",
+   "basis": "取本规范最严的一级，不另设倍数或比例",
+   "approved": "user:2026-10-29"
+  },
+  "soa_segment_share": {
+   "value": {
+    "CONSTANT_POWER": 1.0,
+    "THERMAL_INSTABILITY": 0.8
+   },
+   "applies": "MOSFET 高温 SOA（R11）：按持续时间选 25 °C 曲线、按开始壳温降额后，工作点允许占降额后功率的比例；恒功率段 CONSTANT_POWER，热不稳定段 THERMAL_INSTABILITY",
+   "basis": "四份降额标准都没有 MOSFET 安全工作区的降额值（GJB/Z 35 表9 只给功率双极晶体管的集电极-发射极电压与集电极电流，即 BJT-SOA-V/BJT-SOA-I）；工程取值，不是厂家保证",
+   "approved": "user:2026-10-23"
+  }
  }
 }
