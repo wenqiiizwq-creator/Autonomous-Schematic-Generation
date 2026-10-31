@@ -36,10 +36,22 @@ PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额
 # and checking its guarantees is handed to procurement (user 2026-10-28: 先改前四条; 同意按此做).
 BOM_SPEC = 'by_bom_spec'
 # Commodity chip-resistor floor voltages (V), mirroring schematic-review passive_stress RESISTOR_FLOORS: a working
-# voltage within half the package's weakest part constrains nothing (SR passes it with no rating written).
+# voltage within the package's weakest part derated by RES-SMD-V constrains nothing (SR passes it with no rating
+# written). The record names no derating level, so the spec's unset_level (I, the strictest) applies (user 2026-10-29:
+# 类似这种单一的规则，都先不要，全都并入到降额规范里面去).
 RESISTOR_VOLTAGE_FLOORS = {'0201': 15.0, '0402': 25.0, '0603': 50.0, '0805': 100.0,
                            '1206': 150.0, '1210': 200.0, '2010': 200.0, '2512': 200.0}
-VOLTAGE_SHARE, ASSUMED_PACKAGE = 0.5, '0402'
+ASSUMED_PACKAGE = '0402'
+DERATING_RULES = Path(__file__).resolve().parents[2] / 'references' / 'derating-rules.json'
+
+
+def voltage_share():
+    """RES-SMD-V at the shared derating spec's unset_level."""
+    spec = json.loads(DERATING_RULES.read_text(encoding='utf-8'))
+    level = spec['engineering_values']['unset_level']['value']
+    return next(r for r in spec['rules'] if r['id'] == 'RES-SMD-V')['values'][level]
+
+
 RESISTOR_PACKAGE = re.compile(r'^Resistor_SMD:R_(0201|0402|0603|0805|1206|1210|2010|2512)_', re.I)
 BOILERPLATE_REFS, TEMPLATE_CONDITIONS = 3, ('waveform', 'drift')
 CONDITIONS = {'waveform': '波形', 'duration': '持续时间', 'repetition': '重复条件',
@@ -452,15 +464,15 @@ def spec_gaps(entry, spec):
 def requirement_hints(record, intent):
     """Requirements that constrain nothing or repeat a template, written as review hints, not errors."""
     comps = {c['ref']: c for c in intent.get('components', [])}
-    loose, shared = [], {}
+    loose, shared, share = [], {}, voltage_share()
     for entry in record.get('components', []):
         for req in entry.get('requirements', []):
             if (entry.get('kind') == 'resistor' and req.get('parameter') == 'working_voltage' and req.get('op') == 'ge'
                     and finite(req.get('value')) and req.get('unit') == 'V'):
                 m = RESISTOR_PACKAGE.match(str(comps.get(entry['ref'], {}).get('footprint') or ''))
                 floor = RESISTOR_VOLTAGE_FLOORS[m.group(1) if m else ASSUMED_PACKAGE]
-                if req['value'] <= floor * VOLTAGE_SHARE:
-                    loose.append(f"{entry['ref']}（{req['value']:g} V ≤ {floor * VOLTAGE_SHARE:g} V）")
+                if req['value'] <= floor * share:
+                    loose.append(f"{entry['ref']}（{req['value']:g} V ≤ {floor * share:g} V）")
             if str(req.get('parameter', '')).startswith('pulse_') or req.get('parameter') == 'drift':
                 for key, value in (req.get('conditions') or {}).items():
                     if key not in TEMPLATE_CONDITIONS:
@@ -468,8 +480,8 @@ def requirement_hints(record, intent):
                     shared.setdefault((key, ' '.join(str(value).split())), set()).add(entry['ref'])
     hints = []
     if loose:
-        hints.append('%d 颗电阻的工作电压要求不到封装最弱常用件耐压的一半，不起约束作用，可以不写：%s'
-                     % (len(loose), '、'.join(loose[:6]) + ('等' if len(loose) > 6 else '')))
+        hints.append('%d 颗电阻的工作电压要求不超过封装最弱常用件耐压 × RES-SMD-V %g%%，不起约束作用，可以不写：%s'
+                     % (len(loose), share * 100, '、'.join(loose[:6]) + ('等' if len(loose) > 6 else '')))
     for (key, value), refs in sorted(shared.items()):
         if len(refs) >= BOILERPLATE_REFS:
             hints.append('%d 颗器件的脉冲/漂移条件“%s”是同一句（%s）：按各自工况写，或确认确实相同'

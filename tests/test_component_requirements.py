@@ -314,15 +314,17 @@ class PerformanceTests(unittest.TestCase):
                                           conditions={'temperature': '25 degC'}, basis='calculation',
                                           source=entry['requirements'][0]['source']))
         hints = cr.requirement_hints(self.record, self.intent)
-        self.assertTrue(any('R1（0.0632 V ≤ 12.5 V）' in h for h in hints), hints)
+        self.assertTrue(any('R1（0.0632 V ≤ 18.75 V）' in h for h in hints), hints)
         self.assertFalse(any('同一句' in h for h in hints), hints)
         for ref in ('R2', 'R3'):
             self.intent['components'].append(dict(self.intent['components'][0], ref=ref))
             self.record['components'].append(dict(copy.deepcopy(entry), ref=ref))
         hints = cr.requirement_hints(self.record, self.intent)
         self.assertTrue(any(h.startswith('3 颗器件的脉冲/漂移条件“<=1 % after 1000 pulses”') for h in hints), hints)
-        entry['requirements'][-1]['value'] = 60
-        self.intent['components'][0]['footprint'] = 'Resistor_SMD:R_0805_2012Metric'   # 100 V × 0.5
+        # 2026-10-29 (user: 并入降额规范): the share is RES-SMD-V at unset_level I (75 %), not a separate half
+        self.assertEqual(cr.voltage_share(), 0.75)
+        entry['requirements'][-1]['value'] = 80
+        self.intent['components'][0]['footprint'] = 'Resistor_SMD:R_0805_2012Metric'   # 100 V × 0.75
         self.assertFalse(any('R1（' in h for h in cr.requirement_hints(self.record, self.intent)))
 
     @unittest.skipUnless(SR_PASSIVE.is_file(), 'schematic-review not installed')

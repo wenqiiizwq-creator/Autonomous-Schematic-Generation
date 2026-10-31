@@ -4400,6 +4400,27 @@
    "applies": "MOSFET 高温 SOA（R11）：按持续时间选 25 °C 曲线、按开始壳温降额后，工作点允许占降额后功率的比例；恒功率段 CONSTANT_POWER，热不稳定段 THERMAL_INSTABILITY",
    "basis": "四份降额标准都没有 MOSFET 安全工作区的降额值（GJB/Z 35 表9 只给功率双极晶体管的集电极-发射极电压与集电极电流，即 BJT-SOA-V/BJT-SOA-I）；工程取值，不是厂家保证",
    "approved": "user:2026-10-23"
+  },
+  "thermal_calc_trigger": {
+   "value": {
+    "power_w": 0.3,
+    "rating_share": 0.5
+   },
+   "applies": "ASG 选型：线性稳压、采样电阻、钳位/泄放电阻等最坏功耗达到 power_w 或封装额定功率的 rating_share 时，按手册热阻估算结温/温升，作为一条带 checks 的计算",
+   "basis": "何时做热计算的触发条件，不是判据；判据是本表的温度规则。数值沿用 ASG 2026-10-16 起的写法",
+   "approved": "user:2026-10-29"
+  },
+  "typical_band": {
+   "value": 0.3,
+   "applies": "SR 定界推法 G9 ③：参数只有典型值、同手册比例与同系列保证范围都推不出时，按典型 ± 此比例估算；不用于损坏、过热和保护判据",
+   "basis": "估算不确定度取值（定界表 G9），不是厂家保证",
+   "approved": "user:2026-10-23"
+  },
+  "forced_beta_k": {
+   "value": 2,
+   "applies": "BJT 饱和开关按强制 β 设计：IB ≥ IC /（hFE_min / k）",
+   "basis": "饱和开关的常用设计取值（定界表决定 D），不是厂家保证",
+   "approved": "user:2026-10-23"
   }
  }
 }

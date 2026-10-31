@@ -8,6 +8,31 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 热计算触发值、典型值估算带、强制 β 并入降额规范工程取值 (2026-10-29)
+
+用户要求把上一条里列为“未改”的几处也处理（“这些也都处理”）：共用 `derating-rules.md/json` 的“工程取值”新增
+`thermal_calc_trigger`（0.3 W 或封装额定 50% 时估算结温，触发条件不是判据）、`typical_band`（SR 定界 G9 ③ 典型 ±30%）、
+`forced_beta_k`（SR 强制 β k = 2）。ASG `requirements-to-intent.md` 改为引用 `thermal_calc_trigger`，不再自写数字；
+SR 侧脚本改为从规范读取，同日 SR 条目记。数值未改。
+
+- Event: user:2026-10-29 (这些也都处理)
+- Causes: rule_not_enforced 1
+- Changed: references/derating-rules.md, references/derating-rules.json, references/requirements-to-intent.md, tests/test_derating_rules.py, docs/improvement-ledger.md
+
+## 单立的降额类规则并入降额规范：电阻工作电压提示、PDF 补电容耐压 (2026-10-29)
+
+用户问两条规则是否符合降额规范，并要求“类似这种单一的规则，都先不要，全都并入到降额规范里面去”。
+1. `component_requirements.py` 的电阻工作电压提示按“封装最弱常用件耐压的一半”（`VOLTAGE_SHARE = 0.5`）判不起约束，
+   它照抄的是 SR 已删除的 50% 预判门限，与 SR 现行判据（最弱档 × RES-SMD-V）不一致。改为最弱档 × RES-SMD-V，
+   记录里没有降额等级，按规范工程取值 `unset_level`（I 级，最严，对任何等级都不会误报“不起约束”）。
+2. `pdf-schematic-extraction.md` 的“电容没写耐压按电源轨 1.5–2 倍选”不符合规范：1.5 倍即 67%，钽电容各级（50/60/70%）都不满足。
+   改为额定 ≥ 轨最高电压 ÷ 该电容类型电压规则的本级取值（等级未定按 `unset_level`）。
+`requirements-to-intent.md` 里“功耗达到约 0.3 W 或封装额定的一半时估算结温”是何时做热计算的触发条件，不是判据，本次未改，已告知用户。
+
+- Event: user:2026-10-29 (这两条是符合降额规范的吗？类似这种单一的规则，都先不要，全都并入到降额规范里面去)
+- Causes: knowledge_wrong 2
+- Changed: scripts/schematic_layout/component_requirements.py, references/component-requirements.md, references/pdf-schematic-extraction.md, tests/test_component_requirements.py, tests/test_derating_rules.py, docs/improvement-ledger.md
+
 ## SOA 段系数并入降额规范；常规件 50% 预判门限删除 (2026-10-29)
 
 SR 里两处降额相关数字不在共用降额规范里：MOS 高温 SOA 段系数（恒功率段 100%、热不稳定段 80%）和常规件 50% 预判门限

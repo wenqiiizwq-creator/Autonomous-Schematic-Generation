@@ -96,6 +96,21 @@ class DeratingSpecTests(unittest.TestCase):
             self.assertTrue(entry['basis'] and entry['applies'], name)
             self.assertRegex(text, r'(?m)^\| `%s` \|.*\| %s \|$' % (name, entry['approved']), name)
 
+    def test_a_missing_capacitor_voltage_is_chosen_by_the_spec(self):
+        # 2026-10-29 (user: 类似这种单一的规则，都先不要，全都并入到降额规范里面去): no 1.5–2× rule of thumb
+        text = (ROOT / 'references' / 'pdf-schematic-extraction.md').read_text(encoding='utf-8')
+        line = next(l for l in text.splitlines() if '电容没写耐压' in l)
+        self.assertNotRegex(line, r'\d\s*倍')
+        self.assertIn('CAP-MLCC-CHIP-V', line)
+        self.assertIn('unset_level', line)
+
+    def test_the_thermal_calculation_trigger_is_the_spec_value(self):
+        # 2026-10-29 (user: 这些也都处理): when to estimate junction temperature is named in the spec, not in the text
+        self.assertEqual(SPEC['engineering_values']['thermal_calc_trigger']['value'], {'power_w': 0.3, 'rating_share': 0.5})
+        text = (ROOT / 'references' / 'requirements-to-intent.md').read_text(encoding='utf-8')
+        self.assertIn('thermal_calc_trigger', text)
+        self.assertNotIn('0.3 W', text)
+
     @unittest.skipUnless((SR / 'derating-rules.json').is_file(), 'schematic-review not installed')
     def test_schematic_review_holds_the_same_files(self):
         for name in ('derating-rules.json', 'derating-rules.md', 'stress-spec.md'):
