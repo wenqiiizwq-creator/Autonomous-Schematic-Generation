@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import uuid
 
+from .native import QUALIFIED_VERSIONS
 from .native_geometry import SVG, removal, finite, bounds
 from .native_hierarchy import NativeHierarchy
 from .sexpr import parse, all_nodes, first, value
@@ -224,7 +225,7 @@ def prepare_geometry_context(root, project, cli, workdir, pin_names=True):
         result['configuration_sha256']=configuration_hashes()
         result['source_sha256']={name:sha(p) for name,p in source_files.items()}
         result['tool']={'path':str(Path(cli).resolve()),'sha256':sha(cli),'version':run([cli,'version']).stdout.strip()}
-        if result['tool']['version']!='10.0.6': raise ValueError('native version profile not qualified')
+        if result['tool']['version'] not in QUALIFIED_VERSIONS: raise ValueError('native version profile not qualified')
         result['environment']={k:env.get(k) for k in ('KICAD_CONFIG_HOME','KICAD_FONTCONFIG_FILE','FONTCONFIG_FILE','FONTCONFIG_PATH','LANG','LC_ALL')}
         baseline=clone_export('baseline'); replica=clone_export('replica')
         if set(baseline)!=set(replica) or len(baseline)!=len(h.pages): raise ValueError('native page count/context mismatch')

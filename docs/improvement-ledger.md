@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## KiCad 10.0.7 列入原生几何已验证版本 (2026-10-30)
+
+本机 kicad-cli 已升到 10.0.7，`native_geometry_context`、`native_circle_contacts` 只认 10.0.6，原生几何门一律报
+“native version profile not qualified”，13 个原生测试失败。改为 `native.QUALIFIED_VERSIONS = ("10.0.6", "10.0.7")`，
+两处共用。依据：在 10.0.7 上全量测试 1012 个通过，含篡改、越界、外来导线等全部反例控制，测试未改。
+另 2 个 ERC 测试失败（`lib_symbol_issues` 39 条）是本机全局符号库表不含 KiCad 标准库所致，属环境问题，未改代码。
+
+- Event: test:2026-10-30 (kicad-cli 10.0.7; 用户：这两个问题请帮我解决)
+- Causes: knowledge_missing 1
+- Changed: scripts/schematic_layout/native.py, scripts/schematic_layout/native_geometry_context.py, scripts/schematic_layout/native_circle_contacts.py, docs/improvement-ledger.md
+
 ## 热计算触发值、典型值估算带、强制 β 并入降额规范工程取值 (2026-10-29)
 
 用户要求把上一条里列为“未改”的几处也处理（“这些也都处理”）：共用 `derating-rules.md/json` 的“工程取值”新增

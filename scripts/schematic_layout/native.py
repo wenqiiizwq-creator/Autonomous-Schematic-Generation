@@ -10,6 +10,9 @@ import xml.etree.ElementTree as ET
 
 # KiCad automatic names; the pin names inside may themselves contain "/".
 AUTO_NET_NAME = re.compile(r"(?:^|/)(?:Net|unconnected)-\(")
+# kicad-cli versions whose SVG export the native geometry controls were run on (10.0.7: 2026-10-30, every
+# native test passes unchanged). Add a version only after that check.
+QUALIFIED_VERSIONS = ("10.0.6", "10.0.7")
 # ERC rules KiCad 10 ignores by default that a generated project turns on, and the only
 # rules a project may leave ignored (they concern simulation models and footprint filters).
 ERC_RULES_ON = {"single_global_label": "error", "four_way_junction": "error"}

@@ -21,7 +21,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 from .scratch import scratch_base
-from .native import find_cli
+from .native import find_cli, QUALIFIED_VERSIONS
 from .native_geometry import SVG, finite, linear_path, stroke_path, distance, point_segment, filled_arc_box
 from .native_geometry_context import configuration_hashes, context_files, spans, paths, sha
 from .native_hierarchy import NativeHierarchy
@@ -272,7 +272,7 @@ def refine_wire_contacts(schematic,report,cli=None,workdir=None,expected_source_
             evidence['commands'].append({'argv':list(map(str,cmd)),'start_utc':start,'seconds':time.monotonic()-t,'rc':r.returncode,'stdout':r.stdout,'stderr':r.stderr})
             if r.returncode or before!=config or configuration_hashes()!=config:raise ValueError('native command/configuration changed')
             return r
-        if run([cli,'version']).stdout.strip()!='10.0.6':raise ValueError('unsupported native version')
+        if run([cli,'version']).stdout.strip() not in QUALIFIED_VERSIONS:raise ValueError('unsupported native version')
         raw=files[rel].read_bytes().decode('utf-8');ranges=spans(raw);nodepaths=paths(tree)
         def export(label,edits=()):
             folder=work/label;folder.mkdir();clone=folder/'source';clone.mkdir()
