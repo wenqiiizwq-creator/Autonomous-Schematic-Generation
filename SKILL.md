@@ -109,10 +109,13 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 用户暂缓的，按建议条文作为写明的假设设计，相关需求和计算为有条件成立，记成 `requirement` 待办。
 降额等级（I/II/III 级，见[降额规范](references/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
 附按产品失效后果和工作方式给出的建议等级；答复写回需求清单。用户暂缓的，按建议等级作为写明的假设设计。
+共用规范规则（G01–G09，与 schematic-review 同一版，见[共用规范规则库](references/guideline-rules.md)）按产品基线和本设计的功能电路类型、器件类别适用：
+产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 
 做完的标志：`design-closure.json` 的每条需求有功能路径和承担器件（或写明理由的空列表）；每个需求澄清都有答复
 （用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求。有未答复的需求澄清不进入步骤 ②。
 降额等级已定（需求给定、用户答复或写明的假设），记入 `design-closure.json`。
+规则库有规则时，产品基线、功能电路类型与器件类别记入 `design-closure.json` 的 `guideline_scope`（`guideline_version: 1`）。
 
 #### 1.2 系统架构
 
@@ -205,6 +208,8 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   位号和手册定位（`datasheet:<库内路径>#p<页>` 加表名/符号）。依据另有 `requirement`（来自需求，`source` 写 `req:<需求编号>`）
   和 `constant`（物理常数），不再归入 `model`。手册没给的器件参数标 `unspecified`，不能写成保证值，
   也不能支撑 `supported`。格式见 [设计待办记录](references/design-closure.md)，`audit_design_closure.py` 核对。
+- **按适用的共用规范规则设计**：规则卡的 `asg_action` 是设计动作；落实它的计算在 `guidelines` 里写规则编号，
+  关闭阶段在原理图之后的规则用一件技术转交待办引用；确实不适用的写进 `guideline_scope.not_applicable` 并写理由。
 
 **把计算落实为可采购的器件性能要求**：将实际需要核算的器件记入 `record/component-requirements.json`，由它统一生成设计网表属性、BOM规格和图面标注。字段及执行接口见 [器件性能要求](references/component-requirements.md)；新设计采用 `component_requirements_version: 1`，按用途分组筛选位号，不给每颗普通件增加全参数计算。
 - 每项要求写明位号、用途、参数、比较方向、数值/范围、单位、适用条件、计算/需求来源及依据性质。额定值与降额后的可用值分开；设计要求与所选器件保证值分开。
@@ -385,7 +390,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 同时核对性能定义与选型状态：可独立完成的性能要求计算须完成；仅有料号但关键性能未核实的，不能写“已核准”。有条件性能要求和真实外部依赖继续按现有计算依据分类，不因图纸已输出而转成保证。
 
-做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成。
+做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成；适用的共用规范规则都已在计算或待办里引用，或写明不适用的理由。
 
 #### 5.2 经验总结
 
@@ -465,6 +470,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
+| 共用规范规则（G01–G09）：规则卡、适用条件、引用与覆盖、下游约束（与 schematic-review 共用，同字节） | [guideline-rules.md](references/guideline-rules.md)、`references/guideline-rules.json` |
 | 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（与 schematic-review 共用） | [stress-spec.md](references/stress-spec.md)、[derating-rules.md](references/derating-rules.md)、`references/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR-01–HR-11、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |

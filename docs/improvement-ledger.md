@@ -8,6 +8,24 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 接入共用规范规则库 G01–G09 (2026-10-31)
+
+用户确认《ASG与SR规则接入方案草稿》并要求执行（“请开始执行这个方案，慢慢来，一步一步来修改。遇到问题的时候先按照你的建议来执行。”）。
+九份共用规范的规则卡汇编成 `references/guideline-rules.json`，与说明 `guideline-rules.md`、脚本 `scripts/guideline_rules.py`
+在 ASG 与 schematic-review 两边同字节（沿用降额规范的做法，两个仓库独立发布也能用；两边测试互相逐字节比对）。
+ASG 侧：1.1 定产品基线（默认工业/通信板卡）与功能电路类型、器件类别，记入 `design-closure.json` 的 `guideline_scope`（`guideline_version: 1`）；
+2.2 落实规则卡设计动作的计算写 `guidelines`，原理图之后关闭的规则用技术转交待办引用；5.1 做完的标志加“适用规则都已引用或写明不适用”。
+审计新增 `guideline_uncovered`（待完成）、`guideline_unknown`、`guideline_cited_not_applicable`、`guideline_downstream_without_work_item`、
+`guideline_scope`、`guideline_scope_missing`；报告新增“共用规范规则覆盖”“下游约束（共用规范）”两节和结论一行。
+规则库现在为空（规范尚在成文），审计与报告不变；规则库有规则后旧记录要补 `guideline_scope`。
+基线测试：变基到 KiCad 10.0.7 修复之后，全量 1020 个测试通过，含新增 8 个。
+
+- Event: user:2026-10-31 (请开始执行这个方案)
+- Approved: user:2026-10-31
+- Outline: 6322a2833548105c
+- Causes: rule_missing 1
+- Changed: SKILL.md, references/guideline-rules.md, references/guideline-rules.json, references/design-closure.md, references/delivery-report.md, scripts/guideline_rules.py, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_guideline_closure.py, docs/improvement-ledger.md
+
 ## KiCad 10.0.7 列入原生几何已验证版本 (2026-10-30)
 
 本机 kicad-cli 已升到 10.0.7，`native_geometry_context`、`native_circle_contacts` 只认 10.0.6，原生几何门一律报

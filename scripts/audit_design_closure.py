@@ -11,6 +11,7 @@ import math
 import re
 from pathlib import Path
 from design_frontier import frontier
+import guideline_rules
 from schematic_layout import part_classes
 from schematic_layout.citations import check_source
 
@@ -708,6 +709,43 @@ def audit_estimate_margins(calculations, error):
     return risks
 
 
+def audit_guidelines(record, calculations, work, error, need, library=None):
+    """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
+    (references/guideline-rules.md). Each applicable rule is cited by a calculation or work item, or held not
+    applicable with a reason; one that closes after the schematic is cited by a work item, its handoff downstream."""
+    library = library or guideline_rules.load()
+    scope = record.get('guideline_scope')
+    problems = guideline_rules.scope_errors(scope, library)
+    for problem in problems:
+        error('guideline_scope', problem)
+    if problems:
+        return None
+    cited, by_work = {}, set()
+    for kind, table in (('calc', calculations), ('work', work)):
+        for key, row in table.items():
+            ids = row.get('guidelines', [])
+            if not (isinstance(ids, list) and all(isinstance(i, str) for i in ids)):
+                error('schema', key + ':guidelines must be a string list')
+                continue
+            for gid in ids:
+                cited.setdefault(gid, []).append(kind + ':' + key)
+                if kind == 'work':
+                    by_work.add(gid)
+    applicable = guideline_rules.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
+    found = guideline_rules.coverage(library, applicable, cited,
+                                     {i['id']: i['reason'] for i in scope.get('not_applicable', [])})
+    for gid in found['unknown_cited']:
+        error('guideline_unknown', gid)
+    for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
+        error('guideline_cited_not_applicable', '%s：规则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
+    for gid in found['uncovered']:
+        need('guideline_uncovered', '%s：在计算或待办的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
+    for gid in found['downstream']:
+        if gid in found['covered'] and gid not in by_work:
+            error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
+    return found
+
+
 def audit(record, intent_path, artifact_root, inputs=None):
     errors, pending = [], []
     def error(code, item):
@@ -932,6 +970,14 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'uncertainty_version must be 1, with parameter_version 2 or 3')
         else:
             margins = audit_estimate_margins(calculations, error)
+    guidelines = None
+    if 'guideline_version' in record:
+        if record['guideline_version'] != 1:
+            error('schema', 'guideline_version must be 1')
+        else:
+            guidelines = audit_guidelines(record, calculations, work, error, need)
+    elif guideline_rules.load()['rules']:
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/guideline-rules.md）')
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')
@@ -967,6 +1013,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'gaps': 'CHECKED' if gaps else 'NOT_CHECKED', 'citations': citations,
             'derating': derating if derating is not None else 'NOT_CHECKED',
             'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
+            'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),
             'downstream_handoffs': [k for k, v in work.items() if v.get('stage') in ('validation', 'pcb') and v.get('status') == 'handoff']}
 

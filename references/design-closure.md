@@ -171,6 +171,13 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       检查写 `improvement`（换额定更高的件或降低应力，缺记 `stress_risk_without_improvement`），不挂待办，也不要用户签认；
       审计在 `derating.stress_risks` 列出每一处，报告的“应力风险”一节逐条列出，不挡交付。降额值以内是普通的满足。
     - 没有 `derating_version` 的记录照旧审计，报告在“记录版本”一行写明器件应力没有按降额等级核对。
+  - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用规范规则（G01–G09，见[共用规范规则库](guideline-rules.md)）。
+    `guideline_scope` 写 `library_version`（已装规则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
+    `circuit_types` 与 `device_kinds`（取规则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
+    计算和待办可写 `guidelines`（规范规则编号列表）。审计按范围选出适用规则：每条要被计算或待办引用，或写进 `not_applicable`，
+    否则 `guideline_uncovered`（设计没做完）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`
+    （补范围或去掉引用）；关闭阶段在原理图之后的规则要有待办引用，缺了记 `guideline_downstream_without_work_item`。范围写错记 `guideline_scope`。
+    规则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；规则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
   - `parameter_version: 1` 的旧记录照旧审计（下面两段），报告写明“结论没有按依据分层”；版本 2 的旧记录照旧审计，报告在“记录版本”一行写明门槛出处和需求检查没核对。
   - `refs`：这条计算决定了哪些位号的取值，非空，且都在设计网表里。
   - `checks`：非空列表，每项是一个算出来的值和它必须满足的门槛 `{name, value, operator(<=,<,>=,>), limit, unit}`。

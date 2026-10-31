@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
+import guideline_rules  # noqa: E402
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
@@ -692,6 +693,39 @@ def worst(levels):
     return found[0] if found else None
 
 
+STAGE_WORDS = {'schematic': '原理图', 'pcb': 'PCB', 'simulation': '仿真', 'prototype': '样机', 'production': '生产'}
+
+
+def render_guidelines(guidelines):
+    """共用规范规则覆盖与下游约束（references/guideline-rules.md）：适用规则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
+    if not (guidelines and guidelines.get('applicable')):
+        return []
+    cards = {r['id']: r for r in guideline_rules.load()['rules']}
+    where = lambda gid: ('、'.join(guidelines['covered'].get(gid) or [])
+                         or ('不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else '未覆盖'))
+    out = ['## 共用规范规则覆盖', '',
+           '本设计按规则库 %s 适用的共用规范规则；“落实处”是引用它的计算（calc）或待办（work）。' % guidelines['library_version'], '',
+           '| 规范规则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
+    for gid in guidelines['applicable']:
+        c = cards.get(gid, {'title': '', 'source': [], 'closing_stage': ''})
+        source = '；'.join('%s %s %s 第%s页' % (s['document'], s['edition'], s['clause'], s['page']) for s in c['source'])
+        out.append('| %s | %s | %s | %s | %s |' % (gid, cell(c['title']), cell(source), cell(where(gid)),
+                                                    STAGE_WORDS.get(c['closing_stage'], '')))
+    out.append('')
+    down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable']]
+    if down:
+        out += ['## 下游约束（共用规范）', '',
+                '这些规范规则在原理图之后的环节关闭，由所列待办交给下游；原理图阶段不宣布它们已满足。', '',
+                '| 规范规则 | 关闭阶段 | 技术转交待办 | 下游要做的（规则卡 asg_action） |', '|---|---|---|---|']
+        for gid in down:
+            c = cards.get(gid, {'closing_stage': '', 'asg_action': ''})
+            work = [w for w in guidelines['covered'].get(gid) or [] if w.startswith('work:')]
+            out.append('| %s | %s | %s | %s |' % (gid, STAGE_WORDS.get(c['closing_stage'], ''), '、'.join(work) or '无',
+                                                  cell(c['asg_action'])))
+        out.append('')
+    return out
+
+
 def render(root, notes=None, title=None):
     root = Path(root)
     record = root / 'record'
@@ -877,6 +911,11 @@ def render(root, notes=None, title=None):
             LEVEL_NAMES.get(derating.get('level'), '未定'), derating.get('source') or '没有写来源',
             '合格但有风险（应力）%d 处，见“应力风险”。' % len(risks) if risks else '写出的应力都在降额值以内。',
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
+    guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
+    if guidelines and guidelines.get('applicable'):
+        out.append('- **共用规范**：规则库 %s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用规范规则覆盖”。' % (
+            guidelines['library_version'], len(guidelines['applicable']), len(guidelines['covered']),
+            len(guidelines['not_applicable']), len(guidelines['uncovered']), len(guidelines['downstream'])))
     margins = audit.get('estimate_margins') if isinstance(audit.get('estimate_margins'), list) else []
     if margins:
         out.append('- **估计余量**：%d 处检查的余量小于所依赖工程估计的不确定度，合格但有风险，见“余量不足以覆盖估计误差”。' % len(margins))
@@ -1165,6 +1204,7 @@ def render(root, notes=None, title=None):
                 '（额定）' if m.get('against') == 'rating' else '', m.get('unit') or '', m['margin'] * 100,
                 m['uncertainty'] * 100, cell(m.get('improvement') or '')))
         out.append('')
+    out += render_guidelines(guidelines)
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:
         out += ['## 手册未规定的工作点', '',
