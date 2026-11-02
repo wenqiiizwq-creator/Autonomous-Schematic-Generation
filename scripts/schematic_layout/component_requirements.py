@@ -39,16 +39,16 @@ BOM_SPEC = 'by_bom_spec'
 # voltage within the package's weakest part derated by RES-SMD-V constrains nothing (SR passes it with no rating
 # written). The record names no derating level, so the rule library's unset_level (I, the strictest) applies (user 2026-10-29:
 # 类似这种单一的规则，都先不要，全都并入到降额规范里面去).
-import guideline_rules   # scripts/ is on the path whenever ASG runs; the shared layer is read, not copied
-RESISTOR_VOLTAGE_FLOORS = {p: v['voltage_v'] for p, v in guideline_rules.commodity_floors()['chip_resistor']['packages'].items()}
-ASSUMED_PACKAGE = guideline_rules.engineering_value('assumed_resistor_package')
+import guideline_criteria   # scripts/ is on the path whenever ASG runs; the shared layer is read, not copied
+RESISTOR_VOLTAGE_FLOORS = {p: v['voltage_v'] for p, v in guideline_criteria.commodity_floors()['chip_resistor']['packages'].items()}
+ASSUMED_PACKAGE = guideline_criteria.engineering_value('assumed_resistor_package')
 DERATING_RULES = Path(__file__).resolve().parents[2] / 'references' / 'shared' / 'derating-rules.json'
 
 
 def voltage_share():
     """RES-SMD-V at the rule library's unset_level (a G01 engineering value, from the derating spec since 2026-11-02)."""
     spec = json.loads(DERATING_RULES.read_text(encoding='utf-8'))
-    level = guideline_rules.engineering_value('unset_level')
+    level = guideline_criteria.engineering_value('unset_level')
     return next(r for r in spec['rules'] if r['id'] == 'RES-SMD-V')['values'][level]
 
 

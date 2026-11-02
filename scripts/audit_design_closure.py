@@ -11,8 +11,8 @@ import math
 import re
 from pathlib import Path
 from design_frontier import frontier
-import circuit_patterns
-import guideline_rules
+import typical_circuits
+import guideline_criteria
 import stress_check
 from schematic_layout import part_classes
 from schematic_layout.citations import check_source
@@ -88,9 +88,9 @@ RATING_SOURCE = re.compile(r'^(datasheet:.+#p\d+|req:\S+|calc:\S+)$')
 # engineering value unset_level, in the rule library since 2026-11-02; user 2026-10-29: 删掉 2 倍，按降额规范取); a part without a footprint is judged as 0402.
 # The floors and the two judgement values are the shared layer's (commodity-floors.json; G02 weakest_share,
 # assumed_resistor_package), the same bytes SR's passive_stress reads (2026-11-02).
-RESISTOR_FLOORS = {p: v['power_w_70c'] for p, v in guideline_rules.commodity_floors()['chip_resistor']['packages'].items()}
-WEAKEST_SHARE = guideline_rules.engineering_value('weakest_share')
-ASSUMED_PACKAGE = guideline_rules.engineering_value('assumed_resistor_package')
+RESISTOR_FLOORS = {p: v['power_w_70c'] for p, v in guideline_criteria.commodity_floors()['chip_resistor']['packages'].items()}
+WEAKEST_SHARE = guideline_criteria.engineering_value('weakest_share')
+ASSUMED_PACKAGE = guideline_criteria.engineering_value('assumed_resistor_package')
 RESISTOR_PACKAGE = re.compile(r'^Resistor_SMD:R_(0201|0402|0603|0805|1206|1210|2010|2512)_', re.I)
 WATTS = re.compile(r'^(\d+(?:\.\d+)?)\s*(m?)W$')
 SEGMENT_SPLIT = re.compile(r'[/，,；;、\s]+')
@@ -499,7 +499,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
         error('derating_level_without_source', 'derating.source: req:<需求编号>，或 clarification:<用户暂缓的需求澄清>')
     comps = {c['ref']: c for c in intent.get('components') or []}
     ruled = {k for r in rules.values() for k in r['kinds']}
-    share_level = level or guideline_rules.engineering_value('unset_level')
+    share_level = level or guideline_criteria.engineering_value('unset_level')
     share = rules['RES-SMD-P']['values'][share_level]
     risks, hints = [], []
     for key, row in calculations.items():
@@ -704,15 +704,15 @@ def component_guidelines(artifact_root, error):
         return {}
 
 
-def page_plan_patterns(artifact_root, error):
+def page_plan_circuits(artifact_root, error):
     """The `<模式>#<做法>` references the page plan's blocks name (record/page-plan.json), or [] without a plan."""
     path = Path(artifact_root) / 'record' / 'page-plan.json'
     if not path.is_file():
         return []
     try:
         plan = json.loads(path.read_text(encoding='utf-8'))
-        return [ref for page in plan.get('pages') or [] if isinstance(page.get('patterns'), dict)
-                for ref in page['patterns'].values() if text(ref)]
+        return [ref for page in plan.get('pages') or [] if isinstance(page.get('circuits'), dict)
+                for ref in page['circuits'].values() if text(ref)]
     except (ValueError, AttributeError, TypeError) as exc:
         error('schema', 'record/page-plan.json: %s' % exc)
         return []
@@ -720,12 +720,12 @@ def page_plan_patterns(artifact_root, error):
 
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
-    (references/shared/guideline-rules.md). Each applicable rule is cited by a calculation, work item or component requirement,
+    (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item or component requirement,
     or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
     downstream."""
-    library = library or guideline_rules.load()
+    library = library or guideline_criteria.load()
     scope = record.get('guideline_scope')
-    problems = guideline_rules.scope_errors(scope, library)
+    problems = guideline_criteria.scope_errors(scope, library)
     for problem in problems:
         error('guideline_scope', problem)
     if problems:
@@ -742,29 +742,29 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
                 cited.setdefault(gid, []).append(kind + ':' + key)
                 if kind == 'work':
                     by_work.add(gid)
-    applicable = guideline_rules.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
-    found = guideline_rules.coverage(library, applicable, cited,
+    applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
+    found = guideline_criteria.coverage(library, applicable, cited,
                                      {i['id']: i['reason'] for i in scope.get('not_applicable', [])})
     for gid in found['unknown_cited']:
         error('guideline_unknown', gid)
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
-        error('guideline_cited_not_applicable', '%s：规则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
+        error('guideline_cited_not_applicable', '%s：设计准则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
     for gid in found['uncovered']:
         need('guideline_uncovered', '%s：在计算、待办或器件性能要求的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
     for gid in found['downstream']:
         if gid in found['covered'] and gid not in by_work:
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
-    # The pattern approaches the page plan names (circuit_patterns.py) declare circuit types and the rules they put into
+    # The typical-circuit implementations the page plan names (typical_circuits.py) declare circuit types and the rules they put into
     # practice: the scope must list those types, and a claimed rule the scope leaves inapplicable means the scope is short.
-    pattern = circuit_patterns.claimed(page_plan_patterns(artifact_root, error)) if artifact_root else {'circuit_types': {}, 'rules': {}}
-    for t, refs in sorted(pattern['circuit_types'].items()):
+    circuit = typical_circuits.claimed(page_plan_circuits(artifact_root, error)) if artifact_root else {'circuit_types': {}, 'criteria': {}}
+    for t, refs in sorted(circuit['circuit_types'].items()):
         if t not in scope['circuit_types']:
-            error('guideline_scope_pattern', '%s：模式 %s 声明电路类型 %s，guideline_scope.circuit_types 没有它' % (t, '、'.join(refs), t))
-    for gid, refs in sorted(pattern['rules'].items()):
+            error('guideline_scope_circuit', '%s：典型电路 %s 声明电路类型 %s，guideline_scope.circuit_types 没有它' % (t, '、'.join(refs), t))
+    for gid, refs in sorted(circuit['criteria'].items()):
         if gid not in found['applicable'] and gid not in found['unknown_cited']:
-            error('guideline_scope_pattern', '%s：模式 %s 的做法落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
-    found['pattern_rules'] = {gid: refs for gid, refs in sorted(pattern['rules'].items())}
-    found['shared_sha256'] = guideline_rules.shared_digest()   # the whole shared layer the audit ran against
+            error('guideline_scope_circuit', '%s：典型电路 %s 的实现方案落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
+    found['circuit_criteria'] = {gid: refs for gid, refs in sorted(circuit['criteria'].items())}
+    found['shared_sha256'] = guideline_criteria.shared_digest()   # the whole shared layer the audit ran against
     return found
 
 
@@ -998,8 +998,8 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'guideline_version must be 1')
         else:
             guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root)
-    elif guideline_rules.load()['rules']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-rules.md）')
+    elif guideline_criteria.load()['criteria']:
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')

@@ -88,7 +88,7 @@ class Delivery:
             {'page': 1, 'file': 'board.kicad_sch', 'paths': ['VIN to VOUT'], 'problems': []}]})
         self.write('page-plan.json', {'schema_version': 1, 'pages': [
             {'file': 'board.kicad_sch', 'reader_tasks': ['跟随 VIN 到 VOUT 的能量流'], 'blocks': {'稳压': ['U1', 'R1']},
-             'patterns': {'稳压': 'output-filter-storage#电解/聚合物 + MLCC 并联'}}]})
+             'circuits': {'稳压': 'output-filter-storage#电解/聚合物 + MLCC 并联'}}]})
         self.write('lessons.json', {'schema_version': 1, 'events': [
             {'source': 'datasheet:raw/Datasheet/08_电源管理/X - XYZ100.pdf#p3', 'cause': 'none',
              'why_none': 'p.3 的输出电容要求与 part-roles.md 降压转换器行一致'}]})
@@ -589,12 +589,12 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('| review:SR-R3/W-2 | 缺知识 | scripts/x.py |', text)
 
     def test_a_lesson_changed_in_the_delivery_is_not_a_skill_change(self):
-        # R8 wrote its new circuit patterns into 设计资料/references/circuit-patterns/, so the skill learned nothing.
+        # R8 wrote its new circuit patterns into 设计资料/references/typical-circuits/, so the skill learned nothing.
         self.d.write('lessons.json', {'schema_version': 1, 'events': [
             {'source': 'user:2026-10-27', 'cause': 'knowledge_missing',
-             'change': '设计资料/references/circuit-patterns/ac-indicator.md：补一次侧 VCC 供电 LED 做法'},
+             'change': '设计资料/references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法'},
             {'source': 'user:2026-10-27', 'cause': 'knowledge_missing',
-             'change': 'references/circuit-patterns/ac-indicator.md：补一次侧 VCC 供电 LED 做法'}]})
+             'change': 'references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法'}]})
         _, problems = self.d.report()
         self.assertTrue(any(p.startswith('lessons.json 第 1 条的 change 写在交付目录里') for p in problems), problems)
         self.assertFalse(any(p.startswith('lessons.json 第 2 条') for p in problems), problems)
@@ -672,28 +672,28 @@ class DesignReportTests(unittest.TestCase):
     def test_blocks_name_a_pattern_approach_or_register_the_gap(self):
         plan = json.loads((self.d.record / 'page-plan.json').read_text())
         page = plan['pages'][0]
-        page['patterns'] = {}
+        page['circuits'] = {}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertIn('board.kicad_sch：功能块“稳压”没有标注电路模式（patterns），没有合适模式时在 lessons.json 登记 knowledge_missing 并补写 references/circuit-patterns/', problems)
+        self.assertIn('board.kicad_sch：功能块“稳压”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/', problems)
         self.d.write('lessons.json', {'schema_version': 1, 'events': [
-            {'source': 'user:2026-10-19', 'cause': 'knowledge_missing', 'change': 'references/circuit-patterns/ldo-regulator.md 新增'}]})
+            {'source': 'user:2026-10-19', 'cause': 'knowledge_missing', 'change': 'references/typical-circuits/ldo-regulator.md 新增'}]})
         _, problems = self.d.report()
         self.assertEqual([], problems)
-        page['patterns'] = {'稳压': 'no-such#做法'}
+        page['circuits'] = {'稳压': 'no-such#做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertIn('board.kicad_sch：功能块“稳压”标注的模式 no-such 在 references/circuit-patterns/ 里不存在', problems)
-        page['patterns'] = {'稳压': 'output-filter-storage#不存在的做法'}
+        self.assertIn('board.kicad_sch：功能块“稳压”标注的典型电路 no-such 在 references/typical-circuits/ 里不存在', problems)
+        page['circuits'] = {'稳压': 'output-filter-storage#不存在的做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertTrue(any(p.startswith('board.kicad_sch：功能块“稳压”标注的做法“不存在的做法”不在模式 output-filter-storage 里') for p in problems), problems)
+        self.assertTrue(any(p.startswith('board.kicad_sch：功能块“稳压”标注的实现方案“不存在的做法”不在典型电路 output-filter-storage 里') for p in problems), problems)
         plan['pages'].insert(0, {'file': 'PD_root.kicad_sch', 'reader_tasks': ['看流向'], 'blocks': {'能量链': ['U1']}})
         self.d.write('page-plan.json', plan)
         self.d.write('visual-review.json', {'status': 'REVIEWED', 'pdf_sha256': self.d.pdf, 'pages': [
             {'page': 1, 'file': 'board.kicad_sch', 'paths': ['VIN to VOUT'], 'problems': []},
             {'page': 0, 'file': 'PD_root.kicad_sch', 'paths': ['flow'], 'problems': []}]})
-        page['patterns'] = {'稳压': 'output-filter-storage#电解/聚合物 + MLCC 并联'}
+        page['circuits'] = {'稳压': 'output-filter-storage#电解/聚合物 + MLCC 并联'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
         self.assertFalse(any('PD_root' in p for p in problems), problems)

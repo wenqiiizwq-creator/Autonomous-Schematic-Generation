@@ -329,10 +329,10 @@ class PerformanceTests(unittest.TestCase):
 
     def test_the_voltage_floors_are_the_shared_layers(self):
         # 2026-11-02 (user: 最弱档收进共用层): the same file SR's passive_stress reads
-        import guideline_rules
-        floors = guideline_rules.commodity_floors()['chip_resistor']['packages']
+        import guideline_criteria
+        floors = guideline_criteria.commodity_floors()['chip_resistor']['packages']
         self.assertEqual({p: v['voltage_v'] for p, v in floors.items()}, cr.RESISTOR_VOLTAGE_FLOORS)
-        self.assertEqual(cr.ASSUMED_PACKAGE, guideline_rules.engineering_value('assumed_resistor_package'))
+        self.assertEqual(cr.ASSUMED_PACKAGE, guideline_criteria.engineering_value('assumed_resistor_package'))
 
     def test_pending_calculation_is_visible_not_complete(self):
         entry = self.record['components'][0]

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-import guideline_rules
+import guideline_criteria
 from audit_design_closure import audit, sha256
 
 # Citations here name no real PDF; without a library they are NOT_CHECKED and leave these checks alone
@@ -21,13 +21,13 @@ def setUpModule():
     from unittest import mock
     # the installed shared guideline rules would ask every record here for its guideline scope; test_guideline_closure
     # covers that with its own library
-    library = guideline_rules.load(guideline_rules.BUNDLE_PATH)
-    library.update(library_version='0.0.0', specs={}, rules=[],
-                   content_sha256=guideline_rules.content_sha256([], library.get('engineering_values')))
-    empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-rules.json'
-    empty.write_text(guideline_rules.dump(library), encoding='utf-8')
+    library = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+    library.update(library_version='0.0.0', specs={}, criteria=[],
+                   content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
+    empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria.json'
+    empty.write_text(guideline_criteria.dump(library), encoding='utf-8')
     _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library'),
-                                          'GUIDELINE_RULES': str(empty)})
+                                          'GUIDELINE_CRITERIA': str(empty)})
     _env.start()
 
 

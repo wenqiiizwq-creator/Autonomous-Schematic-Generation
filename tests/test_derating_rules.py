@@ -14,7 +14,7 @@ from schematic_layout import part_classes as pc
 
 JSON_PATH = ROOT / 'references' / 'shared' / 'derating-rules.json'
 MD_PATH = ROOT / 'references' / 'shared' / 'derating-rules.md'
-import guideline_rules
+import guideline_criteria
 LIBRARY = Path.home() / 'Documents' / '知识库' / 'HardwareWiki'
 SPEC = json.loads(JSON_PATH.read_text(encoding='utf-8'))
 LEVELS = ('I', 'II', 'III')
@@ -86,9 +86,9 @@ class DeratingSpecTests(unittest.TestCase):
 
     def test_engineering_values_live_in_the_rule_library(self):
         # Values the standards do not give (user 2026-10-29: SOA 段系数并入降额规范；等级未定按 I 级) moved into the rule
-        # library on 2026-11-02 (user: 迁进规则库): the derating table holds none, its document points at the library.
+        # library on 2026-11-02 (user: 迁进设计准则库): the derating table holds none, its document points at the library.
         self.assertNotIn('engineering_values', SPEC)
-        values = guideline_rules.load()['engineering_values']
+        values = guideline_criteria.load()['engineering_values']
         self.assertEqual(values['unset_level']['value'], 'I')
         self.assertEqual(values['soa_segment_share']['value'], {'CONSTANT_POWER': 1.0, 'THERMAL_INSTABILITY': 0.8})
         text = MD_PATH.read_text(encoding='utf-8')
@@ -107,7 +107,7 @@ class DeratingSpecTests(unittest.TestCase):
 
     def test_the_thermal_calculation_trigger_is_the_spec_value(self):
         # 2026-10-29 (user: 这些也都处理): when to estimate junction temperature is named in the spec, not in the text
-        self.assertEqual(guideline_rules.engineering_value('thermal_calc_trigger'), {'power_w': 0.3, 'rating_share': 0.5})
+        self.assertEqual(guideline_criteria.engineering_value('thermal_calc_trigger'), {'power_w': 0.3, 'rating_share': 0.5})
         text = (ROOT / 'references' / 'requirements-to-intent.md').read_text(encoding='utf-8')
         self.assertIn('thermal_calc_trigger', text)
         self.assertNotIn('0.3 W', text)

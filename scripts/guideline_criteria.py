@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""共用规范规则库（G01–G09）：校验、汇编、按适用条件选出规则、统计覆盖；共用层指纹。
+"""共用设计准则库（G01–G09）：校验、汇编、按适用条件选出规则、统计覆盖；共用层指纹。
 
 本文件、scripts/stress_check.py（共用应力核对）和 references/shared/ 下的文件是 ASG 与 SR 的共用层，两个技能里是同一份字节，
 改动时两边一起改（见 references/shared/shared-layer.md；两边的对齐测试逐字节比对）。只用标准库，不导入任一技能的模块。
 
-    python3 guideline_rules.py check BUNDLE                       校验汇编文件
-    python3 guideline_rules.py build --from DIR --library-version V --out PATH
-                                                                  从 DIR 下各 G0x_规则登记.json 汇编（词表取自 vocabulary.json）
-    python3 guideline_rules.py select BUNDLE [--baseline B] [--circuit-type T ...] [--device-kind K ...]
-                                                                  列出适用规则
-    python3 guideline_rules.py value NAME [BUNDLE]                 读一项工程取值
-    python3 guideline_rules.py shared                              共用层指纹与逐文件 sha256
+    python3 guideline_criteria.py check BUNDLE                       校验汇编文件
+    python3 guideline_criteria.py build --from DIR --library-version V --out PATH
+                                                                  从 DIR 下各 G0x_准则登记.json 汇编（词表取自 vocabulary.json）
+    python3 guideline_criteria.py select BUNDLE [--baseline B] [--circuit-type T ...] [--device-kind K ...]
+                                                                  列出适用准则
+    python3 guideline_criteria.py value NAME [BUNDLE]                 读一项工程取值
+    python3 guideline_criteria.py shared                              共用层指纹与逐文件 sha256
 """
 import argparse
 import hashlib
@@ -24,16 +24,16 @@ from pathlib import Path
 BUNDLE_SCHEMA_VERSION = 1
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 SHARED_DIR = SKILL_ROOT / 'references' / 'shared'
-BUNDLE_PATH = SHARED_DIR / 'guideline-rules.json'
+BUNDLE_PATH = SHARED_DIR / 'guideline-criteria.json'
 DERATING_PATH = SHARED_DIR / 'derating-rules.json'
 VOCABULARY_PATH = SHARED_DIR / 'vocabulary.json'       # 词表的唯一出处：基线、电路类型、器件类别（名字与标题）
 COMMODITY_PATH = SHARED_DIR / 'commodity-floors.json'  # 常规件最弱档：片式电阻、MLCC 可订购档、触点（厂家目录给的数）
 # 共用层的全部文件（相对技能根目录）：references/shared/ 里的每一份加本脚本。两技能同字节，指纹由它们现算。
-SHARED_FILES = ('references/shared/shared-layer.md', 'references/shared/guideline-rules.json',
-                'references/shared/guideline-rules.md', 'references/shared/derating-rules.json',
+SHARED_FILES = ('references/shared/shared-layer.md', 'references/shared/guideline-criteria.json',
+                'references/shared/guideline-criteria.md', 'references/shared/derating-rules.json',
                 'references/shared/derating-rules.md', 'references/shared/stress-spec.md',
                 'references/shared/vocabulary.json', 'references/shared/commodity-floors.json',
-                'scripts/guideline_rules.py', 'scripts/stress_check.py')
+                'scripts/guideline_criteria.py', 'scripts/stress_check.py')
 RULE_ID = re.compile(r'^G0[1-9]-\d{3}$')
 STATUSES = ('draft', 'active', 'retired')
 NATURES = ('shall', 'should', 'method', 'project')
@@ -58,7 +58,7 @@ def _text(value):
 def content_sha256(rules, values=None):
     """Hash of the rules, and of the engineering values when there are any (a bundle without values keeps the
     rules-only hash)."""
-    content = {'rules': rules, 'engineering_values': values} if values else rules
+    content = {'criteria': rules, 'engineering_values': values} if values else rules
     return hashlib.sha256(json.dumps(content, ensure_ascii=False, sort_keys=True,
                                      separators=(',', ':')).encode('utf-8')).hexdigest()
 
@@ -91,8 +91,8 @@ def value_errors(name, entry):
 
 
 def load(path=None):
-    """The bundle at path, else at $GUIDELINE_RULES (the tests point it at a library without rules), else the installed one."""
-    return json.loads(Path(path or os.environ.get('GUIDELINE_RULES') or BUNDLE_PATH).read_text(encoding='utf-8'))
+    """The bundle at path, else at $GUIDELINE_CRITERIA (the tests point it at a library without rules), else the installed one."""
+    return json.loads(Path(path or os.environ.get('GUIDELINE_CRITERIA') or BUNDLE_PATH).read_text(encoding='utf-8'))
 
 
 def vocabulary(path=None):
@@ -187,7 +187,7 @@ def bundle_errors(bundle):
         shared = globals()['vocabulary']()
         if vocabulary != shared['vocabulary'] or default != shared['default_baseline']:
             errors.append('vocabulary or default_baseline differs from references/shared/vocabulary.json: rebuild the bundle')
-    rules = bundle.get('rules')
+    rules = bundle.get('criteria')
     if not isinstance(rules, list):
         return errors + ['rules must be a list']
     ids = [r.get('id') for r in rules if isinstance(r, dict)]
@@ -241,9 +241,9 @@ def shared_versions(root=SKILL_ROOT):
 
 
 def shared_label(root=SKILL_ROOT):
-    """共用层 <指纹前 12 位>，规则库 <版本>，降额 v<版本> — the one line both reports print."""
+    """共用层 <指纹前 12 位>，设计准则库 <版本>，降额 v<版本> — the one line both reports print."""
     v = shared_versions(root)
-    return '共用层 %s，规则库 %s，降额 v%s' % (v['shared_sha256'][:12], v['library_version'], v['derating_version'])
+    return '共用层 %s，设计准则库 %s，降额 v%s' % (v['shared_sha256'][:12], v['library_version'], v['derating_version'])
 
 
 def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
@@ -252,7 +252,7 @@ def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
     baseline = baseline or bundle['default_baseline']
     circuits, kinds = set(circuit_types), set(device_kinds)
     out = []
-    for rule in bundle['rules']:
+    for rule in bundle['criteria']:
         when = rule['applies_when']
         if rule['status'] != 'active' or (when.get('baselines') and baseline not in when['baselines']):
             continue
@@ -283,7 +283,7 @@ def scope_errors(scope, bundle):
             errors.append('scope %s must be a list' % key)
         elif [v for v in values if v not in vocabulary[key]]:
             errors.append('scope %s not in vocabulary: %s' % (key, [v for v in values if v not in vocabulary[key]]))
-    known = {r['id'] for r in bundle['rules']}
+    known = {r['id'] for r in bundle['criteria']}
     for item in scope.get('not_applicable', []):
         if not (isinstance(item, dict) and item.get('id') in known and _text(item.get('reason'))):
             errors.append('scope not_applicable entries are {id, reason} naming a rule in the bundle')
@@ -295,7 +295,7 @@ def coverage(bundle, applicable, cited, not_applicable=None):
     cited or held not applicable with a reason; the rest are uncovered. Rules closing after the schematic are listed
     as downstream whether covered or not."""
     not_applicable = not_applicable or {}
-    known = {r['id'] for r in bundle['rules']}
+    known = {r['id'] for r in bundle['criteria']}
     ids = [r['id'] for r in applicable]
     return {
         'library_version': bundle['library_version'],
@@ -310,14 +310,14 @@ def coverage(bundle, applicable, cited, not_applicable=None):
 
 
 def build(registry_dir, library_version):
-    """Gather the rules of every G0x_规则登记.json under registry_dir into one bundle; the vocabulary and default
+    """Gather the rules of every G0x_准则登记.json under registry_dir into one bundle; the vocabulary and default
     baseline come from references/shared/vocabulary.json."""
     base = vocabulary()
     rules, specs, values = [], {}, {}
-    for path in sorted(Path(registry_dir).rglob('G0*_规则登记.json')):
+    for path in sorted(Path(registry_dir).rglob('G0*_准则登记.json')):
         registry = json.loads(path.read_text(encoding='utf-8'))
         specs[registry['spec']] = registry['version']
-        rules.extend(registry['rules'])
+        rules.extend(registry['criteria'])
         for name, entry in (registry.get('engineering_values') or {}).items():
             if name in values:
                 raise ValueError('engineering value %s is defined by both %s and %s'
@@ -327,7 +327,7 @@ def build(registry_dir, library_version):
     values = dict(sorted(values.items()))
     bundle = {'schema_version': BUNDLE_SCHEMA_VERSION, 'library_version': library_version,
               'default_baseline': base['default_baseline'], 'vocabulary': base['vocabulary'], 'specs': specs,
-              'content_sha256': content_sha256(rules, values), 'rules': rules}
+              'content_sha256': content_sha256(rules, values), 'criteria': rules}
     if values:
         bundle['engineering_values'] = values
     return bundle
@@ -381,7 +381,7 @@ def main(argv=None):
         for rule in select(bundle, args.baseline, args.circuit_type, args.device_kind):
             print('%s  %s  [%s]' % (rule['id'], rule['title'], rule['closing_stage']))
     else:
-        print('%s: %d rules, library %s' % (args.command, len(bundle['rules']), bundle['library_version']))
+        print('%s: %d criteria, library %s' % (args.command, len(bundle['criteria']), bundle['library_version']))
     return 0
 
 

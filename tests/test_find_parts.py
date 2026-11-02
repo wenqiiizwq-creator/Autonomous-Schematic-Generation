@@ -111,14 +111,14 @@ class FindPartsTests(unittest.TestCase):
             self.assertEqual(1, r.returncode)
 
     def test_patterns_are_searchable_and_each_approach_has_sources_and_pitfalls(self):
-        r = find_parts.search_patterns(['反激'])
+        r = find_parts.search_circuits(['反激'])
         self.assertIn('qr-flyback', [x['id'] for x in r['results']])
-        self.assertEqual(0, find_parts.search_patterns(['不存在的功能'])['total'])
-        index = find_parts.pattern_index()
+        self.assertEqual(0, find_parts.search_circuits(['不存在的功能'])['total'])
+        index = find_parts.circuit_index()
         self.assertGreaterEqual(len(index), 16)
         for pid, info in index.items():
-            self.assertTrue(info['title'] and info['function'] and info['approaches'], pid)
-            body = (find_parts.PATTERNS_DIR / (pid + '.md')).read_text(encoding='utf-8')
+            self.assertTrue(info['title'] and info['function'] and info['implementations'], pid)
+            body = (find_parts.CIRCUITS_DIR / (pid + '.md')).read_text(encoding='utf-8')
             for section in body.split('### ')[1:]:
                 for label in ('适用范围', '核心器件类', '必需外围', '必算项', '已知坑', '来源'):
                     self.assertIn('**%s**' % label, section, '%s: %s' % (pid, section[:40]))

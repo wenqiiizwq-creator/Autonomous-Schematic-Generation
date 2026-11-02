@@ -10,13 +10,13 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-import guideline_rules
+import guideline_criteria
 import render_design_report
 from audit_design_closure import audit, sha256
 
 ASG = Path(__file__).resolve().parents[1]
 SR = Path.home() / '.agents' / 'skills' / 'schematic-review'
-SHARED = guideline_rules.SHARED_FILES   # the whole shared layer, references/shared/ plus the script (2026-11-02: 目录制)
+SHARED = guideline_criteria.SHARED_FILES   # the whole shared layer, references/shared/ plus the script (2026-11-02: 目录制)
 
 
 def setUpModule():
@@ -39,9 +39,9 @@ def card(rid, **changes):
 
 
 def library(*cards):
-    out = copy.deepcopy(guideline_rules.load())
-    out['rules'] = sorted(cards, key=lambda r: r['id'])
-    out['content_sha256'] = guideline_rules.content_sha256(out['rules'])
+    out = copy.deepcopy(guideline_criteria.load())
+    out['criteria'] = sorted(cards, key=lambda r: r['id'])
+    out['content_sha256'] = guideline_criteria.content_sha256(out['criteria'])
     return out
 
 
@@ -75,7 +75,7 @@ class GuidelineClosureTests(unittest.TestCase):
                               'omitted_terms': [], 'guidelines': ['G01-001', 'G04-001']}]}
 
     def run_audit(self, lib=LIBRARY):
-        with mock.patch.object(guideline_rules, 'load', lambda *args: lib):
+        with mock.patch.object(guideline_criteria, 'load', lambda *args: lib):
             return audit(self.record, self.intent, self.root)
 
     def codes(self, result):
@@ -108,11 +108,11 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertEqual(result['guidelines']['covered']['G04-001'], ['component:U1'])
 
     def test_the_six_external_interface_types_select_their_rules(self):
-        real = guideline_rules.load(guideline_rules.BUNDLE_PATH)
+        real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
         for name in ('DC_48V', 'AC_MAINS', 'INDUSTRIAL_DI', 'POE_PD', 'VEHICLE_28V', 'SHIP_AC'):
             self.assertIn(name, real['vocabulary']['circuit_types'])
-        none = guideline_rules.select(real, 'industrial_telecom', [], [])
-        poe = guideline_rules.select(real, 'industrial_telecom', ['POE_PD'], [])
+        none = guideline_criteria.select(real, 'industrial_telecom', [], [])
+        poe = guideline_criteria.select(real, 'industrial_telecom', ['POE_PD'], [])
         self.assertGreater(len(poe), len(none))
 
     def test_a_downstream_rule_needs_a_work_item(self):
@@ -136,7 +136,7 @@ class GuidelineClosureTests(unittest.TestCase):
     def test_a_library_with_rules_asks_for_the_scope_and_an_empty_one_does_not(self):
         del self.record['guideline_version'], self.record['guideline_scope']
         self.assertIn('guideline_scope_missing', self.codes(self.run_audit()))
-        empty = dict(LIBRARY, rules=[], content_sha256=guideline_rules.content_sha256([]))
+        empty = dict(LIBRARY, criteria=[], content_sha256=guideline_criteria.content_sha256([]))
         result = self.run_audit(empty)
         self.assertNotIn('guideline_scope_missing', self.codes(result))
         self.assertEqual(result['guidelines'], 'NOT_CHECKED')
@@ -145,8 +145,8 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['guideline_scope']['device_kinds'] = ['fuse']
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G05-001', 'reason': '输入由上级设备熔断'}]
         result = self.run_audit()
-        self.assertEqual(result['guidelines']['shared_sha256'], guideline_rules.shared_digest())   # the audit binds the whole shared layer
-        with mock.patch.object(guideline_rules, 'load', lambda *args: LIBRARY):
+        self.assertEqual(result['guidelines']['shared_sha256'], guideline_criteria.shared_digest())   # the audit binds the whole shared layer
+        with mock.patch.object(guideline_criteria, 'load', lambda *args: LIBRARY):
             text = '\n'.join(render_design_report.render_guidelines(result['guidelines']))
         self.assertIn('| G04-001 | 示例规则 G04-001 | GB/T 17799.2 2023 表4 第9页 | calc:C1 | 原理图 |', text)
         self.assertIn('| G05-001 | 示例规则 G05-001 | GB/T 17799.2 2023 表4 第9页 | 不适用：输入由上级设备熔断 | 原理图 |', text)
@@ -155,14 +155,14 @@ class GuidelineClosureTests(unittest.TestCase):
 
     def test_the_shared_directory_holds_exactly_the_shared_files(self):
         listed = {Path(n).name for n in SHARED if n.startswith('references/shared/')}
-        self.assertEqual(sorted(p.name for p in guideline_rules.SHARED_DIR.iterdir() if p.name != '__pycache__'), sorted(listed))
-        self.assertRegex(guideline_rules.shared_label(), r'^共用层 [0-9a-f]{12}，规则库 \S+，降额 v\d+$')
+        self.assertEqual(sorted(p.name for p in guideline_criteria.SHARED_DIR.iterdir() if p.name != '__pycache__'), sorted(listed))
+        self.assertRegex(guideline_criteria.shared_label(), r'^共用层 [0-9a-f]{12}，设计准则库 \S+，降额 v\d+$')
 
     @unittest.skipUnless((SR / SHARED[1]).is_file(), 'schematic-review without the rule library')
     def test_schematic_review_holds_the_same_shared_layer(self):
         for name in SHARED:
             self.assertEqual((SR / name).read_bytes(), (ASG / name).read_bytes(), name)
-        self.assertEqual(guideline_rules.shared_digest(SR), guideline_rules.shared_digest())
+        self.assertEqual(guideline_criteria.shared_digest(SR), guideline_criteria.shared_digest())
 
 
 if __name__ == '__main__':

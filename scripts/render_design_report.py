@@ -16,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
-import circuit_patterns  # noqa: E402
-import guideline_rules  # noqa: E402
+import typical_circuits  # noqa: E402
+import guideline_criteria  # noqa: E402
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
@@ -209,39 +209,39 @@ def symbol_refs(sch_path):
     return refs
 
 
-PATTERNS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'circuit-patterns'
+CIRCUITS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'typical-circuits'
 
 
-def pattern_approaches(patterns_dir=PATTERNS_DIR):
-    return {pid: set(info['approaches']) for pid, info in circuit_patterns.load(patterns_dir).items()}
+def circuit_implementations(circuits_dir=CIRCUITS_DIR):
+    return {pid: set(info['implementations']) for pid, info in typical_circuits.load(circuits_dir).items()}
 
 
-def check_block_patterns(name, blocks, patterns, approaches, lessons):
+def check_block_circuits(name, blocks, patterns, implementations, lessons):
     """Each functional block names an existing pattern approach, or lessons.json registers the gap."""
     errors = []
-    registered = any(isinstance(e, dict) and e.get('cause') == 'knowledge_missing' and 'circuit-patterns' in str(e.get('change') or '')
+    registered = any(isinstance(e, dict) and e.get('cause') == 'knowledge_missing' and 'typical-circuits' in str(e.get('change') or '')
                      for e in (lessons or {}).get('events') or [])
     patterns = patterns if isinstance(patterns, dict) else {}
     for block in blocks:
         ref = patterns.get(block)
         if not text(ref):
             if not registered:
-                errors.append('%s：功能块“%s”没有标注电路模式（patterns），没有合适模式时在 lessons.json 登记 knowledge_missing 并补写 references/circuit-patterns/' % (name, block))
+                errors.append('%s：功能块“%s”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/' % (name, block))
             continue
         pid, _, approach = ref.partition('#')
-        if pid not in approaches:
-            errors.append('%s：功能块“%s”标注的模式 %s 在 references/circuit-patterns/ 里不存在' % (name, block, pid))
-        elif approach not in approaches[pid]:
-            errors.append('%s：功能块“%s”标注的做法“%s”不在模式 %s 里（有：%s）' % (name, block, approach, pid, '、'.join(sorted(approaches[pid]))))
+        if pid not in implementations:
+            errors.append('%s：功能块“%s”标注的典型电路 %s 在 references/typical-circuits/ 里不存在' % (name, block, pid))
+        elif approach not in implementations[pid]:
+            errors.append('%s：功能块“%s”标注的实现方案“%s”不在典型电路 %s 里（有：%s）' % (name, block, approach, pid, '、'.join(sorted(implementations[pid]))))
     return errors
 
 
-def check_page_plan(plan, intent, visual, lessons=None, patterns_dir=PATTERNS_DIR):
+def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DIR):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
     errors = []
-    approaches = pattern_approaches(patterns_dir)
+    implementations = circuit_implementations(circuits_dir)
     known = {c.get('ref') for c in intent.get('components') or [] if isinstance(c, dict)}
     on_page = {}
     for c in intent.get('components') or []:
@@ -270,7 +270,7 @@ def check_page_plan(plan, intent, visual, lessons=None, patterns_dir=PATTERNS_DI
                 placed[ref] = block
         cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task 3.3)
         if not cover and 'system_block' not in name.lower():
-            errors += check_block_patterns(name, blocks, page.get('patterns'), approaches, lessons)
+            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, lessons)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))
         if missing:
             errors.append('%s：这些器件不属于任何功能块：%s' % (name, '、'.join(missing[:6])))
@@ -695,15 +695,15 @@ STAGE_WORDS = {'schematic': '原理图', 'pcb': 'PCB', 'simulation': '仿真', '
 
 
 def render_guidelines(guidelines):
-    """共用规范规则覆盖与下游约束（references/shared/guideline-rules.md）：适用规则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
+    """共用设计准则覆盖与下游约束（references/shared/guideline-criteria.md）：适用准则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
     if not (guidelines and guidelines.get('applicable')):
         return []
-    cards = {r['id']: r for r in guideline_rules.load()['rules']}
+    cards = {r['id']: r for r in guideline_criteria.load()['criteria']}
     where = lambda gid: ('、'.join(guidelines['covered'].get(gid) or [])
                          or ('不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else '未覆盖'))
-    out = ['## 共用规范规则覆盖', '',
-           '本设计按规则库 %s 适用的共用规范规则；“落实处”是引用它的计算（calc）、待办（work）或器件性能要求（component）。' % guidelines['library_version'], '',
-           '| 规范规则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
+    out = ['## 共用设计准则覆盖', '',
+           '本设计按设计准则库 %s 适用的共用设计准则；“落实处”是引用它的计算（calc）、待办（work）或器件性能要求（component）。' % guidelines['library_version'], '',
+           '| 设计准则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
     for gid in guidelines['applicable']:
         c = cards.get(gid, {'title': '', 'source': [], 'closing_stage': ''})
         source = '；'.join('%s %s %s 第%s页' % (s['document'], s['edition'], s['clause'], s['page']) for s in c['source'])
@@ -713,8 +713,8 @@ def render_guidelines(guidelines):
     down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable']]
     if down:
         out += ['## 下游约束（共用规范）', '',
-                '这些规范规则在原理图之后的环节关闭，由所列待办交给下游；原理图阶段不宣布它们已满足。', '',
-                '| 规范规则 | 关闭阶段 | 技术转交待办 | 下游要做的（规则卡 asg_action） |', '|---|---|---|---|']
+                '这些设计准则在原理图之后的环节关闭，由所列待办交给下游；原理图阶段不宣布它们已满足。', '',
+                '| 设计准则 | 关闭阶段 | 技术转交待办 | 下游要做的（设计准则 asg_action） |', '|---|---|---|---|']
         for gid in down:
             c = cards.get(gid, {'closing_stage': '', 'asg_action': ''})
             work = [w for w in guidelines['covered'].get(gid) or [] if w.startswith('work:')]
@@ -911,8 +911,8 @@ def render(root, notes=None, title=None):
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
     guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
     if guidelines and guidelines.get('applicable'):
-        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用规范规则覆盖”。' % (
-            guideline_rules.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
+        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用设计准则覆盖”。' % (
+            guideline_criteria.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
             len(guidelines['not_applicable']), len(guidelines['uncovered']), len(guidelines['downstream'])))
     margins = audit.get('estimate_margins') if isinstance(audit.get('estimate_margins'), list) else []
     if margins:

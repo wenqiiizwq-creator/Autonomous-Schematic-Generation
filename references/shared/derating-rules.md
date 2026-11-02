@@ -30,7 +30,7 @@ SR 按需求澄清处理；问的时候附上建议等级：
 
 GJB 表1 的应用范围：战略导弹 I～II 级，战术导弹、飞机与舰船、通信电子系统 I～III 级，地面保障设备 II～III 级。
 
-等级定下之前，常规件的应力预判和 BOM 最低额定按规则库工程取值 `unset_level`（I 级）取值；这不代替定等级，等级仍按上文问用户或作需求澄清。
+等级定下之前，常规件的应力预判和 BOM 最低额定按设计准则库工程取值 `unset_level`（I 级）取值；这不代替定等级，等级仍按上文问用户或作需求澄清。
 
 ## 取值规则
 
@@ -60,9 +60,9 @@ GJB 表1 的应用范围：战略导弹 I～II 级，战术导弹、飞机与舰
   CTR 保留比例（所需 CTR ÷ 设计取值），不高于 85% 即满足。厂家给了 CTR 随时间的曲线时按曲线，不另编系数。
 - **R12 余量不叠加，同时成立的条件照叠**：一个量只取一份人为余量（降额系数、估算倍数、设计容限），不在同一个量上连乘几份；
   物理上同时成立的条件照叠，例如寿命末与最高工作温度、浪涌叠在电网峰值上；互相独立的偶发事件不叠，例如浪涌与输出短路。
-- **R11 已有计算方法**：MOS 高温 SOA（按持续时间选曲线、按开始壳温降额，再按规则库工程取值 `soa_segment_share` 分段留余量）、电位器局部轨段与滑臂、电解电容寿命、开关次数类寿命，
+- **R11 已有计算方法**：MOS 高温 SOA（按持续时间选曲线、按开始壳温降额，再按设计准则库工程取值 `soa_segment_share` 分段留余量）、电位器局部轨段与滑臂、电解电容寿命、开关次数类寿命，
   按各自的计算方法得出应力或允许值后再套本表（SR：`references/bounding-table.md`、`references/wca-formulas.md`、
-  `references/commodity-floors.md`），不在本表和规则库工程取值之外另乘系数，也不重复降额。
+  `references/commodity-floors.md`），不在本表和设计准则库工程取值之外另乘系数，也不重复降额。
 - **R6 判定**：按 [器件应力规范](stress-spec.md)：超过额定值为不成立；在额定值内但超过降额值为合格但有风险（应力），
   不挡定稿（1013 5.1、GJB 4.4 允许经评估偏离降额值）；只审写出来的应力余量，不要求逐器件全覆盖。
 
@@ -91,8 +91,8 @@ GJB 表1 的应用范围：战略导弹 I～II 级，战术导弹、飞机与舰
 ## 工程取值
 
 降额标准没有给数的取值不在本表：`unset_level`（等级未定按 I 级）、`soa_segment_share`（MOSFET 高温 SOA 分段系数）、
-`thermal_calc_trigger`（ASG 何时做热计算）2026-11-02 迁入规则库 `guideline-rules.json` 的 `engineering_values`（G01、G03），
-规则库是全部工程取值的唯一出处；读取用 `guideline_rules.engineering_value(name)` 或 `python3 scripts/guideline_rules.py value <name>`。
+`thermal_calc_trigger`（ASG 何时做热计算）2026-11-02 迁入设计准则库 `guideline-criteria.json` 的 `engineering_values`（G01、G03），
+设计准则库是全部工程取值的唯一出处；读取用 `guideline_criteria.engineering_value(name)` 或 `python3 scripts/guideline_criteria.py value <name>`。
 
 ## 没有收录的
 

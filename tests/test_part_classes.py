@@ -86,8 +86,8 @@ class ClassTests(unittest.TestCase):
     def test_kind_vocabulary_is_the_shared_vocabulary(self):
         # 2026-11-02 (user: 词表进共用层): names and titles come from references/shared/vocabulary.json, not from SR's code
         import json
-        import guideline_rules
-        shared = json.loads(guideline_rules.VOCABULARY_PATH.read_text(encoding='utf-8'))['device_kinds']
+        import guideline_criteria
+        shared = json.loads(guideline_criteria.VOCABULARY_PATH.read_text(encoding='utf-8'))['device_kinds']
         self.assertEqual({x['name'] for x in shared}, set(pc.KINDS) - {'mechanical'})
         for item in shared:
             self.assertEqual(pc.KINDS[item['name']].title, item['title'], item['name'])

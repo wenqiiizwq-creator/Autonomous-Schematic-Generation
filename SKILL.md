@@ -48,13 +48,13 @@ ASG 负责需求到电路的方案可行性、选型依据、设计计算和功�
 ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …），按实际原理图设计流程排列；
 先弄清自己在哪一步、产出什么，再按“主流程”逐项任务做，每项任务做到“做完的标志”为止。
 
-- **输入**：需求、器件知识库、电路模式库、已有工程/审查意见
+- **输入**：需求、器件知识库、典型电路库、已有工程/审查意见
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）、
   持续改进（lessons → 归因 → 修改 → 合成测试）
 
 | 步骤 | 任务 | 这一步的目的 | 产出 |
 |---|---|---|---|
-| ① 需求与方案 | 1.1 需求追溯 · 1.2 系统架构 · 1.3 功能块做法 · 1.4 核心器件选型与方案确认 | 把需求落到功能块和核心器件；需求缺口当场问用户，答复写回需求清单，会改变方案的取舍由用户定下 | 需求追溯、需求澄清、系统架构、`selection.json` |
+| ① 需求与方案 | 1.1 需求追溯 · 1.2 系统架构 · 1.3 功能块实现方案 · 1.4 核心器件选型与方案确认 | 把需求落到功能块和核心器件；需求缺口当场问用户，答复写回需求清单，会改变方案的取舍由用户定下 | 需求追溯、需求澄清、系统架构、`selection.json` |
 | ② 详细设计 | 2.1 数据手册核对与外围电路 · 2.2 设计计算与性能要求 · 2.3 器件选型与性能符合性 · 2.4 设计网表 | 按核心器件手册确定外围约束，从工况计算器件性能要求，核对采购来源或候选器件的符合性，再写出设计网表 | `reference-input.json`、计算记录、`component-requirements.json`、`electrical-intent.json` |
 | ③ 原理图绘制 | 3.1 分页方案 · 3.2 图页脚本 · 3.3 组装工程 | 按绘图纲要 O1–O8 把设计网表画成可读的 KiCad 工程 | `page-plan.json`、图页脚本、KiCad 工程 |
 | ④ 设计检查 | 4.1 自动检查 · 4.2 图面审阅 | 用 KiCad 导出核对电气与图面，再按 PDF 逐页审阅 | `summary.json`、`visual-review.json` |
@@ -109,14 +109,14 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 用户暂缓的，按建议条文作为写明的假设设计，相关需求和计算为有条件成立，记成 `requirement` 待办。
 降额等级（I/II/III 级，见[降额规范](references/shared/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
 附按产品失效后果和工作方式给出的建议等级；答复写回需求清单。用户暂缓的，按建议等级作为写明的假设设计。
-共用规范规则（G01–G09，与 schematic-review 同一版，见[共用规范规则库](references/shared/guideline-rules.md)）按产品基线和本设计的功能电路类型、器件类别适用：
+共用设计准则（G01–G09，与 schematic-review 同一版，见[共用设计准则库](references/shared/guideline-criteria.md)）按产品基线和本设计的功能电路类型、器件类别适用：
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
 做完的标志：`design-closure.json` 的每条需求有功能路径和承担器件（或写明理由的空列表）；每个需求澄清都有答复
 （用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求。有未答复的需求澄清不进入步骤 ②。
 降额等级已定（需求给定、用户答复或写明的假设），记入 `design-closure.json`。
-规则库有规则时，产品基线、功能电路类型与器件类别记入 `design-closure.json` 的 `guideline_scope`（`guideline_version: 1`）。
+设计准则库有准则时，产品基线、功能电路类型与器件类别记入 `design-closure.json` 的 `guideline_scope`（`guideline_version: 1`）。
 
 #### 1.2 系统架构
 
@@ -126,14 +126,14 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 做完的标志：每个功能块有输入输出和所在电压域；每条跨块流向有名字；隔离边界两侧各有哪些功能块已定。
 
-#### 1.3 功能块做法
+#### 1.3 功能块实现方案
 
-每个功能块先在 [功能电路模式库](references/circuit-patterns.md) 里找做法（`find_parts.py --patterns <功能>`）：
-做法给出核心器件类、必需外围、必算项和已知坑；没有合适做法的功能块在 `lessons.json` 登记 `knowledge_missing`，设计完成后补写模式文件。
+每个功能块先在 [典型电路库](references/typical-circuits.md) 里找实现方案（`find_parts.py --circuits <功能>`）：
+实现方案给出核心器件类、必需外围、必算项和已知坑；没有合适实现方案的功能块在 `lessons.json` 登记 `knowledge_missing`，设计完成后补写典型电路文件。
 
-功能做法同时指出器件的设计用途、工作状态和需要核算的性能。放电、吸收、检流、限流、滤波等用途触发相应核算；“脉冲/浪涌”等关键词触发性能要求核验，不自动推出某个具体料号。普通器件可复用受控标准物料规范，仍须确认本设计工况在其适用范围内。
+实现方案同时指出器件的设计用途、工作状态和需要核算的性能。放电、吸收、检流、限流、滤波等用途触发相应核算；“脉冲/浪涌”等关键词触发性能要求核验，不自动推出某个具体料号。普通器件可复用受控标准物料规范，仍须确认本设计工况在其适用范围内。
 
-做完的标志：每个功能块有选定的模式与做法，或在 `lessons.json` 登记了 `knowledge_missing`；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。
+做完的标志：每个功能块有选定的典型电路与实现方案，或在 `lessons.json` 登记了 `knowledge_missing`；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。
 
 #### 1.4 核心器件选型与方案确认
 
@@ -209,7 +209,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   位号和手册定位（`datasheet:<库内路径>#p<页>` 加表名/符号）。依据另有 `requirement`（来自需求，`source` 写 `req:<需求编号>`）
   和 `constant`（物理常数），不再归入 `model`。手册没给的器件参数标 `unspecified`，不能写成保证值，
   也不能支撑 `supported`。格式见 [设计待办记录](references/design-closure.md)，`audit_design_closure.py` 核对。
-- **按适用的共用规范规则设计**：规则卡的 `asg_action` 是设计动作；落实它的计算在 `guidelines` 里写规则编号，
+- **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作；落实它的计算在 `guidelines` 里写准则编号，
   关闭阶段在原理图之后的规则用一件技术转交待办引用；确实不适用的写进 `guideline_scope.not_applicable` 并写理由。
 
 **把计算落实为可采购的器件性能要求**：将实际需要核算的器件记入 `record/component-requirements.json`，由它统一生成设计网表属性、BOM规格和图面标注。字段及执行接口见 [器件性能要求](references/component-requirements.md)；新设计采用 `component_requirements_version: 1`，按用途分组筛选位号，不给每颗普通件增加全参数计算。
@@ -229,7 +229,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 查阅原厂手册以核实候选，不自动意味着电路只能绑定该料号；可转为完整可替代性能约束的，优先保留规格采购方式。
 3. **核对候选**：将要求值、候选保证值及双方适用条件逐项对照，记录资料来源、符合/不符合/尚未核实的结论。需要比较核心器件方案时仍执行任务1.4，不给所有普通料新增“两候选”义务。
 4. **处理差距**：算出不满足时换料、调整电路或重新分配性能，并回到受影响计算。厂家保证缺失时保留真实外部依赖；不要先把候选写成已核准，再附一句“关键性能待确认”。
-5. **按规则选型**：规范规则的 `asg_action` 对选型提要求的，在对应性能记录的 `guidelines` 写规则编号（电源输入器件、接口保护器件等）。
+5. **按准则选型**：设计准则的 `asg_action` 对选型提要求的，在对应性能记录的 `guidelines` 写准则编号（电源输入器件、接口保护器件等）。
 6. **记录状态**：性能定义是否完整、采购定义方式、候选是否已经核实分别记录。未核准的候选放入候选栏；“型号未定”“候选待核”“已核准”不能混用。按规格采购可以有多个经核准的来源。
 
 做完的标志：每项性能要求都有采购定义方式和来源/候选处置；无已知不满足被当成满足，无未核实候选被当成已核准。尚缺外部数据的可有条件进入出图，但报告不能宣布其型号核实或设计定型已完成。
@@ -259,7 +259,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 为每页写一张简短的分页方案，内容包括：读者任务（跟随能量流、看懂反馈、追一个受保护接口……）、
 功能块及每块的位号、主路径、电源轨、出页网络及目的功能/页码、标签边界。先保证一条功能路径易读，再决定拆页或加大纸张。
 分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`patterns`），本页每个器件都要属于一个功能块，
-每个功能块标注所用模式与做法 `"<模式文件名>#<做法名>"`（第一页是架构页，免标；没有模式的块要在 `lessons.json` 登记）；
+每个功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有典型电路的块要在 `lessons.json` 登记）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](references/human-readable-routing.md) 第 1 节。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
@@ -268,7 +268,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 - 按绘图纲要 O1–O8 决定页面流向、锚点、器件归属、画法、出线、标签、间距和修复顺序，见
   [drawing-recipes.md](references/drawing-recipes.md)。
 
-做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与模式齐全，每个器件属于一个功能块。
+做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与典型电路齐全，每个器件属于一个功能块。
 
 #### 3.2 图页脚本
 
@@ -392,7 +392,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 同时核对性能定义与选型状态：可独立完成的性能要求计算须完成；仅有料号但关键性能未核实的，不能写“已核准”。有条件性能要求和真实外部依赖继续按现有计算依据分类，不因图纸已输出而转成保证。
 
-做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成；适用的共用规范规则都已在计算或待办里引用，或写明不适用的理由。
+做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成；适用的共用设计准则都已在计算或待办里引用，或写明不适用的理由。
 
 #### 5.2 经验总结
 
@@ -468,11 +468,11 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
 | 技能怎样持续改进：事件、归因、台账、合成测试 | [docs/improvement-plan.md](docs/improvement-plan.md)、每版的固定动作 [docs/operating-cadence.md](docs/operating-cadence.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
-| 一个功能通常怎么实现、有几种做法、各自的必算项与已知坑 | [circuit-patterns.md](references/circuit-patterns.md) 与 `references/circuit-patterns/` |
+| 一个功能通常怎么实现、有几种实现方案、各自的必算项与已知坑 | [typical-circuits.md](references/typical-circuits.md) 与 `references/typical-circuits/` |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
-| 共用规范规则（G01–G09）：规则卡、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-rules.md](references/shared/guideline-rules.md)、`references/shared/guideline-rules.json` |
+| 共用设计准则（G01–G09）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
 | 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |

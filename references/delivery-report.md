@@ -21,7 +21,7 @@
 | `summary.json` | `verify_schematic.py` 的自动检查结果，原样复制 |
 | `component-requirements.json` | 新性能流程的唯一源记录：用途筛选、计算得到的性能要求、采购方式、候选核实状态；格式与准备/出图接口见 [器件性能要求](component-requirements.md) |
 | `component-requirements-check.json` | 从本次原生图纸、PDF、XML与BOM复核的结果；不与源记录重名，不用历史PASS代替本次核对 |
-| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "patterns": {块名: "模式#做法"}}]}`；本页每个器件属于一个功能块，每块标注 `references/circuit-patterns/` 里的做法（第一页架构页免标） |
+| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "circuits": {块名: "模式#做法"}}]}`；本页每个器件属于一个功能块，每块标注 `references/typical-circuits/` 里的做法（第一页架构页免标） |
 | `selection.json` | 核心器件选型：每个角色的位号、决定性条件、≥2 个候选（选中/淘汰理由、相对知识库的手册路径）；每个 U/Q/T 器件都要属于一个角色；选定候选写外部依赖，依赖未公开资料时附 2–3 个方案、建议和用户的决定，格式见 [核心器件选型](core-part-selection.md) |
 | `lessons.json` | 本版学到的东西：`{"schema_version": 1, "events": [{"source", "cause", "change" 或 "why_none", "why_not_rule"}]}`；来源只能是 `review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:<记录>`、`user:<日期>`；`datasheet:` 来源核对文件和页码；归因与改动位置的要求见 [处理审查意见](review-comments.md) |
 | `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要在对应页有非空处置，写出在本版 PDF 上看到了什么；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `原理图/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 原理图/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
@@ -60,8 +60,8 @@
    合格但有风险，不挡交付（见 [器件应力规范](shared/stress-spec.md)）。结论一节的“降额等级”一行写等级、来源、应力风险处数和没点名规则的提示数。
    **余量不足以覆盖估计误差**（`uncertainty_version: 1`）：余量小于所依赖工程估计不确定度的检查，列值 / 门槛、余量 / 不确定度和改进；
    合格但有风险，不挡交付，结论一节写处数。
-   **共用规范规则覆盖**、**下游约束（共用规范）**（`guideline_version: 1`）：适用的规范规则逐条列出处、落实处（引用它的计算或待办，或不适用的理由）和关闭阶段；
-   关闭阶段在原理图之后的另列一表，写技术转交待办和规则卡的设计动作。结论一节的“共用规范”一行写规则库版本和各类条数。
+   **共用设计准则覆盖**、**下游约束（共用规范）**（`guideline_version: 1`）：适用的设计准则逐条列出处、落实处（引用它的计算或待办，或不适用的理由）和关闭阶段；
+   关闭阶段在原理图之后的另列一表，写技术转交待办和设计准则的设计动作。结论一节的“共用规范”一行写设计准则库版本和各类条数。
    器件性能流程一行之后：按 BOM 规格转交采购的件只写一行总数；性能要求提示（不起约束的要求、套用的同一句条件）每类一行。
    结论一节的“记录版本”一行写明旧版本没核对的内容（版本 2 没核门槛出处和需求检查，`gap_version 1` 没给缺口分类，
    没有 `uncertainty_version` 没对不确定度核对估计余量）。

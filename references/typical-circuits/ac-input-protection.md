@@ -6,7 +6,7 @@
 
 电路类型：POWER_PROTECTION、AC_MAINS
 
-## 做法
+## 实现方案
 
 ### 保险丝 + NTC + MOV + 共模扼流圈 + 桥式整流
 

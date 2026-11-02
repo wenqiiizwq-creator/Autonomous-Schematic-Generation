@@ -6,7 +6,7 @@
 
 电路类型：POWER_CONVERTER
 
-## 做法
+## 实现方案
 
 ### QR 控制器 + 外置高压 MOSFET + RCD/TVS 钳位 + 光耦反馈
 

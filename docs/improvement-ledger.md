@@ -8,6 +8,26 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 正式电路用语：设计准则、典型电路、实现方案（连文件名与字段一起改） (2026-11-02)
+
+用户问“规则、模式、覆盖这些名词在电路专用术语里怎么讲”，随后要求把它们改成正式电路名词，并选择连文件名和字段一起改。
+三个名词定为：**设计准则**（原“规范规则/规则卡”，单条可核对要求；汇编叫**设计准则库**，原“规则库”）、**典型电路**（原“电路模式/模式库”）、
+**实现方案**（原同一典型电路下的“做法”）。“覆盖”一词及其动词（落实准则 / 核对准则）用户要求先缓，本轮不改。
+文件与标识符随之改名：`references/shared/guideline-rules.json/.md` → `guideline-criteria.json/.md`，`scripts/guideline_rules.py` → `guideline_criteria.py`
+（模块名、`$GUIDELINE_CRITERIA` 环境变量同改），汇编与规范登记里的 `rules` 键 → `criteria`，规范工作目录的 `G0x_规则登记.json` → `G0x_准则登记.json`（5 份，经维护锁改）；
+`references/circuit-patterns/` → `typical-circuits/`，`circuit-patterns.md` → `typical-circuits.md`，`scripts/circuit_patterns.py` → `typical_circuits.py`，
+`find_parts.py --patterns` → `--circuits`，`page-plan.json` 的 `patterns` 字段 → `circuits`（值仍是 `典型电路#实现方案`），审计 `guidelines.pattern_rules` → `circuit_criteria`，
+典型电路文件的 `## 做法` → `## 实现方案`（`落实规则` 一行暂留）。设计准则库 1.4.1 因键名改变重建（内容不变，`content_sha256` 变）；
+共用层指纹随之变化，SR 同步。术语表“技能文档用词”加两行，旧词进“不用的词”；纲要文字随名词改，哈希变。
+已交付记录里的 `page-plan.json` 旧字段 `patterns` 不再被识别，重新出图时按新字段写。
+
+- Event: user:2026-11-02 (把这些名词都改成正式的电路名词; 设计准则/典型电路/实现方案可以，改吧; 连文件名和字段一起改)
+- Causes: judgment 1
+- Changed: README.md, SKILL.md, references/component-requirements.md, references/delivery-report.md, references/design-closure.md, references/human-readable-routing.md, references/shared/derating-rules.md, references/shared/guideline-criteria.json, references/shared/guideline-criteria.md, references/shared/shared-layer.md, references/terminology.md, references/typical-circuits.md, references/typical-circuits/ac-indicator.md, references/typical-circuits/ac-input-protection.md, references/typical-circuits/aux-bias-supply.md, references/typical-circuits/aux-overvoltage-latch.md, references/typical-circuits/current-sensing.md, references/typical-circuits/isolated-feedback.md, references/typical-circuits/ntc-temperature-sensing.md, references/typical-circuits/output-filter-storage.md, references/typical-circuits/pd-output-control.md, references/typical-circuits/pfc-boost.md, references/typical-circuits/production-test-points.md, references/typical-circuits/qr-flyback.md, references/typical-circuits/reviewed-bias-and-latch.md, references/typical-circuits/safety-bridging.md, references/typical-circuits/synchronous-rectification.md, references/typical-circuits/type-c-port-protection.md, references/typical-circuits/zcd-sensing.md, scripts/audit_design_closure.py, scripts/find_parts.py, scripts/guideline_criteria.py, scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, scripts/typical_circuits.py, tests/test_bias_latch_cases.py, tests/test_component_requirements.py, tests/test_derating_audit.py, tests/test_derating_rules.py, tests/test_design_closure.py, tests/test_design_report.py, tests/test_find_parts.py, tests/test_guideline_closure.py, tests/test_part_classes.py, tests/test_typical_circuits.py
+- Gates: pytest 1033
+- Approved: user:2026-11-02
+- Outline: f10aa370dbb0f34c
+
 ## 共用层第二轮：词表、最弱档、共用应力核对进共用层；模式做法落实规则 (2026-11-02)
 
 用户要求把零散的规则归入新架构，并且不再逐项确认方案（“按照你推荐的方式，现在就开始执行”；“我不确认方案了…一直到都做完”）。
@@ -21,7 +41,7 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 模式→规则映射（与 SR `catalog.BASIS` 对称）：17 个模式文件各加一行 `电路类型：`（词表名，`ac-indicator`、`production-test-points` 无对应类型写“无”），
 每种做法加一行 `落实规则`（只引用 active、按本模式类型/器件类别/全板触发、且做法正文做到了其 asg_action 的规则；部分覆盖不引用，`aux-overvoltage-latch` 因 G05-036/037 适用文本限于热插拔暂写“无”）。
 新模块 `scripts/circuit_patterns.py` 读它们，`render_design_report.pattern_approaches` 改为调用；设计完成核对读 `record/page-plan.json` 标注的做法，
-声明的类型不在 `guideline_scope.circuit_types` 或落实的规则按范围不适用记 `guideline_scope_pattern`，审计 `guidelines.pattern_rules` 列出模式声称落实的规则。
+声明的类型不在 `guideline_scope.circuit_types` 或落实的规则按范围不适用记 `guideline_scope_circuit`（本轮改名前叫 guideline_scope_pattern），审计 `guidelines.pattern_rules` 列出模式声称落实的规则。
 草案由 opus 子代理按库逐条对照做法正文生成，本人逐条复核后写入；当前模式覆盖规则库很低（POWER_CONVERTER 38 条可引用 8 条，USB/ISOLATION 0 条），因为模式都来自同一块 PD 充电器。
 纲要（SKILL.md）本轮未改，哈希不变。
 

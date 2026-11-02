@@ -6,7 +6,7 @@
 
 电路类型：POWER_CONVERTER
 
-## 做法
+## 实现方案
 
 ### CrM/多模 PFC 控制器 + 外置 MOSFET + 升压二极管
 

@@ -71,8 +71,8 @@
     "G04": "1.0",
     "G05": "1.0"
   },
-  "content_sha256": "77dd8c2f140c0dcd711edb29073ec41cb455a53f890bea8c7592824cb8c6e194",
-  "rules": [
+  "content_sha256": "0d42002b0f17fe0140d810f0e8af7ad704df426e61a60c6a250ebdf339374954",
+  "criteria": [
     {
       "id": "G01-001",
       "title": "设计输入给出范围或容差，不只给标称值",

@@ -20,7 +20,7 @@ class ReviewedCases(unittest.TestCase):
  def test_mov_prefix_needs_specific_identity(self):
   identity=lambda r:'varistor' if r.startswith('RV') else 'resistor'
   self.assertEqual(identity('RV101'),'varistor')
- def test_published_approaches_and_origins(self):
-  text=(ROOT/'references/circuit-patterns/reviewed-bias-and-latch.md').read_text()
+ def test_published_implementations_and_origins(self):
+  text=(ROOT/'references/typical-circuits/reviewed-bias-and-latch.md').read_text()
   for key in ['F-001','F-002','F-004','F-005','F-006']:self.assertIn('/'+key,text)
   self.assertEqual(sum(l.startswith('### ') for l in text.splitlines()),4)

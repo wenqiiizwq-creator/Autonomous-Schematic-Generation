@@ -11,7 +11,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-import guideline_rules
+import guideline_criteria
 import audit_design_closure as adc
 from audit_design_closure import audit, sha256
 
@@ -22,13 +22,13 @@ def setUpModule():
     global _env
     # the installed shared guideline rules would ask every record here for its guideline scope; test_guideline_closure
     # covers that with its own library
-    library = guideline_rules.load(guideline_rules.BUNDLE_PATH)
-    library.update(library_version='0.0.0', specs={}, rules=[],
-                   content_sha256=guideline_rules.content_sha256([], library.get('engineering_values')))
-    empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-rules.json'
-    empty.write_text(guideline_rules.dump(library), encoding='utf-8')
+    library = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+    library.update(library_version='0.0.0', specs={}, criteria=[],
+                   content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
+    empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria.json'
+    empty.write_text(guideline_criteria.dump(library), encoding='utf-8')
     _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library'),
-                                          'GUIDELINE_RULES': str(empty)})
+                                          'GUIDELINE_CRITERIA': str(empty)})
     _env.start()
 
 
@@ -288,11 +288,11 @@ class DeratingAuditTests(unittest.TestCase):
 
     def test_the_floors_are_the_shared_layers(self):
         # 2026-11-02 (user: 最弱档收进共用层): the same file SR's passive_stress reads, no copy in either skill
-        import guideline_rules
-        floors = guideline_rules.commodity_floors()['chip_resistor']['packages']
+        import guideline_criteria
+        floors = guideline_criteria.commodity_floors()['chip_resistor']['packages']
         self.assertEqual({p: v['power_w_70c'] for p, v in floors.items()}, adc.RESISTOR_FLOORS)
         self.assertEqual((adc.WEAKEST_SHARE, adc.ASSUMED_PACKAGE),
-                         (guideline_rules.engineering_value('weakest_share'), guideline_rules.engineering_value('assumed_resistor_package')))
+                         (guideline_criteria.engineering_value('weakest_share'), guideline_criteria.engineering_value('assumed_resistor_package')))
         self.assertEqual(adc.WEAKEST_SHARE, 0.5)
 
     def test_derating_needs_a_layered_record(self):

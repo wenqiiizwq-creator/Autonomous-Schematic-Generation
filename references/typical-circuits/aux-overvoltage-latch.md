@@ -6,7 +6,7 @@
 
 电路类型：POWER_PROTECTION
 
-## 做法
+## 实现方案
 
 ### 齐纳 + 电阻进 FAULT 引脚
 

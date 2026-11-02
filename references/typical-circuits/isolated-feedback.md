@@ -6,7 +6,7 @@
 
 电路类型：POWER_CONVERTER、ISOLATION
 
-## 做法
+## 实现方案
 
 ### PD 控制器直驱光耦（无外置误差放大器）
 

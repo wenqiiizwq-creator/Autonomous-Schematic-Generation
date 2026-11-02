@@ -6,7 +6,7 @@
 
 电路类型：POWER_CONVERTER
 
-## 做法
+## 实现方案
 
 ### VDS 检测 SR 控制器 + 低 Rds(on) MOSFET
 

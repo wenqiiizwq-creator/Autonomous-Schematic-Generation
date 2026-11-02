@@ -14,7 +14,7 @@ ASG 只做出图自检；严格的电气审查交给 `schematic-review`。
 - `verify_design_change.py`、`audit_project.py`、`verify_reference_contract.py`：改版合同、多页工程交付核对、器件与外围合同，见 [project-verification.md](references/project-verification.md)。
 - `patch_schematic_values.py`：保持连线与图面的 Value 修改，见 [value-patch.md](references/value-patch.md)。
 - `check_ledger.py`：检查改进台账最新条目的事件来源、归因和改动文件。改进规则见 [docs/improvement-plan.md](docs/improvement-plan.md)。
-- `find_parts.py`：在本机知识库 `~/Documents/知识库/HardwareWiki/raw/` 检索器件手册、参考设计和应用笔记，见 [core-part-selection.md](references/core-part-selection.md)、[part-roles.md](references/part-roles.md)；`--patterns` 检索 [功能电路模式库](references/circuit-patterns.md)。
+- `find_parts.py`：在本机知识库 `~/Documents/知识库/HardwareWiki/raw/` 检索器件手册、参考设计和应用笔记，见 [core-part-selection.md](references/core-part-selection.md)、[part-roles.md](references/part-roles.md)；`--circuits` 检索 [典型电路库](references/typical-circuits.md)。
 
 上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）的源码路径、commit、许可证和未采用部分见
 [融合说明](references/upstream-integration.md)；历次改造与发布验证记录在 [docs/](docs/)。
