@@ -8,10 +8,10 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
-## 校准板说明跟上准则库 1.5.0 的 DC_24V (2026-11-02)
+## 校准板说明对齐准则库 1.6.0 的 DC_24V (2026-11-02)
 
-合并 main 后，工业板需求和校准板 README 中“缺 `DC_24V`”的说法已过时，改为写明该类型可用，并把它加入工业板的预期类型表。
-目前没有准则挂在 `DC_24V` 下，只写它选不中准则，仍要同时写 `POWER_PROTECTION` 与 `POWER_CONVERTER`。`SKILL.md` 的对外接口列表未改，加入要改纲要，待用户批准。
+合并 main 后，工业板需求和校准板 README 中“缺 `DC_24V`”的说法已过时，改为写 `DC_24V`（选中 G01-051～054）并同时声明 `POWER_PROTECTION`、`POWER_CONVERTER`。
+类型表保留准则入口，等级指向已闭合的 C01、C12、C13。按 G01-054 的端口归类，把工业板 24 V 口写明为按连接长距离线路归类，等级数值不变。
 
 - Event: user:2026-11-02 (合并并修正)
 - Changed: evals/calibration_boards/industrial-io-rs485-can/requirements.md, evals/calibration_boards/README.md, docs/improvement-ledger.md
@@ -35,6 +35,18 @@ C04、C15 按 ASG 处理写明；产品决定已全部闭合，标准正文未�
 - Event: user:2026-11-02 (可以现在就做的，放到另一个子对话里面)
 - Causes: knowledge_missing 3
 - Changed: docs/proposals/calibration-boards-readiness-2026-11-02.md, evals/calibration_boards/datasheets-to-collect.md
+
+## 准则库 1.6.0：DC_24V 的 4 条接口准则 (2026-11-02)
+
+`DC_24V` 进词表后选不中任何准则。新增 G01-051～054（G01 登记文件 1.3）：只有 G01-054 按 GB/T 17799.2 表 2、表 3 登记端口浪涌与快速瞬变，电压窗、反接、中断都要求项目写明，未给定标 TBR，因为 IEC 61131-2 与 IEC 61000-4-29 没有原文。
+纲要第 114 行的对外接口清单加 `DC_24V`。规范正文同步了这 4 条和 1.5.0 放宽的 9 条“适用”行。校准板说明里已过期的“缺词”改掉。
+
+- Event: user:2026-11-02 (按建议全部入库)
+- Causes: rule_missing 1
+- Changed: SKILL.md, references/shared/guideline-criteria.json, references/shared/shared-layer.md, tests/test_guideline_closure.py, evals/calibration_boards/README.md, evals/calibration_boards/industrial-io-rs485-can/requirements.md, docs/proposals/dc-24v-criteria-draft-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1034
+- Approved: user:2026-11-02
+- Outline: c2674c38f46374e8
 
 ## 准则库 1.5.0：DC_24V 与典型电路补 10 处引用 (2026-11-02)
 
