@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 盘点两块校准板开工前的知识缺口 (2026-11-02)
+
+对照工业 I/O 与 PoE 传感节点两份需求，按 20 个功能块查手册库、典型电路和需求可追溯性，出报告和待采集清单。
+手册库只缺 3 类，都在 PoE 的 RJ45 与数据磁件（无 PoE 额定的分立磁件、集成磁件 RJ45、无磁 RJ45）；典型电路缺 14 个。
+30 项待澄清分诊为 6 个必问决定、18 项建议条文和 5 项不问（工业 C11–C13、PoE C12–C14 各合并问一次，C02 与 C11 同问）；POE-003 的 37 V 与库内手册写的 802.3af 36 V 有出入，列为存疑。
+只读分析：未改需求、典型电路、共用层和 HardwareWiki，未执行校准；归因计数为缺手册的器件类数。
+
+- Event: user:2026-11-02 (可以现在就做的，放到另一个子对话里面)
+- Causes: knowledge_missing 3
+- Changed: docs/proposals/calibration-boards-readiness-2026-11-02.md, evals/calibration_boards/datasheets-to-collect.md
+
 ## 增加工业 I/O 与 PoE 传感节点两类校准需求输入 (2026-11-02)
 
 现有典型电路来自同一块 100 W USB PD 充电器，工业接口、隔离 I/O、PoE 和以太网缺少不同板型的需求输入。
