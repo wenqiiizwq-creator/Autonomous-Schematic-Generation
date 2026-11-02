@@ -1,6 +1,6 @@
 # 典型电路必算项与设计准则缺口处理（2026-11-02）
 
-以 `evals/typical-circuits-criteria-draft.json` 的 48 处 `uncertain` 为逐项清单，对照当前共用库 1.4.1（340 条）的 `status`、`asg_action` 与 `applies_when`。结果：已补并引用 37 处、准则侧待办 10 处、不该引用 1 处，合计 48 处；修改 14 个典型电路文件。每处计数按“典型电路 + 实现方案 + 准则编号”，不同实现方案引用同一编号分别计数。
+以 `docs/proposals/typical-circuits-criteria-draft-2026-11-02.json` 的 48 处 `uncertain` 为逐项清单，对照当前共用库 1.4.1（340 条）的 `status`、`asg_action` 与 `applies_when`。结果：已补并引用 37 处、准则侧待办 10 处、不该引用 1 处，合计 48 处；修改 14 个典型电路文件。每处计数按“典型电路 + 实现方案 + 准则编号”，不同实现方案引用同一编号分别计数。
 
 仅扩充必算项及 `落实规则` 后的编号列表，保留标签、既有来源和已知坑。`SKILL.md`、`references/shared/`、`scripts/guideline_criteria.py`、`scripts/stress_check.py` 均不改。新增引用均为 active、未被 industrial_telecom 基线排除，且按文件声明的电路类型、全板或本方案核心器件类别触发；适用文本另行逐项核对。输入草案随提交保留，以便追溯前值。
 
