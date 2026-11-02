@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 器件认知表跟上 2026-11-01 整理后的器件库；检索不再混入旧版手册 (2026-11-01)
+
+`test_find_parts` 的真实库比对失败：当天的器件库整理新增了子类，表里缺 8 行，已补，并在倒排索引里加了晶体和 LED。
+库里 `<一级类>/versions/<哈希>/` 的旧版手册被索引算成子类 `versions`，`--mpn DS18B20` 还把旧版排在现行版前面。`find_parts.py` 的检索和子类统计现在跳过这些存档，`library_index` 仍能按哈希找到它们。
+器件库一侧把重复子类“逻辑门_缓冲器与驱动器”的 3 份手册并回“标准逻辑门”和“缓冲器_收发器”，所以不必为它加一行。
+
+- Event: user:2026-11-01 (补上并推送；如有必要修改 HardwareWiki 的 datasheet 分类)
+- Causes: rule_missing 1
+- Changed: docs/improvement-ledger.md, references/part-roles.md, scripts/find_parts.py, tests/test_find_parts.py
+
 ## 规则库 1.0.0（G01–G03）装入：接口电路类型、选型引用规则 (2026-11-01)
 
 用户确认《规则库 v1.0 技能接入方案》的四项决定并说“开工”；方案第四节写明确认方案即视为批准纲要小改。

@@ -137,6 +137,18 @@ class FindPartsTests(unittest.TestCase):
                            capture_output=True, text=True)
         self.assertEqual(1, r.returncode)
 
+    def test_archived_versions_are_neither_candidates_nor_a_subcategory(self):
+        path = self.wiki / 'raw' / 'Datasheet' / 'catalog.json'
+        data = json.loads(path.read_text())
+        old = '08_电源管理/versions/abc123/Richtek - RT7209.pdf'
+        (path.parent / old).parent.mkdir(parents=True)
+        (path.parent / old).write_bytes(b'%PDF')
+        data['rows'].append(dict(data['rows'][0], path=old, subcategory='versions'))
+        path.write_text(json.dumps(data))
+        r = find_parts.search_datasheets(self.wiki, [], mpn='RT7209')
+        self.assertEqual(['raw/Datasheet/08_电源管理/USB PD 控制器/Richtek - RT7209.pdf'], [x['path'] for x in r['results']])
+        self.assertNotIn('versions', find_parts.categories(self.wiki)['categories']['08_电源管理'])
+
     def test_roles_table_matches_the_real_library_when_present(self):
         if not (find_parts.DEFAULT_WIKI / 'raw' / 'Datasheet' / 'catalog.json').is_file():
             raise unittest.SkipTest('HardwareWiki library is not on this machine')

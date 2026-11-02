@@ -46,6 +46,11 @@ def load_catalog(wiki):
         return None, f"{path}: {exc}"
 
 
+def archived(row):
+    """A superseded datasheet kept under <category>/versions/<hash>/: not a subcategory, not a candidate."""
+    return "versions" in row["path"].split("/")
+
+
 def unindexed_pdfs(wiki, indexed_paths):
     root = wiki / "raw" / "Datasheet"
     found = []
@@ -76,6 +81,7 @@ def search_datasheets(wiki, terms, category=None, mpn=None, with_text=False, lim
     catalog, problem = load_catalog(wiki)
     rows = list((catalog or {}).get("rows") or [])
     rows += unindexed_pdfs(wiki, {r["path"] for r in rows})
+    rows = [r for r in rows if not archived(r)]
     if mpn:
         key = norm(mpn)
         hits = [r for r in rows if key in norm(r.get("model")) or key in norm(r.get("aliases"))]
@@ -93,6 +99,8 @@ def categories(wiki):
     catalog, problem = load_catalog(wiki)
     counts = {}
     for r in (catalog or {}).get("rows") or []:
+        if archived(r):
+            continue
         counts.setdefault(r.get("category", ""), {}).setdefault(r.get("subcategory", ""), 0)
         counts[r["category"]][r.get("subcategory", "")] += 1
     return {"library": str(wiki), "catalog_problem": problem, "categories": counts}
