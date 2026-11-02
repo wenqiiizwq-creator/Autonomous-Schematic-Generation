@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.2.0",
+  "library_version": "1.3.0",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -71,7 +71,7 @@
     "G04": "1.0",
     "G05": "1.0"
   },
-  "content_sha256": "b4fa2b78404899a726f2f45d2f1a697fbb6db162310f5588948c018d50daa127",
+  "content_sha256": "e48fb80eb558e2ce5586d5a60a0c9727e86ed6587ec03bbd7f3da7986cc4da88",
   "rules": [
     {
       "id": "G01-001",
@@ -6015,7 +6015,7 @@
       "title": "接口电平按保证值兼容，噪声裕量为正",
       "spec": "G04",
       "version": "1.0",
-      "status": "draft",
+      "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
@@ -6425,7 +6425,7 @@
       "title": "同步接口的建立和保持时序按保证值有余量",
       "spec": "G04",
       "version": "1.0",
-      "status": "draft",
+      "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
@@ -9078,7 +9078,7 @@
       "title": "振荡器增益裕量足够起振",
       "spec": "G04",
       "version": "1.0",
-      "status": "draft",
+      "status": "active",
       "nature": "method",
       "applies_when": {
         "device_kinds": [
@@ -9087,7 +9087,7 @@
         "text": "有无源晶振由 MCU、PHY 等内部皮尔斯振荡器驱动时；手册另有判据的以手册为准"
       },
       "not_applicable": "",
-      "tailoring": "倍数 5 来自 ST 文档，用于其他厂家芯片前先查该厂家手册。",
+      "tailoring": "手册另有判据的按手册；手册没有时默认取 5。倍数 5 来自 ST AN2867，用于其他厂家是工程默认（用户 2026-11-02 同意转 active）。",
       "inputs": [
         "振荡器 gm 或 gm_crit_max（手册保证值）",
         "晶振 ESR、C0、CL、频率"
@@ -10878,7 +10878,7 @@
       "title": "级联保护中最靠近故障的一级先动作",
       "spec": "G05",
       "version": "1.0",
-      "status": "draft",
+      "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
@@ -10887,7 +10887,7 @@
         "text": "同一通路有两级及以上过流保护时"
       },
       "not_applicable": "只有一级保护的不适用。",
-      "tailoring": "手册只给熔断熔断积分不给分断积分时，下级取最大、上级取最小，缺数据记资料不足。",
+      "tailoring": "手册只给熔断熔断积分不给分断积分时，下级取最大、上级取最小，缺数据记资料不足。eFuse 与上游熔断器的配合没有通用厂家方法（SLVA862A 未涉及），按两者手册的动作时间和 I²t 比较；手册不给就记资料不足，不推定配合。",
       "inputs": [
         "协调表"
       ],
