@@ -115,6 +115,13 @@ class GuidelineClosureTests(unittest.TestCase):
         poe = guideline_criteria.select(real, 'industrial_telecom', ['POE_PD'], [])
         self.assertGreater(len(poe), len(none))
 
+    def test_dc_24v_selects_its_own_rules_and_no_telecom_48v_rule(self):
+        real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+        ids = lambda types: {r['id'] for r in guideline_criteria.select(real, 'industrial_telecom', types, [])}
+        added = ids(['DC_24V']) - ids([])
+        self.assertEqual(added, {'G01-051', 'G01-052', 'G01-053', 'G01-054'})
+        self.assertFalse(added & (ids(['DC_48V']) - ids([])))
+
     def test_a_downstream_rule_needs_a_work_item(self):
         self.record['work_items'][0]['guidelines'] = []
         self.record['calculations'][0]['guidelines'].append('G07-001')

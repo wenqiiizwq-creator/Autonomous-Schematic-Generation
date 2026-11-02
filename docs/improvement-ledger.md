@@ -8,6 +8,18 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.6.0：DC_24V 的 4 条接口准则 (2026-11-02)
+
+`DC_24V` 进词表后选不中任何准则。新增 G01-051～054（G01 登记文件 1.3）：只有 G01-054 按 GB/T 17799.2 表 2、表 3 登记端口浪涌与快速瞬变，电压窗、反接、中断都要求项目写明，未给定标 TBR，因为 IEC 61131-2 与 IEC 61000-4-29 没有原文。
+纲要第 114 行的对外接口清单加 `DC_24V`。规范正文同步了这 4 条和 1.5.0 放宽的 9 条“适用”行。校准板说明里已过期的“缺词”改掉。
+
+- Event: user:2026-11-02 (按建议全部入库)
+- Causes: rule_missing 1
+- Changed: SKILL.md, references/shared/guideline-criteria.json, references/shared/shared-layer.md, tests/test_guideline_closure.py, evals/calibration_boards/README.md, evals/calibration_boards/industrial-io-rs485-can/requirements.md, docs/proposals/dc-24v-criteria-draft-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1034
+- Approved: user:2026-11-02
+- Outline: c2674c38f46374e8
+
 ## 准则库 1.5.0：DC_24V 与典型电路补 10 处引用 (2026-11-02)
 
 典型电路映射留下的 10 处“准则侧待办”涉及 9 条准则，适用条件不覆盖对应实现方案；校准板的正 24 V 输入在词表里也没有类型。

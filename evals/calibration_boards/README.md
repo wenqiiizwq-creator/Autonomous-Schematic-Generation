@@ -50,14 +50,12 @@ evals/calibration_boards/<board>/requirements.md，产品基线 industrial_telec
 
 ## 词表边界与准则核对
 
-当前 `references/shared/vocabulary.json` **没有 `DC_24V`**。
-最接近正 24 V 输入功能的是 `POWER_PROTECTION` 与 `POWER_CONVERTER`；工业 24 V 数字输入另用 `INDUSTRIAL_DI`。
+正 24 V 供电输入声明 `DC_24V`（准则库 1.6.0 起，选中 G01-051～054），同时声明 `POWER_PROTECTION` 与 `POWER_CONVERTER`；工业 24 V 数字输入另用 `INDUSTRIAL_DI`。
 `DC_48V` 明确定义为电信 **−48 V** 输入，会引入 ETSI 专用准则，不能用来冒充正 24 V 供电。
-这个词表缺口在输入说明中保留，本任务不修改共用层，也不在 `guideline_scope` 写词表外值。
 
 预期两板都会核对 G01–G05 的适用准则；隔离相关的 G06、EMC 的 G07、PCB 的 G08、
 制造与测试的 G09 按实际准则库中存在的 active 条目和关闭阶段核对。组名存在不等于已有准则条目：
-本次读取的库 `library_version: 1.4.1` 实际登记到 G05，不能宣称已自动覆盖 G06–G09。
+准则库 `library_version: 1.6.0` 实际登记到 G05，不能宣称已自动覆盖 G06–G09。
 需求末尾给出接口准则编号作为核对入口，并非完整准则清单。
 
 ## 与已有校准/回放的关系
