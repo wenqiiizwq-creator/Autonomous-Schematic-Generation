@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.6.1：G01-053 按 GB/T 17626.29 修订 (2026-11-02)
+
+用户取得 GB/T 17626.29-2006 全文（等同 IEC 61000-4-29:2000）。G01-053 改为按表 1a、1b 写明选定的暂降与中断组合，中断分高阻抗和低阻抗，恢复判据按 §9，低阻抗反灌接 G03-031；登记文件 G01 1.4。
+该标准 §1 写明严酷度由技术委员会、用户或制造商选择，所以仍不设默认等级。24 V 电压窗与 PS1/PS2 仍缺，要靠 GB/T 15969.2-2024。
+
+- Event: user:2026-11-02 (入库并修订)
+- Causes: knowledge_missing 1
+- Changed: references/shared/guideline-criteria.json, docs/improvement-ledger.md
+- Gates: pytest 1034
+
 ## 校准板说明对齐准则库 1.6.0 的 DC_24V (2026-11-02)
 
 合并 main 后，工业板需求和校准板 README 中“缺 `DC_24V`”的说法已过时，改为写 `DC_24V`（选中 G01-051～054）并同时声明 `POWER_PROTECTION`、`POWER_CONVERTER`。
