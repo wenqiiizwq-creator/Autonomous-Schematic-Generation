@@ -8,6 +8,18 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 增加工业 I/O 与 PoE 传感节点两类校准需求输入 (2026-11-02)
+
+现有典型电路来自同一块 100 W USB PD 充电器，工业接口、隔离 I/O、PoE 和以太网缺少不同板型的需求输入。
+新增两份可追溯需求和 ASG 使用说明，分别定义非隔离 CAN 的工业 I/O 板与 IEEE 802.3af 受电传感节点。
+区分产品范围、标准正文、预览和厂家转引；没有依据的量化指标列入任务 1.1 澄清清单。
+按现有词表列出预期类型及准则核对入口，说明正 24 V 缺少专用类型，不能误用电信 −48 V 类型。
+本次只准备输入，不生成电路、不改变共用层，也不宣称已执行校准或硬件验收。
+
+- Event: user:2026-11-02 (请安排这样的工作，并调用codex…)
+- Causes: knowledge_missing 1
+- Changed: evals/calibration_boards/README.md, evals/calibration_boards/industrial-io-rs485-can/requirements.md, evals/calibration_boards/poe-pd-sensor-node/requirements.md, docs/improvement-ledger.md
+
 ## 正式电路用语：设计准则、典型电路、实现方案（连文件名与字段一起改） (2026-11-02)
 
 用户问“规则、模式、覆盖这些名词在电路专用术语里怎么讲”，随后要求把它们改成正式电路名词，并选择连文件名和字段一起改。
