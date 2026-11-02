@@ -16,7 +16,7 @@ from audit_design_closure import audit, sha256
 
 ASG = Path(__file__).resolve().parents[1]
 SR = Path.home() / '.agents' / 'skills' / 'schematic-review'
-SHARED = ('references/guideline-rules.json', 'references/guideline-rules.md', 'scripts/guideline_rules.py')
+SHARED = guideline_rules.SHARED_FILES   # the whole shared layer, references/shared/ plus the script (2026-11-02: 目录制)
 
 
 def setUpModule():
@@ -145,6 +145,7 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['guideline_scope']['device_kinds'] = ['fuse']
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G05-001', 'reason': '输入由上级设备熔断'}]
         result = self.run_audit()
+        self.assertEqual(result['guidelines']['shared_sha256'], guideline_rules.shared_digest())   # the audit binds the whole shared layer
         with mock.patch.object(guideline_rules, 'load', lambda *args: LIBRARY):
             text = '\n'.join(render_design_report.render_guidelines(result['guidelines']))
         self.assertIn('| G04-001 | 示例规则 G04-001 | GB/T 17799.2 2023 表4 第9页 | calc:C1 | 原理图 |', text)
@@ -152,10 +153,16 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertIn('| G07-001 | PCB | work:W1 | 设计动作 |', text.split('## 下游约束（共用规范）')[1])
         self.assertEqual(render_design_report.render_guidelines(None), [])
 
-    @unittest.skipUnless((SR / SHARED[0]).is_file(), 'schematic-review without the rule library')
-    def test_schematic_review_holds_the_same_files(self):
+    def test_the_shared_directory_holds_exactly_the_shared_files(self):
+        listed = {Path(n).name for n in SHARED if n.startswith('references/shared/')}
+        self.assertEqual(sorted(p.name for p in guideline_rules.SHARED_DIR.iterdir() if p.name != '__pycache__'), sorted(listed))
+        self.assertRegex(guideline_rules.shared_label(), r'^共用层 [0-9a-f]{12}，规则库 \S+，降额 v\d+$')
+
+    @unittest.skipUnless((SR / SHARED[1]).is_file(), 'schematic-review without the rule library')
+    def test_schematic_review_holds_the_same_shared_layer(self):
         for name in SHARED:
             self.assertEqual((SR / name).read_bytes(), (ASG / name).read_bytes(), name)
+        self.assertEqual(guideline_rules.shared_digest(SR), guideline_rules.shared_digest())
 
 
 if __name__ == '__main__':

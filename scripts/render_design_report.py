@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
+import circuit_patterns  # noqa: E402
 import guideline_rules  # noqa: E402
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
@@ -212,10 +213,7 @@ PATTERNS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'circuit-
 
 
 def pattern_approaches(patterns_dir=PATTERNS_DIR):
-    out = {}
-    for md in sorted(patterns_dir.glob('*.md')) if patterns_dir.is_dir() else []:
-        out[md.stem] = {line[4:].strip() for line in md.read_text(encoding='utf-8').splitlines() if line.startswith('### ')}
-    return out
+    return {pid: set(info['approaches']) for pid, info in circuit_patterns.load(patterns_dir).items()}
 
 
 def check_block_patterns(name, blocks, patterns, approaches, lessons):
@@ -697,7 +695,7 @@ STAGE_WORDS = {'schematic': '原理图', 'pcb': 'PCB', 'simulation': '仿真', '
 
 
 def render_guidelines(guidelines):
-    """共用规范规则覆盖与下游约束（references/guideline-rules.md）：适用规则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
+    """共用规范规则覆盖与下游约束（references/shared/guideline-rules.md）：适用规则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
     if not (guidelines and guidelines.get('applicable')):
         return []
     cards = {r['id']: r for r in guideline_rules.load()['rules']}
@@ -913,8 +911,8 @@ def render(root, notes=None, title=None):
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
     guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
     if guidelines and guidelines.get('applicable'):
-        out.append('- **共用规范**：规则库 %s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用规范规则覆盖”。' % (
-            guidelines['library_version'], len(guidelines['applicable']), len(guidelines['covered']),
+        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用规范规则覆盖”。' % (
+            guideline_rules.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
             len(guidelines['not_applicable']), len(guidelines['uncovered']), len(guidelines['downstream'])))
     margins = audit.get('estimate_margins') if isinstance(audit.get('estimate_margins'), list) else []
     if margins:

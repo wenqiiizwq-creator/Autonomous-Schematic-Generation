@@ -8,6 +8,48 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 共用层第二轮：词表、最弱档、共用应力核对进共用层；模式做法落实规则 (2026-11-02)
+
+用户要求把零散的规则归入新架构，并且不再逐项确认方案（“按照你推荐的方式，现在就开始执行”；“我不确认方案了…一直到都做完”）。
+① 词表：`references/shared/vocabulary.json` 成为基线、电路类型、器件类别名字与标题的唯一出处，规则库汇编从它取词表（`build` 不再有 `--base`），
+`part_classes.KINDS` 对着它核对（`test_part_classes` 不再伸手到 SR 的 checkout 读 `device_kinds.py`，只剩分类线索的对等比较）；`zener`/`fuse` 标题统一为“稳压管”“保险丝”。
+② 常规件最弱档：`references/shared/commodity-floors.json` 一份（片式电阻 8 个封装的 70 ℃ 功率与耐压、MLCC 可订购档、触点），
+`audit_design_closure.RESISTOR_FLOORS` 与 `component_requirements.RESISTOR_VOLTAGE_FLOORS` 从它构造，两条用 `ast` 解析 SR 源码的测试改读共用文件；
+`weakest_share`、`assumed_resistor_package` 迁入规则库 G02 工程取值，规则库 1.4.1。④ 定界表剩余估算倍数查无数值，不做。
+③ 共用应力核对 `scripts/stress_check.py`：某级降额限值（`derated_limit`）、一条应力对额定与降额值的判法（`verdict`）、没点名规则时按器件类别与量纲挑规则（`fit_rules`）
+只写一份，两技能同字节、进共用层指纹；`audit_design_closure` 删掉自己的 `derated_limit` 和挑规则逻辑改为调用它（SR `derating.py` 同步）。
+模式→规则映射（与 SR `catalog.BASIS` 对称）：17 个模式文件各加一行 `电路类型：`（词表名，`ac-indicator`、`production-test-points` 无对应类型写“无”），
+每种做法加一行 `落实规则`（只引用 active、按本模式类型/器件类别/全板触发、且做法正文做到了其 asg_action 的规则；部分覆盖不引用，`aux-overvoltage-latch` 因 G05-036/037 适用文本限于热插拔暂写“无”）。
+新模块 `scripts/circuit_patterns.py` 读它们，`render_design_report.pattern_approaches` 改为调用；设计完成核对读 `record/page-plan.json` 标注的做法，
+声明的类型不在 `guideline_scope.circuit_types` 或落实的规则按范围不适用记 `guideline_scope_pattern`，审计 `guidelines.pattern_rules` 列出模式声称落实的规则。
+草案由 opus 子代理按库逐条对照做法正文生成，本人逐条复核后写入；当前模式覆盖规则库很低（POWER_CONVERTER 38 条可引用 8 条，USB/ISOLATION 0 条），因为模式都来自同一块 PD 充电器。
+纲要（SKILL.md）本轮未改，哈希不变。
+
+- Event: user:2026-11-02 (按照你推荐的方式，现在就开始执行; 我不确认方案了，你先找你推荐的方式把1/2/4做完之后做3，一直到都做完)
+- Causes: judgment 1
+- Changed: references/shared/vocabulary.json, references/shared/commodity-floors.json, references/shared/guideline-rules.json, references/shared/guideline-rules.md, references/shared/derating-rules.json, references/shared/derating-rules.md, references/shared/stress-spec.md, references/shared/shared-layer.md, references/circuit-patterns.md, references/design-closure.md, references/circuit-patterns/ac-indicator.md, references/circuit-patterns/ac-input-protection.md, references/circuit-patterns/aux-bias-supply.md, references/circuit-patterns/aux-overvoltage-latch.md, references/circuit-patterns/current-sensing.md, references/circuit-patterns/isolated-feedback.md, references/circuit-patterns/ntc-temperature-sensing.md, references/circuit-patterns/output-filter-storage.md, references/circuit-patterns/pd-output-control.md, references/circuit-patterns/pfc-boost.md, references/circuit-patterns/production-test-points.md, references/circuit-patterns/qr-flyback.md, references/circuit-patterns/reviewed-bias-and-latch.md, references/circuit-patterns/safety-bridging.md, references/circuit-patterns/synchronous-rectification.md, references/circuit-patterns/type-c-port-protection.md, references/circuit-patterns/zcd-sensing.md, scripts/guideline_rules.py, scripts/stress_check.py, scripts/circuit_patterns.py, scripts/audit_design_closure.py, scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, tests/test_guideline_closure.py, tests/test_derating_rules.py, tests/test_part_classes.py, tests/test_derating_audit.py, tests/test_component_requirements.py, tests/test_circuit_patterns.py, docs/improvement-ledger.md
+- Gates: pytest 1033（含 test_circuit_patterns 9 条）；SR pytest 2406
+
+## 共用层目录制：references/shared/、工程取值唯一出处、一个指纹 (2026-11-02)
+
+用户要求重新调整与 SR 的共用层，让结构清晰简单、映射明确。此前共用层是两次决定叠出来的：规则库三份文件和
+降额表、应力规范散在 `references/` 与 `scripts/`，两套版本、两条对齐测试、工程取值在规则库（41 项）和降额表（3 项）两个家，
+六份文档各说一遍“与 schematic-review 共用”。现在 `guideline-rules.json/.md`、`derating-rules.json/.md`、`stress-spec.md`
+搬进 `references/shared/`，新增 `shared-layer.md` 作为共用层唯一说明页（四件事、谁读、哪条测试守、怎么改、同名不共用）；
+降额表剩下的 `unset_level`、`thermal_calc_trigger`（G01）与 `soa_segment_share`（G03）迁入规则库 1.4.0，
+`component_requirements.voltage_share` 和 `audit_design_closure` 改读 `guideline_rules.engineering_value`；
+`guideline_rules.shared_digest()` 给整个共用层一个指纹，设计完成核对把它写进审计 `guidelines.shared_sha256`，
+报告“共用规范”一行印“共用层 <指纹>，规则库 1.4.0，降额 v1”；`test_guideline_closure` 一条整目录对齐测试取代原来规则库、降额各一条。
+主流程 1.1、2.2 里三处链接的路径随之改成 `references/shared/…`，纲要文字别无变化，哈希随路径变。
+用户在方案（目录制、3 项工程取值迁进规则库）批准时确认。
+
+- Event: user:2026-11-02 (帮我重新调整一下这部分共用层的架构，让结构清晰简单，映射明确; 目录制; 迁进规则库)
+- Causes: judgment 1
+- Changed: SKILL.md, references/shared/shared-layer.md, references/shared/guideline-rules.json, references/shared/guideline-rules.md, references/shared/derating-rules.json, references/shared/derating-rules.md, references/shared/stress-spec.md, references/component-requirements.md, references/delivery-report.md, references/design-closure.md, references/pdf-schematic-extraction.md, references/requirement-clarifications.md, references/requirements-to-intent.md, scripts/guideline_rules.py, scripts/audit_design_closure.py, scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, tests/test_guideline_closure.py, tests/test_derating_rules.py, docs/improvement-ledger.md
+- Gates: pytest 1023
+- Approved: user:2026-11-02
+- Outline: 05cb56c08f9d7126
+
 ## 器件认知表跟上 2026-11-01 整理后的器件库；检索不再混入旧版手册 (2026-11-01)
 
 `test_find_parts` 的真实库比对失败：当天的器件库整理新增了子类，表里缺 8 行，已补，并在倒排索引里加了晶体和 LED。
@@ -30,12 +72,12 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 - Approved: user:2026-11-01
 - Outline: df4f8f0aaa826e52
 - Causes: rule_missing 1
-- Changed: SKILL.md, docs/improvement-ledger.md, references/component-requirements.md, references/derating-rules.json, references/derating-rules.md, references/design-closure.md, references/guideline-rules.json, references/guideline-rules.md, scripts/audit_design_closure.py, scripts/guideline_rules.py, scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, tests/test_derating_audit.py, tests/test_design_closure.py, tests/test_guideline_closure.py
+- Changed: SKILL.md, docs/improvement-ledger.md, references/component-requirements.md, references/shared/derating-rules.json, references/shared/derating-rules.md, references/design-closure.md, references/shared/guideline-rules.json, references/shared/guideline-rules.md, scripts/audit_design_closure.py, scripts/guideline_rules.py, scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, tests/test_derating_audit.py, tests/test_design_closure.py, tests/test_guideline_closure.py
 
 ## 接入共用规范规则库 G01–G09 (2026-10-31)
 
 用户确认《ASG与SR规则接入方案草稿》并要求执行（“请开始执行这个方案，慢慢来，一步一步来修改。遇到问题的时候先按照你的建议来执行。”）。
-九份共用规范的规则卡汇编成 `references/guideline-rules.json`，与说明 `guideline-rules.md`、脚本 `scripts/guideline_rules.py`
+九份共用规范的规则卡汇编成 `references/shared/guideline-rules.json`，与说明 `guideline-rules.md`、脚本 `scripts/guideline_rules.py`
 在 ASG 与 schematic-review 两边同字节（沿用降额规范的做法，两个仓库独立发布也能用；两边测试互相逐字节比对）。
 ASG 侧：1.1 定产品基线（默认工业/通信板卡）与功能电路类型、器件类别，记入 `design-closure.json` 的 `guideline_scope`（`guideline_version: 1`）；
 2.2 落实规则卡设计动作的计算写 `guidelines`，原理图之后关闭的规则用技术转交待办引用；5.1 做完的标志加“适用规则都已引用或写明不适用”。
@@ -48,7 +90,7 @@ ASG 侧：1.1 定产品基线（默认工业/通信板卡）与功能电路类�
 - Approved: user:2026-10-31
 - Outline: 6322a2833548105c
 - Causes: rule_missing 1
-- Changed: SKILL.md, references/guideline-rules.md, references/guideline-rules.json, references/design-closure.md, references/delivery-report.md, scripts/guideline_rules.py, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_guideline_closure.py, docs/improvement-ledger.md
+- Changed: SKILL.md, references/shared/guideline-rules.md, references/shared/guideline-rules.json, references/design-closure.md, references/delivery-report.md, scripts/guideline_rules.py, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_guideline_closure.py, docs/improvement-ledger.md
 
 ## KiCad 10.0.7 列入原生几何已验证版本 (2026-10-30)
 
@@ -70,7 +112,7 @@ SR 侧脚本改为从规范读取，同日 SR 条目记。数值未改。
 
 - Event: user:2026-10-29 (这些也都处理)
 - Causes: rule_not_enforced 1
-- Changed: references/derating-rules.md, references/derating-rules.json, references/requirements-to-intent.md, tests/test_derating_rules.py, docs/improvement-ledger.md
+- Changed: references/shared/derating-rules.md, references/shared/derating-rules.json, references/requirements-to-intent.md, tests/test_derating_rules.py, docs/improvement-ledger.md
 
 ## 单立的降额类规则并入降额规范：电阻工作电压提示、PDF 补电容耐压 (2026-10-29)
 
@@ -102,7 +144,7 @@ ASG 纲要（SKILL.md）没改。SR 侧同日条目记其余改动。
 
 - Event: user:2026-10-29 (SOA段系数和常规件预判门限，需要并入到这个降额规范里面去。常规件预判门限是否合理？如果不合理的话就删掉；按方案改)
 - Causes: knowledge_wrong 1, rule_not_enforced 1
-- Changed: references/derating-rules.md, references/derating-rules.json, references/design-closure.md, scripts/audit_design_closure.py, tests/test_derating_audit.py, tests/test_derating_rules.py, docs/improvement-ledger.md
+- Changed: references/shared/derating-rules.md, references/shared/derating-rules.json, references/design-closure.md, scripts/audit_design_closure.py, tests/test_derating_audit.py, tests/test_derating_rules.py, docs/improvement-ledger.md
 
 ## R10 暴露的四个问题：规格件关闭、要求收敛、不满足的计算、估计余量 (2026-10-28)
 
@@ -206,7 +248,7 @@ SR 在 7b49463 给 IC 角色线索加了 `linearregulator`，ASG 的器件类型
 
 SR 复查 R8、把共用降额规范接进 SR 后，用户定了三点：降额等级的来源“照 ASG”；“将共用规范R6和ASG统一到现在的“应力”规范下来，
 制定单独的应力规范”；“ASG里面现在每颗器件都有降额规则，这个过于严苛了。请将其统一到余量审核规则上来”。
-新增与 SR 逐字相同的 `references/stress-spec.md`（器件应力规范），`derating-rules.md` 的 R6 改为指向它；`derating-rules.json` 不变。
+新增与 SR 逐字相同的 `references/shared/stress-spec.md`（器件应力规范），`derating-rules.md` 的 R6 改为指向它；`derating-rules.json` 不变。
 ASG 改法：在额定内但超过降额值不再是有条件成立加降额待办或用户接受，而是合格但有风险（应力）：计算照常推出结论，检查写
 `improvement`（缺记 `stress_risk_without_improvement`），审计在 `derating.stress_risks` 列出，报告“应力风险”一节逐条列出，不挡交付；
 超过额定仍为 `failed`。去掉 `rests_on: derating` 一档、design 待办的 `derating` 字段与 `derating_without_item`。覆盖按写出来的应力：
@@ -218,7 +260,7 @@ ASG 改法：在额定内但超过降额值不再是有条件成立加降额待�
 - Approved: user:2026-10-27
 - Outline: 798c19acd30beee2
 - Causes: rule_wrong 1
-- Changed: SKILL.md, references/stress-spec.md, references/derating-rules.md, references/design-closure.md, references/delivery-report.md, references/requirements-to-intent.md, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_derating_audit.py, tests/test_derating_rules.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Changed: SKILL.md, references/shared/stress-spec.md, references/shared/derating-rules.md, references/design-closure.md, references/delivery-report.md, references/requirements-to-intent.md, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_derating_audit.py, tests/test_derating_rules.py, tests/test_design_report.py, docs/improvement-ledger.md
 
 ## 纲要 1.1/2.2：问降额等级，关键与特殊器件按等级核对应力 (2026-10-27)
 
@@ -245,14 +287,14 @@ R8 复查时用户问 ASG 何时做裕量检查，决定建立“建立在电路
 放入知识库 `raw/Standard/`（IPC-9592B 只有目录，未收录），并要求按 I/II/III 三级给值、ASG 与 SR 都按项目的降额等级取值、
 不只用于消费类产品。用户确认的取值规则：来源按 1013 → GJB → 1006 优先；1006 只有一级，三级同值；GJB 给范围的取保守端；
 1013 已控电感绕组温度和磁饱和时不叠加 GJB 表29 的工作电流系数；只给一个系数时对稳态与瞬态的最坏组合生效，手册单列的冲击、
-脉冲额定按表中比例比较。新增 `references/derating-rules.json`（223 条，每条写器件类型、参数、工况、判据、三级取值和 PDF 页码）
+脉冲额定按表中比例比较。新增 `references/shared/derating-rules.json`（223 条，每条写器件类型、参数、工况、判据、三级取值和 PDF 页码）
 与同内容的 `derating-rules.md`（等级从哪来、取值规则、各类器件的表），两份与 schematic-review 逐字相同。
 测试核对每条的类型属于器件类型词表、判据与工况已定义、页码在来源页数内、三级从 I 到 III 降额递减、未分级来源三级同值、
 文档列出每条、来源文件的 SHA-256 与知识库一致、两个仓库的文件相同。ASG 计算按等级取值、任务 1.1 问降额等级要改纲要，另行提案。
 
 - Event: user:2026-10-27
 - Causes: knowledge_missing 1
-- Changed: references/derating-rules.json, references/derating-rules.md, SKILL.md, tests/test_derating_rules.py, docs/improvement-ledger.md
+- Changed: references/shared/derating-rules.json, references/shared/derating-rules.md, SKILL.md, tests/test_derating_rules.py, docs/improvement-ledger.md
 
 ## R8 暴露的记录问题：缺口分类、门槛出处、需求检查、经验落点、本机路径引用、小数显示 (2026-10-27)
 

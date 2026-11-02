@@ -25,7 +25,7 @@ CLASS_NAMES = {KEY: '关键器件', SPECIAL: '特殊器件', COMMON: '常规件'
 
 Kind = namedtuple('Kind', 'title prefixes words cues')
 
-# The kind vocabulary of schematic-review's scripts/device_kinds.py (plus ASG's `mechanical`). Words are matched
+# The kind vocabulary of the shared references/shared/vocabulary.json (plus ASG's `mechanical`; test_part_classes checks it). Words are matched
 # on "<lib_id> <value> <mpn>" in this order, the first kind wins; prefixes are the weakest evidence. Cues are what a
 # datasheet quote must say, lowercase with spaces removed; they include schematic-review's cues for the kind.
 # A part-number family (B) never starts inside a longer part number: PS2[5-9]xx is not the PS2663 in TPS26630.

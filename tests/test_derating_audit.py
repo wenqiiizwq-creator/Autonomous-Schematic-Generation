@@ -286,19 +286,14 @@ class DeratingAuditTests(unittest.TestCase):
         self.add_resistor('1k/1%', 0.03, footprint='Resistor_SMD:R_1206_3216Metric')   # 0.125 × 0.5 × 0.8 = 0.05
         self.assertNotIn('resistor_power_rating_missing', self.codes())
 
-    @unittest.skipUnless(SR_PASSIVE.is_file(), 'schematic-review not installed')
-    def test_the_floors_are_schematic_reviews(self):
-        found = {}
-        for node in ast.parse(SR_PASSIVE.read_text(encoding='utf-8')).body:
-            if isinstance(node, ast.Assign):
-                names = [t.id for t in node.targets if isinstance(t, ast.Name)] or [
-                    e.id for t in node.targets if isinstance(t, ast.Tuple) for e in t.elts]
-                values = node.value.elts if isinstance(node.value, ast.Tuple) and len(names) > 1 else [node.value]
-                for name, value in zip(names, values):
-                    if name in ('RESISTOR_FLOORS', 'WEAKEST_SHARE', 'ASSUMED_PACKAGE'):
-                            found[name] = eval(compile(ast.Expression(value), str(SR_PASSIVE), 'eval'))
-        self.assertEqual({k: v[0] for k, v in found['RESISTOR_FLOORS'].items()}, adc.RESISTOR_FLOORS)
-        self.assertEqual((found['WEAKEST_SHARE'], found['ASSUMED_PACKAGE']), (adc.WEAKEST_SHARE, adc.ASSUMED_PACKAGE))
+    def test_the_floors_are_the_shared_layers(self):
+        # 2026-11-02 (user: 最弱档收进共用层): the same file SR's passive_stress reads, no copy in either skill
+        import guideline_rules
+        floors = guideline_rules.commodity_floors()['chip_resistor']['packages']
+        self.assertEqual({p: v['power_w_70c'] for p, v in floors.items()}, adc.RESISTOR_FLOORS)
+        self.assertEqual((adc.WEAKEST_SHARE, adc.ASSUMED_PACKAGE),
+                         (guideline_rules.engineering_value('weakest_share'), guideline_rules.engineering_value('assumed_resistor_package')))
+        self.assertEqual(adc.WEAKEST_SHARE, 0.5)
 
     def test_derating_needs_a_layered_record(self):
         self.record['parameter_version'] = 1

@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "default_baseline": "industrial_telecom",
+  "baselines": [
+    {
+      "name": "industrial_telecom",
+      "title": "工业/通信板卡"
+    },
+    {
+      "name": "aerospace",
+      "title": "航天"
+    },
+    {
+      "name": "military",
+      "title": "军用"
+    }
+  ],
+  "circuit_types": [
+    {
+      "name": "POWER_CONVERTER",
+      "title": "变换器与稳压器"
+    },
+    {
+      "name": "POWER_PROTECTION",
+      "title": "电源输入保护"
+    },
+    {
+      "name": "ANALOG",
+      "title": "模拟前端与监测"
+    },
+    {
+      "name": "STARTUP",
+      "title": "上电、复位与启动"
+    },
+    {
+      "name": "CLOCK",
+      "title": "时钟"
+    },
+    {
+      "name": "I2C",
+      "title": "I²C"
+    },
+    {
+      "name": "LEVEL_SHIFT",
+      "title": "电平转换与跨电压域互连"
+    },
+    {
+      "name": "SPI",
+      "title": "SPI"
+    },
+    {
+      "name": "UART",
+      "title": "UART/RS232"
+    },
+    {
+      "name": "CAN",
+      "title": "CAN"
+    },
+    {
+      "name": "RS485",
+      "title": "RS485"
+    },
+    {
+      "name": "USB",
+      "title": "USB/Type-C"
+    },
+    {
+      "name": "ETHERNET",
+      "title": "以太网"
+    },
+    {
+      "name": "DDR",
+      "title": "DDR"
+    },
+    {
+      "name": "STORAGE",
+      "title": "eMMC/SD"
+    },
+    {
+      "name": "RF",
+      "title": "射频与模组"
+    },
+    {
+      "name": "HSSERIAL",
+      "title": "高速串行"
+    },
+    {
+      "name": "AV",
+      "title": "音视频接口"
+    },
+    {
+      "name": "ISOLATION",
+      "title": "隔离"
+    },
+    {
+      "name": "DEBUG",
+      "title": "调试与烧录"
+    },
+    {
+      "name": "DC_48V",
+      "title": "−48 V 直流输入"
+    },
+    {
+      "name": "AC_MAINS",
+      "title": "交流市电输入"
+    },
+    {
+      "name": "INDUSTRIAL_DI",
+      "title": "工业 24 V 数字输入"
+    },
+    {
+      "name": "POE_PD",
+      "title": "PoE 受电端"
+    },
+    {
+      "name": "VEHICLE_28V",
+      "title": "军车 28 V 输入"
+    },
+    {
+      "name": "SHIP_AC",
+      "title": "舰船交流输入"
+    }
+  ],
+  "device_kinds": [
+    {
+      "name": "relay",
+      "title": "继电器"
+    },
+    {
+      "name": "varistor",
+      "title": "压敏电阻"
+    },
+    {
+      "name": "ntc",
+      "title": "热敏电阻"
+    },
+    {
+      "name": "opto",
+      "title": "光耦"
+    },
+    {
+      "name": "tvs",
+      "title": "TVS"
+    },
+    {
+      "name": "zener",
+      "title": "稳压管"
+    },
+    {
+      "name": "bjt",
+      "title": "双极晶体管"
+    },
+    {
+      "name": "mosfet",
+      "title": "MOSFET"
+    },
+    {
+      "name": "diode",
+      "title": "二极管"
+    },
+    {
+      "name": "common_mode_choke",
+      "title": "共模扼流圈"
+    },
+    {
+      "name": "coupled_inductor",
+      "title": "耦合电感"
+    },
+    {
+      "name": "ferrite",
+      "title": "磁珠"
+    },
+    {
+      "name": "inductor",
+      "title": "电感"
+    },
+    {
+      "name": "crystal",
+      "title": "晶体"
+    },
+    {
+      "name": "transformer",
+      "title": "变压器"
+    },
+    {
+      "name": "fuse",
+      "title": "保险丝"
+    },
+    {
+      "name": "battery",
+      "title": "电池"
+    },
+    {
+      "name": "testpoint",
+      "title": "测试点"
+    },
+    {
+      "name": "connector",
+      "title": "连接器"
+    },
+    {
+      "name": "resistor",
+      "title": "电阻"
+    },
+    {
+      "name": "capacitor",
+      "title": "电容"
+    },
+    {
+      "name": "jumper",
+      "title": "跳线"
+    },
+    {
+      "name": "switch",
+      "title": "开关"
+    },
+    {
+      "name": "bridge_rectifier",
+      "title": "整流桥"
+    },
+    {
+      "name": "ic",
+      "title": "集成电路"
+    }
+  ]
+}

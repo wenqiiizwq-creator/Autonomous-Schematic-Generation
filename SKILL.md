@@ -107,9 +107,9 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 只问证据和工程判断解决不了的产品取舍；缺厂家资料、设计没做完、属于后续环节的事项不问。
 任务 1.2–2.4 中途发现新的需求缺口，同样停在当前任务问，答复写回需求清单后从受影响的任务重做（会改变架构的回到 1.2）。
 用户暂缓的，按建议条文作为写明的假设设计，相关需求和计算为有条件成立，记成 `requirement` 待办。
-降额等级（I/II/III 级，见[降额规范](references/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
+降额等级（I/II/III 级，见[降额规范](references/shared/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
 附按产品失效后果和工作方式给出的建议等级；答复写回需求清单。用户暂缓的，按建议等级作为写明的假设设计。
-共用规范规则（G01–G09，与 schematic-review 同一版，见[共用规范规则库](references/guideline-rules.md)）按产品基线和本设计的功能电路类型、器件类别适用：
+共用规范规则（G01–G09，与 schematic-review 同一版，见[共用规范规则库](references/shared/guideline-rules.md)）按产品基线和本设计的功能电路类型、器件类别适用：
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
@@ -199,7 +199,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   见 [设计待办记录](references/design-closure.md)。
 - 器件热可行性（功耗→结温）属于设计，在本任务算；散热实现才交 PCB。见 requirements-to-intent.md 第 4 节。
   损耗预算列出主要遗漏项及有依据的边界，不能用子总和证明达标。
-- **器件应力按降额等级核对**（按[器件应力规范](references/stress-spec.md)）：关键器件与特殊器件在工作包络角点和瞬态下的
+- **器件应力按降额等级核对**（按[器件应力规范](references/shared/stress-spec.md)）：关键器件与特殊器件在工作包络角点和瞬态下的
   电压、电流、功率与温度应力，与额定比较的检查点名 `derating-rules.json` 里适用的规则，按本项目等级那一列取降额值；
   额定取最坏温度下的保证值。只给一个系数的项对稳态与瞬态的最坏组合生效，手册单列的冲击、脉冲额定按表中比例比较。
   常规件的规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。只审写出来的应力，不要求每颗器件、每条规则都有一条比较。
@@ -472,8 +472,9 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
-| 共用规范规则（G01–G09）：规则卡、适用条件、引用与覆盖、下游约束（与 schematic-review 共用，同字节） | [guideline-rules.md](references/guideline-rules.md)、`references/guideline-rules.json` |
-| 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（与 schematic-review 共用） | [stress-spec.md](references/stress-spec.md)、[derating-rules.md](references/derating-rules.md)、`references/derating-rules.json` |
+| 共用规范规则（G01–G09）：规则卡、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-rules.md](references/shared/guideline-rules.md)、`references/shared/guideline-rules.json` |
+| 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
+| 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR-01–HR-11、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |

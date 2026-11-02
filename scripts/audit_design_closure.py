@@ -11,7 +11,9 @@ import math
 import re
 from pathlib import Path
 from design_frontier import frontier
+import circuit_patterns
 import guideline_rules
+import stress_check
 from schematic_layout import part_classes
 from schematic_layout.citations import check_source
 
@@ -77,16 +79,18 @@ DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 # Whether the user let ASG write a decided requirement into the original requirement files.
 FILE_DECISIONS = ('UPDATED', 'KEPT')
 # derating_version 1 (user 2026-10-27): stresses are checked against the I/II/III column of the shared derating spec.
-DERATING_RULES = Path(__file__).resolve().parent.parent / 'references' / 'derating-rules.json'
+DERATING_RULES = Path(__file__).resolve().parent.parent / 'references' / 'shared' / 'derating-rules.json'
 DERATING_SOURCE = re.compile(r'^(req:|clarification:)(\S+)$')
 RATING_SOURCE = re.compile(r'^(datasheet:.+#p\d+|req:\S+|calc:\S+)$')
 # A resistor whose power matters carries its power rating (user 2026-10-27: 设计时考虑功耗，除阻值和精度外还要写上功率等级，
-# 作为给以后的约束). Mirrors schematic-review's passive_stress: the weakest part the written fields allow is half the
+# 作为给以后的约束). The same rule as schematic-review's passive_stress: the weakest part the written fields allow is half the
 # package's commodity floor (RG1005 0.032 W), derated by the level's RES-SMD-P value (with no level, the spec's
-# engineering value unset_level; user 2026-10-29: 删掉 2 倍，按降额规范取); a part without a footprint is judged as 0402.
-RESISTOR_FLOORS = {'0201': 0.05, '0402': 1 / 16, '0603': 1 / 16, '0805': 0.1,
-                   '1206': 0.125, '1210': 0.25, '2010': 0.5, '2512': 1.0}
-WEAKEST_SHARE, ASSUMED_PACKAGE = 0.5, '0402'
+# engineering value unset_level, in the rule library since 2026-11-02; user 2026-10-29: 删掉 2 倍，按降额规范取); a part without a footprint is judged as 0402.
+# The floors and the two judgement values are the shared layer's (commodity-floors.json; G02 weakest_share,
+# assumed_resistor_package), the same bytes SR's passive_stress reads (2026-11-02).
+RESISTOR_FLOORS = {p: v['power_w_70c'] for p, v in guideline_rules.commodity_floors()['chip_resistor']['packages'].items()}
+WEAKEST_SHARE = guideline_rules.engineering_value('weakest_share')
+ASSUMED_PACKAGE = guideline_rules.engineering_value('assumed_resistor_package')
 RESISTOR_PACKAGE = re.compile(r'^Resistor_SMD:R_(0201|0402|0603|0805|1206|1210|2010|2512)_', re.I)
 WATTS = re.compile(r'^(\d+(?:\.\d+)?)\s*(m?)W$')
 SEGMENT_SPLIT = re.compile(r'[/，,；;、\s]+')
@@ -457,27 +461,9 @@ def power_rating_needed(comp, watts, share):
     return watts / share
 
 
-def derated_limit(rule, level, rating):
-    """The limit a rule sets at this level, or None when the measure has no single number to compare.
-    A ratio of a negative rating is the allowed magnitude (R8)."""
-    v, m = rule['values'][level], rule['measure']
-    if m in ('ratio', 'pulse_ratio', 'min_ratio', 'margin_c', 'tj_percent') and not finite(rating):
-        return None
-    if m in ('ratio', 'pulse_ratio', 'min_ratio'):
-        rating = abs(rating)
-    return {'ratio': lambda: rating * v, 'pulse_ratio': lambda: rating * v, 'min_ratio': lambda: rating * v,
-            'margin_c': lambda: rating - v, 'tj_percent': lambda: (rating - 25) * v + 25,
-            'max_c': lambda: v, 'max_rise_k': lambda: v, 'max_v': lambda: v, 'min_hours': lambda: v,
-            'min_years': lambda: v, 'max_dvdt': lambda: v}.get(m, lambda: None)()
-
-
 # A check against a guaranteed rating that names no rule (stress-spec.md, 2026-10-28, user: 按推荐都做): the quantity is
-# the unit's, and rules of one kind are told apart by the part's identity, the "其他…" rule taking a part none names.
-# Mirrors schematic-review's derating.implied_ratio.
+# the unit's; which rule fits and how the stress is judged are the shared stress_check (same code as SR's derating.implied_ratio).
 UNIT_DIMENSIONS = (('current', re.compile(r'^[mµu]?A$')), ('voltage', re.compile(r'^[mk]?V$')), ('power', re.compile(r'^m?W$')))
-DIMENSION_WORDS = {'current': ('电流',), 'voltage': ('电压',), 'power': ('功率', '功耗')}
-TYPE_WORDS = {'USB 母座': re.compile(r'USB', re.I),
-              '器具耦合器': re.compile(r'耦合器|IEC ?60320|appliance coupler|\bC(?:5|6|7|8|13|14|15|16)\b', re.I)}
 
 
 def implied_rule(c, comp, kind, rules, level):
@@ -487,18 +473,13 @@ def implied_rule(c, comp, kind, rules, level):
     if not (level and kind and not text(c.get('derating_rule')) and c.get('limit_basis') == 'guaranteed'
             and c.get('operator') in ('<=', '<') and finite(c.get('value')) and finite(c.get('limit')) and c['limit'] > 0):
         return None
-    words = next((DIMENSION_WORDS[d] for d, pattern in UNIT_DIMENSIONS if pattern.match(str(c.get('unit') or '').strip())), ())
-    fits = [r for r in rules.values() if r['measure'] == 'ratio' and r['condition'] in ('worst', 'steady')
-            and kind in r['kinds'] and any(w in r['parameter'] for w in words)]
-    if len(fits) > 1:
-        identity = ' '.join(str(comp.get(k) or '') for k in ('mpn', 'value', 'lib_id'))
-        named = [r for r in fits if TYPE_WORDS.get(r['type']) and TYPE_WORDS[r['type']].search(identity)]
-        fits = named or [r for r in fits if r['type'].startswith('其他') and not any(
-            TYPE_WORDS.get(o['type']) and TYPE_WORDS[o['type']].search(identity) for o in fits)]
+    dimension = next((d for d, pattern in UNIT_DIMENSIONS if pattern.match(str(c.get('unit') or '').strip())), None)
+    identity = ' '.join(str(comp.get(k) or '') for k in ('mpn', 'value', 'lib_id'))
+    fits = stress_check.fit_rules(rules.values(), (kind,), dimension, identity)
     if len(fits) != 1:
         return None
-    derated = c['limit'] * fits[0]['values'][level]
-    return (fits[0], derated) if c['value'] > derated else None
+    judged = stress_check.verdict(c['value'], c['limit'], fits[0], level)
+    return (fits[0], judged[1]) if judged and judged[0] != stress_check.OK else None
 
 
 def audit_derating(record, intent, calculations, requirements, clarifications, error, loaded=None):
@@ -509,7 +490,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
     rules, spec = loaded or load_derating()
     info = record.get('derating') if isinstance(record.get('derating'), dict) else {}
     level = info.get('level')
-    if level not in ('I', 'II', 'III'):
+    if level not in stress_check.LEVELS:
         error('derating_level_missing', 'derating.level must be I, II or III')
         level = None
     m = DERATING_SOURCE.match(info.get('source') or '')
@@ -518,7 +499,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
         error('derating_level_without_source', 'derating.source: req:<需求编号>，或 clarification:<用户暂缓的需求澄清>')
     comps = {c['ref']: c for c in intent.get('components') or []}
     ruled = {k for r in rules.values() for k in r['kinds']}
-    share_level = level or spec['engineering_values']['unset_level']['value']
+    share_level = level or guideline_rules.engineering_value('unset_level')
     share = rules['RES-SMD-P']['values'][share_level]
     risks, hints = [], []
     for key, row in calculations.items():
@@ -556,7 +537,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                 error('derating_limit_source', where + '：limit_basis 写 standard，limit_source 写 standard:derating-rules#' + rule['id'])
             if c.get('rating') is not None and not (finite(c['rating']) and RATING_SOURCE.match(str(c.get('rating_source') or ''))):
                 error('derating_rating_without_source', where)
-            expected = derated_limit(rule, level, c.get('rating')) if level else None
+            expected = stress_check.derated_limit(rule, level, c.get('rating')) if level else None
             if rule['measure'] in ('ratio', 'pulse_ratio', 'min_ratio', 'margin_c', 'tj_percent') and not finite(c.get('rating')):
                 error('derating_rating_missing', where)
             elif expected is not None and finite(c.get('limit')) and not math.isclose(
@@ -723,9 +704,23 @@ def component_guidelines(artifact_root, error):
         return {}
 
 
+def page_plan_patterns(artifact_root, error):
+    """The `<模式>#<做法>` references the page plan's blocks name (record/page-plan.json), or [] without a plan."""
+    path = Path(artifact_root) / 'record' / 'page-plan.json'
+    if not path.is_file():
+        return []
+    try:
+        plan = json.loads(path.read_text(encoding='utf-8'))
+        return [ref for page in plan.get('pages') or [] if isinstance(page.get('patterns'), dict)
+                for ref in page['patterns'].values() if text(ref)]
+    except (ValueError, AttributeError, TypeError) as exc:
+        error('schema', 'record/page-plan.json: %s' % exc)
+        return []
+
+
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
-    (references/guideline-rules.md). Each applicable rule is cited by a calculation, work item or component requirement,
+    (references/shared/guideline-rules.md). Each applicable rule is cited by a calculation, work item or component requirement,
     or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
     downstream."""
     library = library or guideline_rules.load()
@@ -759,6 +754,17 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
     for gid in found['downstream']:
         if gid in found['covered'] and gid not in by_work:
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
+    # The pattern approaches the page plan names (circuit_patterns.py) declare circuit types and the rules they put into
+    # practice: the scope must list those types, and a claimed rule the scope leaves inapplicable means the scope is short.
+    pattern = circuit_patterns.claimed(page_plan_patterns(artifact_root, error)) if artifact_root else {'circuit_types': {}, 'rules': {}}
+    for t, refs in sorted(pattern['circuit_types'].items()):
+        if t not in scope['circuit_types']:
+            error('guideline_scope_pattern', '%s：模式 %s 声明电路类型 %s，guideline_scope.circuit_types 没有它' % (t, '、'.join(refs), t))
+    for gid, refs in sorted(pattern['rules'].items()):
+        if gid not in found['applicable'] and gid not in found['unknown_cited']:
+            error('guideline_scope_pattern', '%s：模式 %s 的做法落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
+    found['pattern_rules'] = {gid: refs for gid, refs in sorted(pattern['rules'].items())}
+    found['shared_sha256'] = guideline_rules.shared_digest()   # the whole shared layer the audit ran against
     return found
 
 
@@ -993,7 +999,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
         else:
             guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root)
     elif guideline_rules.load()['rules']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/guideline-rules.md）')
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-rules.md）')
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')

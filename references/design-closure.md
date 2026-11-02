@@ -140,8 +140,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - 每条需求至少出现在一条计算的 `requirements` 里，或写 `no_check_reason`（认证范围、取舍优先级这类不对应电路的需求）；
       否则记 `requirement_without_check`。成本需求要有一条物料成本估算：单价按 `model` 写，`reason` 写价格来源和日期；
       估算超过目标，或设计要拿成本换余量时，按[需求澄清](requirement-clarifications.md)停下来问用户。
-  - **`derating_version: 1`**（新设计，与 `parameter_version` 2 或 3 一起；用户 2026-10-27）：器件应力按[器件应力规范](stress-spec.md)
-    判，降额值取[降额规范](derating-rules.md)中本项目等级那一列，规则数据在 `derating-rules.json`。
+  - **`derating_version: 1`**（新设计，与 `parameter_version` 2 或 3 一起；用户 2026-10-27）：器件应力按[器件应力规范](shared/stress-spec.md)
+    判，降额值取[降额规范](shared/derating-rules.md)中本项目等级那一列，规则数据在 `derating-rules.json`。
     - `derating`：`{level, source}`。`level` 是 `I`/`II`/`III`（缺记 `derating_level_missing`）；`source` 写 `req:<需求编号>`，
       或用户暂缓时 `clarification:<需求澄清编号>`（该澄清的答复是 `DEFERRED`），否则记 `derating_level_without_source`。
     - **查到什么程度**：只审写出来的应力（用户 2026-10-27：每颗器件都有降额规则过于严苛，统一到余量审核规则上来），
@@ -171,13 +171,15 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       检查写 `improvement`（换额定更高的件或降低应力，缺记 `stress_risk_without_improvement`），不挂待办，也不要用户签认；
       审计在 `derating.stress_risks` 列出每一处，报告的“应力风险”一节逐条列出，不挡交付。降额值以内是普通的满足。
     - 没有 `derating_version` 的记录照旧审计，报告在“记录版本”一行写明器件应力没有按降额等级核对。
-  - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用规范规则（G01–G09，见[共用规范规则库](guideline-rules.md)）。
+  - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用规范规则（G01–G09，见[共用规范规则库](shared/guideline-rules.md)）。
     `guideline_scope` 写 `library_version`（已装规则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取规则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
     计算、待办和 `record/component-requirements.json` 的性能记录可写 `guidelines`（规范规则编号列表）。审计按范围选出适用规则：每条要被它们引用，或写进 `not_applicable`，
     否则 `guideline_uncovered`（设计没做完）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`
     （补范围或去掉引用）；关闭阶段在原理图之后的规则要有待办引用，缺了记 `guideline_downstream_without_work_item`。范围写错记 `guideline_scope`。
     规则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；规则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
+    分页方案（`record/page-plan.json`）标注的模式做法声明了电路类型、列了落实规则（[功能电路模式库](circuit-patterns.md)）：类型不在 `guideline_scope.circuit_types`，
+    或落实规则按范围不适用，记 `guideline_scope_pattern`（范围写少了）；审计在 `guidelines.pattern_rules` 列出模式声称落实的规则及出处。
   - `parameter_version: 1` 的旧记录照旧审计（下面两段），报告写明“结论没有按依据分层”；版本 2 的旧记录照旧审计，报告在“记录版本”一行写明门槛出处和需求检查没核对。
   - `refs`：这条计算决定了哪些位号的取值，非空，且都在设计网表里。
   - `checks`：非空列表，每项是一个算出来的值和它必须满足的门槛 `{name, value, operator(<=,<,>=,>), limit, unit}`。

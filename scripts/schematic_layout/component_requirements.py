@@ -35,20 +35,20 @@ PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额
 # A spec-bought common part closes once each requirement is in its exported BOM/XML RequirementSpec; finding the part
 # and checking its guarantees is handed to procurement (user 2026-10-28: 先改前四条; 同意按此做).
 BOM_SPEC = 'by_bom_spec'
-# Commodity chip-resistor floor voltages (V), mirroring schematic-review passive_stress RESISTOR_FLOORS: a working
+# Commodity chip-resistor floor voltages (V) from the shared layer (commodity-floors.json, the bytes SR's passive_stress reads): a working
 # voltage within the package's weakest part derated by RES-SMD-V constrains nothing (SR passes it with no rating
-# written). The record names no derating level, so the spec's unset_level (I, the strictest) applies (user 2026-10-29:
+# written). The record names no derating level, so the rule library's unset_level (I, the strictest) applies (user 2026-10-29:
 # 类似这种单一的规则，都先不要，全都并入到降额规范里面去).
-RESISTOR_VOLTAGE_FLOORS = {'0201': 15.0, '0402': 25.0, '0603': 50.0, '0805': 100.0,
-                           '1206': 150.0, '1210': 200.0, '2010': 200.0, '2512': 200.0}
-ASSUMED_PACKAGE = '0402'
-DERATING_RULES = Path(__file__).resolve().parents[2] / 'references' / 'derating-rules.json'
+import guideline_rules   # scripts/ is on the path whenever ASG runs; the shared layer is read, not copied
+RESISTOR_VOLTAGE_FLOORS = {p: v['voltage_v'] for p, v in guideline_rules.commodity_floors()['chip_resistor']['packages'].items()}
+ASSUMED_PACKAGE = guideline_rules.engineering_value('assumed_resistor_package')
+DERATING_RULES = Path(__file__).resolve().parents[2] / 'references' / 'shared' / 'derating-rules.json'
 
 
 def voltage_share():
-    """RES-SMD-V at the shared derating spec's unset_level."""
+    """RES-SMD-V at the rule library's unset_level (a G01 engineering value, from the derating spec since 2026-11-02)."""
     spec = json.loads(DERATING_RULES.read_text(encoding='utf-8'))
-    level = spec['engineering_values']['unset_level']['value']
+    level = guideline_rules.engineering_value('unset_level')
     return next(r for r in spec['rules'] if r['id'] == 'RES-SMD-V')['values'][level]
 
 

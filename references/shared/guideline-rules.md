@@ -1,9 +1,9 @@
 # 共用规范规则库（G01–G09）
 
-> 读者：SR 维护者（与 ASG 维护者、写规范规则的人共用）。
+> 读者：SR 维护者（与 ASG 维护者、写规范规则的人共用；共用层文件，见 [shared-layer.md](shared-layer.md)）。
 
-本文件、`guideline-rules.json` 和 `scripts/guideline_rules.py` 在 ASG 与 SR 两个技能里是同一份字节，改动时两边一起改；
-SR 的 `test_guideline_rules.py` 在两边都装了时逐字节比对。
+本文件、`guideline-rules.json` 和 `scripts/guideline_rules.py` 属于 ASG 与 SR 的共用层，两个技能里是同一份字节；
+怎么改、哪条测试守见 [shared-layer.md](shared-layer.md)。
 
 九份《硬件设计与审查共用规范》（G01 设计输入与工况 … G09 制造与可测试性）把标准条款写成规则卡。
 ASG 按规则卡的 `asg_action` 设计并留证据，SR 按 `sr_check` 独立复核；两边用同一版规则库，但 SR 不继承 ASG 的结论。
@@ -12,8 +12,9 @@ ASG 按规则卡的 `asg_action` 设计并留证据，SR 按 `sr_check` 独立�
 
 | 文件 | 内容 |
 |---|---|
-| `references/guideline-rules.json` | 汇编后的规则库：版本、词表、默认基线、全部规则卡与工程取值 |
-| `scripts/guideline_rules.py` | 校验、汇编、按适用条件选规则、统计覆盖；只用标准库 |
+| `references/shared/guideline-rules.json` | 汇编后的规则库：版本、词表、默认基线、全部规则卡与全部工程取值（含降额标准没给的 `unset_level`、`soa_segment_share`、`thermal_calc_trigger`） |
+| `scripts/guideline_rules.py` | 校验、汇编、按适用条件选规则、统计覆盖、共用层指纹；只用标准库 |
+| `references/shared/vocabulary.json` | 词表：基线、电路类型、器件类别，每项名字与标题，加默认基线 |
 | 规范工作目录下各 `G0x_规则登记.json` | 规则的源头（规范成文时写），汇编时读入 |
 
 规则库里没有规则时（`rules: []`），两个技能照常运行，相关段落不出现。
@@ -24,7 +25,7 @@ ASG 按规则卡的 `asg_action` 设计并留证据，SR 按 `sr_check` 独立�
 |---|---|
 | `library_version` | 规则库版本，每次汇编由维护者给定 |
 | `default_baseline` | 默认产品基线：`industrial_telecom`（工业/通信电路板卡） |
-| `vocabulary` | 触发词表：`baselines`、`circuit_types`（SR `catalog.CIRCUIT_TYPES` 的名称）、`device_kinds`（SR `device_kinds.KINDS`，与降额规范同一套）。SR 测试核对与登记一致 |
+| `vocabulary` | 触发词表：`baselines`、`circuit_types`、`device_kinds` 的名字，汇编时从 `vocabulary.json` 抄入（词表的唯一出处，名字和标题都在那里；SR 的 `catalog.CIRCUIT_TYPES`、`device_kinds.KINDS` 和 ASG 的 `part_classes.KINDS` 都对着它核对）。校验器拒收与 `vocabulary.json` 不一致的汇编 |
 | `specs` | 各规范的版本，如 `{"G03": "0.1"}` |
 | `content_sha256` | 规则（有工程取值时连同工程取值）的规范 JSON 哈希；报告用它绑定确切内容 |
 | `rules` | 规则卡，按编号排序 |
@@ -76,8 +77,8 @@ ASG 按规则卡的 `asg_action` 设计并留证据，SR 按 `sr_check` 独立�
 ## 六、更新规则库
 
 1. 在规范工作目录改 `G0x_规则登记.json`（文件为 `{spec, version, rules}`）。
-2. `python3 scripts/guideline_rules.py build --from <规范工作目录> --library-version <新版本> --out references/guideline-rules.json`。
-3. 把三份共用文件复制到另一个技能，两边跑全量测试。
+2. `python3 scripts/guideline_rules.py build --from <规范工作目录> --library-version <新版本> --out references/shared/guideline-rules.json`（词表取自 `vocabulary.json`）。
+3. 把 `references/shared/` 整个目录和两份共用脚本复制到另一个技能，两边跑全量测试（见 [shared-layer.md](shared-layer.md) 第四节）。
 4. 规则库进入两个技能的工程规则身份：版本变化后，受影响的设计和审查按各自的复验规则重新打开。
 
 ## 七、工程取值

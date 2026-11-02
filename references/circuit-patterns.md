@@ -13,12 +13,14 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。模�
 # <功能标题>
 功能：一句话。
 适用范围：功率/电压/频率/隔离等级。
+电路类型：规则库词表的电路类型名（`references/shared/vocabulary.json`，多个用、分隔；没有对应类型写 无）
 ## 做法
 ### <做法名>
 - 适用范围：这种做法在什么条件下优于别的做法
 - 核心器件类：指向 part-roles.md 的二级类
 - 必需外围：没有它电路不工作的元件
 - 必算项：任务 2.2 必须做的计算（对应 calculation-preflight 的类型）
+- 落实规则：这种做法落实的共用规范规则编号（`references/shared/guideline-rules.md`，只写 active、按本模式电路类型/器件类别/全板触发、且做法正文确实做到了其 asg_action 的；没有写 无，可括注原因）
 - 已知坑：每条引用审查待办（review:<目录>/<编号>）或手册页码；没有来源的坑不写
 - 来源：参考设计板名（raw/Designexample/…）或手册路径
 ```
@@ -32,6 +34,10 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。模�
   设计完成后补写模式文件。`render_design_report.py` 核对：模式文件和做法标题存在，或 lessons.json 里有这条登记。
 - 每块新板子至少新增或修订一个模式；审查意见归因为 `knowledge_missing` 且涉及电路做法时，改的就是这里的"已知坑"或"必算项"。
 - 模式里不写具体型号的参数值；型号的比较在 `selection.json`。
+- 模式→规则映射（2026-11-02，与 SR `catalog.BASIS` 对称）：`scripts/circuit_patterns.py` 读每个模式的电路类型和每种做法的落实规则；
+  `tests/test_circuit_patterns.py` 守编号存在、active、不被基线排除、与声明的电路类型相容。分页方案标注了某做法，设计完成核对就要求
+  `guideline_scope.circuit_types` 含它声明的类型、它落实的规则按范围适用（否则 `guideline_scope_pattern`），再按普通覆盖要求被引用（`guideline_uncovered`）。
+  新增或修订做法时同时改落实规则行；规则只有部分被做法覆盖（如只算了相位裕量没算增益裕量）时不引用，补齐必算项后再加。
 
 ## 现有模式
 

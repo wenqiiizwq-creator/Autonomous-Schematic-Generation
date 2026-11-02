@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""共用规范规则库（G01–G09）：校验、汇编、按适用条件选出规则、统计覆盖。
+"""共用规范规则库（G01–G09）：校验、汇编、按适用条件选出规则、统计覆盖；共用层指纹。
 
-本文件与 references/guideline-rules.json、references/guideline-rules.md 在 ASG 与 SR 两个技能里是同一份字节，
-改动时两边一起改（SR 的 test_guideline_rules.py 在两边都装了时逐字节比对）。只用标准库，不导入任一技能的模块。
+本文件、scripts/stress_check.py（共用应力核对）和 references/shared/ 下的文件是 ASG 与 SR 的共用层，两个技能里是同一份字节，
+改动时两边一起改（见 references/shared/shared-layer.md；两边的对齐测试逐字节比对）。只用标准库，不导入任一技能的模块。
 
     python3 guideline_rules.py check BUNDLE                       校验汇编文件
-    python3 guideline_rules.py build --from DIR --base BUNDLE --library-version V --out PATH
-                                                                  从 DIR 下各 G0x_规则登记.json 汇编（词表取自 BASE）
+    python3 guideline_rules.py build --from DIR --library-version V --out PATH
+                                                                  从 DIR 下各 G0x_规则登记.json 汇编（词表取自 vocabulary.json）
     python3 guideline_rules.py select BUNDLE [--baseline B] [--circuit-type T ...] [--device-kind K ...]
                                                                   列出适用规则
     python3 guideline_rules.py value NAME [BUNDLE]                 读一项工程取值
+    python3 guideline_rules.py shared                              共用层指纹与逐文件 sha256
 """
 import argparse
 import hashlib
@@ -21,7 +22,18 @@ import sys
 from pathlib import Path
 
 BUNDLE_SCHEMA_VERSION = 1
-BUNDLE_PATH = Path(__file__).resolve().parent.parent / 'references' / 'guideline-rules.json'
+SKILL_ROOT = Path(__file__).resolve().parent.parent
+SHARED_DIR = SKILL_ROOT / 'references' / 'shared'
+BUNDLE_PATH = SHARED_DIR / 'guideline-rules.json'
+DERATING_PATH = SHARED_DIR / 'derating-rules.json'
+VOCABULARY_PATH = SHARED_DIR / 'vocabulary.json'       # 词表的唯一出处：基线、电路类型、器件类别（名字与标题）
+COMMODITY_PATH = SHARED_DIR / 'commodity-floors.json'  # 常规件最弱档：片式电阻、MLCC 可订购档、触点（厂家目录给的数）
+# 共用层的全部文件（相对技能根目录）：references/shared/ 里的每一份加本脚本。两技能同字节，指纹由它们现算。
+SHARED_FILES = ('references/shared/shared-layer.md', 'references/shared/guideline-rules.json',
+                'references/shared/guideline-rules.md', 'references/shared/derating-rules.json',
+                'references/shared/derating-rules.md', 'references/shared/stress-spec.md',
+                'references/shared/vocabulary.json', 'references/shared/commodity-floors.json',
+                'scripts/guideline_rules.py', 'scripts/stress_check.py')
 RULE_ID = re.compile(r'^G0[1-9]-\d{3}$')
 STATUSES = ('draft', 'active', 'retired')
 NATURES = ('shall', 'should', 'method', 'project')
@@ -81,6 +93,19 @@ def value_errors(name, entry):
 def load(path=None):
     """The bundle at path, else at $GUIDELINE_RULES (the tests point it at a library without rules), else the installed one."""
     return json.loads(Path(path or os.environ.get('GUIDELINE_RULES') or BUNDLE_PATH).read_text(encoding='utf-8'))
+
+
+def vocabulary(path=None):
+    """vocabulary.json flattened to the bundle's form: {'default_baseline', 'vocabulary': {trigger: [names]}}.
+    The file is the one place the names and titles live; SR's catalog and ASG's part classes are checked against it."""
+    raw = json.loads(Path(path or VOCABULARY_PATH).read_text(encoding='utf-8'))
+    return {'default_baseline': raw['default_baseline'],
+            'vocabulary': {key: [item['name'] for item in raw[key]] for key in TRIGGERS}}
+
+
+def commodity_floors(path=None):
+    """commodity-floors.json: chip-resistor floors by package, orderable MLCC rows and contact floors, with their basis."""
+    return json.loads(Path(path or COMMODITY_PATH).read_text(encoding='utf-8'))
 
 
 def rule_errors(rule, vocabulary, default_baseline):
@@ -158,6 +183,10 @@ def bundle_errors(bundle):
     default = bundle.get('default_baseline')
     if default not in vocabulary['baselines']:
         errors.append('default_baseline must be in vocabulary.baselines')
+    if VOCABULARY_PATH.is_file():   # the bundle carries a copy of the shared vocabulary; a changed vocabulary.json needs a rebuild
+        shared = globals()['vocabulary']()
+        if vocabulary != shared['vocabulary'] or default != shared['default_baseline']:
+            errors.append('vocabulary or default_baseline differs from references/shared/vocabulary.json: rebuild the bundle')
     rules = bundle.get('rules')
     if not isinstance(rules, list):
         return errors + ['rules must be a list']
@@ -189,6 +218,32 @@ def bundle_errors(bundle):
 def engineering_value(name, bundle=None):
     """The value of one engineering value (raises KeyError when the bundle does not hold it)."""
     return (bundle if bundle is not None else load())['engineering_values'][name]['value']
+
+
+def shared_files(root=SKILL_ROOT):
+    """{relative path: sha256} of every shared-layer file installed under root."""
+    return {name: hashlib.sha256((Path(root) / name).read_bytes()).hexdigest() for name in SHARED_FILES}
+
+
+def shared_digest(root=SKILL_ROOT):
+    """One fingerprint of the whole shared layer: the sha256 of its files' sha256 list in SHARED_FILES order.
+    Reports bind to it; a plan or audit written against another digest is stale."""
+    return hashlib.sha256('\n'.join(shared_files(root)[n] for n in SHARED_FILES).encode('utf-8')).hexdigest()
+
+
+def shared_versions(root=SKILL_ROOT):
+    """The versions the shared layer carries: the rule library's and the derating table's."""
+    root = Path(root)
+    library = json.loads((root / SHARED_FILES[1]).read_text(encoding='utf-8'))
+    derating = json.loads((root / SHARED_FILES[3]).read_text(encoding='utf-8'))
+    return {'shared_sha256': shared_digest(root), 'library_version': library['library_version'],
+            'derating_version': derating['version']}
+
+
+def shared_label(root=SKILL_ROOT):
+    """共用层 <指纹前 12 位>，规则库 <版本>，降额 v<版本> — the one line both reports print."""
+    v = shared_versions(root)
+    return '共用层 %s，规则库 %s，降额 v%s' % (v['shared_sha256'][:12], v['library_version'], v['derating_version'])
 
 
 def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
@@ -254,9 +309,10 @@ def coverage(bundle, applicable, cited, not_applicable=None):
     }
 
 
-def build(registry_dir, base, library_version):
+def build(registry_dir, library_version):
     """Gather the rules of every G0x_规则登记.json under registry_dir into one bundle; the vocabulary and default
-    baseline come from the installed bundle (base)."""
+    baseline come from references/shared/vocabulary.json."""
+    base = vocabulary()
     rules, specs, values = [], {}, {}
     for path in sorted(Path(registry_dir).rglob('G0*_规则登记.json')):
         registry = json.loads(path.read_text(encoding='utf-8'))
@@ -288,7 +344,6 @@ def main(argv=None):
     check.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
     make = sub.add_parser('build')
     make.add_argument('--from', dest='source', required=True)
-    make.add_argument('--base', default=str(BUNDLE_PATH))
     make.add_argument('--library-version', required=True)
     make.add_argument('--out', required=True)
     pick = sub.add_parser('select')
@@ -299,9 +354,15 @@ def main(argv=None):
     read = sub.add_parser('value')
     read.add_argument('name')
     read.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
+    sub.add_parser('shared')
     args = parser.parse_args(argv)
+    if args.command == 'shared':
+        for name, digest in shared_files().items():
+            print('%s  %s' % (digest, name))
+        print(shared_label())
+        return 0
     if args.command == 'build':
-        bundle = build(args.source, load(args.base), args.library_version)
+        bundle = build(args.source, args.library_version)
         errors = bundle_errors(bundle)
         if not errors:
             Path(args.out).write_text(dump(bundle), encoding='utf-8')

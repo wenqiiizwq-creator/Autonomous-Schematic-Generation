@@ -327,13 +327,12 @@ class PerformanceTests(unittest.TestCase):
         self.intent['components'][0]['footprint'] = 'Resistor_SMD:R_0805_2012Metric'   # 100 V × 0.75
         self.assertFalse(any('R1（' in h for h in cr.requirement_hints(self.record, self.intent)))
 
-    @unittest.skipUnless(SR_PASSIVE.is_file(), 'schematic-review not installed')
-    def test_the_voltage_floors_are_schematic_reviews(self):
-        found = {}
-        for node in ast.parse(SR_PASSIVE.read_text(encoding='utf-8')).body:
-            if isinstance(node, ast.Assign) and any(getattr(t, 'id', '') == 'RESISTOR_FLOORS' for t in node.targets):
-                found = eval(compile(ast.Expression(node.value), str(SR_PASSIVE), 'eval'))
-        self.assertEqual({k: v[1] for k, v in found.items()}, cr.RESISTOR_VOLTAGE_FLOORS)
+    def test_the_voltage_floors_are_the_shared_layers(self):
+        # 2026-11-02 (user: 最弱档收进共用层): the same file SR's passive_stress reads
+        import guideline_rules
+        floors = guideline_rules.commodity_floors()['chip_resistor']['packages']
+        self.assertEqual({p: v['voltage_v'] for p, v in floors.items()}, cr.RESISTOR_VOLTAGE_FLOORS)
+        self.assertEqual(cr.ASSUMED_PACKAGE, guideline_rules.engineering_value('assumed_resistor_package'))
 
     def test_pending_calculation_is_visible_not_complete(self):
         entry = self.record['components'][0]

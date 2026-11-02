@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.3.0",
+  "library_version": "1.4.1",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -65,13 +65,13 @@
     ]
   },
   "specs": {
-    "G01": "1.1",
-    "G02": "1.1",
-    "G03": "1.2",
+    "G01": "1.2",
+    "G02": "1.2",
+    "G03": "1.3",
     "G04": "1.0",
     "G05": "1.0"
   },
-  "content_sha256": "e48fb80eb558e2ce5586d5a60a0c9727e86ed6587ec03bbd7f3da7986cc4da88",
+  "content_sha256": "77dd8c2f140c0dcd711edb29073ec41cb455a53f890bea8c7592824cb8c6e194",
   "rules": [
     {
       "id": "G01-001",
@@ -13717,6 +13717,13 @@
       "confirmed": "2026-11-01",
       "spec": "G02"
     },
+    "assumed_resistor_package": {
+      "value": "0402",
+      "applies": "片式电阻没有封装（或封装不在最弱档表里）时，按此封装的最弱档定界；SR 与 ASG 同用",
+      "basis": "受控采购范围里最小的常用封装，取它是最保守的一档；工程取值",
+      "confirmed": "user:2026-10-27（同上），2026-11-02 由 passive_stress 迁入 G02",
+      "spec": "G02"
+    },
     "est_bjt_hfe": {
       "value": 1.5,
       "unit": "倍",
@@ -14003,6 +14010,26 @@
       "confirmed": "2026-11-01",
       "spec": "G05"
     },
+    "soa_segment_share": {
+      "value": {
+        "CONSTANT_POWER": 1.0,
+        "THERMAL_INSTABILITY": 0.8
+      },
+      "applies": "MOSFET 高温 SOA（R11）：按持续时间选 25 °C 曲线、按开始壳温降额后，工作点允许占降额后功率的比例；恒功率段 CONSTANT_POWER，热不稳定段 THERMAL_INSTABILITY",
+      "basis": "四份降额标准都没有 MOSFET 安全工作区的降额值（GJB/Z 35 表9 只给功率双极晶体管的集电极-发射极电压与集电极电流，即 BJT-SOA-V/BJT-SOA-I）；工程取值，不是厂家保证",
+      "confirmed": "user:2026-10-23，2026-11-02 由降额规范迁入 G03",
+      "spec": "G03"
+    },
+    "thermal_calc_trigger": {
+      "value": {
+        "power_w": 0.3,
+        "rating_share": 0.5
+      },
+      "applies": "ASG 选型：线性稳压、采样电阻、钳位/泄放电阻等最坏功耗达到 power_w 或封装额定功率的 rating_share 时，按手册热阻估算结温/温升，作为一条带 checks 的计算",
+      "basis": "何时做热计算的触发条件，不是判据；判据是本表的温度规则。数值沿用 ASG 2026-10-16 起的写法",
+      "confirmed": "user:2026-10-29，2026-11-02 由降额规范迁入 G01",
+      "spec": "G01"
+    },
     "typical_band": {
       "value": 0.3,
       "unit": "比例",
@@ -14010,6 +14037,13 @@
       "basis": "估算不确定度取值（定界表 G9），不是厂家保证",
       "confirmed": "user:2026-10-23，2026-11-01 由降额规范迁入 G02",
       "spec": "G02"
+    },
+    "unset_level": {
+      "value": "I",
+      "applies": "项目降额等级未定时，常规件应力预判与 BOM 最低额定按此等级取值",
+      "basis": "取本规范最严的一级，不另设倍数或比例",
+      "confirmed": "user:2026-10-29，2026-11-02 由降额规范迁入 G01",
+      "spec": "G01"
     },
     "wca_sigma_factor": {
       "value": 1.0,
@@ -14035,6 +14069,14 @@
       "applies": "G02-016：允许用统计法放行的后果类；器件损坏、过热、安全、保护判据用 EVA 或保证值",
       "basis": "PD-ED-1212 第 3 页；与 SR“估算不放行损坏类判据”一致",
       "confirmed": "2026-11-01",
+      "spec": "G02"
+    },
+    "weakest_share": {
+      "value": 0.5,
+      "unit": "比例",
+      "applies": "BOM 只写了阻值、精度、封装而没写额定时，按已写字段能买到的最弱件定界：封装最弱档（commodity-floors.json 片式电阻）× 此比例；SR passive_stress 预判与 ASG 设计完成核对同用",
+      "basis": "已核采购范围内存在额定只有封装最弱档一半的器件（Susumu RG1005 0.032 W），不是厂家保证",
+      "confirmed": "user:2026-10-27（设计时考虑功耗，除阻值和精度外还要写上功率等级，作为给以后的约束），2026-11-02 由 passive_stress 迁入 G02",
       "spec": "G02"
     }
   }

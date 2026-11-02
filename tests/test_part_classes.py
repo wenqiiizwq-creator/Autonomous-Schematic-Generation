@@ -83,15 +83,23 @@ class ClassTests(unittest.TestCase):
         self.assertEqual(('tvs', None), pc.kind_of(part('D1', 'Device:D', Kind='tvs')))
         self.assertIn('不是器件类型', pc.kind_of(part('D1', 'Device:D', Kind='suppressor'))[1])
 
+    def test_kind_vocabulary_is_the_shared_vocabulary(self):
+        # 2026-11-02 (user: 词表进共用层): names and titles come from references/shared/vocabulary.json, not from SR's code
+        import json
+        import guideline_rules
+        shared = json.loads(guideline_rules.VOCABULARY_PATH.read_text(encoding='utf-8'))['device_kinds']
+        self.assertEqual({x['name'] for x in shared}, set(pc.KINDS) - {'mechanical'})
+        for item in shared:
+            self.assertEqual(pc.KINDS[item['name']].title, item['title'], item['name'])
+
     @unittest.skipUnless((SR / 'device_kinds.py').is_file(), 'schematic-review not installed')
-    def test_kind_vocabulary_matches_schematic_review(self):
+    def test_kind_cues_cover_schematic_reviews(self):
+        # the classifier cues are each skill's own; ASG's must at least contain SR's for every kind (parity, not vocabulary)
         sys.path.insert(0, str(SR))
         try:
             import device_kinds
         finally:
             sys.path.remove(str(SR))
-        sr = set(device_kinds.KINDS) - {'unknown'}
-        self.assertEqual(sr, set(pc.KINDS) - {'mechanical'})
         for name, kind in device_kinds.KINDS.items():
             if name in pc.KINDS:
                 self.assertLessEqual(set(kind.cues), set(pc.KINDS[name].cues), name)

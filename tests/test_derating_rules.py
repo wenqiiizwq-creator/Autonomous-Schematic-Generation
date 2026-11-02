@@ -1,6 +1,6 @@
 """The derating spec (I/II/III levels from T/CPSS 1013, GJB/Z 35 and T/CPSS 1006) is one file shared with
-schematic-review: every rule names a known kind, a measure, a condition and a cited page, the levels run from most to
-least derating, and both repositories hold the same bytes (user 2026-10-27)."""
+schematic-review (references/shared, compared byte for byte by test_guideline_closure): every rule names a known kind,
+a measure, a condition and a cited page, and the levels run from most to least derating (user 2026-10-27)."""
 import hashlib
 import json
 import re
@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from schematic_layout import part_classes as pc
 
-JSON_PATH = ROOT / 'references' / 'derating-rules.json'
-MD_PATH = ROOT / 'references' / 'derating-rules.md'
-SR = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'references'
+JSON_PATH = ROOT / 'references' / 'shared' / 'derating-rules.json'
+MD_PATH = ROOT / 'references' / 'shared' / 'derating-rules.md'
+import guideline_rules
 LIBRARY = Path.home() / 'Documents' / '知识库' / 'HardwareWiki'
 SPEC = json.loads(JSON_PATH.read_text(encoding='utf-8'))
 LEVELS = ('I', 'II', 'III')
@@ -84,17 +84,18 @@ class DeratingSpecTests(unittest.TestCase):
             self.assertTrue(path.is_file(), source['path'])
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), source['sha256'], key)
 
-    def test_engineering_values_are_approved_and_listed(self):
-        # Values the standards do not give (user 2026-10-29: SOA 段系数并入降额规范；等级未定按 I 级) live in the spec's
-        # 工程取值 table, each with its basis and the user's approval.
-        values = SPEC['engineering_values']
+    def test_engineering_values_live_in_the_rule_library(self):
+        # Values the standards do not give (user 2026-10-29: SOA 段系数并入降额规范；等级未定按 I 级) moved into the rule
+        # library on 2026-11-02 (user: 迁进规则库): the derating table holds none, its document points at the library.
+        self.assertNotIn('engineering_values', SPEC)
+        values = guideline_rules.load()['engineering_values']
         self.assertEqual(values['unset_level']['value'], 'I')
         self.assertEqual(values['soa_segment_share']['value'], {'CONSTANT_POWER': 1.0, 'THERMAL_INSTABILITY': 0.8})
         text = MD_PATH.read_text(encoding='utf-8')
-        for name, entry in values.items():
-            self.assertRegex(entry['approved'], r'^user:\d{4}-\d{2}-\d{2}$', name)
-            self.assertTrue(entry['basis'] and entry['applies'], name)
-            self.assertRegex(text, r'(?m)^\| `%s` \|.*\| %s \|$' % (name, entry['approved']), name)
+        for name in ('unset_level', 'soa_segment_share', 'thermal_calc_trigger'):
+            self.assertRegex(values[name]['confirmed'], r'^user:\d{4}-\d{2}-\d{2}', name)
+            self.assertIn('`%s`' % name, text)
+        self.assertNotRegex(text, r'(?m)^\| `unset_level` \|')
 
     def test_a_missing_capacitor_voltage_is_chosen_by_the_spec(self):
         # 2026-10-29 (user: 类似这种单一的规则，都先不要，全都并入到降额规范里面去): no 1.5–2× rule of thumb
@@ -106,15 +107,11 @@ class DeratingSpecTests(unittest.TestCase):
 
     def test_the_thermal_calculation_trigger_is_the_spec_value(self):
         # 2026-10-29 (user: 这些也都处理): when to estimate junction temperature is named in the spec, not in the text
-        self.assertEqual(SPEC['engineering_values']['thermal_calc_trigger']['value'], {'power_w': 0.3, 'rating_share': 0.5})
+        self.assertEqual(guideline_rules.engineering_value('thermal_calc_trigger'), {'power_w': 0.3, 'rating_share': 0.5})
         text = (ROOT / 'references' / 'requirements-to-intent.md').read_text(encoding='utf-8')
         self.assertIn('thermal_calc_trigger', text)
         self.assertNotIn('0.3 W', text)
 
-    @unittest.skipUnless((SR / 'derating-rules.json').is_file(), 'schematic-review not installed')
-    def test_schematic_review_holds_the_same_files(self):
-        for name in ('derating-rules.json', 'derating-rules.md', 'stress-spec.md'):
-            self.assertEqual((SR / name).read_bytes(), (ROOT / 'references' / name).read_bytes(), name)
 
 
 if __name__ == '__main__':
