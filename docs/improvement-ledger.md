@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 典型电路必算项补到设计准则深度 (2026-11-02)
+
+逐条核对草案的 48 处 uncertain：37 处补齐计算、限值或生产/测试约束并引用，10 处因适用类型或文本边界留作准则侧待办，1 处因功能不对应不引用。修改 14 个典型电路文件，报告保留逐项处置和按电路类型统计的前后对比，输入草案随提交保留；不改共用层、SKILL.md、落实规则标签及既有来源。归因计数为 37 处实际补齐的知识缺项，其余 11 处仅在报告记录判断。
+
+- Event: user:2026-11-02 (请安排这样的工作，并调用codex…)
+- Causes: knowledge_missing 37
+- Changed: references/typical-circuits/ac-input-protection.md, references/typical-circuits/aux-bias-supply.md, references/typical-circuits/aux-overvoltage-latch.md, references/typical-circuits/current-sensing.md, references/typical-circuits/isolated-feedback.md, references/typical-circuits/ntc-temperature-sensing.md, references/typical-circuits/output-filter-storage.md, references/typical-circuits/pd-output-control.md, references/typical-circuits/pfc-boost.md, references/typical-circuits/production-test-points.md, references/typical-circuits/reviewed-bias-and-latch.md, references/typical-circuits/synchronous-rectification.md, references/typical-circuits/type-c-port-protection.md, references/typical-circuits/zcd-sensing.md, docs/proposals/typical-circuits-criteria-gap-2026-11-02.md, evals/typical-circuits-criteria-draft.json, docs/improvement-ledger.md
+- Gates: 指定五组 pytest 103 passed；check_ledger.py PASS；48 处处置一致；11 个受保护文件字节不变
+
 ## 正式电路用语：设计准则、典型电路、实现方案（连文件名与字段一起改） (2026-11-02)
 
 用户问“规则、模式、覆盖这些名词在电路专用术语里怎么讲”，随后要求把它们改成正式电路名词，并选择连文件名和字段一起改。
