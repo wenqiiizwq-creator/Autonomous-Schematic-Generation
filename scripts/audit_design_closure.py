@@ -709,10 +709,25 @@ def audit_estimate_margins(calculations, error):
     return risks
 
 
-def audit_guidelines(record, calculations, work, error, need, library=None):
+def component_guidelines(artifact_root, error):
+    """{ref: guidelines} of record/component-requirements.json: task 2.3's selection requirements may cite rules too
+    (user 2026-11-01: 开工). The file's own audit checks the field's shape."""
+    path = Path(artifact_root) / 'record' / 'component-requirements.json'
+    if not path.is_file():
+        return {}
+    try:
+        entries = json.loads(path.read_text(encoding='utf-8')).get('components', [])
+        return {e['ref']: e for e in entries if e.get('guidelines')}
+    except (ValueError, AttributeError, TypeError, KeyError) as exc:
+        error('schema', 'record/component-requirements.json: %s' % exc)
+        return {}
+
+
+def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
-    (references/guideline-rules.md). Each applicable rule is cited by a calculation or work item, or held not
-    applicable with a reason; one that closes after the schematic is cited by a work item, its handoff downstream."""
+    (references/guideline-rules.md). Each applicable rule is cited by a calculation, work item or component requirement,
+    or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
+    downstream."""
     library = library or guideline_rules.load()
     scope = record.get('guideline_scope')
     problems = guideline_rules.scope_errors(scope, library)
@@ -721,7 +736,8 @@ def audit_guidelines(record, calculations, work, error, need, library=None):
     if problems:
         return None
     cited, by_work = {}, set()
-    for kind, table in (('calc', calculations), ('work', work)):
+    components = component_guidelines(artifact_root, error) if artifact_root else {}
+    for kind, table in (('calc', calculations), ('work', work), ('component', components)):
         for key, row in table.items():
             ids = row.get('guidelines', [])
             if not (isinstance(ids, list) and all(isinstance(i, str) for i in ids)):
@@ -739,7 +755,7 @@ def audit_guidelines(record, calculations, work, error, need, library=None):
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
         error('guideline_cited_not_applicable', '%s：规则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
     for gid in found['uncovered']:
-        need('guideline_uncovered', '%s：在计算或待办的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
+        need('guideline_uncovered', '%s：在计算、待办或器件性能要求的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
     for gid in found['downstream']:
         if gid in found['covered'] and gid not in by_work:
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
@@ -975,7 +991,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
         if record['guideline_version'] != 1:
             error('schema', 'guideline_version must be 1')
         else:
-            guidelines = audit_guidelines(record, calculations, work, error, need)
+            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root)
     elif guideline_rules.load()['rules']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/guideline-rules.md）')
     gaps = 'gap_version' in record

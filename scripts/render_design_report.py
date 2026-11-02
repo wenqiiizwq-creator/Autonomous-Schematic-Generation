@@ -704,7 +704,7 @@ def render_guidelines(guidelines):
     where = lambda gid: ('、'.join(guidelines['covered'].get(gid) or [])
                          or ('不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else '未覆盖'))
     out = ['## 共用规范规则覆盖', '',
-           '本设计按规则库 %s 适用的共用规范规则；“落实处”是引用它的计算（calc）或待办（work）。' % guidelines['library_version'], '',
+           '本设计按规则库 %s 适用的共用规范规则；“落实处”是引用它的计算（calc）、待办（work）或器件性能要求（component）。' % guidelines['library_version'], '',
            '| 规范规则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
     for gid in guidelines['applicable']:
         c = cards.get(gid, {'title': '', 'source': [], 'closing_stage': ''})

@@ -212,6 +212,8 @@ def entry_errors(entry, comp=None):
         errors.append('entry needs ref, purpose and kind')
     if entry.get('definition_status') not in ('complete', 'pending'):
         errors.append('definition_status must be complete/pending')
+    if not (isinstance(entry.get('guidelines', []), list) and all(text(g) for g in entry.get('guidelines', []))):
+        errors.append('guidelines must be a list of rule ids')
     if entry.get('display') not in ('inline', 'note'):
         errors.append('display must be inline/note')
     procurement = entry.get('procurement', {})

@@ -10,10 +10,12 @@
                                                                   从 DIR 下各 G0x_规则登记.json 汇编（词表取自 BASE）
     python3 guideline_rules.py select BUNDLE [--baseline B] [--circuit-type T ...] [--device-kind K ...]
                                                                   列出适用规则
+    python3 guideline_rules.py value NAME [BUNDLE]                 读一项工程取值
 """
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -30,6 +32,10 @@ RELATION_KEYS = ('related', 'primary', 'reuses', 'conflicts')
 RULE_KEYS = {'id', 'title', 'spec', 'version', 'status', 'nature', 'applies_when', 'not_applicable', 'tailoring',
              'inputs', 'asg_action', 'sr_check', 'source', 'relations', 'closing_stage'}
 SOURCE_KEYS = ('document', 'edition', 'clause', 'page')
+VALUE_NAME = re.compile(r'^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$')
+VALUE_KEYS = {'spec', 'value', 'unit', 'applies', 'basis', 'confirmed'}
+# 规则正文里点名工程取值的两种写法：反引号括住的蛇形名，或 G0x 前缀的裸名（如 g03_loop_pm_min）
+VALUE_CITE = re.compile(r'`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`|\b(g0[1-9]_[a-z0-9_]*[a-z0-9])\b')
 PREVIEW_WORDS = ('公开预览', '非全文', 'preview')   # 公开预览不能作规则依据
 
 
@@ -37,13 +43,44 @@ def _text(value):
     return isinstance(value, str) and bool(value.strip())
 
 
-def content_sha256(rules):
-    return hashlib.sha256(json.dumps(rules, ensure_ascii=False, sort_keys=True,
+def content_sha256(rules, values=None):
+    """Hash of the rules, and of the engineering values when there are any (a bundle without values keeps the
+    rules-only hash)."""
+    content = {'rules': rules, 'engineering_values': values} if values else rules
+    return hashlib.sha256(json.dumps(content, ensure_ascii=False, sort_keys=True,
                                      separators=(',', ':')).encode('utf-8')).hexdigest()
 
 
-def load(path=BUNDLE_PATH):
-    return json.loads(Path(path).read_text(encoding='utf-8'))
+def cited_values(rule):
+    """Engineering value names a rule's text cites."""
+    text = ' '.join(str(rule.get(k) or '') for k in ('asg_action', 'sr_check', 'tailoring', 'not_applicable')) \
+        + ' ' + ' '.join(str(x) for x in rule.get('inputs') or [])
+    return {a or b for a, b in VALUE_CITE.findall(text)}
+
+
+def value_errors(name, entry):
+    errors = []
+    if not VALUE_NAME.match(str(name)):
+        errors.append('engineering value %s: name must be snake_case' % name)
+    if not isinstance(entry, dict):
+        return errors + ['engineering value %s is not an object' % name]
+    if set(entry) - VALUE_KEYS:
+        errors.append('engineering value %s: unknown fields %s' % (name, sorted(set(entry) - VALUE_KEYS)))
+    if not (isinstance(entry.get('spec'), str) and re.match(r'^G0[1-9]$', entry['spec'])):
+        errors.append('engineering value %s: spec must look like G02' % name)
+    if 'value' not in entry:
+        errors.append('engineering value %s: value is required' % name)
+    for key in ('applies', 'basis', 'confirmed'):
+        if not _text(entry.get(key)):
+            errors.append('engineering value %s: %s is required' % (name, key))
+    if 'unit' in entry and not isinstance(entry['unit'], str):
+        errors.append('engineering value %s: unit must be text' % name)
+    return errors
+
+
+def load(path=None):
+    """The bundle at path, else at $GUIDELINE_RULES (the tests point it at a library without rules), else the installed one."""
+    return json.loads(Path(path or os.environ.get('GUIDELINE_RULES') or BUNDLE_PATH).read_text(encoding='utf-8'))
 
 
 def rule_errors(rule, vocabulary, default_baseline):
@@ -130,15 +167,28 @@ def bundle_errors(bundle):
     if ids != sorted(ids, key=str):
         errors.append('rules must be sorted by id')
     known = set(ids)
+    values = bundle.get('engineering_values', {})
+    if not isinstance(values, dict):
+        return errors + ['engineering_values must be an object']
+    for name, entry in values.items():
+        errors.extend(value_errors(name, entry))
     for rule in rules:
         errors.extend(rule_errors(rule, vocabulary, default))
         for key, targets in (rule.get('relations') or {}).items() if isinstance(rule, dict) else ():
             for target in targets if isinstance(targets, list) else ():
                 if target not in known:
                     errors.append('%s: relations.%s names unknown rule %s' % (rule.get('id'), key, target))
-    if bundle.get('content_sha256') != content_sha256(rules):
+        if isinstance(rule, dict):
+            for name in sorted(cited_values(rule) - set(values)):
+                errors.append('%s: cites engineering value %s, which the bundle does not hold' % (rule.get('id'), name))
+    if bundle.get('content_sha256') != content_sha256(rules, values):
         errors.append('content_sha256 does not match the rules')
     return errors
+
+
+def engineering_value(name, bundle=None):
+    """The value of one engineering value (raises KeyError when the bundle does not hold it)."""
+    return (bundle if bundle is not None else load())['engineering_values'][name]['value']
 
 
 def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
@@ -207,15 +257,24 @@ def coverage(bundle, applicable, cited, not_applicable=None):
 def build(registry_dir, base, library_version):
     """Gather the rules of every G0x_规则登记.json under registry_dir into one bundle; the vocabulary and default
     baseline come from the installed bundle (base)."""
-    rules, specs = [], {}
+    rules, specs, values = [], {}, {}
     for path in sorted(Path(registry_dir).rglob('G0*_规则登记.json')):
         registry = json.loads(path.read_text(encoding='utf-8'))
         specs[registry['spec']] = registry['version']
         rules.extend(registry['rules'])
+        for name, entry in (registry.get('engineering_values') or {}).items():
+            if name in values:
+                raise ValueError('engineering value %s is defined by both %s and %s'
+                                 % (name, values[name].get('spec'), registry['spec']))
+            values[name] = dict(entry, spec=registry['spec'])
     rules.sort(key=lambda r: str(r.get('id')))
-    return {'schema_version': BUNDLE_SCHEMA_VERSION, 'library_version': library_version,
-            'default_baseline': base['default_baseline'], 'vocabulary': base['vocabulary'], 'specs': specs,
-            'content_sha256': content_sha256(rules), 'rules': rules}
+    values = dict(sorted(values.items()))
+    bundle = {'schema_version': BUNDLE_SCHEMA_VERSION, 'library_version': library_version,
+              'default_baseline': base['default_baseline'], 'vocabulary': base['vocabulary'], 'specs': specs,
+              'content_sha256': content_sha256(rules, values), 'rules': rules}
+    if values:
+        bundle['engineering_values'] = values
+    return bundle
 
 
 def dump(bundle):
@@ -237,6 +296,9 @@ def main(argv=None):
     pick.add_argument('--baseline')
     pick.add_argument('--circuit-type', action='append', default=[])
     pick.add_argument('--device-kind', action='append', default=[])
+    read = sub.add_parser('value')
+    read.add_argument('name')
+    read.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
     args = parser.parse_args(argv)
     if args.command == 'build':
         bundle = build(args.source, load(args.base), args.library_version)
@@ -249,7 +311,12 @@ def main(argv=None):
     if errors:
         print('\n'.join(errors), file=sys.stderr)
         return 1
-    if args.command == 'select':
+    if args.command == 'value':
+        if args.name not in bundle.get('engineering_values', {}):
+            print('no engineering value %s' % args.name, file=sys.stderr)
+            return 1
+        print(json.dumps(bundle['engineering_values'][args.name], ensure_ascii=False))
+    elif args.command == 'select':
         for rule in select(bundle, args.baseline, args.circuit_type, args.device_kind):
             print('%s  %s  [%s]' % (rule['id'], rule['title'], rule['closing_stage']))
     else:

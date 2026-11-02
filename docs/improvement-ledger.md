@@ -8,6 +8,20 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 规则库 1.0.0（G01–G03）装入：接口电路类型、选型引用规则 (2026-11-01)
+
+用户确认《规则库 v1.0 技能接入方案》的四项决定并说“开工”；方案第四节写明确认方案即视为批准纲要小改。
+1.1 从需求声明 6 个对外接口电路类型，写入 `guideline_scope`，接口规则靠它选中；2.3 的性能记录可写 `guidelines`，`audit_design_closure.py` 读 `record/component-requirements.json` 计入覆盖，落实处记 `component:<位号>`。
+共用文件同步：规则库 143 条、39 项工程取值；降额规范删去 `typical_band`、`forced_beta_k`（迁到 G02）。ASG 只读 `unset_level`，不受影响。
+真实规则库下核对：POWER_CONVERTER、POE_PD 范围适用 97 条，都不引用时 97 条待完成；全部引用后无 guideline 类问题；改航天基线再多 11 条待完成。同一范围下与 SR 选出的规则集相同。
+测试：设计待办和降额审计两组测试用无规则库，规则行为由 `test_guideline_closure.py` 覆盖。`test_find_parts` 的真实库比对在 main 上同样失败，与本次无关。发现但未改：示例 `build_compact.py` 仍给 `check_scene` 传已移除的 `grid=`，联调时临时兼容后跑通。
+
+- Event: user:2026-11-01 (开工)
+- Approved: user:2026-11-01
+- Outline: df4f8f0aaa826e52
+- Causes: rule_missing 1
+- Changed: SKILL.md, docs/improvement-ledger.md, references/component-requirements.md, references/derating-rules.json, references/derating-rules.md, references/design-closure.md, references/guideline-rules.json, references/guideline-rules.md, scripts/audit_design_closure.py, scripts/guideline_rules.py, scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, tests/test_derating_audit.py, tests/test_design_closure.py, tests/test_guideline_closure.py
+
 ## 接入共用规范规则库 G01–G09 (2026-10-31)
 
 用户确认《ASG与SR规则接入方案草稿》并要求执行（“请开始执行这个方案，慢慢来，一步一步来修改。遇到问题的时候先按照你的建议来执行。”）。

@@ -27,6 +27,7 @@
 | `requirements[]` | `parameter`, `op: eq/le/ge`, 有限数值 `value`, `unit`, `conditions`, `basis`, `source` |
 | `procurement` | `mode: spec/mpn/design_sheet` 与 `reason`；由物理引脚、行为、认证或不可替代曲线决定绑定时列 `binding_dependencies`，必须选 `mpn`；`design_sheet` 只用于带 `fields.DesignSheet` 的定制磁件 |
 | `selection` | `status: not_selected/candidate/qualified/by_spec/by_bom_spec/by_design_sheet`；候选与型号已核准时附 `mpn` 和选料途径 `route`；已核准另有 `properties[]`；受控规格核实用 `by_spec`；按 BOM 规格转交采购用 `by_bom_spec`；定制磁件按设计单核实用 `by_design_sheet` |
+| `guidelines` | 可选：这项选型落实的共用规范规则编号（[规则库](guideline-rules.md)），设计待办审计计入覆盖 |
 | `display` | `inline`：完整要求显示在元件旁；`note`：元件旁显示“要求见 CR-位号”，同页生成完整技术注释 |
 
 比较对象是采购性能：`power ge 3 W` 表示额定功率至少 3 W；`tolerance le 5 %` 表示容差不得大于 5%。

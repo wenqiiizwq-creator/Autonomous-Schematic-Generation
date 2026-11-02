@@ -96,6 +96,25 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertNotIn('guideline_uncovered', self.codes(result))
         self.assertEqual(result['guidelines']['not_applicable'], {'G04-001': '只接本板内部总线'})
 
+    def test_a_component_requirement_may_cite_a_rule(self):
+        self.record['calculations'][0]['guidelines'] = ['G01-001']
+        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
+        record_dir = self.root / 'record'
+        record_dir.mkdir()
+        (record_dir / 'component-requirements.json').write_text(
+            json.dumps({'components': [{'ref': 'U1', 'guidelines': ['G04-001']}]}), encoding='utf-8')
+        result = self.run_audit()
+        self.assertNotIn('guideline_uncovered', self.codes(result))
+        self.assertEqual(result['guidelines']['covered']['G04-001'], ['component:U1'])
+
+    def test_the_six_external_interface_types_select_their_rules(self):
+        real = guideline_rules.load(guideline_rules.BUNDLE_PATH)
+        for name in ('DC_48V', 'AC_MAINS', 'INDUSTRIAL_DI', 'POE_PD', 'VEHICLE_28V', 'SHIP_AC'):
+            self.assertIn(name, real['vocabulary']['circuit_types'])
+        none = guideline_rules.select(real, 'industrial_telecom', [], [])
+        poe = guideline_rules.select(real, 'industrial_telecom', ['POE_PD'], [])
+        self.assertGreater(len(poe), len(none))
+
     def test_a_downstream_rule_needs_a_work_item(self):
         self.record['work_items'][0]['guidelines'] = []
         self.record['calculations'][0]['guidelines'].append('G07-001')
@@ -117,7 +136,8 @@ class GuidelineClosureTests(unittest.TestCase):
     def test_a_library_with_rules_asks_for_the_scope_and_an_empty_one_does_not(self):
         del self.record['guideline_version'], self.record['guideline_scope']
         self.assertIn('guideline_scope_missing', self.codes(self.run_audit()))
-        result = self.run_audit(guideline_rules.load())
+        empty = dict(LIBRARY, rules=[], content_sha256=guideline_rules.content_sha256([]))
+        result = self.run_audit(empty)
         self.assertNotIn('guideline_scope_missing', self.codes(result))
         self.assertEqual(result['guidelines'], 'NOT_CHECKED')
 

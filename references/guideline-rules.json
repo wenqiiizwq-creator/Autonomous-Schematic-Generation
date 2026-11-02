@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "0.0.0",
+  "library_version": "1.0.0",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -28,7 +28,13 @@
       "HSSERIAL",
       "AV",
       "ISOLATION",
-      "DEBUG"
+      "DEBUG",
+      "DC_48V",
+      "AC_MAINS",
+      "INDUSTRIAL_DI",
+      "POE_PD",
+      "VEHICLE_28V",
+      "SHIP_AC"
     ],
     "device_kinds": [
       "relay",
@@ -58,7 +64,6157 @@
       "ic"
     ]
   },
-  "specs": {},
-  "content_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-  "rules": []
+  "specs": {
+    "G01": "1.1",
+    "G02": "1.1",
+    "G03": "1.1"
+  },
+  "content_sha256": "33aceeb577346bd10fbd670c58d93be2f0a330db525b2b9dfdfa78e0f1d05247",
+  "rules": [
+    {
+      "id": "G01-001",
+      "title": "设计输入给出范围或容差，不只给标称值",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "需求文档或用户输入"
+      ],
+      "asg_action": "1.1 需求追溯时把每条设计输入写成数值：给最小/最大范围，或标称值加容差。",
+      "sr_check": "逐条核对设计输入：只有标称值、无范围或容差的，记“设计输入不完整”（资料不足），不据此判电路缺陷；设计按标称值计算而输入实际有范围的，记缺陷线索交 G02 复核。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.1 a–b",
+          "page": "24"
+        },
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.10 a",
+          "page": "26"
+        },
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.2",
+          "page": "249（印刷 236）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "tailoring": "ECSS 原文为 shall，约束对象是需求文档；本规范在工业/通信默认基线下作工程方法采用（2026-11-01 评审确认）。",
+      "relations": {
+        "related": [
+          "G01-002"
+        ]
+      }
+    },
+    {
+      "id": "G01-002",
+      "title": "电源与接口电压写明测量点及线路压降",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "接口/电源定义"
+      ],
+      "asg_action": "电源与接口电压写明测量点（供电接口处还是设备端子）；两者不同时写出线路压降，设备端子电压 = 接口电压 − 线路压降。",
+      "sr_check": "核对每个电源与接口电压是否写明测量点；未写的记输入缺口；接口处电压被直接当作端子电压用于计算且线路有压降的，记缺陷线索交 G02。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.1 a–b",
+          "page": "24"
+        },
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.2 注 3",
+          "page": "13"
+        },
+        {
+          "document": "MIL-STD-1275F 军车28V直流输入特性",
+          "edition": "F 2022",
+          "clause": "5.2.5",
+          "page": "14（印刷 10）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-001"
+        ]
+      }
+    },
+    {
+      "id": "G01-003",
+      "title": "每条需求有唯一编号",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "每条设计输入给唯一编号，供计算、选型、待办和验证引用。",
+      "sr_check": "核对需求是否有唯一编号；以表格行或段落给出、无法被引用的，记追溯缺口（不判电路缺陷）。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.4–8.2.7",
+          "page": "25"
+        },
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.4 Traceability",
+          "page": "251（印刷 238）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-004",
+          "G01-005"
+        ]
+      }
+    },
+    {
+      "id": "G01-004",
+      "title": "每条需求单一、自含",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "一条需求只写一个要求，不依赖额外解释即可理解和验证。",
+      "sr_check": "抽查需求语句：一条中并列多个可分别验证的要求，或须参照别处解释才能判定的，记需求不单一，要求拆分或补全。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.4–8.2.7",
+          "page": "25"
+        },
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.8",
+          "page": "26"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-003",
+          "G01-005"
+        ]
+      }
+    },
+    {
+      "id": "G01-005",
+      "title": "需求与设计、验证双向追溯",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "设计中的计算、选型和待办引用需求编号；每条需求能追到实现与验证。",
+      "sr_check": "抽查需求→设计→验证两个方向：有需求无实现或无验证，或有设计约束找不到来源需求的，记追溯缺口；不把追溯缺口直接判为电路缺陷。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.2.3",
+          "page": "25"
+        },
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.4 Traceability",
+          "page": "251（印刷 238）"
+        },
+        {
+          "document": "ECSS-E-ST-10-02C Rev.1 验证",
+          "edition": "Rev.1 2018-02-01",
+          "clause": "5.2.3 b",
+          "page": "17"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-003",
+          "G01-004"
+        ]
+      }
+    },
+    {
+      "id": "G01-006",
+      "title": "需求中不得出现不可验证的用词",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "设计输入不用“适当、足够、典型、尽量、优化、最小化、等、和/或、快速、小、大”等不可验证用词；遇到用户原话含此类词，换算成数值并标 TBR（见 G01-007）。",
+      "sr_check": "在设计输入与需求追溯的需求语句中查找禁用词（备注、背景说明、示例不判）；出现即记为不可验证需求，要求给数值或标 TBR。可机检，命中后人工确认是否为需求语句。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "8.3.3 a（27 个禁用词）",
+          "page": "27"
+        },
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.4 Clarity",
+          "page": "250（印刷 237）"
+        }
+      ],
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G01-007",
+      "title": "未知输入按 TBR 登记估计值、理由、责任方与关闭条件",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "用户没给的工况（输入电压窗、源阻抗、环境温度、负载曲线等）用最佳估计值并标 TBR，写明理由、估计依据、确认责任方和关闭条件；估计值进入计算时在计算书里注明。",
+      "sr_check": "核对 TBR 清单：标了 TBR 但缺估计值、理由、责任方或关闭条件的，记 TBR 不完整（只有问题没有估计值的属 TBD）。",
+      "source": [
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.3",
+          "page": "250（印刷 237）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-008"
+        ]
+      }
+    },
+    {
+      "id": "G01-008",
+      "title": "设计假设不得当作用户要求",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "设计用到的每个工况注明来源：用户给定、标准默认值（引用 G01 规则编号）或设计假设；设计假设标 TBR。",
+      "sr_check": "核对设计用到的每个工况的来源；设计假设未标 TBR 或被当作用户要求的，记“未确认输入”，相关结论降为有条件结论。",
+      "source": [
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.3",
+          "page": "250（印刷 237）"
+        },
+        {
+          "document": "IEC 61160 Ed.2.0 设计评审",
+          "edition": "Ed.2.0 2005",
+          "clause": "6.4 d",
+          "page": "33（印刷 31）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-007"
+        ]
+      }
+    },
+    {
+      "id": "G01-009",
+      "title": "工况矩阵覆盖各寿命阶段与工作模式",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "工作模式清单"
+      ],
+      "asg_action": "建立工况矩阵：列为工作模式与寿命阶段（工作、待机、上电、掉电、故障、贮存、运输），行为输入电压、源阻抗、负载、环境温度等。",
+      "sr_check": "核对工况矩阵覆盖上下电、故障与非工作阶段；只给正常工作一种工况的，记工况不全。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-06C 技术需求规范",
+          "edition": "2009-03-06",
+          "clause": "附录 A.2.1 <5>–<6>",
+          "page": "29–30"
+        },
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.4 Completeness",
+          "page": "250（印刷 237）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "tailoring": "军用项目的寿命周期环境剖面另见 MIL-STD-810H Part One 4.2.2.3.1（第 21 页），环境试验量级属下游。",
+      "relations": {
+        "related": [
+          "G01-010"
+        ]
+      }
+    },
+    {
+      "id": "G01-010",
+      "title": "每个工作模式给出平均与峰值功耗",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "各模式负载"
+      ],
+      "asg_action": "每个工作模式给平均与峰值功耗及边界条件，宜给实际值。",
+      "sr_check": "核对各模式功耗；只给平均值而设计有与峰值相关的器件（熔断器、限流、储能）时，记输入缺口交 G03/G05。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "5.8.1 l–m",
+          "page": "31–32"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-009"
+        ]
+      }
+    },
+    {
+      "id": "G01-011",
+      "title": "每条需求有验证方法与阶段",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "为每条需求指定验证方法（试验、分析、设计评审、检查）和阶段。",
+      "sr_check": "核对验证矩阵：无验证方法或阶段的需求记缺口。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-02C Rev.1 验证",
+          "edition": "Rev.1 2018-02-01",
+          "clause": "5.2.1 d–e；5.2.2.1 a",
+          "page": "15"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-012"
+        ]
+      }
+    },
+    {
+      "id": "G01-012",
+      "title": "只靠分析或评审关闭的主要需求列下游验证",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "原理图阶段只能用分析或评审关闭、且影响主要功能或安全的需求，在技术转交待办中列出下游验证。",
+      "sr_check": "动态、热、EMC、安全等只做了静态计算或评审就标“已关闭”的，记为“下游待验证”，不接受为已验证；未列入技术转交待办的记缺口。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-02C Rev.1 验证",
+          "edition": "Rev.1 2018-02-01",
+          "clause": "5.2.2.1 d–e",
+          "page": "15"
+        },
+        {
+          "document": "ECSS-E-ST-10-02C Rev.1 验证",
+          "edition": "Rev.1 2018-02-01",
+          "clause": "5.2.2.4 a",
+          "page": "16"
+        },
+        {
+          "document": "IEC 61160 Ed.2.0 设计评审",
+          "edition": "Ed.2.0 2005",
+          "clause": "3.4 注 2",
+          "page": "19（印刷 17）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-011"
+        ]
+      }
+    },
+    {
+      "id": "G01-013",
+      "title": "对外接口逐针写明电气定义与对端",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "对端设备接口资料"
+      ],
+      "asg_action": "对每个对外连接器/接口逐针写明信号或电源名称、方向、单端/差分、额定电压与电流、电平定义、接地与回线、电流方向（漏/源），并写明对端设备与双方责任。",
+      "sr_check": "逐个对外接口核对原理图与接口定义一致（针脚、方向、电平、回线）；接口定义缺对端数据的记输入缺口。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "5.4 a–c",
+          "page": "26–27"
+        },
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "5.8.1 f–g",
+          "page": "30–31"
+        },
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "附录 E.3.4 b–c",
+          "page": "57"
+        },
+        {
+          "document": "Siemens FAQ 109477921 IEC 61131-2 编码器类型与数字输入（厂家转引，非标准原文）",
+          "edition": "V1.0 2015",
+          "clause": "2.3 表 2-2",
+          "page": "8"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-014"
+        ]
+      }
+    },
+    {
+      "id": "G01-014",
+      "title": "对外接口写明非正常行为",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "对每个对外接口写明非正常行为：对端掉电、本端掉电、反接、短路、热插拔，以及复用触点（如充电与通信共用）上的窜入。",
+      "sr_check": "核对接口定义是否覆盖非正常行为；缺的记输入缺口；非正常行为下的电路后果交 G04/G05 判。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "5.4 c",
+          "page": "27"
+        },
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "附录 E.3.4 c",
+          "page": "57"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-013"
+        ]
+      }
+    },
+    {
+      "id": "G01-015",
+      "title": "对外电气接口写明故障耐受",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "对每个对外电气接口写明本端能承受的故障电压/电流（如对端短路到电源、过压）。",
+      "sr_check": "核对每个对外接口是否有故障耐受数值；没有的记输入缺口；有数值的由 G05 核对保护器件是否满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "5.8.1 h",
+          "page": "31"
+        }
+      ],
+      "closing_stage": "schematic",
+      "tailoring": "验证属下游（故障注入试验）。",
+      "relations": {
+        "related": [
+          "G01-016"
+        ]
+      }
+    },
+    {
+      "id": "G01-016",
+      "title": "对外电气接口写明故障发射",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "对每个对外电气接口写明本端故障时向外施加的电压/电流上限。",
+      "sr_check": "核对每个对外接口是否有故障发射上限；没有的记输入缺口；有数值的由 G05 核对本端限流与隔离是否满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "5.8.1 h",
+          "page": "31"
+        }
+      ],
+      "closing_stage": "schematic",
+      "tailoring": "验证属下游（故障注入试验）。",
+      "relations": {
+        "related": [
+          "G01-015"
+        ]
+      }
+    },
+    {
+      "id": "G01-017",
+      "title": "电源输入接口的工况清单齐全",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [],
+      "asg_action": "每个电源输入写明：最小/最大稳态电压、源阻抗或线路压降、欠压与过压条件、暂降/中断、尖峰与浪涌、允许的浪涌电流、上游过流保护的类型与额定值；标准有默认值的引用对应 G01 规则，没有的标 TBR。",
+      "sr_check": "逐个电源输入核对清单项；缺项记输入缺口并指出影响的设计判断（如保持时间、器件耐压、熔断器选型）。保护器件规格（如防雷器通流量、漏电保护动作电流）不能代替设备须承受的工况，二者分开登记。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-10-24C Rev.1 接口管理",
+          "edition": "Rev.1 2024-11-15",
+          "clause": "附录 E.3.4 a",
+          "page": "56–57"
+        },
+        {
+          "document": "IEC 61160 Ed.2.0 设计评审",
+          "edition": "Ed.2.0 2005",
+          "clause": "附录 F.8 h",
+          "page": "65（印刷 63）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "relations": {
+        "related": [
+          "G01-001",
+          "G01-002",
+          "G01-007",
+          "G01-008",
+          "G01-018",
+          "G01-019",
+          "G01-020",
+          "G01-021",
+          "G01-022",
+          "G01-023",
+          "G01-024",
+          "G01-025",
+          "G01-026",
+          "G01-027",
+          "G01-028",
+          "G01-029",
+          "G01-030",
+          "G01-031",
+          "G01-034",
+          "G01-035",
+          "G01-036",
+          "G01-037",
+          "G01-038",
+          "G01-039",
+          "G01-040",
+          "G01-041",
+          "G01-042",
+          "G01-043",
+          "G01-044",
+          "G01-045",
+          "G01-046",
+          "G01-047",
+          "G01-048",
+          "G01-049",
+          "G01-050"
+        ]
+      }
+    },
+    {
+      "id": "G01-018",
+      "title": "−48 V 输入的极性与回线接地方式按 ETSI 4.1",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "DC_48V"
+        ]
+      },
+      "inputs": [
+        "回线方式（隔离/共用）"
+      ],
+      "asg_action": "有 −48 V 输入时，写明正极接地、DC 回线为隔离回线（单点接地）还是共用回线（多点接地）。",
+      "sr_check": "核对输入极性、回线与机壳/地的连接方式与声明一致，隔离回线时输入端不得与机壳直连。",
+      "source": [
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.1",
+          "page": "11"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 −48 V 直流输入时不适用。48 V 不是通信 −48 V 配电（如车载、储能、PoE 48 V）时不适用；48 V 的来源或极性不明时标 TBR，不默认套用本规则。",
+      "tailoring": "项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-019",
+          "G01-020",
+          "G01-021",
+          "G01-022",
+          "G01-023",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-019",
+      "title": "−48 V 输入的工作电压范围与耐受范围",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "DC_48V"
+        ]
+      },
+      "inputs": [
+        "是否冗余双输入"
+      ],
+      "asg_action": "正常工作 −40.5～−57 V 不降级（含范围内 0.1 s 阶跃）；−57～−60 V 与 0～−40.5 V 稳态不损坏，恢复后自动恢复；异常电压不得使上游保护器件动作。冗余双输入三种组合都要满足。",
+      "sr_check": "核对转换器与输入器件的工作范围覆盖 40.5–57 V，耐压覆盖 60 V 并留裕量（裕量按降额规范）；欠压锁定门限在 40.5 V 以下且能自恢复。电压阶跃试验列为下游。",
+      "source": [
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.2 表 1",
+          "page": "11–12"
+        },
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.3.1 表 2；4.3.2 表 3",
+          "page": "13–14"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 −48 V 直流输入时不适用。48 V 不是通信 −48 V 配电（如车载、储能、PoE 48 V）时不适用；48 V 的来源或极性不明时标 TBR，不默认套用本规则。",
+      "tailoring": "项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-018",
+          "G01-020",
+          "G01-021",
+          "G01-022",
+          "G01-023",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-020",
+      "title": "−48 V 输入 0.1 s 中断后自恢复",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "DC_48V"
+        ]
+      },
+      "inputs": [
+        "是否冗余双输入"
+      ],
+      "asg_action": "−57 V→0 V 中断 0.1 s 后无需人工干预自恢复；冗余双输入时单路中断须不降级。",
+      "sr_check": "核对欠压锁定、重启与时序电路在 0.1 s 中断后能自恢复、不锁死；冗余输入的 OR 电路在单路中断时保持供电。中断试验列为下游。",
+      "source": [
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.3.2 表 3",
+          "page": "13–14"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 −48 V 直流输入时不适用。48 V 不是通信 −48 V 配电（如车载、储能、PoE 48 V）时不适用；48 V 的来源或极性不明时标 TBR，不默认套用本规则。",
+      "tailoring": "项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-018",
+          "G01-019",
+          "G01-021",
+          "G01-022",
+          "G01-023",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-021",
+      "title": "−48 V 输入承受 500 V 1.2/50 µs 浪涌",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "DC_48V"
+        ]
+      },
+      "inputs": [
+        "回线方式（隔离/共用）"
+      ],
+      "asg_action": "浪涌 500 V 1.2/50 µs：线—线 2 Ω；隔离回线时线—地 12 Ω；判据为不损坏、自恢复。",
+      "sr_check": "核对输入端有与 500 V/2 Ω 相称的钳位或耐受设计；防护器件选型由 G07 主判。浪涌试验列为下游。",
+      "source": [
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.3.3.2 表 4",
+          "page": "15–16"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 −48 V 直流输入时不适用。48 V 不是通信 −48 V 配电（如车载、储能、PoE 48 V）时不适用；48 V 的来源或极性不明时标 TBR，不默认套用本规则。",
+      "tailoring": "项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-018",
+          "G01-019",
+          "G01-020",
+          "G01-022",
+          "G01-023",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-022",
+      "title": "−48 V 输入在 −40.5 V 下电流不大于 1.5 Im",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "DC_48V"
+        ]
+      },
+      "inputs": [
+        "Im（满配置标称电压下最大稳态电流）"
+      ],
+      "asg_action": "按最低电压 −40.5 V 与最大负载确定输入电流，不大于 1.5 Im（上游保护器件额定 1.5 Im）。",
+      "sr_check": "按 P/η/40.5 V 计算最低电压下的输入电流，核对 ≤ 1.5 Im；Im 未给定时记输入缺口。",
+      "source": [
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.6 表 6",
+          "page": "17–18"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 −48 V 直流输入时不适用。48 V 不是通信 −48 V 配电（如车载、储能、PoE 48 V）时不适用；48 V 的来源或极性不明时标 TBR，不默认套用本规则。",
+      "tailoring": "项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-018",
+          "G01-019",
+          "G01-020",
+          "G01-021",
+          "G01-023",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-023",
+      "title": "−48 V 输入的合闸浪涌电流不超过 ETSI 图 4",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "DC_48V"
+        ]
+      },
+      "inputs": [
+        "Im（满配置标称电压下最大稳态电流）"
+      ],
+      "asg_action": "在 −48、−40.5、−57 V 合闸时，浪涌电流比 It/Im 在 0.9 ms 以下小于 48，1 ms 以后不超过图 4 曲线。",
+      "sr_check": "由输入电容与限流（热插拔、NTC）估算浪涌电流比并与图 4 比较；浪涌电流试验列为下游。",
+      "source": [
+        {
+          "document": "ETSI EN 300 132-2 ICT设备输入电源接口 第2部分 -48V直流",
+          "edition": "V2.8.1 2024-10",
+          "clause": "4.7.1 图 4",
+          "page": "18–19"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 −48 V 直流输入时不适用。48 V 不是通信 −48 V 配电（如车载、储能、PoE 48 V）时不适用；48 V 的来源或极性不明时标 TBR，不默认套用本规则。",
+      "tailoring": "项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-018",
+          "G01-019",
+          "G01-020",
+          "G01-021",
+          "G01-022",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-024",
+      "title": "交流输入 1 周期 0% 跌落不复位（判据 B）",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "AC_MAINS"
+        ]
+      },
+      "inputs": [
+        "交流额定电压与频率",
+        "负载功率",
+        "保持时间需求"
+      ],
+      "asg_action": "有交流电网输入时，电压暂降 0% 残压 1 周期按判据 B：自恢复、允许暂时降级，不得复位或丢数据。设计据此确定保持时间。",
+      "sr_check": "按保持电容与负载估算 1 周期跌落期间输出是否保持；保持不住且会复位或丢数据的记缺陷。试验列为下游。",
+      "source": [
+        {
+          "document": "GB/T 17799.2 电磁兼容 通用标准 工业环境中的抗扰度",
+          "edition": "GB/T 17799.2—2023",
+          "clause": "表 4 序号 4.2",
+          "page": "14（印刷 8）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有交流电网输入时不适用。",
+      "tailoring": "端口浪涌、快速瞬变等其余抗扰度项由 G07 主判，这里只取供电扰动。GB/T 17799.2 只覆盖工业场所（由专用高/中压变压器供电）；住宅、商业和轻工业场所按 GB/T 17799.1（未取得），先标 TBR。",
+      "relations": {
+        "related": [
+          "G01-025",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-025",
+      "title": "交流输入较长暂降与中断后自恢复（判据 C）",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "AC_MAINS"
+        ]
+      },
+      "inputs": [
+        "交流额定电压与频率"
+      ],
+      "asg_action": "电压暂降 40% 10 周期、70% 25 周期与中断 0% 250 周期按判据 C：可中断，须能自恢复；电力电子变换器允许欠压保护动作。",
+      "sr_check": "核对欠压保护与重启逻辑在这些暂降与中断后能自恢复、不锁死。试验列为下游。",
+      "source": [
+        {
+          "document": "GB/T 17799.2 电磁兼容 通用标准 工业环境中的抗扰度",
+          "edition": "GB/T 17799.2—2023",
+          "clause": "表 4 序号 4.2–4.3 及注 c",
+          "page": "14（印刷 8）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有交流电网输入时不适用。",
+      "tailoring": "端口浪涌、快速瞬变等其余抗扰度项由 G07 主判，这里只取供电扰动。GB/T 17799.2 只覆盖工业场所（由专用高/中压变压器供电）；住宅、商业和轻工业场所按 GB/T 17799.1（未取得），先标 TBR。",
+      "relations": {
+        "related": [
+          "G01-024",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-026",
+      "title": "USB 供电输入电压窗按 vSafe5V 并计线缆压降",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ]
+      },
+      "inputs": [
+        "端口角色（Source/Sink/DRP）"
+      ],
+      "asg_action": "USB 供电输入：源端 vSafe5V 4.75–5.5 V（协商电压按 ±0.5 V 有效带），设备端再减线缆压降。",
+      "sr_check": "核对输入窗按源端范围减线缆压降计算，下游转换器在最低值下能工作。",
+      "source": [
+        {
+          "document": "USB Power Delivery Specification",
+          "edition": "R3.2 V1.2 2026-08",
+          "clause": "表 4.6 vSrcValid；表 4.8 vSafe5V",
+          "page": "83–84"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "USB 只作数据接口、VBUS 不取电时不适用。",
+      "relations": {
+        "related": [
+          "G01-027",
+          "G01-028",
+          "G01-029",
+          "G01-030",
+          "G01-031",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-027",
+      "title": "USB 可用电流按实际协商档取",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ]
+      },
+      "inputs": [
+        "支持的协商方式"
+      ],
+      "asg_action": "可用电流按实际协商方式取（PD > Type-C 3.0 A > 1.5 A > BC 1.2 > 默认 USB 供电）；未确认协商方式时按默认档作最坏工况。",
+      "sr_check": "核对功率预算所用电流与协商方式一致，不能默认按 3 A；协商方式未写明的记输入缺口。",
+      "source": [
+        {
+          "document": "USB Type-C Cable and Connector Specification",
+          "edition": "R2.5 2026-03",
+          "clause": "4.6 表 4-19",
+          "page": "225"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "USB 只作数据接口、VBUS 不取电时不适用。",
+      "relations": {
+        "related": [
+          "G01-026",
+          "G01-028",
+          "G01-029",
+          "G01-030",
+          "G01-031",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-028",
+      "title": "USB Sink 承受 24 V VBUS 不损坏",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "should",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "Sink 的 VBUS 输入器件宜承受 24 V 不损坏。",
+      "sr_check": "核对 VBUS 输入器件耐压覆盖 24 V；不满足记 should 级风险。器件耐压与 TVS 交 G05/G07。",
+      "source": [
+        {
+          "document": "USB Power Delivery Specification",
+          "edition": "R3.2 V1.2 2026-08",
+          "clause": "4.7.2 表 4.7 vSprMax",
+          "page": "84"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "USB 只作数据接口、VBUS 不取电时不适用。",
+      "relations": {
+        "related": [
+          "G01-026",
+          "G01-027",
+          "G01-029",
+          "G01-030",
+          "G01-031",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-029",
+      "title": "USB Sink 的 VBUS 体电容不超过 100 µF，超出须限流",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "协商后 Sink 的 VBUS 体电容不超过 100 µF；需要更大电容时加 VBUS 浪涌限流；非 Attached.SNK 时 VBUS 电容不超过 10 µF。",
+      "sr_check": "统计 VBUS 上的体电容，核对 ≤ 100 µF 或有限流电路。",
+      "source": [
+        {
+          "document": "USB Power Delivery Specification",
+          "edition": "R3.2 V1.2 2026-08",
+          "clause": "4.7.2 表 4.7（含注 1）",
+          "page": "83–84"
+        },
+        {
+          "document": "USB Type-C Cable and Connector Specification",
+          "edition": "R2.5 2026-03",
+          "clause": "表 4-3",
+          "page": "153"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "端口不作 Sink 时不适用。",
+      "relations": {
+        "related": [
+          "G01-026",
+          "G01-027",
+          "G01-028",
+          "G01-030",
+          "G01-031",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-030",
+      "title": "USB Sink 断开检测在 40 ms 内、5 V 时门限不高于 3.67 V",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "Sink 断开判定在 40 ms 内完成，5 V 时门限不高于 3.67 V。",
+      "sr_check": "核对 VBUS 检测分压与门限、检测时间满足表 4-3；协议与 CC 逻辑交 G04。",
+      "source": [
+        {
+          "document": "USB Type-C Cable and Connector Specification",
+          "edition": "R2.5 2026-03",
+          "clause": "表 4-3",
+          "page": "153"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "端口不作 Sink 时不适用。",
+      "relations": {
+        "related": [
+          "G01-026",
+          "G01-027",
+          "G01-028",
+          "G01-029",
+          "G01-031",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-031",
+      "title": "USB Source 未连接时 VBUS 不带电，电容不超过表 4-2",
+      "spec": "G01",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "USB 供电输出：未连接 Sink 时 VBUS 不带电（有 VBUS 开关与放电），端口电容不超过表 4-2 限值。",
+      "sr_check": "核对源端口有 VBUS 开关和放电路径，端口电容不超过表 4-2。",
+      "source": [
+        {
+          "document": "USB Type-C Cable and Connector Specification",
+          "edition": "R2.5 2026-03",
+          "clause": "4.4.2 表 4-2",
+          "page": "152"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "端口不作 Source 时不适用。",
+      "relations": {
+        "related": [
+          "G01-026",
+          "G01-027",
+          "G01-028",
+          "G01-029",
+          "G01-030",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-032",
+      "title": "工业 24 V 数字输入写明 IEC 61131-2 输入类型与电流方向",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "INDUSTRIAL_DI"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "有工业 24 V 数字输入时，接口需求写明输入类型（Type 1 机械触点；Type 2 两线半导体传感器；Type 3 低功耗、可兼作 1/2）、漏型或源型、信号电压范围（−3～30 V）。门限与输入电流按类型设计，由 G04 主判。",
+      "sr_check": "核对接口需求写明了输入类型与电流方向；缺的记输入缺口。门限判据交 G04。",
+      "source": [
+        {
+          "document": "Siemens FAQ 109477921 IEC 61131-2 编码器类型与数字输入（厂家转引，非标准原文）",
+          "edition": "V1.0 2015（限值引自 EN 61131-2:2003）",
+          "clause": "2；2.2 表 2-1；2.3",
+          "page": "5、7、8"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "没有工业 24 V 数字输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-10-31 决定）；现行 IEC 61131-2:2017（GB/T 15969.2-2024）新增负逻辑输入，取得原文后核对。24 V 供电中断等级 PS1/PS2 资料不足，未写入。",
+      "relations": {
+        "related": [
+          "G01-033"
+        ]
+      }
+    },
+    {
+      "id": "G01-033",
+      "title": "工业数字输入所接传感器与输入类型相符",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "INDUSTRIAL_DI"
+        ]
+      },
+      "inputs": [
+        "所接传感器类型（两线/三线、机械触点）"
+      ],
+      "asg_action": "按所接传感器（两线/三线、机械触点）选输入类型；两线传感器的关态残余电流须低于输入关态门限。",
+      "sr_check": "核对所接传感器与输入类型相符，两线传感器关态残余电流低于关态门限；不符的记缺陷线索交 G04。",
+      "source": [
+        {
+          "document": "Siemens FAQ 109477921 IEC 61131-2 编码器类型与数字输入（厂家转引，非标准原文）",
+          "edition": "V1.0 2015（限值引自 EN 61131-2:2003）",
+          "clause": "2；2.2 表 2-1；2.3",
+          "page": "5、7、8"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "没有工业 24 V 数字输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-10-31 决定）；现行 IEC 61131-2:2017（GB/T 15969.2-2024）新增负逻辑输入，取得原文后核对。24 V 供电中断等级 PS1/PS2 资料不足，未写入。",
+      "relations": {
+        "related": [
+          "G01-032"
+        ]
+      }
+    },
+    {
+      "id": "G01-034",
+      "title": "军车 28 V 输入稳态 20–33 V 并承受 ±2 V 纹波",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "VEHICLE_28V"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "稳态 20–33 V（含纹波）；注入纹波 ±2 V（30 Hz–5 kHz）不降级。",
+      "sr_check": "核对转换器输入范围覆盖 20–33 V；纹波抑制交 G03。",
+      "source": [
+        {
+          "document": "MIL-STD-1275F 军车28V直流输入特性",
+          "edition": "F 2022",
+          "clause": "5.1.1.1 图 8；5.1.1.2.1",
+          "page": "11、13（印刷 7、9）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非车载 28 V 输入时不适用。",
+      "relations": {
+        "related": [
+          "G01-035",
+          "G01-036",
+          "G01-037",
+          "G01-038",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-035",
+      "title": "军车 28 V 输入起动跌落 12 V/1 s、16 V/30 s 不降级",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "VEHICLE_28V"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "起动初始啮合最低 12 V、不超过 1 s；拖动最低 16 V、不超过 30 s，均不降级。",
+      "sr_check": "核对转换器在 12 V 下能工作、欠压锁定门限在 12 V 以下或有保持手段。起动试验列为下游。",
+      "source": [
+        {
+          "document": "MIL-STD-1275F 军车28V直流输入特性",
+          "edition": "F 2022",
+          "clause": "5.1.2 图 6",
+          "page": "11–12（印刷 7–8）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非车载 28 V 输入时不适用。",
+      "relations": {
+        "related": [
+          "G01-034",
+          "G01-036",
+          "G01-037",
+          "G01-038",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-036",
+      "title": "军车 28 V 输入承受 100 V/50 ms 浪涌",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "VEHICLE_28V"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "浪涌 100 V 持续 50 ms（源阻抗 500 mΩ），之后包络降至 33 V。",
+      "sr_check": "核对输入器件耐 100 V/50 ms 或有浪涌抑制。浪涌试验列为下游。",
+      "source": [
+        {
+          "document": "MIL-STD-1275F 军车28V直流输入特性",
+          "edition": "F 2022",
+          "clause": "5.1.3.2.1 图 8",
+          "page": "13（印刷 9）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非车载 28 V 输入时不适用。",
+      "relations": {
+        "related": [
+          "G01-034",
+          "G01-035",
+          "G01-037",
+          "G01-038",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-037",
+      "title": "军车 28 V 输入承受 ±250 V 尖峰",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "VEHICLE_28V"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "注入尖峰 ±250 V 包络、上升不超过 50 ns、单次能量不超过 200 mJ。",
+      "sr_check": "核对输入端有钳位，钳位器件耐压与能量交 G05/G07。尖峰试验列为下游。",
+      "source": [
+        {
+          "document": "MIL-STD-1275F 军车28V直流输入特性",
+          "edition": "F 2022",
+          "clause": "5.1.3.1.1 图 7",
+          "page": "12（印刷 8）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非车载 28 V 输入时不适用。",
+      "relations": {
+        "related": [
+          "G01-034",
+          "G01-035",
+          "G01-036",
+          "G01-038",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-038",
+      "title": "军车 28 V 输入反接自保护",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "VEHICLE_28V"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "反接时自保护，反向电流不大于正常工作电流。",
+      "sr_check": "核对防反接电路满足 4.1；防反接设计交 G05。反接试验列为下游。",
+      "source": [
+        {
+          "document": "MIL-STD-1275F 军车28V直流输入特性",
+          "edition": "F 2022",
+          "clause": "4.1",
+          "page": "10（印刷 6）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非车载 28 V 输入时不适用。",
+      "relations": {
+        "related": [
+          "G01-034",
+          "G01-035",
+          "G01-036",
+          "G01-037",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-039",
+      "title": "舰船交流输入稳态偏离范围按 MIL-STD-1399 表 II",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "SHIP_AC"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "舰船交流输入（Type I 60 Hz 440/115 V 等）：稳态 ±5%（单线 ±7%），最大稳态偏离 ±8%。",
+      "sr_check": "核对输入级与转换器覆盖表 II 的稳态范围。",
+      "source": [
+        {
+          "document": "MIL-STD-1399-300-1 舰船低压交流电源",
+          "edition": "2018",
+          "clause": "表 II",
+          "page": "26（印刷 17）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非舰船交流供电时不适用。",
+      "relations": {
+        "related": [
+          "G01-040",
+          "G01-041",
+          "G01-042",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-040",
+      "title": "舰船交流输入瞬态 ±16%、最坏 ±20% 不损坏",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "SHIP_AC"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "瞬态 ±16%、最坏 ±20%（2 s 恢复）。",
+      "sr_check": "核对输入级与转换器在瞬态范围内不损坏、恢复后正常工作。",
+      "source": [
+        {
+          "document": "MIL-STD-1399-300-1 舰船低压交流电源",
+          "edition": "2018",
+          "clause": "表 II",
+          "page": "26（印刷 17）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非舰船交流供电时不适用。",
+      "relations": {
+        "related": [
+          "G01-039",
+          "G01-041",
+          "G01-042",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-041",
+      "title": "舰船交流输入承受 1.0 kVp 尖峰",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "SHIP_AC"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "尖峰 1.0 kVp（115 V 系统）。",
+      "sr_check": "核对输入端钳位与耐压；钳位与保护交 G05/G07。",
+      "source": [
+        {
+          "document": "MIL-STD-1399-300-1 舰船低压交流电源",
+          "edition": "2018",
+          "clause": "表 II",
+          "page": "26（印刷 17）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非舰船交流供电时不适用。",
+      "relations": {
+        "related": [
+          "G01-039",
+          "G01-040",
+          "G01-042",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-042",
+      "title": "舰船交流输入应急条件 −100%～+35% 不损坏",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "military"
+        ],
+        "circuit_types": [
+          "SHIP_AC"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "应急条件 −100%～+35%。",
+      "sr_check": "核对输入级在应急过压下不损坏、失压后能自恢复。",
+      "source": [
+        {
+          "document": "MIL-STD-1399-300-1 舰船低压交流电源",
+          "edition": "2018",
+          "clause": "表 II",
+          "page": "26（印刷 17）"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "非舰船交流供电时不适用。",
+      "relations": {
+        "related": [
+          "G01-039",
+          "G01-040",
+          "G01-041",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-043",
+      "title": "PoE PD 输入电压窗按 Type 与功率等级取，含线缆压降",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "PD Type（1–4）",
+        "PD 功率等级（Class）"
+      ],
+      "asg_action": "有 PoE 受电输入时，PD 接口（PI）处静态输入电压窗按 Type 与功率取：13 W 及以下 37–57 V；13 W 以上的 Type 2/Type 3 为 42.5–57 V；Type 4 为 41.2–57 V。标准已把最大线缆损耗计入这些值；输入整流桥的压降再从中扣除。",
+      "sr_check": "核对 PD 控制器与 DC/DC 的工作范围、欠压门限覆盖本 Type 的输入窗（扣除整流桥压降后），耐压覆盖 57 V 并留裕量（裕量按降额规范）。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.1 表 6",
+          "page": "22"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-044",
+          "G01-045",
+          "G01-046",
+          "G01-047",
+          "G01-048",
+          "G01-049",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-044",
+      "title": "PoE PD 分级按负载最大平均功率声明",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "负载最大平均功率",
+        "PD Type（1–4）"
+      ],
+      "asg_action": "按负载的最大平均功率选 Class（PD 端功率上限：Class 0 为 12.95 W；1 为 3.84 W；2 为 6.49 W；3 为 12.95 W；4 为 25.5 W；5 为 40 W；6 为 51 W；7 为 62 W；8 为 71 W），分级电阻与声明的 Class 一致；Type 2–4 PD 前两次分级事件呈现 Class 4。",
+      "sr_check": "用功耗预算的最大平均功率（含 DC/DC 效率）核对所选 Class 的功率上限；分级电阻值与 Class 对应关系按控制器手册核对。超出所选 Class 平均功率的，PSE 可断电，记缺陷。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.3.3 表 1",
+          "page": "18"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.5",
+          "page": "24–25"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-045",
+          "G01-046",
+          "G01-047",
+          "G01-048",
+          "G01-049",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-045",
+      "title": "PoE PD 浪涌电流低于 PSE 浪涌限值，上电后 80 ms 内取电不超过 400 mA",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "PD 体电容",
+        "PD Type（1–4）"
+      ],
+      "asg_action": "PSE 加工作电压后 75 ms 内为 PSE 浪涌期，PSE 浪涌限流按分配功率为：Class 0–4 为 400–450 mA，Class 5–6 为 400–900 mA，Class 7–8 为 800–900 mA。PD 的体电容充电电流按最低值（400 mA，Class 7–8 为 800 mA）以下设计；PD 前 50 ms 按 Type 1 取电，到 80 ms 之前工作电流小于 400 mA（Type 2/3 单接口 PD 为必须，Type 4 单接口 PD 为建议）。设计用 PD 控制器的浪涌限流与 PG 延时启动下游变换器。",
+      "sr_check": "核对体电容充电由 PD 控制器限流完成，下游变换器在浪涌结束（PG）后才启动，80 ms 内总电流不超过 400 mA；由体电容与限流值估算充电时间。上电波形实测列为下游。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.6",
+          "page": "27"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.1 第 5–6 项",
+          "page": "23"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.3.7",
+          "page": "19–20"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-044",
+          "G01-046",
+          "G01-047",
+          "G01-048",
+          "G01-049",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-046",
+      "title": "PoE PD 欠压时取电不超过 60 mA/5 mA",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [],
+      "asg_action": "输入电压低于 30 V 时 PD 电流不超过 60 mA，低于 10 V 时不超过 5 mA。",
+      "sr_check": "核对 PD 控制器欠压锁定与下游变换器的欠压关断使低于 30 V 时负载断开；有适配器或辅助电源反向灌入 PoE 侧的路径时记缺陷线索。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.1 第 7 项",
+          "page": "23"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-044",
+          "G01-045",
+          "G01-047",
+          "G01-048",
+          "G01-049",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-047",
+      "title": "PoE PD 获准功率前不超过已分配功率",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "负载最大平均功率"
+      ],
+      "asg_action": "未收到至少 Type 2 硬件分级或 DLL 许可时不超过 13 W；未收到至少 4 次分级事件或 DLL 许可时不超过 25.5 W；未收到至少 5 次分级事件或 DLL 许可时不超过 51 W。功率降级时 PD 可选择不启动，或按已分配功率启动并关断部分负载。",
+      "sr_check": "核对设计读取分配功率指示（如 TPH/TPL/BT）或 DLL 协商结果，并有按分配功率限载的手段；高功率 PD 无降级处理的记缺陷线索（软件部分交下游）。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.1 第 8–10 项",
+          "page": "23"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.3.6 表 2、表 3",
+          "page": "19"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.5",
+          "page": "25"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-044",
+          "G01-045",
+          "G01-046",
+          "G01-048",
+          "G01-049",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-048",
+      "title": "PoE PD 轻载时保持维持功率特征（MPS）",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "各工作模式的最小负载电流"
+      ],
+      "asg_action": "PD 上电后须保持 MPS，否则 PSE 关断端口：Type 1/2 为直流至少 10 mA，或每 325 ms 内至少 75 ms 的 10 mA 脉冲，并且交流阻抗低于 26.3 kΩ 并 0.05 µF；Type 3/4 PSE 的脉冲持续时间约为 Type 1/2 的 10%，Class 5–8 PD 的 MPS 电流在 PSE 端为 16 mA。负载电流可能低于这些值的工作模式（待机、低功耗）要有自动 MPS 或最小负载。",
+      "sr_check": "核对各工作模式下 PD 输入电流是否始终满足 MPS，或有自动 MPS 电路；MPS 要求在电缆 PSE 端满足，脉冲占空比的选择与体电容、电缆长度、阻断二极管配合按控制器手册核对。Type 3/4 脉冲的确切时长转引只给“约 10%”，记 TBR，取得原文后核对。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.7",
+          "page": "27"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.3.8 表 4、表 5",
+          "page": "20"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-044",
+          "G01-045",
+          "G01-046",
+          "G01-047",
+          "G01-049",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-049",
+      "title": "PoE 与适配器双源供电时电源切换不超出当前电源能力",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "适配器电压与功率",
+        "并联方式"
+      ],
+      "asg_action": "有适配器与 PoE 两路供电时，写明并联方式（PD 输入侧、PD 与变换器之间、变换器输出侧）、优先电源与切换门限；电源切换（适配器插拔、PSE 上电）时负载按当前电源的可用功率调整。",
+      "sr_check": "核对并联二极管/MOSFET 能防止适配器反接、短路与相互灌入；切换方向上的电流（如 12 V 适配器换算到 PoE 侧约 4 倍）不超过 PSE 已分配功率；有优先级要求的，门限电阻按控制器手册核对。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.10",
+          "page": "30"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.11",
+          "page": "30–31"
+        },
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.13",
+          "page": "31"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-044",
+          "G01-045",
+          "G01-046",
+          "G01-047",
+          "G01-048",
+          "G01-050",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G01-050",
+      "title": "PoE 适配器输入与其他连接之间的绝缘耐压",
+      "spec": "G01",
+      "version": "1.1",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POE_PD"
+        ]
+      },
+      "inputs": [
+        "并联方式"
+      ],
+      "asg_action": "适配器接在 PD 输入侧或 PD 与变换器之间时（并联方式 1、2），适配器输出与其他所有连接之间须能承受 1500 Vac 介电耐压；接在变换器输出侧时由变换器提供隔离。",
+      "sr_check": "核对适配器并联方式与所需隔离一致；隔离与电气间隙由 G06 主判。",
+      "source": [
+        {
+          "document": "TI TPS2373 高功率 PoE PD 接口数据手册（厂家转引 IEEE 802.3bt，非标准原文）",
+          "edition": "SLUSCD1C Rev.C 2018-11",
+          "clause": "7.4.11",
+          "page": "31"
+        }
+      ],
+      "closing_stage": "schematic",
+      "not_applicable": "板卡没有 PoE 受电（PD）输入时不适用。",
+      "tailoring": "厂家转引，非标准原文（用户 2026-11-01 决定）；转引的是 802.3bt 发布前的版本，取得 IEEE 802.3-2022 第 33、145 条原文后核对。项目另有供电规格时以项目规格为准，并在设计输入中写明偏离。",
+      "relations": {
+        "related": [
+          "G01-043",
+          "G01-044",
+          "G01-045",
+          "G01-046",
+          "G01-047",
+          "G01-048",
+          "G01-049",
+          "G01-017"
+        ]
+      }
+    },
+    {
+      "id": "G02-001",
+      "title": "凡结论依赖参数变化的需求都映射到最坏工况分析项",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "工业/通信默认基线不要求单独的 WCCA 计划与 PDR/CDR 交付；映射表可并入设计闭环记录。非关键量（不影响功能、性能和安全的指示类）可略去，须写理由。",
+      "inputs": [
+        "G01 的需求清单及验证方法（分析/评审/试验）",
+        "电路划分（功能块）与每块的输入输出要求",
+        "本地（派生）需求：器件手册对供电、时序、电平的要求等"
+      ],
+      "asg_action": "从 G01 需求清单中选出验证方法为“分析”、且结论依赖器件参数、温度、供电或负载变化的需求（精度、门限、时序、裕量、稳定性、器件应力），连同本地需求（如 FPGA 内核电压 ±3 % 要求、复位门限、逻辑电平兼容）逐条映射到分析项，每个分析项有唯一编号并写明判据来源。证据：需求—分析映射表（WCM）。",
+      "sr_check": "独立列出本设计的关键量（门限、精度、时序、保护点、供电窗口），核对每个关键量都有分析项或注明不适用理由；缺分析项且结论可能改变的记“证据不足”，已能算出越限的按越限判。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.A；附录 A.3.C、A.3.D、A.3.E",
+          "page": "27–28（13–14）；71–72"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.3、4.4",
+          "page": "13–14"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7a",
+          "page": "29"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.12 本地需求示例",
+          "page": "103–104"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-002",
+          "G02-024",
+          "G02-033"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-002",
+      "title": "相同电路多处使用时只算一处，须写明覆盖清单和该处为何最坏",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "相同电路的全部使用位置及各处负载、温度、供电"
+      ],
+      "asg_action": "相同电路多处使用时可只分析一处，写明覆盖的位号清单，并说明所选一处在负载、温度、供电上为何最坏；各处条件不同而无法排序时分别分析。",
+      "sr_check": "核对合并分析的覆盖清单是否完整、“最坏一处”的理由是否成立；理由不成立时按条件最不利的一处复算。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.A；附录 A.3.C、A.3.D、A.3.E",
+          "page": "27–28（13–14）；71–72"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.3、4.4",
+          "page": "13–14"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7a",
+          "page": "29"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.12 本地需求示例",
+          "page": "103–104"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-001"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-003",
+      "title": "参数取准确料号的手册保证限值，不用典型值或绝对最大额定",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "默认基线下“PMP 标准或 DSCC/DLA 数据表”改为准确料号的厂家手册保证值；EOL 漂移手册不给时见 G02-008、G02-009。",
+      "inputs": [
+        "准确料号或系列/精度档",
+        "器件手册的 min/max 及其测试条件、脚注"
+      ],
+      "asg_action": "每个进入分析的参数记录：准确料号、手册版本、表/页、MIN/TYP/MAX 列、测试条件、偏置或随机属性；典型值、绝对最大额定和其他行的值不得充当保证工作限值。",
+      "sr_check": "按手册原表核对每个关键参数的列位置；典型值或绝对最大额定冒充保证值的，按 SR `references/bounding-table.md` 与 `wca-formulas.md`“器件参数定界口径”重新定界后再下结论。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.C；附录 A.4.A、A.6.A.6",
+          "page": "28–29（14–15）；74；80–81"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.1、5.1.1.2、5.1.1.5c",
+          "page": "15、17"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "Implementation Method、Technical Rationale",
+          "page": "1"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-004",
+          "G02-005"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-004",
+      "title": "工作条件超出手册测试条件时按定界表推出保证最坏值，推不出时才估算并标“估算”",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "器件手册参数的测试条件",
+        "工作条件（电压、电流、温度、负载、时序）"
+      ],
+      "asg_action": "逐项比较测试条件与工作条件；超出时按 SR 定界表 G1–G6 推出保证最坏值，推不出时才用估算推法并标“估算”，估算倍数取工程取值表（迁入项，接入阶段实施）。参照 ASG `references/worst-case-bounds.md`“源表条件与工作条件匹配”。",
+      "sr_check": "核对关键参数是否在测试条件外套用（如 25 °C 最大值用于高温）；套用的按定界表重算。估算得出的通过只能判“合格但有风险”，不能用于器件损坏、过热、安全和保护判据。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.C；附录 A.4.A、A.6.A.6",
+          "page": "28–29（14–15）；74；80–81"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.1、5.1.1.2、5.1.1.5c",
+          "page": "15、17"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "Implementation Method、Technical Rationale",
+          "page": "1"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-003"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-005",
+      "title": "计入全部变化因素：初始公差（含装焊）、温度、老化、电接口与负载",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-003 的参数记录",
+        "G01 的工况（环境温度、输入电压窗、负载范围）",
+        "装焊或筛选引起的规定漂移（手册给出时）"
+      ],
+      "asg_action": "对每个参数合成：初始公差（含手册规定的焊接、湿热等装配漂移）、温度变化、寿命末期老化、电接口与负载变化；略去某项须写量化理由（灵敏度或量级比较）。辐照只在项目声明航天时计入（G02-034）。证据：参数变化分解表。",
+      "sr_check": "核对关键参数是否漏了某类变化（最常见：只用初始公差、漏温漂；精密电阻漏老化；基准漏长期漂移）；漏项可能改变结论时记“证据不足”，漏项本身就使结论越限时判失败。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.3、5.1.1.5–5.1.1.8、表 5-1",
+          "page": "13、17–19"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.F.3；附录 A.6.A.1、A.6.A.2、A.6.A.5",
+          "page": "33–35（19–21）；80"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-003",
+          "G02-006",
+          "G02-008",
+          "G02-009"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-006",
+      "title": "温度端点：下限取最低环境或冷启动温度，上限取元件实际温度",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "验收/鉴定温度范围的区分在工业/通信基线下对应“工作温度范围/高低温试验温度”，数值由 G01 给。同一参数在两个独立判据里可取相反温度端（正文方法说明第 4 点）。",
+      "inputs": [
+        "G01 的环境温度范围（工作、冷启动、贮存后上电）",
+        "元件自身功耗与温升估算或热分析结果"
+      ],
+      "asg_action": "温度相关参数的下限取设备最低工作环境温度，冷启动按 G01 规定的最低启动温度；上限取元件实际温度（环境温度 + 元件温升），没有热分析时按元件最高工作温度或手册全温范围的不利端；有源器件老化与温漂用结温，无源器件用本体温度。",
+      "sr_check": "核对温度端点是否来自 G01 工况而不是 25 °C；高温端是否计入元件温升；冷启动是否单独核对（启动门限、振荡起振、电解电容低温 ESR）。端点取错可能改变结论时按正确端点重算。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.5d、5.1.1.5e",
+          "page": "17"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.D.1；附录 A.6.A.2、A.6.E.1–3、A.5.A.2",
+          "page": "30（16）；80–82；76"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-005",
+          "G02-007"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-007",
+      "title": "要做高低温筛选或试验时，电源和故障会致损的电路按试验温度核对不致损坏",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "not_applicable": "产品不做超出工作温度范围的筛选或试验。",
+      "inputs": [
+        "G01 的高低温试验或筛选温度",
+        "电源电路与故障时会致损的电路清单"
+      ],
+      "asg_action": "产品要做高低温筛选或试验时，电源和故障会致损的电路另按试验温度、BOL 参数核对不致损坏（应力判定按降额规范与 G02-027、G02-028）。",
+      "sr_check": "有高低温试验而未按试验温度核对电源与致损电路的，记“证据不足”；按试验温度算出越过器件额定的判不合格。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.5d、5.1.1.5e",
+          "page": "17"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.D.1；附录 A.6.A.2、A.6.E.1–3、A.5.A.2",
+          "page": "30（16）；80–82；76"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-006",
+          "G02-027"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-008",
+      "title": "有老化数据时按规定外推到设计寿命与工作温度",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "短寿命、可维修、可重新校准的产品可裁剪老化项，须写理由。",
+      "inputs": [
+        "设计寿命与工作温度（G01）",
+        "手册或寿命试验的老化数据及其寿命、温度条件"
+      ],
+      "asg_action": "设计寿命长于数据寿命时线性外推；短于时取数据库中下一个更长区间的值，不在数据点间插值；温度不同用 Arrhenius 式 q2 = q1·exp[(EA/k)(1/T1 − 1/T2)]，激活能取手册值，无值时用 ECSS 手册默认表（Si 1.1 eV、金属/薄膜电阻 1.35 eV、陶瓷电容 1.67 eV、钽 0.43 eV 等）。",
+      "sr_check": "核对精密基准、分压电阻、定时 RC、电解电容容量与 ESR 等对老化敏感的量是否计入老化；外推方法是否保守（插值、短寿命数据直接用于长寿命的判错）。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.7.1–5.1.1.7.3",
+          "page": "17–19"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7c",
+          "page": "29"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.6.A.5",
+          "page": "80"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-005",
+          "G02-009"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-009",
+      "title": "没有老化数据时按器件类别特点估算并标“估算”，估算值不放行损坏与保护判据",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "短寿命、可维修、可重新校准的产品可裁剪老化项，须写理由。",
+      "inputs": [
+        "器件类别与老化机理",
+        "工程取值 `aging_drift_default`"
+      ],
+      "asg_action": "手册不给老化数据且该项可能改变结论时，按工程取值表 `aging_drift_default` 的做法：依这一类器件的老化机理与典型老化曲线（如薄膜电阻阻值随时间与温度缓慢上升、电解电容容量下降与 ESR 上升、基准电压长期漂移按 √t 规律）估算寿命末期漂移，写明估算依据并标“估算”；估算值可判功能、性能、指示类判据（合格时记风险），不能放行器件损坏、过热、安全、保护判据。",
+      "sr_check": "核对按类别估算的老化是否写明依据、方向是否不利。估算值放行了损坏、过热、安全、保护判据的判不合格；估算下结论在边界附近时记“证据不足”，并写明需要的数据。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.7.1–5.1.1.7.3",
+          "page": "17–19"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7c",
+          "page": "29"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.6.A.5",
+          "page": "80"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-008",
+          "G02-016"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-010",
+      "title": "默认用极值法（EVA）：参数按代数和取极值，EVA 通过即结束",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-003～009 的参数变化",
+        "关注量的电路方程或模型"
+      ],
+      "asg_action": "先用 EVA：P(MIN) = P(NOM)(1 − I − T − A − R)，P(MAX) = P(NOM)(1 + I + T + A + R)，I/T/A/R 取正值（偏置项按实际方向）；再按 G02-011、G02-012 的方向把参数代入电路方程，得到关注量的 min/max。EVA 满足要求就不再做统计分析；不满足时先考虑改电路（更稳定的器件、更大裕量），再考虑 G02-013～016。",
+      "sr_check": "独立复算关键量的 EVA 区间（SR `calc.py` 已有的分压窗口等直接复用）；设计方用统计法放行而 EVA 不过的，核对是否满足 G02-013～016 的条件。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.B.1、A.5.B.3；3.F.4、图 3",
+          "page": "76；35–36、41（21–22、27）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.3.2",
+          "page": "21"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "方法选择",
+          "page": "3"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-011",
+          "G02-012",
+          "G02-013"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-011",
+      "title": "确定每个参数的不利方向，非单调时查内部极值",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "关注量的电路方程、灵敏度或仿真模型"
+      ],
+      "asg_action": "用解析式（必要时取倒数等变形）或灵敏度符号确定每个参数取 min 还是 max；灵敏度法须核对单调性，非单调或含驻点时比较端点、内部驻点与分段边界。参照 ASG `references/worst-case-bounds.md`“在实际取值范围内求边界”。",
+      "sr_check": "抽查关键量的方向判断（如分压输出最小：V1 最小、上臂最小、下臂最大）；漏了内部极值（如 v·(Vs − v) 型功耗）的按正确组合重算再下结论。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.F.2、3.F.4、3.F.5.a、3.F.5.b；附录 A.5.E.2–3",
+          "page": "33、35–39（19、21–25）；77"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "Implementation Method",
+          "page": "1"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-010",
+          "G02-012"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-012",
+      "title": "同一分析里同一参数、同一全局条件只取一个值，不用不可能组合",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "同一参数在两个独立判据里取相反端点不属于不可能组合（正文方法说明第 4 点）。",
+      "inputs": [
+        "参数之间的依赖关系（共用参数、全局温度和供电）"
+      ],
+      "asg_action": "同一参数在一个分析里只取一个值，全局条件（环境温度、供电电压）同一时刻只有一个值；有意采用不可能组合作“最坏的最坏”时须注明。",
+      "sr_check": "发现一处取 min 一处取 max 的不可能组合，按可实现组合重算再下结论；有意采用且注明的不判错。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.F.2、3.F.4、3.F.5.a、3.F.5.b；附录 A.5.E.2–3",
+          "page": "33、35–39（19、21–25）；77"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "Implementation Method",
+          "page": "1"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-011"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-013",
+      "title": "RSS 只在 EVA 不过时使用：偏置项相加、随机项开方，三项及以上，只用在一级",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "TOR 正文 3.G 认为两项也可 RSS，与附录 A 草案“三项及以上”冲突，本规范采用附录 A（见冲突登记 1，2026-11-01 用户确认）。",
+      "inputs": [
+        "EVA 结果",
+        "参数的偏置/随机分解与相关性"
+      ],
+      "asg_action": "RSS：偏置项直接相加，只有随机项平方和开方；显著相关的计入相关性；仅当合成项有三项及以上时用；RSS 只用在参数级或电路级之一。",
+      "sr_check": "核对偏置项是否被错误 RSS、项数是否不足三项、是否在参数级和电路级都用了 RSS、相关项是否计入；不满足的退回 EVA 结论。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.B.2、A.5.C、A.5.D、A.5.E.1、A.5.F；3.G",
+          "page": "76–77；42–47、51–53、59–61（28–33、37–39、45–47）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.3.3–5.3.5、表 5-2",
+          "page": "21–22"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "表 1、方法选择",
+          "page": "2–3"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-010",
+          "G02-014",
+          "G02-015",
+          "G02-016"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-014",
+      "title": "Monte Carlo 写明参数、分布、运行次数依据与直方图",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "变化参数及其分布",
+        "仿真条件"
+      ],
+      "asg_action": "MC：写明变化参数、仿真条件、所用分布及实现、有统计依据的运行次数（预测区间系数或 K-S 规则）、直方图。",
+      "sr_check": "核对 MC 次数与分布是否有依据、记录是否齐全；缺依据的统计放行退回 EVA 结论。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.B.2、A.5.C、A.5.D、A.5.E.1、A.5.F；3.G",
+          "page": "76–77；42–47、51–53、59–61（28–33、37–39、45–47）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.3.3–5.3.5、表 5-2",
+          "page": "21–22"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "表 1、方法选择",
+          "page": "2–3"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-013",
+          "G02-015",
+          "G02-016"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-015",
+      "title": "统计法结果的覆盖率达到工程取值",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "工程取值 `wca_statistical_coverage`、`wca_sigma_factor`"
+      ],
+      "asg_action": "RSS 与 MC 的结果按工程取值表 `wca_statistical_coverage` 的覆盖率给出区间；厂家规定限值视为双侧 3σ 点，安全系数取 `wca_sigma_factor`。",
+      "sr_check": "核对统计区间的覆盖率是否达到取值表；未达到的退回 EVA 结论。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.B.2、A.5.C、A.5.D、A.5.E.1、A.5.F；3.G",
+          "page": "76–77；42–47、51–53、59–61（28–33、37–39、45–47）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.3.3–5.3.5、表 5-2",
+          "page": "21–22"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "表 1、方法选择",
+          "page": "2–3"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-013",
+          "G02-014"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-016",
+      "title": "统计法只用于功能、性能、指示类判据，不放行损坏、过热、安全、保护判据",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "判据的后果类",
+        "工程取值 `wca_statistical_scope`"
+      ],
+      "asg_action": "统计法只用于工程取值表 `wca_statistical_scope` 允许的后果类（功能、性能、指示），器件损坏、过热、安全、保护判据仍用 EVA 或保证值。",
+      "sr_check": "统计法被用于损坏、过热、安全、保护判据的，退回 EVA 或保证值结论。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.B.2、A.5.C、A.5.D、A.5.E.1、A.5.F；3.G",
+          "page": "76–77；42–47、51–53、59–61（28–33、37–39、45–47）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.3.3–5.3.5、表 5-2",
+          "page": "21–22"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "表 1、方法选择",
+          "page": "2–3"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-013",
+          "G02-014",
+          "G02-009"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-017",
+      "title": "依赖校准、调试或补偿的分析项写明残余变化",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "校准或调试方法（出厂校准、软件校准、选配电阻、电位器）",
+        "补偿电路（温度补偿、比例式测量）"
+      ],
+      "asg_action": "依赖校准、选配或补偿的分析项，写明被消除的变化项、残余变化（校准分辨率、校准后漂移、补偿失配）及其计算。",
+      "sr_check": "核对“已校准所以不计初始公差”的说法是否有校准方案和残余误差；温度补偿是否计入补偿元件自身的公差与跟踪误差；校准后仍存在的温漂和老化是否保留。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.3、5.1.1.6",
+          "page": "15、17"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.6.J",
+          "page": "83"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-005",
+          "G02-018"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-018",
+      "title": "依赖校准或选配的电路功能和位号列入报告并交生产/测试",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-017 的校准与补偿项"
+      ],
+      "asg_action": "在报告中列出依赖校准/选配的电路功能和位号及校准方法，并交生产/测试作为下游约束。",
+      "sr_check": "核对依赖校准或选配的位号是否都已列出并进入下游约束清单；漏列的记缺陷。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.3、5.1.1.6",
+          "page": "15、17"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.6.J",
+          "page": "83"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-017",
+          "G02-024"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-019",
+      "title": "下游电路的供电与接口信号取规格容差与最坏瞬态，不取标称",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "tailoring": "航天母线的欠压生存、故障清除尖峰等由 G01 按项目声明给出。",
+      "inputs": [
+        "G01 的输入电压窗、瞬态与源阻抗及接口规格",
+        "本板变换器输出的规格容差、负载阶跃瞬态、交叉调整率、上电时序"
+      ],
+      "asg_action": "由本板电源供电的电路取电源输出电压 ± 规格容差，并计入最坏负载阶跃引起的正负瞬态、多电压上电时序、交叉调整率；接口信号极值取 G01 接口规格。电源本身的动态（环路、输入滤波、浪涌）由 G03 主判，本条只规定下游电路使用这些结果。",
+      "sr_check": "核对下游电路是否用了电源的容差和瞬态而非标称值；接口信号是否取接口规格的极值。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.3.F.2、A.6.B、A.6.C、A.6.D；3.D.2",
+          "page": "72；81；30（16）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.4、5.1.1.8",
+          "page": "13–14、19"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-020",
+          "G02-021",
+          "G02-023"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-020",
+      "title": "负载取寿命末期最坏阻抗与电流，计入互连阻抗、负载电容与 ESR",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "负载曲线、互连阻抗、负载电容及 ESR"
+      ],
+      "asg_action": "负载取 EOL 最坏阻抗与电流，计入互连阻抗、负载电容与 ESR。",
+      "sr_check": "核对负载是否含互连阻抗、寄生与电容；只按理想负载算且可能改变结论的按实际负载重算。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.3.F.2、A.6.B、A.6.C、A.6.D；3.D.2",
+          "page": "72；81；30（16）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.4、5.1.1.8",
+          "page": "13–14、19"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-019",
+          "G02-021"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-021",
+      "title": "逐一分析全部工作模式与模式转换，只分析最严酷模式须写理由",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "工作模式（启动、关断、待机、满载/空载）及转换"
+      ],
+      "asg_action": "逐一考虑工作模式和模式转换（启动、掉电、待机、满载、空载）；只分析最严酷模式须写理由。",
+      "sr_check": "核对是否漏了启动、掉电、待机等模式；参照 SR `wca-formulas.md`“必查状态与留档”。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.3.F.2、A.6.B、A.6.C、A.6.D；3.D.2",
+          "page": "72；81；30（16）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.4、5.1.1.8",
+          "page": "13–14、19"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-019",
+          "G02-020"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-022",
+      "title": "复位、时钟与同步接口的时序在源和负载同时最坏时仍配合",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "not_applicable": "没有时序关键的数字接口、复位或时钟的板卡。",
+      "inputs": [
+        "器件时序参数（建立/保持、传播延迟、复位时长）的 min/max",
+        "供电、容性负载、时钟偏差与边沿"
+      ],
+      "asg_action": "对复位、时钟与同步接口做最坏时序核对：总延迟 = 传播延迟 + 转换时间影响，计入供电电压、容性负载、时钟不稳定和边沿斜率；源和负载同时取最坏。电源轨之间的上电、掉电时序与 DC/DC 环路裕量由 G03 主判，本条不管。证据：最坏时序表或时序图。",
+      "sr_check": "核对复位、时钟与同步接口时序是否取最坏端点；只用典型延迟的按 SR 定界表判。电源轨上电、掉电时序不在本条报。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.2.1–5.2.2.3",
+          "page": "20"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.12 本地需求示例（逻辑兼容、噪声裕量、时序裕量、电源时序）",
+          "page": "104"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-019",
+          "G02-023"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-023",
+      "title": "接口电平按保证值兼容，直流噪声裕量为正",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "not_applicable": "没有数字或逻辑电平接口的板卡。",
+      "inputs": [
+        "接口电平门限（VIH/VIL、VOH/VOL）及其条件",
+        "实际供电与负载"
+      ],
+      "asg_action": "源和负载同时取最坏，核对静态电平兼容（VOH min 对 VIH min、VOL max 对 VIL max）与直流噪声裕量。",
+      "sr_check": "核对电平兼容是否用保证值且在实际供电与负载下；裕量为负的判不合格。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.2.1–5.2.2.3",
+          "page": "20"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.12 本地需求示例（逻辑兼容、噪声裕量、时序裕量、电源时序）",
+          "page": "104"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-019",
+          "G02-022"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-024",
+      "title": "每个分析项给出 min / 典型 / max、判据与裕量",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-001 的映射表",
+        "各分析项的 EVA 或统计结果"
+      ],
+      "asg_action": "每个分析项给出关注量在 EOL 变化下的最小、典型、最大值及判据、裕量（EOL 预测对规格）；略去的次要要求写理由。",
+      "sr_check": "核对每个分析项有 min/typ/max 而非只有标称；裕量计算方向正确。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.A.1、A.7、A.8.A.9–11、A.12 注",
+          "page": "76；86；88–89；103"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.5",
+          "page": "14"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7b、附录 J.2.1",
+          "page": "29、60"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-001",
+          "G02-025",
+          "G02-026"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-025",
+      "title": "不符合项明确列出并给出改法",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-024 的结果"
+      ],
+      "asg_action": "裕量为负或证据不足的分析项单列为不符合项，给出改法（换件、改值、改电路或补资料）。",
+      "sr_check": "核对不符合项未被隐藏或归入“风险”；裕量为负而未列为不符合项的判错。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.A.1、A.7、A.8.A.9–11、A.12 注",
+          "page": "76；86；88–89；103"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.5",
+          "page": "14"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7b、附录 J.2.1",
+          "page": "29、60"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-024"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-026",
+      "title": "分析证据绑定原理图版本，记录假设、方法、参数库与工具版本",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "原理图版本",
+        "分析记录"
+      ],
+      "asg_action": "证据绑定原理图版本，记录假设、方法、参数库与所用工具版本。",
+      "sr_check": "核对证据对应当前原理图版本；版本变化后按复验规则重新打开（G02-031）。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.A.1、A.7、A.8.A.9–11、A.12 注",
+          "page": "76；86；88–89；103"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.5",
+          "page": "14"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.7b、附录 J.2.1",
+          "page": "29、60"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-024",
+          "G02-031",
+          "G02-033"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-027",
+      "title": "稳态（含重复）应力按最不利的可实现条件组合计算，阈值引用降额规范",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-019～021 的最坏工况组合",
+        "器件额定值",
+        "共用降额规范 `derating-rules.md` 的等级与规则"
+      ],
+      "asg_action": "稳态与重复应力按最不利的可实现条件组合（最高输入、最大负载、最高温度）计算，与降额规范对应规则比较；应力表列额定、降额后额定、最坏条件及理由、标称与最大应力、应力比。G02 只定工况组合方法，降额百分比只引用降额规范。",
+      "sr_check": "核对稳态应力是否在最坏可实现组合下计算，而不是标称。阈值判定按降额规范与 SR 应力检查。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.2.A、A.6.I、A.8.A.12",
+          "page": "69；82；89"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.8a",
+          "page": "29"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-028",
+          "G02-019"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-028",
+      "title": "非周期瞬态应力（通断、阶跃、模式切换）按最不利的可实现条件组合计算",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "G02-021 的模式与转换",
+        "器件瞬态或脉冲额定",
+        "共用降额规范"
+      ],
+      "asg_action": "通断、线性/负载阶跃、模式切换等非周期瞬态应力按最不利的可实现条件组合计算，与降额规范对应规则比较；瞬态偏离稳态降额须写理由。",
+      "sr_check": "核对瞬态应力是否计算、组合是否最坏；瞬态偏离稳态降额而无理由的记缺陷。阈值判定按降额规范。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.2.A、A.6.I、A.8.A.12",
+          "page": "69；82；89"
+        },
+        {
+          "document": "ECSS-Q-ST-30C Rev.1 可信性",
+          "edition": "2017-02-15",
+          "clause": "6.4.2.8a",
+          "page": "29"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-027",
+          "G02-021"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-029",
+      "title": "仿真作 WCA 证据时写明模型来源、适用范围并给出验证",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "仿真模型来源与适用范围"
+      ],
+      "asg_action": "用仿真作 WCA 证据时写明模型来源、版本、适用范围及其如何体现参数变化；不易理解或不能审查的模型给出验证证据。",
+      "sr_check": "核对仿真证据是否有模型来源与验证说明；没有的记“证据不足”。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.E；附录 A.3.F.5、A.5.G.2、A.5.G.3、A.8.A.13–14",
+          "page": "31–32（17–18）；72；78；89–90"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-030",
+          "G02-033"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-030",
+      "title": "只能靠计算或仿真预测的分析项列为下游实测，在三组以上实际工作点验证",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "样机或评估板测试计划"
+      ],
+      "asg_action": "模型可信度不足、原理图阶段只能靠计算或仿真预测的分析项，列为下游待验证项，交样机在三组及以上实际工作点实测。电源环路裕量与输出阻抗的实测清单由 G03 主判，本条不重复列。",
+      "sr_check": "只有计算或仿真、且模型未经验证的分析项，结论保持“下游待验证”，不能在原理图阶段关闭。电源环路与输出阻抗不在本条报。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.E；附录 A.3.F.5、A.5.G.2、A.5.G.3、A.8.A.13–14",
+          "page": "31–32（17–18）；72；78；89–90"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-029"
+        ]
+      },
+      "closing_stage": "prototype"
+    },
+    {
+      "id": "G02-031",
+      "title": "需求变严、电路改动或替代料时复核受影响的分析项",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "设计变更记录、替代料清单"
+      ],
+      "asg_action": "以下情况复核并更新受影响的分析项：需求变严、电路改动使原分析失效、替代料参数变化更大、换供应商或批次参数更宽。例外：裕量大到明显不受影响，须写理由。",
+      "sr_check": "改版审查时，按改动清单找出受影响的分析项并核对已更新。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.2.E、A.2.F",
+          "page": "69"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "6",
+          "page": "23"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "Impact of Nonpractice",
+          "page": "4"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-026",
+          "G02-032"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-032",
+      "title": "复用已有电路时核对原分析在新工况、新需求下仍有效且完整",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "复用电路的原有分析",
+        "新工况与新需求"
+      ],
+      "asg_action": "复用已有电路时核对原分析在新工况、新需求下是否仍有效、是否完整，不满足的按新工况复算。",
+      "sr_check": "复用电路在新工况下没有分析的，按新工况复算关键量。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.2.E、A.2.F",
+          "page": "69"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "6",
+          "page": "23"
+        },
+        {
+          "document": "NASA PD-ED-1212 最坏环境与器件参数变化下的电路设计分析",
+          "edition": "年份未标注",
+          "clause": "Impact of Nonpractice",
+          "page": "4"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-031"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-033",
+      "title": "分析记录可复核：自带假设、来源与推导，审查方独立复算关键边界",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "inputs": [
+        "分析记录（公式、参数来源、假设、工具版本）"
+      ],
+      "asg_action": "手算写清推导，表格避免难以核对的复杂单元格引用，复杂符号表达式用第二种方法核对（如手算 EVA 对照 SPICE）；分析记录完整到审查方无需事先了解设计、无需外部资料、无需自行重推即可核对。",
+      "sr_check": "审查方不继承设计方结论，对关键边界独立复算；记录缺少假设或来源以致无法核对时，记“证据不足”并写明缺什么。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.F（分析工具）、A.5.G.1、A.5.G.4、A.9.B；3.F.5.b",
+          "page": "77–78；93；39（25）"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-024",
+          "G02-026"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-034",
+      "title": "航天项目：有源器件计入总剂量与剂量率漂移，数据裕量按批次关系取",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "board": true
+      },
+      "not_applicable": "工业/通信默认基线与军用基线（未声明辐照环境时）。",
+      "inputs": [
+        "任务总剂量与剂量率、屏蔽分析",
+        "器件辐照试验数据（同批或相似批）",
+        "辐照设计裕量（项目规定）"
+      ],
+      "asg_action": "有源器件计入总剂量漂移（偏置变化）、ELDRS 与剂量率效应；非同批数据加裕量（同厂同工艺 20 %，不同厂或工艺 >100 % 且至少 3 只样品验证）；不得外推到高于试验的剂量。",
+      "sr_check": "核对辐照漂移的数据来源与裕量；外推超过试验剂量的判不合格。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.4.1–5.1.1.4.5",
+          "page": "15–17"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.6.A.3、A.6.A.4；3.F.3 第 4 条",
+          "page": "80；34（20）"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-005",
+          "G02-035"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-035",
+      "title": "航天项目：单粒子效应防护电路在正常工作下纳入 WCA",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "board": true
+      },
+      "not_applicable": "工业/通信默认基线与军用基线（未声明辐照环境时）。",
+      "inputs": [
+        "单粒子效应防护电路清单"
+      ],
+      "asg_action": "为防单粒子效应加的保护电路在正常工作下纳入 WCA，单粒子效应本身按异常处理（归 G05）。",
+      "sr_check": "核对 SEE 防护电路是否纳入正常工作的 WCA；未纳入的记“证据不足”。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.4.1–5.1.1.4.5",
+          "page": "15–17"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.6.A.3、A.6.A.4；3.F.3 第 4 条",
+          "page": "80；34（20）"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-034"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-001",
+      "title": "电源树各节点的最坏峰值电流不超过手册保证额定",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true
+      },
+      "not_applicable": "",
+      "tailoring": "无源转接板可只列对外供电的电流与额定。",
+      "inputs": [
+        "G01 工况矩阵：各工作模式（关断、待机、正常、启动、峰值）的平均与峰值功耗；G01 电源输入工况：输入电压窗、测量点与线路压降、上游保护；有对应接口时取 G01 的 −48 V、USB、PoE PD 输入工况（电压范围、输入电流或功率等级限值）",
+        "各变换器在最坏输入、负载、温度点的效率（准确料号手册曲线或保证值）",
+        "电源树：源、变换器、LDO、限流器、连接器的级联关系与保证额定"
+      ],
+      "asg_action": "建电源树，按 G01 模式矩阵逐轨自下而上汇总平均与峰值电流；变换器输入电流 Iin = Pout /（η_min × Vin_min），LDO 输入电流取输出电流加静态电流；Vin_min 扣线路与保护器件压降；最坏组合按 G02 的最坏工况方法取，模式覆盖须含启动与峰值。判据：每个源、变换器、限流器、连接器的最坏峰值 ≤ 手册保证额定，余量按工程取值 g03_budget_margin（不另加）。证据：电源树与预算表，每行写工况点和数据出处。器件应力降额按降额规范，不在本规则重复。",
+      "sr_check": "独立重建电源树和最坏组合，不继承 ASG 的预算表。核模式覆盖是否含启动与峰值、效率是否取最坏点而非典型、Vin_min 是否扣了线路与保护器件压降。缺功耗或效率数据记资料不足，不判通过；最坏峰值超过保证额定判不成立。关闭条件：预算表齐全，每行最坏值不超过保证额定。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.2.2.2 a、c（原文 shall，航天；默认基线下作方法依据）",
+          "page": "42–43"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-002",
+          "G03-013",
+          "G03-042"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-002",
+      "title": "对外电源输入在最低电压下的输入电流不超过 G01 接口限值",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "board": true,
+        "text": "有对外电源输入接口的板卡"
+      },
+      "not_applicable": "没有对外电源输入（只由板内电源供电）的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "G01 工况矩阵：各工作模式（关断、待机、正常、启动、峰值）的平均与峰值功耗；G01 电源输入工况：输入电压窗、测量点与线路压降、上游保护；有对应接口时取 G01 的 −48 V、USB、PoE PD 输入工况（电压范围、输入电流或功率等级限值）",
+        "各变换器在最坏输入、负载、温度点的效率（准确料号手册曲线或保证值）"
+      ],
+      "asg_action": "用 G03-001 的最坏功耗和最低输入电压算对外输入电流，与 G01 的接口限值对照（如 −48 V 输入在最低电压下的 1.5 Im、USB 协商电流、PoE 功率等级）。证据：对照行，写明工况点与所用 G01 接口工况。",
+      "sr_check": "独立复算；G01 没给接口限值的记资料不足并转 G01；超过限值判不成立。关闭条件：每个对外输入都有对照且满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.2.2.2 a、c（原文 shall，航天；默认基线下作方法依据）",
+          "page": "42–43"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-001"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-003",
+      "title": "内补偿变换器与 LDO 的输出电容有效值在手册允许范围内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "内补偿开关变换器与 LDO"
+      },
+      "not_applicable": "补偿网络由设计者外接的变换器转 G03-006～G03-009。",
+      "tailoring": "手册明确“任意电容稳定”的 LDO 只核最小电容。",
+      "inputs": [
+        "准确料号手册的稳定条件：电感范围、输出电容最小值与范围、ESR 窗口、穿越频率与 LC 的关系式",
+        "输出电容有效值（G03-010）及 ESR 的最小、最大值（含低温、频率）"
+      ],
+      "asg_action": "列出手册对输出电容的最小值与范围要求，用有效电容（G03-010）的最小、最大两端核对；为保持时间等目的加大电容时核手册是否允许。证据：稳定条件对照表。",
+      "sr_check": "按手册条件独立复核两端值；任一端越界判不成立；手册未给电容条件或电容缺直流偏置数据记资料不足。关闭条件：两端满足，或以 G03-008、G03-009 的环路分析代替并列入 G03-041 实测。",
+      "source": [
+        {
+          "document": "TI SLVA115A ESR, Stability, and the LDO Regulator",
+          "edition": "Rev.A，2002-05 初版 / 2020-02 修订",
+          "clause": "§1 Introduction（三极点、ESR 零点、ESR 窗口与最小电容）",
+          "page": "1–3"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-004",
+          "G03-005"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-004",
+      "title": "内补偿变换器与 LDO 的输出电容 ESR 在手册窗口内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "手册给出 ESR 窗口的内补偿变换器与 LDO"
+      },
+      "not_applicable": "手册未给 ESR 窗口（如允许任意低 ESR 的 MLCC 稳定型）的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "准确料号手册的稳定条件：电感范围、输出电容最小值与范围、ESR 窗口、穿越频率与 LC 的关系式",
+        "输出电容有效值（G03-010）及 ESR 的最小、最大值（含低温、频率）"
+      ],
+      "asg_action": "旧式 PNP/PMOS 型 LDO 需要输出电容 ESR 零点把 0 dB 处斜率压回 −20 dB/十倍频，ESR 须在手册窗口内（下限决定 fZ(ESR) 上限）；ESR 取最小、最大两端：电解、钽电容取低温 ESR（阻抗比），ESR 随频率变化时取最小值。证据：稳定条件对照表。",
+      "sr_check": "独立复核 ESR 两端；只有典型 ESR 不能证明满足窗口，记资料不足；最坏端越界判不成立。关闭条件：两端都在窗口内。",
+      "source": [
+        {
+          "document": "TI SLVA115A ESR, Stability, and the LDO Regulator",
+          "edition": "Rev.A，2002-05 初版 / 2020-02 修订",
+          "clause": "§1 Introduction（ESR 窗口）",
+          "page": "1–3"
+        },
+        {
+          "document": "TI SLVA115A ESR, Stability, and the LDO Regulator",
+          "edition": "Rev.A，2002-05 初版 / 2020-02 修订",
+          "clause": "§2 Conclusion（ESR 随频率变化，取最小 ESR）",
+          "page": "6"
+        },
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "Output filter capacitors：ESR 变化导致增益与相位裕量变化",
+          "page": "13"
+        },
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "1. 3) Impedance Ratio（低温阻抗比）",
+          "page": "8"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-003",
+          "G03-005",
+          "G03-038"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-005",
+      "title": "手册给出 LC 与穿越频率关系式的内补偿变换器按式满足",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "手册给出电感范围、LC 与穿越频率关系式的内补偿开关变换器"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "准确料号手册的稳定条件：电感范围、输出电容最小值与范围、ESR 窗口、穿越频率与 LC 的关系式",
+        "输出电容有效值（G03-010）及 ESR 的最小、最大值（含低温、频率）"
+      ],
+      "asg_action": "电感在手册范围内；按手册式算穿越频率与 ESR 上限（如 f_CO 与 f_LC 的关系、ESR_MAX = 1/(2π·C_OUT·f_CO)），电容取有效值两端。证据：计算行，注明手册式号。",
+      "sr_check": "按手册式独立复算；穿越频率或电感越出手册范围判不成立；缺电容或 ESR 数据记资料不足。关闭条件：两端都在手册范围内。",
+      "source": [
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "Output filter capacitors：ESR 变化导致增益与相位裕量变化",
+          "page": "13"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-003",
+          "G03-004"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-006",
+      "title": "外补偿型式与控制方式匹配",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "补偿网络外接的开关变换器"
+      },
+      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "tailoring": "",
+      "inputs": [
+        "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
+        "功率级参数：L、输出电容有效值与 ESR、负载范围、输入电压范围（G01 电源输入工况）",
+        "开关频率；误差放大器类型（运放 / OTA）"
+      ],
+      "asg_action": "电压型 CCM 须用 Type III（Type II 相位恒为负，不能补偿 LC 后的相位跌落）；Type II 用于电流型或始终 DCM。证据：控制方式与补偿型式说明。",
+      "sr_check": "核补偿型式与控制方式、导通模式匹配；不匹配判不成立。关闭条件：型式正确。",
+      "source": [
+        {
+          "document": "TI SLVA662 Demystifying Type II and Type III Compensators Using Op-Amp and OTA for DC/DC Converters",
+          "edition": "2014-07",
+          "clause": "Type II 限制（不能用于 CCM 电压型）",
+          "page": "5"
+        },
+        {
+          "document": "TI SLVA662 Demystifying Type II and Type III Compensators Using Op-Amp and OTA for DC/DC Converters",
+          "edition": "2014-07",
+          "clause": "Type III 用于需 90° 以上相位提升",
+          "page": "8"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-007",
+          "G03-008",
+          "G03-009"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-007",
+      "title": "外补偿穿越频率低于开关频率限值与最低 RHP 零点",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "补偿网络外接的开关变换器"
+      },
+      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "tailoring": "",
+      "inputs": [
+        "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
+        "功率级参数：L、输出电容有效值与 ESR、负载范围、输入电压范围（G01 电源输入工况）",
+        "开关频率；误差放大器类型（运放 / OTA）"
+      ],
+      "asg_action": "穿越频率远低于开关频率；升压、反激的电压环穿越低于最低 RHP 零点（ωRHPZ = R_LOAD(1−D)²/L，最低出现在最大负载、最低输入）。证据：穿越频率与 RHP 零点计算，注明工况点。",
+      "sr_check": "独立复算补偿零极点与穿越频率；在最大负载、最低输入下穿越频率不低于最低 RHP 零点的判不成立。关闭条件：最坏工况下满足。",
+      "source": [
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "相位裕量与条件稳定、穿越频率限制",
+          "page": "4–6"
+        },
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "RHP 零点式 (13) 与电压环穿越低于最低 RHP 零点",
+          "page": "22"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-006",
+          "G03-008"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-008",
+      "title": "外补偿环路在最坏组合下相位裕量不低于取值",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "补偿网络外接的开关变换器"
+      },
+      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "tailoring": "",
+      "inputs": [
+        "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
+        "功率级参数：L、输出电容有效值与 ESR、负载范围、输入电压范围（G01 电源输入工况）",
+        "开关频率；误差放大器类型（运放 / OTA）",
+        "隔离反馈：光耦 CTR 的初始范围、温度与寿命末衰减，TL431 偏置与内部补偿参数"
+      ],
+      "asg_action": "相位裕量 ≥ g03_loop_pm_min（45°），0 dB 处斜率约 −20 dB/十倍频。在输入、负载、电容与 ESR（含低温、寿命末）的最坏组合（按 G02 的最坏工况方法，含寿命末参数）下算；光耦隔离反馈的环路增益正比于 CTR，CTR 取初始最小/最大、温度与寿命末衰减两端分别算；OTA 型分压的两只电阻都进交流分析，改分压须重算补偿（运放型改输出电压只改下分压电阻）。证据：环路计算或仿真（Bode），注明模型与工况点；实测交 G03-041。",
+      "sr_check": "独立复算；只在单一工况点算或测裕量的记资料不足（单点实测不能代替最坏组合）；最坏点相位裕量低于取值判不成立（有仿真或实测证据前）。关闭条件：最坏组合满足，并已列入 G03-041 的环路实测。",
+      "source": [
+        {
+          "document": "TI SLVA662 Demystifying Type II and Type III Compensators Using Op-Amp and OTA for DC/DC Converters",
+          "edition": "2014-07",
+          "clause": "§1 稳定判据（45°–60° 相位裕量、−20 dB/十倍频）",
+          "page": "2"
+        },
+        {
+          "document": "TI SLVA662 Demystifying Type II and Type III Compensators Using Op-Amp and OTA for DC/DC Converters",
+          "edition": "2014-07",
+          "clause": "OTA 与运放的分压电阻差别",
+          "page": "15"
+        },
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "相位裕量与条件稳定、穿越频率限制",
+          "page": "4–6"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-006",
+          "G03-007",
+          "G03-009",
+          "G03-026",
+          "G03-041",
+          "G03-044"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-009",
+      "title": "外补偿环路在最坏组合下增益裕量不低于取值",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "补偿网络外接的开关变换器"
+      },
+      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "tailoring": "",
+      "inputs": [
+        "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
+        "功率级参数：L、输出电容有效值与 ESR、负载范围、输入电压范围（G01 电源输入工况）",
+        "开关频率；误差放大器类型（运放 / OTA）",
+        "隔离反馈：光耦 CTR 的初始范围、温度与寿命末衰减，TL431 偏置与内部补偿参数"
+      ],
+      "asg_action": "增益裕量 ≥ g03_loop_gm_min（6 dB）。在输入、负载、电容与 ESR（含低温、寿命末）的最坏组合（按 G02 的最坏工况方法，含寿命末参数）下算；光耦隔离反馈的环路增益正比于 CTR，CTR 取初始最小/最大、温度与寿命末衰减两端分别算；OTA 型分压的两只电阻都进交流分析，改分压须重算补偿（运放型改输出电压只改下分压电阻）。证据：环路计算或仿真（Bode），注明模型与工况点；实测交 G03-041。",
+      "sr_check": "独立复算；只在单一工况点算或测裕量的记资料不足；最坏点增益裕量低于取值判不成立（有仿真或实测证据前）。关闭条件：最坏组合满足，并已列入 G03-041 的环路实测。",
+      "source": [
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "相位裕量与条件稳定、穿越频率限制",
+          "page": "4–6"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-008",
+          "G03-041",
+          "G03-045"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-010",
+      "title": "动态计算用有效电容，按用途取下限或上限",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ]
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "电容准确料号的直流偏置曲线、介质温度特性、容差；电解与钽电容的容差、低温 ESR / 阻抗比",
+        "各电容的工作直流电压与温度范围（G01 工况矩阵；元件温度按 G02 的最坏工况方法取端点）"
+      ],
+      "asg_action": "MLCC 有效电容 = 标称值 × 工作电压处的直流偏置系数（厂家曲线）× 介质温度特性 × 容差下限（厂家给老化时再计）；电解、钽取容差下限与低温、寿命末 ESR。稳定、纹波、负载跃变、保持时间用下限；浪涌电荷、启动时间与限流器应力用上限（容差上限、偏置较低处）。参数变差按 G02 的最坏工况方法组合。证据：关键电容的有效值计算行，注明曲线出处。",
+      "sr_check": "核每个动态计算所用电容取值口径与用途是否对应；用标称值做稳定或保持计算的，计算不成立，须重算；缺直流偏置曲线记资料不足。关闭条件：口径正确且出处可查。",
+      "source": [
+        {
+          "document": "TI SLYY151A LDO Basics（电子书）",
+          "edition": "Rev.A，2020",
+          "clause": "Chapter 2 Capacitor vs. capacitance（直流偏置、温度、容差叠加的有效电容）",
+          "page": "6–7"
+        },
+        {
+          "document": "TI SLOA069 How (Not) to Decouple High-Speed Operational Amplifiers",
+          "edition": "2001-09",
+          "clause": "Table 1 Capacitor Dielectric Characteristics（介质温度系数）",
+          "page": "7"
+        },
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "1. 2)–3)（ESR、阻抗比随温度变化）",
+          "page": "7–8"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-003",
+          "G03-013",
+          "G03-023"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-011",
+      "title": "输入滤波器输出阻抗与变换器输入阻抗之比在全频段不低于取值",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "开关变换器输入端有 LC / 铁氧体滤波，或源阻抗不可忽略（长线、上游变换器）"
+      },
+      "not_applicable": "变换器直接由低阻抗源供电、输入端只有去耦电容的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况中的源阻抗（线缆、LISN、上游变换器输出阻抗）",
+        "滤波器 L、C、阻尼支路及容差",
+        "变换器输入阻抗模型与最大功率、输入电压范围"
+      ],
+      "asg_action": "（1）算滤波器输出阻抗（含谐振峰）与谐振频率；阻尼不足时加 Rd–Cd 并联阻尼（Cd 取约 4C、Rd 取约 √(L/C) 的最优组合）或串联阻尼。（2）开关变换器输入呈负阻抗，模值最小点在最低输入电压、最大负载；降压可按 SNVA538 附录式 Zin ≈ (Ro + RL)/D² 估算，其他拓扑按料号手册或模型。（3）判据：阻抗比 = 变换器输入阻抗最小模值 ÷ 滤波器输出阻抗，须在全频段（含谐振峰处）≥ g03_filter_z_ratio（2 倍）；满足时稳定性判定完成，不再单独判阻尼比（G03-012）。在输入电压范围、功耗、源阻抗、元件不确定度、负载阻抗的最坏组合下算；阻尼元件取使阻尼最小的一端（靠电解电容 ESR 阻尼时取高温、新品的最低 ESR，MLCC 取直流偏置后的有效值，G03-010）。证据：阻抗计算或曲线，注明工况点。",
+      "sr_check": "在最低输入、最大负载与元件容差端独立复核；只按标称值或额定输入算的，阻抗比记“算不清”，转 G03-012 按阻尼比判；阻抗比不满足的判不成立。关闭条件：最坏组合下阻抗比满足；输入阻抗实测列 G03-041。",
+      "source": [
+        {
+          "document": "TI SNVA538 Input Filter Design for Switching Power Supplies（Sclocchi）",
+          "edition": "2010（National Semiconductor 版权，TI 文献号 SNVA538）",
+          "clause": "Undamped L-C Filter：Middlebrook 判据与阻尼比",
+          "page": "4–5"
+        },
+        {
+          "document": "TI SNVA538 Input Filter Design for Switching Power Supplies（Sclocchi）",
+          "edition": "2010（National Semiconductor 版权，TI 文献号 SNVA538）",
+          "clause": "Parallel Damped Filter（Rd、Cd 最优值）",
+          "page": "5–6"
+        },
+        {
+          "document": "TI SNVA538 Input Filter Design for Switching Power Supplies（Sclocchi）",
+          "edition": "2010（National Semiconductor 版权，TI 文献号 SNVA538）",
+          "clause": "Appendix 输入阻抗式与滤波转折频率取环路带宽以下约一个十倍频程",
+          "page": "13"
+        },
+        {
+          "document": "ECSS-E-HB-20-20A Electrical design and interface requirements for power supply（handbook）",
+          "edition": "2016-04-15",
+          "clause": "5.7.6 b、e（最坏组合清单；变换器为负阻，低输入、满载最差）",
+          "page": "64–65"
+        },
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.8.1 q、r、t（级联源—负载阻抗稳定；原文 shall，航天，默认基线下作方法依据）",
+          "page": "68–70"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-012",
+          "G03-041",
+          "G03-048"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-012",
+      "title": "阻抗比余量不足或算不清时，输入滤波主谐振极点对的阻尼比不低于取值",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "开关变换器输入端有 LC / 铁氧体滤波，或源阻抗不可忽略（长线、上游变换器）"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况中的源阻抗（线缆、LISN、上游变换器输出阻抗）",
+        "滤波器 L、C、阻尼支路及容差",
+        "变换器输入阻抗模型与最大功率、输入电压范围"
+      ],
+      "asg_action": "只在 G03-011 的阻抗比余量不足、算不清或缺资料时作硬判据：滤波器阻尼比 ≥ g03_filter_zeta_min（0.4）。阻尼比指滤波网络主谐振极点对的阻尼比，计入全部阻尼支路与电容 ESR；可由网络极点直接求。在输入电压范围、功耗、源阻抗、元件不确定度、负载阻抗的最坏组合下算；阻尼元件取使阻尼最小的一端（靠电解电容 ESR 阻尼时取高温、新品的最低 ESR，MLCC 取直流偏置后的有效值，G03-010）。证据：极点或阻尼计算，注明元件取值端。",
+      "sr_check": "阻抗比已满足的不判本条；阻抗比余量不足、算不清或缺资料时，主谐振极点对的阻尼比低于取值判不成立（有仿真证明前）。关闭条件：阻尼比满足，并把阻抗比列入待补资料。",
+      "source": [
+        {
+          "document": "TI SNVA538 Input Filter Design for Switching Power Supplies（Sclocchi）",
+          "edition": "2010（National Semiconductor 版权，TI 文献号 SNVA538）",
+          "clause": "Undamped L-C Filter：Middlebrook 判据与阻尼比",
+          "page": "4–5"
+        },
+        {
+          "document": "ECSS-E-HB-20-20A Electrical design and interface requirements for power supply（handbook）",
+          "edition": "2016-04-15",
+          "clause": "5.7.6 c（飞行条件阻尼比 0.4；开关变换器负阻恶化阻尼）",
+          "page": "64–65"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-011",
+          "G03-049"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-013",
+      "title": "启动、限流与浪涌模型记录字段齐全（G05 引用同一记录）",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "有热插拔控制器、eFuse、负载开关、缓启动或限流 LDO 的电源入口与配电支路"
+      },
+      "not_applicable": "",
+      "tailoring": "无主动限流的支路只记 M6。",
+      "inputs": [
+        "G01 电源输入工况：输入电压窗（含最高值）、源阻抗、上游保护器件与接口浪涌限值；有对应接口时取 G01 的 −48 V 接口限值（合闸浪涌电流、输入电流）、USB VBUS 电容上限、PoE PD 输入工况（浪涌、输入电压窗）",
+        "限流器件参数的手册极值：电流限、功率限、dv/dt、故障定时器",
+        "下游总电容的上、下限（G03-010），含后级变换器输入电容",
+        "启动期间负载特性（阻性 / 恒流 / 恒功率；后级 UVLO 开启点）",
+        "通路 MOSFET 的 SOA 曲线与热阻"
+      ],
+      "asg_action": "形成一份模型记录，字段固定，G05 直接引用、不另建：M1 限流器 I–V：I_LIM = min(I_LIM,CL, P_LIM/V_DS)；通路上有多个器件（如 PD 控制器内部热插拔加外部旁路 MOSFET）时，分别记录各器件承担浪涌的时段与使能条件；M2 启动浪涌：I_inrush = C_total·dV/dt + 启动期负载电流；只有功率限时 T_START 按 SLVA673A 式 (3)，dv/dt 控制时 T_START = C·ΔV / I_inrush；功率限启动时浪涌电流随 V_DS 下降而升高，峰值取电流限上限；M3 定时器：T_START 与最短故障定时；M4 MOSFET 应力三种情形：正常启动、带短路启动（约 P_LIM 持续 T_TIMER）、热短路（起始壳温更高）；M5 上游：浪涌峰值与持续时间、上游保护；M6 无主动限流（直接上电、PPTC、NTC）时，只记 C_total 与源阻抗，浪涌由源与接口限值判。G03 判 G03-014～G03-017；M4 的带短路启动与热短路、保护选择性与恢复由 G05 判，引用本记录。",
+      "sr_check": "核模型字段是否齐全、参数是否取手册极值（电容取上限，限流与定时取最不利端，计入启动期负载：后级变换器过 UVLO 后即为恒功率负载）；缺定时器或限流公差记资料不足。关闭条件：M1–M6 字段齐全。",
+      "source": [
+        {
+          "document": "TI SLVA673A Robust Hot Swap Design",
+          "edition": "Rev.A（修订记录 1.1，2015-02-27）",
+          "clause": "§2.1 Hot Swap Controllers with FET SOA Protection，式 (1)(2)",
+          "page": "3"
+        },
+        {
+          "document": "TI SLVA673A Robust Hot Swap Design",
+          "edition": "Rev.A（修订记录 1.1，2015-02-27）",
+          "clause": "§2.2.1 只有功率限的启动、带短路启动、热短路，式 (3)",
+          "page": "4–6"
+        },
+        {
+          "document": "TI SLVA673A Robust Hot Swap Design",
+          "edition": "Rev.A（修订记录 1.1，2015-02-27）",
+          "clause": "§2.2.2 功率限加 dv/dt 控制",
+          "page": "6–7"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-001",
+          "G03-014",
+          "G03-015",
+          "G03-016",
+          "G03-017",
+          "G03-018"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-014",
+      "title": "功率限工作点的检测电压不低于手册推荐值",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "带功率限的热插拔控制器"
+      },
+      "not_applicable": "没有功率限功能的限流器不适用。",
+      "tailoring": "",
+      "inputs": [
+        "限流器件参数的手册极值：电流限、功率限、dv/dt、故障定时器"
+      ],
+      "asg_action": "V_SNS = P_LIM × R_SNS / V_DS,max，不低于手册推荐的最小检测电压（低于此值功率限精度明显变差）。证据：计算行，注明手册推荐值出处。",
+      "sr_check": "独立复算；低于手册推荐值判不成立；手册未给推荐值记资料不足。关闭条件：满足。",
+      "source": [
+        {
+          "document": "TI SLVA673A Robust Hot Swap Design",
+          "edition": "Rev.A（修订记录 1.1，2015-02-27）",
+          "clause": "§2.1 Hot Swap Controllers with FET SOA Protection，式 (1)(2)",
+          "page": "3"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-013"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-015",
+      "title": "启动时间不超过最短故障定时的取值比例",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "有热插拔控制器、eFuse、负载开关、缓启动或限流 LDO 的电源入口与配电支路"
+      },
+      "not_applicable": "没有故障定时器的限流器不适用。",
+      "tailoring": "",
+      "inputs": [
+        "限流器件参数的手册极值：电流限、功率限、dv/dt、故障定时器",
+        "下游总电容的上、下限（G03-010），含后级变换器输入电容",
+        "启动期间负载特性（阻性 / 恒流 / 恒功率；后级 UVLO 开启点）"
+      ],
+      "asg_action": "取电容上限、限流（功率限）下限、输入最高时的 T_START ≤ g03_startup_timer_share（80%）× 最短故障定时 T_TIMER,min（计入定时电容、定时电流与门限公差）。证据：M2、M3 计算行。",
+      "sr_check": "按手册极值独立重算；缺定时器或限流公差记资料不足（不按典型值放行）；超过取值判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "TI SLVA673A Robust Hot Swap Design",
+          "edition": "Rev.A（修订记录 1.1，2015-02-27）",
+          "clause": "§2.2.1 只有功率限的启动，式 (3)；定时器须大于启动时间",
+          "page": "4–6"
+        },
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.4.2.3 负载输入滤波充电时间 ≤ 最短跳闸时间的 80%（航天 LCL，g03_startup_timer_share 的借用来源）",
+          "page": "38"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-013",
+          "G03-052"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-016",
+      "title": "正常启动时通路 MOSFET 在降额后的 SOA 内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "有热插拔控制器、eFuse、负载开关、缓启动或限流 LDO 的电源入口与配电支路"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "限流器件参数的手册极值：电流限、功率限、dv/dt、故障定时器",
+        "通路 MOSFET 的 SOA 曲线与热阻"
+      ],
+      "asg_action": "正常启动的应力按 P_LIM（或 dv/dt 控制的实际功率）持续 T_START 计；SOA 按持续时间选曲线、按开始壳温降额（SLVA673A 式 4、5），非方波按式 7 折算；判定按降额规范 R11 与 MOS-* 规则（soa_segment_share）。带短路启动与热短路由 G05 判，引用 G03-013 的 M4 字段。证据：SOA 核算行。",
+      "sr_check": "独立复算；缺 SOA 曲线或热阻记资料不足；降额后不满足判不成立。带短路启动、热短路的结论转 G05，不在 G03 下结论。关闭条件：正常启动满足。",
+      "source": [
+        {
+          "document": "TI SLVA673A Robust Hot Swap Design",
+          "edition": "Rev.A（修订记录 1.1，2015-02-27）",
+          "clause": "§2.3 SOA 曲线、壳温降额与非方波折算，式 (4)–(7)",
+          "page": "7–10"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-013"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-017",
+      "title": "启动浪涌不超过 G01 接口限值，且不使上游保护动作",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "有热插拔控制器、eFuse、负载开关、缓启动或限流 LDO 的电源入口与配电支路"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况：输入电压窗（含最高值）、源阻抗、上游保护器件与接口浪涌限值；有对应接口时取 G01 的 −48 V 接口限值（合闸浪涌电流、输入电流）、USB VBUS 电容上限、PoE PD 输入工况（浪涌、输入电压窗）",
+        "下游总电容的上、下限（G03-010），含后级变换器输入电容",
+        "启动期间负载特性（阻性 / 恒流 / 恒功率；后级 UVLO 开启点）"
+      ],
+      "asg_action": "浪涌峰值（功率限启动时取电流限上限）与持续时间不超过 G01 接口限值（如 −48 V 合闸浪涌电流、USB VBUS 体电容、PoE PD 浪涌），不使上游熔断器、断路器或 PSE 限流动作；无主动限流时由 C_total 与源阻抗算。证据：M5 计算行。",
+      "sr_check": "独立复算；G01 没给接口限值的记资料不足并转 G01；超过限值或会使上游保护动作判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.8.1 n（限流器动作时的瞬态电流峰值在器件额定内，最小串联阻抗工况）",
+          "page": "68"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-013",
+          "G03-002"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-018",
+      "title": "变换器 UVLO 开启点低于输入窗下限",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "所有变换器与 LDO"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况：输入电压上升斜率范围（含慢上电）与源阻抗",
+        "各变换器 UVLO 开启、关断门限与滞回的手册极值；软启动时间极值；LDO 限流方式（砖墙 / 折返）"
+      ],
+      "asg_action": "UVLO 开启点（手册上限）低于输入窗下限（扣线路与保护器件压降），使变换器在源可能给出的任意上升斜率下都能进入正常输出。证据：启动检查表。",
+      "sr_check": "独立核手册极值；缺 UVLO 极值记资料不足；开启点上限高于输入窗下限判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.5 h（任意斜率输入下达到正常工作；原文 shall，航天，默认基线下作方法依据）",
+          "page": "66"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-019",
+          "G03-020",
+          "G03-021",
+          "G03-022",
+          "G03-013"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-019",
+      "title": "满载电流在源阻抗上的压降小于 UVLO 滞回",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "源阻抗不可忽略的变换器输入"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况：输入电压上升斜率范围（含慢上电）与源阻抗",
+        "各变换器 UVLO 开启、关断门限与滞回的手册极值；软启动时间极值；LDO 限流方式（砖墙 / 折返）",
+        "启动期负载类型与电流"
+      ],
+      "asg_action": "满载（含启动后后级恒功率负载）电流 × 源阻抗的压降小于 UVLO 滞回（手册下限），避免开启—关断振荡。证据：启动检查表。",
+      "sr_check": "独立核；源阻抗未知记资料不足并转 G01；压降不小于滞回判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.3.5 负载侧欠压保护与限流器相互作用形成重复过载（航天，作方法依据）",
+          "page": "36"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-018"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-020",
+      "title": "折返限流 LDO 的启动期负载电流低于折返允许电流",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "折返限流的 LDO"
+      },
+      "not_applicable": "砖墙限流 LDO 不适用。",
+      "tailoring": "",
+      "inputs": [
+        "各变换器 UVLO 开启、关断门限与滞回的手册极值；软启动时间极值；LDO 限流方式（砖墙 / 折返）",
+        "启动期负载类型与电流"
+      ],
+      "asg_action": "折返限流 LDO 带恒流类负载可能锁在低压：启动期负载电流低于折返曲线最低处的允许电流。证据：启动检查表。",
+      "sr_check": "独立核；缺负载启动特性或折返曲线记资料不足；负载超过折返允许电流判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "TI SLYY151A LDO Basics（电子书）",
+          "edition": "Rev.A，2020",
+          "clause": "Chapter 5 Current limit（砖墙与折返限流；折返对非阻性负载可能锁死）",
+          "page": "13–14"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-021"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-021",
+      "title": "软启动充电电流加启动期负载低于器件限流下限",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "所有变换器与 LDO"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "各变换器 UVLO 开启、关断门限与滞回的手册极值；软启动时间极值；LDO 限流方式（砖墙 / 折返）",
+        "启动期负载类型与电流"
+      ],
+      "asg_action": "C_out（有效值上限）·V_out / t_SS,min + 启动期负载电流 < 器件限流下限。证据：启动检查表。",
+      "sr_check": "独立复算；缺软启动或限流极值记资料不足；不满足判不成立。关闭条件：满足；启动波形列 G03-041。",
+      "source": [
+        {
+          "document": "TI SLYY151A LDO Basics（电子书）",
+          "edition": "Rev.A，2020",
+          "clause": "Chapter 5 Current limit",
+          "page": "13–14"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-018",
+          "G03-020"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-022",
+      "title": "EN、PG 门限与上拉在最低输入下有效",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "用 EN、PG 控制启动的变换器与 LDO"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "各变换器 UVLO 开启、关断门限与滞回的手册极值；软启动时间极值；LDO 限流方式（砖墙 / 折返）"
+      ],
+      "asg_action": "使能链中 EN 门限、PG 上拉电源与门限在最低输入（含上电过程中）下有效，不出现使能不确定。证据：启动检查表。",
+      "sr_check": "独立核；缺门限极值记资料不足；最低输入下使能不确定判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.5 h（任意斜率输入下达到正常工作；航天，作方法依据）",
+          "page": "66"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-018",
+          "G03-028"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-023",
+      "title": "须保持的轨在中断期间的保持电容满足保持时间",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "有中断保持要求的电源轨"
+      },
+      "not_applicable": "没有保持要求的轨按 G03-024。",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况：电压中断与暂降的等级、持续时间与自恢复要求（有对应接口时取 G01 的 −48 V 中断、交流暂降与中断工况）",
+        "须在中断期间保持的轨与负载功率",
+        "UVLO、复位监控门限的手册极值；负载最低工作电压"
+      ],
+      "asg_action": "C ≥ 2·P·t_hold /（η·(V1² − V2²)），V1 取中断开始时电容电压最低值，V2 取下游 UVLO 关断门限上限；此式为能量守恒推导，非标准原文；C 取有效下限（G03-010），P 取最高功耗。证据：保持计算。",
+      "sr_check": "用有效电容下限与最高功耗独立复算；缺中断等级记资料不足并转 G01；不满足判不成立。关闭条件：计算满足；实测列 G03-041。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.4 a NOTE 1、e、f（欠压期间与恢复时不致失效，恢复后负载状态已知；原文 shall，航天，默认基线下作方法依据）",
+          "page": "64–65"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-024",
+          "G03-025"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-024",
+      "title": "中断与恢复期间无器件过应力，恢复后自动回到正常",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ]
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "G01 电源输入工况：电压中断与暂降的等级、持续时间与自恢复要求（有对应接口时取 G01 的 −48 V 中断、交流暂降与中断工况）",
+        "须在中断期间保持的轨与负载功率",
+        "UVLO、复位监控门限的手册极值；负载最低工作电压"
+      ],
+      "asg_action": "不须保持的轨：中断期间与恢复时无器件过应力（含恢复时的再次浪涌，按 G03-017），恢复后自动回到正常；储能电容大于输入侧时按 G03-031 核反灌；需要时加放电（如假负载放电）。证据：掉电与恢复检查。",
+      "sr_check": "独立核；缺中断等级记资料不足并转 G01；恢复需人工干预或有过应力通路判不成立。关闭条件：掉电与恢复没有未处理的通路。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.4 a NOTE 1、e、f",
+          "page": "64–65"
+        },
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§IV 掉电顺序可与上电相反，可加假负载给输出电容放电（印刷页 2-16）",
+          "page": "38"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-023",
+          "G03-025",
+          "G03-029",
+          "G03-031"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-025",
+      "title": "复位门限高于各负载最低工作电压，掉电先复位",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "有复位监控或 PG 复位的数字负载"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "UVLO、复位监控门限的手册极值；负载最低工作电压"
+      ],
+      "asg_action": "复位（监控器或 PG）门限下限高于各负载最低工作电压，保证掉电先复位、状态已知。证据：门限对照行。",
+      "sr_check": "独立核门限极值与负载最低电压；缺数据记资料不足；门限低于负载最低工作电压判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.4 a NOTE 1、e、f（恢复后负载状态已知）",
+          "page": "64–65"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-024"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-026",
+      "title": "负载跃变下输出偏差在负载允许窗内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ]
+      },
+      "not_applicable": "负载电流恒定或变化缓慢的轨。",
+      "tailoring": "",
+      "inputs": [
+        "G01 工况矩阵：负载跃变幅度与 di/dt（各模式的平均与峰值功耗）",
+        "负载允许电压窗（准确料号手册）",
+        "输出电容有效值、ESR、ESL；环路穿越频率（G03-007 或手册）"
+      ],
+      "asg_action": "静态精度（按 G02 的最坏工况方法）加动态偏差，合计在负载允许窗内。初始偏差按 ΔV ≈ ΔI·ESR + ESL·di/dt 一阶估算（工程估算，非原文公式），恢复过程由环路频率特性决定；LDO 按手册跃变曲线（核电容条件与本设计一致）。估算不满足时加大电容、降低 ESR 或提高带宽。证据：跃变估算，标明“估算”。",
+      "sr_check": "核估算口径与工况；只有典型曲线且条件与本设计不同的记资料不足；估算超窗判风险并要求仿真。关闭条件：仿真或实测（G03-041）满足。",
+      "source": [
+        {
+          "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
+          "edition": "1996（2011 TI 重印）",
+          "clause": "Transient Response：瞬态响应由环路频率特性决定",
+          "page": "6–7"
+        },
+        {
+          "document": "TI SLVA662 Demystifying Type II and Type III Compensators Using Op-Amp and OTA for DC/DC Converters",
+          "edition": "2014-07",
+          "clause": "§1 45°–60° 相位裕量对应阻尼良好的负载跃变",
+          "page": "2"
+        },
+        {
+          "document": "TI SLVA115A ESR, Stability, and the LDO Regulator",
+          "edition": "Rev.A，2002-05 初版 / 2020-02 修订",
+          "clause": "负载跃变测试与振铃判读",
+          "page": "3–5"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-008",
+          "G03-041"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-027",
+      "title": "多电源器件的上电、掉电约束清单齐全",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "STARTUP"
+        ],
+        "text": "板上有多电源器件（FPGA、SoC、DSP、ADC 等）"
+      },
+      "not_applicable": "所有负载都是单电源器件的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "每个多电源器件手册的时序要求：顺序、最大电压差、斜率或单调性、时间窗、掉电要求",
+        "各轨启动时间（软启动极值）、PG 门限与延迟；各轨放电特性（负载、放电电阻）",
+        "跨电压域 I/O 连接（G04）"
+      ],
+      "asg_action": "汇总所有多电源器件的上电、掉电约束（顺序、最大电压差、斜率或单调性、时间窗、掉电要求），选顺序、比例或同步方案；轨合并会改变时序位置（I/O 轨并入同压轨后移到该轨的时序位置），以器件数据手册为准。证据：时序约束表。",
+      "sr_check": "逐器件核约束是否收齐、出处是否为器件手册；缺手册时序记资料不足（转述资料按设计假设记）。关闭条件：约束表覆盖全部多电源器件。",
+      "source": [
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§II Why sequence（闩锁、潜通路、总线冲突）（印刷页 2-1～2-4）",
+          "page": "23–26"
+        },
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§III Sequencing schemes：顺序、比例、同步；手册给的是引脚电压与时间条件（印刷页 2-4～2-6）",
+          "page": "26–28"
+        },
+        {
+          "document": "AMD UG583 UltraScale Architecture PCB Design User Guide",
+          "edition": "v1.29，2025-12-23",
+          "clause": "Chapter 1 Power Supply Consolidation：合并轨改变时序位置，时序以 DS925 为准",
+          "page": "13–14"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-028",
+          "G03-029",
+          "G03-030"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-028",
+      "title": "上电时序在极值时间下满足约束",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "STARTUP"
+        ],
+        "text": "板上有多电源器件（FPGA、SoC、DSP、ADC 等）"
+      },
+      "not_applicable": "所有负载都是单电源器件的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "每个多电源器件手册的时序要求：顺序、最大电压差、斜率或单调性、时间窗、掉电要求",
+        "各轨启动时间（软启动极值）、PG 门限与延迟；各轨放电特性（负载、放电电阻）",
+        "跨电压域 I/O 连接（G04）"
+      ],
+      "asg_action": "用 PG→EN 链、SS/TR 跟踪或监控器实现，二极管只能限制轨间电压差，不能单独实现完整时序；用极值时间（软启动、PG 延迟、门限）验证约束；RC 延时按 R、C（含直流偏置）容差与接收端门限极值算，接到非施密特逻辑输入时核输入转换率要求。证据：极值时序图。",
+      "sr_check": "按极值独立核；只用标称延时的记资料不足；违反约束判不成立。关闭条件：满足；实测波形列 G03-041。",
+      "source": [
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§III Sequencing schemes（印刷页 2-4～2-6）",
+          "page": "26–28"
+        },
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§IV-A Diodes：二极管只能限制电压差（印刷页 2-6～2-7）",
+          "page": "28–29"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-027",
+          "G03-022"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-029",
+      "title": "受控掉电时序满足约束",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "STARTUP"
+        ],
+        "text": "板上有多电源器件（FPGA、SoC、DSP、ADC 等）"
+      },
+      "not_applicable": "所有负载都是单电源器件的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "每个多电源器件手册的时序要求：顺序、最大电压差、斜率或单调性、时间窗、掉电要求",
+        "各轨启动时间（软启动极值）、PG 门限与延迟；各轨放电特性（负载、放电电阻）",
+        "跨电压域 I/O 连接（G04）"
+      ],
+      "asg_action": "按约束安排受控关断（EN 撤除）时的掉电顺序；放电速度取决于负载与放电电阻，需要时加放电。证据：掉电时序图。",
+      "sr_check": "独立核；缺放电特性记资料不足；违反约束判不成立。关闭条件：满足；实测波形列 G03-041。",
+      "source": [
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§IV 掉电顺序可与上电相反，可加假负载给输出电容放电（印刷页 2-16）",
+          "page": "38"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-027",
+          "G03-030"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-030",
+      "title": "单轨失电与上游输入失电时仍满足约束",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "STARTUP"
+        ],
+        "text": "板上有多电源器件（FPGA、SoC、DSP、ADC 等）"
+      },
+      "not_applicable": "所有负载都是单电源器件的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "每个多电源器件手册的时序要求：顺序、最大电压差、斜率或单调性、时间窗、掉电要求",
+        "各轨启动时间（软启动极值）、PG 门限与延迟；各轨放电特性（负载、放电电阻）",
+        "跨电压域 I/O 连接（G04）"
+      ],
+      "asg_action": "列出单轨失电与上游输入失电两种情形；上游输入失电时时序逻辑本身也随之失电，掉电顺序只由各轨放电决定，须单列核；未上电器件 I/O 被他域驱动的潜通路转 G04。证据：失电情形表。",
+      "sr_check": "逐情形独立核；未核这两种情形的记资料不足；违反约束判不成立。关闭条件：两种情形都已核；实测列 G03-041。",
+      "source": [
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§II Why sequence（潜通路）（印刷页 2-1～2-4）",
+          "page": "23–26"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-029",
+          "G03-031"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-031",
+      "title": "反灌与预偏置场景清单齐全",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "输出电容大于输入侧、输入可先掉电、对外接口输出电源、多储能或 OR 连接的轨"
+      },
+      "not_applicable": "防反接（输入极性接反）归 G05。",
+      "tailoring": "",
+      "inputs": [
+        "可能出现 V_out > V_in 的场景：输出储能大于输入、输入先掉电、对外接口可被外部供电、备用电源、OR 连接、他轨经 ESD 或 I/O 灌入",
+        "器件手册的反向电流耐受与预偏置启动能力",
+        "G01 对外接口定义：供电角色与非正常行为"
+      ],
+      "asg_action": "逐场景列出可能出现 V_out > V_in 的情形与通路：输出储能大于输入、输入先掉电、对外接口可被外部供电、备用电源、OR 连接、他轨经 ESD 或体二极管灌入；对外接口按 G01 接口定义的双方责任。证据：反灌场景表。",
+      "sr_check": "核场景是否完整（尤其对外输出电源的接口和多储能轨）；对外接口供电角色未定义记资料不足并转 G01。关闭条件：场景表齐全，每个场景都指向 G03-032 或 G03-033 的处置。",
+      "source": [
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§II-A Latch-up：经 ESD 二极管与体二极管的潜通路（印刷页 2-2～2-3）",
+          "page": "24–25"
+        },
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.1 负载不应向母线回灌电流（航天，作依据）",
+          "page": "44"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-032",
+          "G03-033",
+          "G03-024"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-032",
+      "title": "稳压器反向电流在手册允许内或已阻断",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "输出电容大于输入侧、输入可先掉电、对外接口输出电源、多储能或 OR 连接的轨"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "器件手册的反向电流耐受与预偏置启动能力",
+        "G01 对外接口定义：供电角色与非正常行为"
+      ],
+      "asg_action": "LDO 等稳压器的体二极管通路按手册允许值；超出时加 OUT→IN 肖特基、输入串二极管（会提高压差需求，见 G03-034）或选带反向阻断的器件。证据：场景表对应位号与手册条款。",
+      "sr_check": "核每个场景对应的手册条款；手册不在手边记资料不足；存在通路且手册不允许判不成立。关闭条件：每个场景有处置和手册依据。",
+      "source": [
+        {
+          "document": "TI SLYY151A LDO Basics（电子书）",
+          "edition": "Rev.A，2020",
+          "clause": "Chapter 6 Preventing reverse current（体二极管、肖特基、前置二极管、背靠背 FET）",
+          "page": "15–16"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-031",
+          "G03-034"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-033",
+      "title": "在预偏置输出上启动的同步整流变换器支持预偏置启动",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "输出可能被预偏置的同步整流变换器"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "器件手册的反向电流耐受与预偏置启动能力"
+      ],
+      "asg_action": "同步整流变换器在预偏置输出上启动须选支持预偏置启动的器件或调整时序，避免下管吸电流。证据：手册条款。",
+      "sr_check": "核手册的预偏置启动说明；手册未说明记资料不足；不支持且未调整时序判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "TI SLUP224 2004/05 Power Supply Design Seminar，Topic 2 Sequencing Power Supplies in Multiple Voltage Rail Environments（Daniels、Gehrke、Segal）",
+          "edition": "2004",
+          "clause": "§V-A Pre-bias start-up and synchronous rectifier（印刷页 2-17）",
+          "page": "39"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-031"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-034",
+      "title": "LDO 在最低输入下仍在调整区",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "线性稳压器"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "LDO 手册的压差最大值（随输出电流、结温、输出电压档）",
+        "输入最低值（含上游纹波谷值、线路与串联二极管压降）",
+        "输出电压上限"
+      ],
+      "asg_action": "核 V_IN,min ≥ V_OUT,max + V_DO,max；V_DO 取最大输出电流与最高结温下的手册保证值；上游为开关电源时 V_IN 取纹波谷值；有反灌保护串联二极管时扣除其压降。功耗与结温按降额规范 IC-LDO-* 与 G08，不在此重复。证据：压差核算行。",
+      "sr_check": "独立复核；只有典型压差的按 SR 定界规则处理，推不出时记资料不足；不满足判不成立。关闭条件：最坏端满足。",
+      "source": [
+        {
+          "document": "TI SLYY151A LDO Basics（电子书）",
+          "edition": "Rev.A，2020",
+          "clause": "Chapter 1 Dropout 式 (1) 与 Table 1（压差随电流、温度、精度变化）",
+          "page": "3–5"
+        },
+        {
+          "document": "TI SLYY151A LDO Basics（电子书）",
+          "edition": "Rev.A，2020",
+          "clause": "Chapter 6 前置二极管提高输入需求",
+          "page": "16"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-020",
+          "G03-032"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-035",
+      "title": "手册要求的电源脚去耦齐全",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "device_kinds": [
+          "ic"
+        ],
+        "text": "有电源脚的集成电路"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "各器件手册对电源脚去耦的要求（数量、容值、介质、位置）"
+      ],
+      "asg_action": "逐电源脚按手册要求配置去耦，容值按有效值（G03-010）。靠近、回路、过孔等布局要求作为下游约束交 PCB。",
+      "sr_check": "逐电源脚核手册要求的去耦是否齐全；手册要求而缺的判不成立；手册无要求的不报；手册不在手边的记资料不足。关闭条件：原理图齐全；PCB 落实列为下游。",
+      "source": [
+        {
+          "document": "TI SLOA069 How (Not) to Decouple High-Speed Operational Amplifiers",
+          "edition": "2001-09",
+          "clause": "Capacitor Impedance and Series Self Resonance",
+          "page": "2–3"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-036"
+        ]
+      },
+      "closing_stage": "pcb"
+    },
+    {
+      "id": "G03-036",
+      "title": "去耦电容介质与容值符合噪声频段",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "device_kinds": [
+          "ic"
+        ],
+        "text": "有电源脚的集成电路"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "电源噪声频段（开关频率及其谐波、负载电流频谱）",
+        "去耦电容的介质与容值"
+      ],
+      "asg_action": "高频去耦用稳定介质（C0G、X7R 类），不用 Y5V 类；按噪声频段选容值并注意串联自谐振；电解电容只对约 1 MHz 以下有效。",
+      "sr_check": "核介质与容值是否符合手册与频段；高频去耦用 Y5V 类或只靠电解电容的判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "TI SLOA069 How (Not) to Decouple High-Speed Operational Amplifiers",
+          "edition": "2001-09",
+          "clause": "Capacitor Dielectric Types，Table 1",
+          "page": "7"
+        },
+        {
+          "document": "TI SLOA069 How (Not) to Decouple High-Speed Operational Amplifiers",
+          "edition": "2001-09",
+          "clause": "What About Electrolytic Capacitors?",
+          "page": "8"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-035"
+        ]
+      },
+      "closing_stage": "pcb"
+    },
+    {
+      "id": "G03-037",
+      "title": "电解与钽电容不承受反压",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "电源轨上用铝电解或钽电容"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "电容准确料号的额定电压、允许纹波电流、低温阻抗比",
+        "该位置的直流电压、纹波电流计算、掉电与反灌场景（G03-031）"
+      ],
+      "asg_action": "核掉电、反灌、交流叠加等情形下电容两端不出现反压。证据：逐颗核对行。",
+      "sr_check": "逐颗核；有反压通路判不成立；缺场景分析记资料不足。关闭条件：逐颗满足。",
+      "source": [
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "2-1-1 Circuit Design (4)（极性电容，不得施加反压或交流）",
+          "page": "9"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-038",
+          "G03-039",
+          "G03-040",
+          "G03-031"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-038",
+      "title": "电解与钽电容的直流加纹波峰值在降额内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "电源轨上用铝电解或钽电容"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "电容准确料号的额定电压、允许纹波电流、低温阻抗比",
+        "该位置的直流电压、纹波电流计算、掉电与反灌场景（G03-031）"
+      ],
+      "asg_action": "直流加纹波峰值 ≤ 额定，降额按 CAP-AL-V-* / CAP-TA-V；低温 ESR 计入 G03-004 的稳定核对。证据：逐颗核对行。",
+      "sr_check": "逐颗独立核；超额定或超降额判不成立（按降额规范 R6 分级）。关闭条件：逐颗满足。",
+      "source": [
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "2-1-1 Circuit Design (6) ①（直流叠加纹波的峰值不超过额定电压）",
+          "page": "9"
+        },
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "1. 3) Impedance Ratio",
+          "page": "8"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-037",
+          "G03-004"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-039",
+      "title": "电解与钽电容的纹波电流在允许值内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "电源轨上用铝电解或钽电容"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "电容准确料号的额定电压、允许纹波电流、低温阻抗比",
+        "该位置的直流电压、纹波电流计算、掉电与反灌场景（G03-031）"
+      ],
+      "asg_action": "纹波电流 ≤ 允许值，降额按 CAP-AL-RIPPLE / CAP-TA-RIPPLE；频繁快速充放电的电路选专用品。寿命交 G08。证据：纹波电流计算与逐颗核对行。",
+      "sr_check": "逐颗核；缺纹波电流计算记资料不足；超允许值判不成立。关闭条件：逐颗满足。",
+      "source": [
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "2-1-1 Circuit Design (2) ②（纹波电流不超过允许值）、(5)（反复快速充放电选专用品）",
+          "page": "9"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-037"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-040",
+      "title": "串联使用的电解电容有均压措施",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "电解电容串联使用"
+      },
+      "not_applicable": "没有串联电解电容的不适用。",
+      "tailoring": "",
+      "inputs": [
+        "电容准确料号的额定电压、允许纹波电流、低温阻抗比"
+      ],
+      "asg_action": "串联使用加均压电阻，均压后各电容电压在降额内。证据：均压计算行。",
+      "sr_check": "核均压电阻与电压分配；无均压措施判不成立。关闭条件：满足。",
+      "source": [
+        {
+          "document": "Nichicon CAT.8101H Application Guidelines for Aluminum Electrolytic Capacitors",
+          "edition": "CAT.8101H（正文未标发行年）",
+          "clause": "2-1-1 Circuit Design (6) ②（串联使用加均压电阻）",
+          "page": "9"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-038"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-041",
+      "title": "电源动态性能的实测清单列全（下游约束）",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ]
+      },
+      "not_applicable": "",
+      "tailoring": "手册参考设计原样复用且工况相同的，可只做负载跃变与启动波形。",
+      "inputs": [
+        "G03-003～G03-030 的计算结论与工况点"
+      ],
+      "asg_action": "交下游的验证清单：外补偿环路的增益与相位测量；负载跃变（振铃次数，厂家经验：四次以内通常表示裕量足够）；极值输入、满载与空载下的启动、掉电与时序波形；输入滤波与源阻抗实测；带短路启动与热短路（结论归 G05）。原理图阶段只把这些列为待验证，不能关闭。",
+      "sr_check": "核下游清单是否列全并与各条计算的工况点对应；把原理图计算当作已验证的报缺口。关闭条件：样机实测记录。",
+      "source": [
+        {
+          "document": "TI SLVA115A ESR, Stability, and the LDO Regulator",
+          "edition": "Rev.A，2002-05 初版 / 2020-02 修订",
+          "clause": "负载跃变测试装置与“四次以内振铃”判读",
+          "page": "3–4"
+        },
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.8.1 w（限流器稳定须分析并试验；航天，作依据）",
+          "page": "71"
+        },
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.6 a（浪涌、欠压与代表性故障须试验验证；航天，作依据）",
+          "page": "66"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-008",
+          "G03-011",
+          "G03-026",
+          "G03-028"
+        ]
+      },
+      "closing_stage": "prototype"
+    },
+    {
+      "id": "G03-042",
+      "title": "航天：功率与能量预算覆盖全部任务阶段",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "board": true,
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "按 ECSS-S-ST-00 由项目裁剪。",
+      "inputs": [
+        "各任务阶段的峰值与平均功率；单故障工况"
+      ],
+      "asg_action": "按峰值功率建功率预算、按平均功率建能量预算，覆盖全部任务阶段（含浪涌功率与故障引起的过耗）。",
+      "sr_check": "核预算覆盖；缺阶段或故障工况记资料不足。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.2.1 a；5.2.2.2 a–d",
+          "page": "42–43"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-001",
+          "G03-043"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-043",
+      "title": "航天：可用功率与能量留不少于 5% 的系统余量",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "board": true,
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "按 ECSS-S-ST-00 由项目裁剪。",
+      "inputs": [
+        "各任务阶段的峰值与平均功率；可用功率与能量"
+      ],
+      "asg_action": "在可用功率与能量上留不少于 5% 的系统余量（按原文条件）。",
+      "sr_check": "核 5% 余量的计算条件；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.2.2.2 e",
+          "page": "43"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-042"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-044",
+      "title": "航天：闭环变换器相位裕量不低于 50°（寿命末最坏）",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "寿命末最坏参数与代表性负载"
+      ],
+      "asg_action": "闭环变换器与稳压器在寿命末最坏条件、代表性负载下相位裕量 ≥ 50°；此时替代 G03-008 的工程取值。",
+      "sr_check": "核裕量计算的寿命末参数；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.5 a",
+          "page": "65"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-008",
+          "G03-045"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-045",
+      "title": "航天：闭环变换器增益裕量不低于 6 dB（寿命末最坏）",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "寿命末最坏参数与代表性负载"
+      ],
+      "asg_action": "闭环变换器与稳压器在寿命末最坏条件、代表性负载下增益裕量 ≥ 6 dB；与 G03-009 取值相同，以本条为依据。",
+      "sr_check": "核裕量计算的寿命末参数；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.5 a",
+          "page": "65"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-009",
+          "G03-044"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-046",
+      "title": "航天：电源分系统变换器在任一单故障后仍满足裕量",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时的电源分系统变换器（如太阳阵调节器、蓄电池充放电调节器）"
+      },
+      "not_applicable": "非电源分系统的单机变换器不适用。",
+      "tailoring": "",
+      "inputs": [
+        "单故障清单；故障后的寿命末最坏参数"
+      ],
+      "asg_action": "电源分系统的变换器在任一单故障后仍满足 G03-044、G03-045 的裕量。",
+      "sr_check": "核单故障工况的裕量计算；缺故障清单记资料不足；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.5 b",
+          "page": "65"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-044",
+          "G03-045"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-047",
+      "title": "航天：任意输入斜率下达到正常工作",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "输入电压上升斜率范围（含慢上电）"
+      ],
+      "asg_action": "变换器在任意输入电压斜率下都能达到正常工作（默认基线下由 G03-018、G03-019 作方法实现）。",
+      "sr_check": "核慢上电与快上电两端；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.7.5 h",
+          "page": "66"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-018"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-048",
+      "title": "航天：级联源—负载阻抗稳定判据满足",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "5.8.1 r～t 三选一，u、v 二选一（原文 NOTE 1）。",
+      "inputs": [
+        "源、负载阻抗（按原文图 5-2 的方法表征）"
+      ],
+      "asg_action": "两级以上级联须分析稳定：|Zs| = |ZL| 处相位差在 ±130° 内且相位差为 −180° 处 |Zs|/|ZL| < 0.5；或 |Zs| 比 |ZL| 小 10 倍以上（戴维南模型，诺顿模型对应 u、v）。此时替代 G03-011 的工程取值。",
+      "sr_check": "核采用的判据与阻抗数据来源；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.8.1 q–v",
+          "page": "68–70"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-011"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-049",
+      "title": "航天：输入滤波阻尼比飞行条件不低于 0.4、地面不低于 0.3",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "滤波器 L、C、阻尼支路及容差"
+      ],
+      "asg_action": "输入滤波阻尼比飞行条件不低于 0.4、地面不低于 0.3，差模与共模滤波都适用。此时替代 G03-012 的用法（不以阻抗比满足为免判条件）。",
+      "sr_check": "核阻尼比计算与元件取值端；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-HB-20-20A Electrical design and interface requirements for power supply（handbook）",
+          "edition": "2016-04-15",
+          "clause": "5.7.6 c（飞行 0.4、地面 0.3；差模与共模）",
+          "page": "64–65"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-012"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-050",
+      "title": "航天：限流器按实际负载核稳定，并经最坏工况分析与试验",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_CONVERTER",
+          "POWER_PROTECTION"
+        ],
+        "text": "项目声明采用 ECSS 航天基线时"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "限流器模型与实际负载阻抗"
+      ],
+      "asg_action": "限流器的稳定性按实际负载保证，按最坏工况分析验证，并在与用户商定的工况下试验。",
+      "sr_check": "核分析覆盖实际负载与最坏工况；缺试验计划列下游；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.8.1 k",
+          "page": "68"
+        },
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "5.8.1 w、x",
+          "page": "71"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-041"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-051",
+      "title": "LCL 负载：开机期间除输入滤波充电外不超过等级电流",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "LCL/RLCL 等级电流、最短跳闸时间、允许电容（原文表 3-1、3-2）",
+        "内部变换器启动电流"
+      ],
+      "asg_action": "开机期间除给输入滤波充电外不超过等级电流，内部变换器启动也不超过等级电流。",
+      "sr_check": "逐项核；缺 LCL 等级数据记资料不足；超过判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "1 Scope",
+          "page": "8"
+        },
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.3.1、5.3.2（开机时负载行为）",
+          "page": "35"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-052",
+          "G03-053",
+          "G03-054",
+          "G03-055",
+          "G03-056",
+          "G03-057",
+          "G03-058"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-052",
+      "title": "LCL 负载：达到限流时输入滤波充电时间不超过最短跳闸时间的 80%",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "LCL/RLCL 等级电流、最短跳闸时间、允许电容（原文表 3-1、3-2）"
+      ],
+      "asg_action": "最坏工况、最小限流下，输入滤波充电时间 ≤ 最短跳闸时间的 80%。",
+      "sr_check": "核最坏工况与最小限流；缺数据记资料不足；超过判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.4.2.3 Load input filter charge time",
+          "page": "38"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-051",
+          "G03-015"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-053",
+      "title": "LCL 负载：不向母线回灌电流",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "LCL/RLCL 等级电流、最短跳闸时间、允许电容（原文表 3-1、3-2）"
+      ],
+      "asg_action": "负载不应向母线回灌电流（原文 should）；出现回灌时最大回灌电流等于等级电流并在 10 分钟内线性衰减（原文 5.5.1.2）。",
+      "sr_check": "核回灌通路；存在回灌且超过 5.5.1.2 限值判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.1 Load reverse current",
+          "page": "44"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-051",
+          "G03-031"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-054",
+      "title": "LCL 负载：含线束与输入滤波的电感不超过 300 µH（HLCL 50 µH）",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "LCL/RLCL 等级电流、最短跳闸时间、允许电容（原文表 3-1、3-2）",
+        "线束与输入滤波电感"
+      ],
+      "asg_action": "负载侧电感（含 LCL 到负载的线束与负载输入滤波）≤ 300 µH；HLCL 为 50 µH。",
+      "sr_check": "核电感合计；超过判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.2.1 Maximum inductance",
+          "page": "44"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-051"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-055",
+      "title": "LCL 负载：输入电容符合原文表 3-1/3-2（HLCL 表 3-3）",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "LCL/RLCL 等级电流、最短跳闸时间、允许电容（原文表 3-1、3-2）",
+        "负载输入电容"
+      ],
+      "asg_action": "负载输入电容与 LCL、RLCL、HLCL 对应表格兼容。",
+      "sr_check": "核电容（有效值上限，G03-010）与表格；超过判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.2.2 Maximum capacitance",
+          "page": "44"
+        }
+      ],
+      "relations": {
+        "reuses": [
+          "G03-010"
+        ],
+        "related": [
+          "G03-051"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-056",
+      "title": "LCL 负载：提供 100 Hz–1 MHz 负载阻抗包络",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "负载阻抗（幅值与相位）"
+      ],
+      "asg_action": "向用户提供 100 Hz–1 MHz 的负载阻抗包络（幅值与相位）。",
+      "sr_check": "核是否提供；未提供记缺口。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.2.3 Load impedance envelope",
+          "page": "45"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-057"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G03-057",
+      "title": "LCL 负载：源—负载阻抗相位差大于 150°、增益差大于 5 dB",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "负载阻抗与 LCL 源阻抗"
+      ],
+      "asg_action": "幅值相等处负载与源阻抗相位差 > 150°；相位差为 −180° 处负载与 LCL 阻抗增益差 > 5 dB。",
+      "sr_check": "核阻抗数据来源与两项判据；不满足判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.3 Source-load characteristic",
+          "page": "45"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-056",
+          "G03-048"
+        ]
+      },
+      "closing_stage": "simulation"
+    },
+    {
+      "id": "G03-058",
+      "title": "LCL 负载：内部限流不超过等级电流",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "project",
+      "applies_when": {
+        "baselines": [
+          "aerospace"
+        ],
+        "circuit_types": [
+          "POWER_PROTECTION"
+        ],
+        "text": "负载由航天主母线 LCL/RLCL 供电时"
+      },
+      "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
+      "tailoring": "",
+      "inputs": [
+        "LCL/RLCL 等级电流、最短跳闸时间、允许电容（原文表 3-1、3-2）",
+        "负载内部限流值"
+      ],
+      "asg_action": "负载内部有限流时，总限流值最大等于对应 LCL/RLCL 的等级电流。",
+      "sr_check": "核限流值上限；超过判不成立。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20-20C Electrical design and interface requirements for power supply",
+          "edition": "2016-04-15",
+          "clause": "5.5.5 Internal load input current limitation",
+          "page": "46"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-051"
+        ]
+      },
+      "closing_stage": "schematic"
+    }
+  ],
+  "engineering_values": {
+    "aging_drift_default": {
+      "value": null,
+      "applies": "G02-009：不设统一数值。有手册值取手册值；没有时按这一类器件的老化机理与典型老化曲线估算，写明依据并标“估算”；估算值不放行损坏、过热、安全、保护判据",
+      "basis": "ECSS-Q-ST-30C 6.4.2.7c；MIL-STD-1547B 的 RM 电阻 4 %/7 % 是航天器件数据，不适合直接用于商用件",
+      "confirmed": "2026-11-01",
+      "spec": "G02"
+    },
+    "est_bjt_hfe": {
+      "value": 1.5,
+      "unit": "倍",
+      "applies": "定界表 BJT-HFE 格：比例外推 G7，再 ÷ k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_core_margin": {
+      "value": 10,
+      "unit": "°C",
+      "applies": "凭估算判电解电容纹波发热（ECAP-ESR-RIPPLE）时要求的芯温余量下限",
+      "basis": "估算余量下限（定界表判决边界），不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_diode_ir_hot": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 DIODE-IR-HOT 格：比例外推 G7，再 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_diode_vf": {
+      "value": 1.15,
+      "unit": "倍",
+      "applies": "定界表 DIODE-VF 格：超出测试点需要典型曲线时 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_diode_vf_cold": {
+      "value": 1.15,
+      "unit": "倍",
+      "applies": "定界表 DIODE-VF-COLD 格：典型温度曲线 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ecap_esr_ripple": {
+      "value": 1.3,
+      "unit": "倍",
+      "applies": "定界表 ECAP-ESR-RIPPLE 格：系数表外的频率：ESR × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ic_gate_drive_i": {
+      "value": 1.3,
+      "unit": "倍",
+      "applies": "定界表 IC-GATE-DRIVE-I 格：Qg 只有典型时 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ic_io_level": {
+      "value": 1.5,
+      "unit": "倍",
+      "applies": "定界表 IC-IO-LEVEL 格：超测试电流：输出阻抗典型 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ic_quiescent": {
+      "value": 1.3,
+      "unit": "倍",
+      "applies": "定界表 IC-QUIESCENT 格：典型 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ic_quiescent_damage": {
+      "value": 1.5,
+      "unit": "倍",
+      "applies": "定界表 IC-QUIESCENT 格：用它判偏置电阻功耗损坏时 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ic_threshold": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 IC-THRESHOLD 格：只给 25 °C 加典型温漂时：典型温漂 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ic_timing": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 IC-TIMING 格：只给典型的延时：典型 × k，取不利方向（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_ind_isat": {
+      "value": 1.3,
+      "unit": "倍",
+      "applies": "定界表 IND-ISAT 格：典型 Isat 热态值 ÷ k（峰流 ≤ Isat / k）（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_junction_margin": {
+      "value": 20,
+      "unit": "°C",
+      "applies": "凭估算判器件损坏（DIODE-VF、DIODE-IR-HOT、MOS-VGS-ON 功率开关、MOS-RDS-HOT）时要求的结温余量下限",
+      "basis": "估算余量下限（定界表判决边界），不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_load_mode_typ": {
+      "value": 1.3,
+      "unit": "倍",
+      "applies": "定界表 PWR-C01 检查项 格：负载手册按模式列电流而只有典型值时：典型 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_mlcc_aging": {
+      "value": 0.9,
+      "unit": "倍",
+      "applies": "定界表 MLCC-EFFECTIVE-C 格：MLCC 老化系数，有效容量估算时相乘（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_mlcc_effective_c": {
+      "value": 1.25,
+      "unit": "倍",
+      "applies": "定界表 MLCC-EFFECTIVE-C 格：典型偏压曲线 × (1 − 公差) × 老化系数，再 ÷ k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_mlcc_effective_c_comp": {
+      "value": 1.4,
+      "unit": "倍",
+      "applies": "定界表 MLCC-EFFECTIVE-C 格：用于补偿网络时改为 ÷ k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_mos_linear": {
+      "value": 1.4,
+      "unit": "倍",
+      "applies": "定界表 MOS-LINEAR 格：典型传输曲线 gm ÷ k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_mos_rds_hot": {
+      "value": 1.2,
+      "unit": "倍",
+      "applies": "定界表 MOS-RDS-HOT 格：25 °C max × 典型温度比（G7），再 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_mos_vgs_on": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 MOS-VGS-ON 格：小信号 / 电平转换：典型传输曲线的 RDS × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_opto_ctr": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 OPTO-CTR 格：25 °C 分档下限 × 典型温度曲线最低点（G7），再 ÷ k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_standby_typ": {
+      "value": 1.3,
+      "unit": "倍",
+      "applies": "定界表 PWR-C16 检查项 格：没有数据的级按手册典型值 × k 定界（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_tvs_leak_hot": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 TVS-LEAK-HOT 格：典型温度曲线比例外推 G7，再 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_zener_vz_lower": {
+      "value": 1.2,
+      "unit": "倍",
+      "applies": "定界表 ZENER-VZ-LOWER 格：典型曲线 G8 在工作电流取值，再 ÷ k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_zener_vz_temp": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "定界表 ZENER-VZ-TEMP 格：典型温漂 × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "est_zener_vz_upper": {
+      "value": 1.5,
+      "unit": "倍",
+      "applies": "定界表 ZENER-VZ-UPPER 格：只有典型 rdif 时：典型 rdif × k（估算，只用于该格允许估算的后果类）",
+      "basis": "估算倍数，不是厂家保证",
+      "confirmed": "SR 定界表原值（user:2026-10-23 起逐格确认），2026-11-01 用户确认迁入 G02",
+      "spec": "G02"
+    },
+    "forced_beta_k": {
+      "value": 2,
+      "applies": "BJT 饱和开关按强制 β 设计：IB ≥ IC /（hFE_min / k）",
+      "basis": "饱和开关的常用设计取值（定界表决定 D），不是厂家保证",
+      "confirmed": "user:2026-10-23，2026-11-01 由降额规范迁入 G02",
+      "spec": "G02"
+    },
+    "g03_budget_margin": {
+      "value": 0,
+      "unit": "比例",
+      "applies": "G03-001：最坏峰值与手册保证额定比较时另加的余量；0 即不另加",
+      "basis": "最坏值已按 G02 极值法取，再加余量会与降额规范 R12“余量不叠加”冲突；ECSS-E-ST-20C 5.2.2.2 e 的 5 % 只用于航天 G03-043",
+      "confirmed": "2026-11-01",
+      "spec": "G03"
+    },
+    "g03_filter_z_ratio": {
+      "value": 2,
+      "unit": "倍",
+      "applies": "G03-011：变换器输入阻抗最小模值 ÷ 滤波器输出阻抗峰值，全频段（含谐振峰处）不低于此值",
+      "basis": "用户确认（2026-11-01 评审改定）；SNVA538 p4–5 只说“远低于”；ECSS-E-ST-20C 5.8.1 t 的 10 倍只作参考",
+      "confirmed": "2026-11-01",
+      "spec": "G03"
+    },
+    "g03_filter_zeta_min": {
+      "value": 0.4,
+      "applies": "G03-012：阻抗比余量不足、算不清或缺资料时，滤波网络主谐振极点对的阻尼比下限（计入全部阻尼支路与电容 ESR）；阻抗比满足时不单独判",
+      "basis": "ECSS-E-HB-20-20A 5.7.6 c（飞行条件 0.4）；SNVA538 p4 以 1/√2 为折中",
+      "confirmed": "2026-11-01",
+      "spec": "G03"
+    },
+    "g03_loop_gm_min": {
+      "value": 6,
+      "unit": "dB",
+      "applies": "G03-009：外补偿环路最坏组合下的最小增益裕量",
+      "basis": "厂家资料未给数值；借 ECSS-E-ST-20C 5.7.5 a",
+      "confirmed": "2026-11-01",
+      "spec": "G03"
+    },
+    "g03_loop_pm_min": {
+      "value": 45,
+      "unit": "°",
+      "applies": "G03-008：外补偿环路最坏组合下的最小相位裕量；航天由 G03-044 的 50° 替代",
+      "basis": "SLUP113 p4；SLVA662 p2（45°–60° 视为安全）取下限",
+      "confirmed": "2026-11-01",
+      "spec": "G03"
+    },
+    "g03_startup_timer_share": {
+      "value": 0.8,
+      "unit": "比例",
+      "applies": "G03-015：启动时间（最不利端）≤ 此比例 × 最短故障定时",
+      "basis": "借 ECSS-E-ST-20-20C 5.4.2.3 a；SLVA673A p4 只要求定时器大于启动时间",
+      "confirmed": "2026-11-01",
+      "spec": "G03"
+    },
+    "typical_band": {
+      "value": 0.3,
+      "unit": "比例",
+      "applies": "SR 定界推法 G9 ③：参数只有典型值、同手册比例与同系列保证范围都推不出时，按典型 ± 此比例估算；不用于损坏、过热和保护判据",
+      "basis": "估算不确定度取值（定界表 G9），不是厂家保证",
+      "confirmed": "user:2026-10-23，2026-11-01 由降额规范迁入 G02",
+      "spec": "G02"
+    },
+    "wca_sigma_factor": {
+      "value": 1.0,
+      "applies": "G02-015：统计法安全系数 SF",
+      "basis": "TOR 3.G：SF 通常 1.0～1.2；构成参数已用 EVA 合成时 SF 意义不大",
+      "confirmed": "2026-11-01",
+      "spec": "G02"
+    },
+    "wca_statistical_coverage": {
+      "value": 0.9973,
+      "unit": "双侧概率",
+      "applies": "G02-015：RSS 与 Monte Carlo 结果的覆盖率",
+      "basis": "TOR 附录 A.5.B.2“通常 3σ 或 99.73 %”；ECSS-Q-HB-30-01A 5.3.5 给 MC 至少 99.5 %、置信 95 %，取较严的",
+      "confirmed": "2026-11-01",
+      "spec": "G02"
+    },
+    "wca_statistical_scope": {
+      "value": [
+        "功能",
+        "性能",
+        "指示"
+      ],
+      "applies": "G02-016：允许用统计法放行的后果类；器件损坏、过热、安全、保护判据用 EVA 或保证值",
+      "basis": "PD-ED-1212 第 3 页；与 SR“估算不放行损坏类判据”一致",
+      "confirmed": "2026-11-01",
+      "spec": "G02"
+    }
+  }
 }

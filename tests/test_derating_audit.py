@@ -11,6 +11,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import guideline_rules
 import audit_design_closure as adc
 from audit_design_closure import audit, sha256
 
@@ -19,7 +20,15 @@ SR_PASSIVE = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'scripts'
 
 def setUpModule():
     global _env
-    _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library')})
+    # the installed shared guideline rules would ask every record here for its guideline scope; test_guideline_closure
+    # covers that with its own library
+    library = guideline_rules.load(guideline_rules.BUNDLE_PATH)
+    library.update(library_version='0.0.0', specs={}, rules=[],
+                   content_sha256=guideline_rules.content_sha256([], library.get('engineering_values')))
+    empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-rules.json'
+    empty.write_text(guideline_rules.dump(library), encoding='utf-8')
+    _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library'),
+                                          'GUIDELINE_RULES': str(empty)})
     _env.start()
 
 
