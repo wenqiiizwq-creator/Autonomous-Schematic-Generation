@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 工业校准板需求写入用户答复，升 v0.2 (2026-11-02)
+
+用户答复 C02、C09、C10，采纳 9 项建议条文和各项剩余部分的建议值，并要求直接改需求文件、升 v0.2。
+C04、C15 按 ASG 处理写明；产品决定已全部闭合，标准正文未取得的记 `external` 待办并逐项注明。
+答复是本次校准选定的工况，除注明的 GB/T 17799.2—2023 和 Siemens 转引外不代表标准限值。PoE 板未改。
+
+- Event: user:2026-11-02 (全部采纳；直接改，升 v0.2)
+- Changed: evals/calibration_boards/industrial-io-rs485-can/requirements.md, evals/calibration_boards/README.md, docs/improvement-ledger.md
+
 ## 盘点两块校准板开工前的知识缺口 (2026-11-02)
 
 对照工业 I/O 与 PoE 传感节点两份需求，按 20 个功能块查手册库、典型电路和需求可追溯性，出报告和待采集清单。
