@@ -8,6 +8,18 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 增加工业 I/O 与 PoE 传感节点两类校准需求输入 (2026-11-02)
+
+现有典型电路来自同一块 100 W USB PD 充电器，工业接口、隔离 I/O、PoE 和以太网缺少不同板型的需求输入。
+新增两份可追溯需求和 ASG 使用说明，分别定义非隔离 CAN 的工业 I/O 板与 IEEE 802.3af 受电传感节点。
+区分产品范围、标准正文、预览和厂家转引；没有依据的量化指标列入任务 1.1 澄清清单。
+按现有词表列出预期类型及准则核对入口，说明正 24 V 缺少专用类型，不能误用电信 −48 V 类型。
+本次只准备输入，不生成电路、不改变共用层，也不宣称已执行校准或硬件验收。
+
+- Event: user:2026-11-02 (请安排这样的工作，并调用codex…)
+- Causes: knowledge_missing 1
+- Changed: evals/calibration_boards/README.md, evals/calibration_boards/industrial-io-rs485-can/requirements.md, evals/calibration_boards/poe-pd-sensor-node/requirements.md, docs/improvement-ledger.md
+
 ## 典型电路必算项补到设计准则深度 (2026-11-02)
 
 逐条核对草案的 48 处 uncertain：37 处补齐计算、限值或生产/测试约束并引用，10 处因适用类型或文本边界留作准则侧待办，1 处因功能不对应不引用。修改 14 个典型电路文件，报告保留逐项处置和按电路类型统计的前后对比，输入草案随提交保留；不改共用层、SKILL.md、落实规则标签及既有来源。归因计数为 37 处实际补齐的知识缺项，其余 11 处仅在报告记录判断。
