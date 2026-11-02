@@ -71,7 +71,7 @@ ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独�
   映射的 SR 规则这次没有展开的（本板没有输入滤波器、首审没有改版、电路还没声明）记 `not_triggered`，报告写“未展开”；只有没有映射的才记 `uncovered`。
   电路类型要等电路决定写进 intent 后才齐：冷扫描时只有名称命中的电路类型，按其他电路类型触发的规则此时还不会出现
   （2026-10-31 联调：同一块锂电充电板，ASG 声明了 POWER_CONVERTER，SR 冷扫描只推出 USB）。
-  6 个对外接口类型（`DC_48V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`）网络名没有识别到、intent 也没有声明时，
+  7 个对外接口类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`）网络名没有识别到、intent 也没有声明时，
   报告提示“未声明对外接口”，不靠单一网络名判断。
 
 ## 六、更新设计准则库

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.4.1",
+  "library_version": "1.5.0",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -30,6 +30,7 @@
       "ISOLATION",
       "DEBUG",
       "DC_48V",
+      "DC_24V",
       "AC_MAINS",
       "INDUSTRIAL_DI",
       "POE_PD",
@@ -67,11 +68,11 @@
   "specs": {
     "G01": "1.2",
     "G02": "1.2",
-    "G03": "1.3",
-    "G04": "1.0",
-    "G05": "1.0"
+    "G03": "1.4",
+    "G04": "1.1",
+    "G05": "1.1"
   },
-  "content_sha256": "0d42002b0f17fe0140d810f0e8af7ad704df426e61a60c6a250ebdf339374954",
+  "content_sha256": "5dc6ffa4a780b1f0992a2716ef0480e496c5498218a10ea8f8b60a49726c064d",
   "criteria": [
     {
       "id": "G01-001",
@@ -3716,16 +3717,16 @@
       "id": "G03-007",
       "title": "外补偿穿越频率低于开关频率限值与最低 RHP 零点",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "POWER_CONVERTER"
         ],
-        "text": "补偿网络外接的开关变换器"
+        "text": "补偿网络外接，或补偿参数由设计者配置（固件、寄存器或配置工具设定，如 PD 控制器直驱光耦的 CV/CC 环）的开关变换器"
       },
-      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "not_applicable": "补偿参数不可配置的内补偿器件按 G03-003～G03-005。",
       "tailoring": "",
       "inputs": [
         "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
@@ -3760,16 +3761,16 @@
       "id": "G03-008",
       "title": "外补偿环路在最坏组合下相位裕量不低于取值",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "POWER_CONVERTER"
         ],
-        "text": "补偿网络外接的开关变换器"
+        "text": "补偿网络外接，或补偿参数由设计者配置（固件、寄存器或配置工具设定，如 PD 控制器直驱光耦的 CV/CC 环）的开关变换器"
       },
-      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "not_applicable": "补偿参数不可配置的内补偿器件按 G03-003～G03-005。",
       "tailoring": "",
       "inputs": [
         "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
@@ -3815,16 +3816,16 @@
       "id": "G03-009",
       "title": "外补偿环路在最坏组合下增益裕量不低于取值",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "POWER_CONVERTER"
         ],
-        "text": "补偿网络外接的开关变换器"
+        "text": "补偿网络外接，或补偿参数由设计者配置（固件、寄存器或配置工具设定，如 PD 控制器直驱光耦的 CV/CC 环）的开关变换器"
       },
-      "not_applicable": "内补偿器件按 G03-003～G03-005。",
+      "not_applicable": "补偿参数不可配置的内补偿器件按 G03-003～G03-005。",
       "tailoring": "",
       "inputs": [
         "控制方式（电压型 / 电流型、CCM / DCM）与拓扑",
@@ -4201,7 +4202,7 @@
       "id": "G03-017",
       "title": "启动浪涌不超过 G01 接口限值，且不使上游保护动作",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -4209,7 +4210,7 @@
           "POWER_CONVERTER",
           "POWER_PROTECTION"
         ],
-        "text": "有热插拔控制器、eFuse、负载开关、缓启动或限流 LDO 的电源入口与配电支路"
+        "text": "有热插拔控制器、eFuse、负载开关、缓启动或限流 LDO 的电源入口与配电支路，以及只靠 NTC、串联电阻等被动限流或没有主动限流的电源入口"
       },
       "not_applicable": "",
       "tailoring": "",
@@ -7554,14 +7555,14 @@
       "id": "G04-040",
       "title": "隔离接口两侧的供电和地不被无意短接",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "ISOLATION"
         ],
-        "text": "有数字隔离器或隔离接口时（绝缘等级归 G06）"
+        "text": "有数字隔离器、隔离接口或隔离电源的初次级隔离带时，含 Y 电容等有意跨接（绝缘等级归 G06）"
       },
       "not_applicable": "",
       "tailoring": "",
@@ -11258,14 +11259,15 @@
       "id": "G05-036",
       "title": "有源过压保护动作点下限高于输入窗上限",
       "spec": "G05",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
-          "POWER_PROTECTION"
+          "POWER_PROTECTION",
+          "POWER_CONVERTER"
         ],
-        "text": "有热插拔控制器、eFuse 或带限流的负载开关时"
+        "text": "有热插拔控制器、eFuse 或带限流的负载开关时；也含用齐纳、比较器等检测过压后驱动控制器 FAULT 或使能脚的保护（如辅助绕组过压锁定、比较器型故障锁存），此时被监视轨的正常工作窗视作输入窗"
       },
       "not_applicable": "没有有源过压保护的不适用。",
       "tailoring": "",
@@ -11301,14 +11303,15 @@
       "id": "G05-037",
       "title": "有源过压保护动作点上限低于被保护器件绝对最大值",
       "spec": "G05",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
-          "POWER_PROTECTION"
+          "POWER_PROTECTION",
+          "POWER_CONVERTER"
         ],
-        "text": "有热插拔控制器、eFuse 或带限流的负载开关时"
+        "text": "有热插拔控制器、eFuse 或带限流的负载开关时；也含用齐纳、比较器等检测过压后驱动控制器 FAULT 或使能脚的保护（如辅助绕组过压锁定、比较器型故障锁存）"
       },
       "not_applicable": "没有有源过压保护的不适用。",
       "tailoring": "",
@@ -11464,7 +11467,7 @@
       "id": "G05-041",
       "title": "热短路时通路 MOSFET 按开始壳温降额后在 SOA 内",
       "spec": "G05",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -11474,7 +11477,7 @@
         "device_kinds": [
           "mosfet"
         ],
-        "text": "热插拔控制器或限流器驱动外部通路 MOSFET 时"
+        "text": "热插拔控制器或限流器驱动外部通路 MOSFET 时；也含 PD 控制器等直驱的外部输出通路开关（如 VBUS 开关）"
       },
       "not_applicable": "",
       "tailoring": "",
@@ -12296,14 +12299,15 @@
       "id": "G05-060",
       "title": "锁存型保护有写明的复位路径",
       "spec": "G05",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
-          "POWER_PROTECTION"
+          "POWER_PROTECTION",
+          "POWER_CONVERTER"
         ],
-        "text": "使用锁存型保护时"
+        "text": "使用锁存型保护时（含控制器锁定后靠断电或 VCC 衰减复位的）"
       },
       "not_applicable": "非锁存型不适用。",
       "tailoring": "",

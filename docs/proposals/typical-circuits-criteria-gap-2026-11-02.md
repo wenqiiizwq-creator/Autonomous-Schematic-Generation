@@ -50,16 +50,16 @@
 
 | 典型电路 | 实现方案 | 准则编号 | 处理 | 一句理由 |
 |---|---|---|---|---|
-| [市电输入：整流、浪涌与 EMI](../../references/typical-circuits/ac-input-protection.md) | 保险丝 + NTC + MOV + 共模扼流圈 + 桥式整流 | G03-017 | 不引用，留待准则明确/放宽 | 适用文本列热插拔/eFuse/负载开关/缓启动/限流 LDO，未含被动 NTC 入口；正文却有“无主动限流”，需准则侧明确是否覆盖。 |
-| [辅助绕组过压锁定](../../references/typical-circuits/aux-overvoltage-latch.md) | 齐纳 + 电阻进 FAULT 引脚 | G05-036 | 不引用，留待准则明确/放宽 | 齐纳驱动 FAULT 不属于适用文本限定的热插拔/eFuse/带限流负载开关。 |
-| [辅助绕组过压锁定](../../references/typical-circuits/aux-overvoltage-latch.md) | 齐纳 + 电阻进 FAULT 引脚 | G05-037 | 不引用，留待准则明确/放宽 | 辅助绕组过压锁定不属于适用文本限定的热插拔/eFuse/带限流负载开关。 |
-| [隔离反馈与隔离信号](../../references/typical-circuits/isolated-feedback.md) | PD 控制器直驱光耦（无外置误差放大器） | G03-009 | 不引用，留待准则明确/放宽 | 本方案明确为控制器内置补偿；准则适用文本仅列补偿网络外接的变换器，需先明确可配置内补偿环路的适用性。 |
-| [USB PD 输出控制](../../references/typical-circuits/pd-output-control.md) | PD 控制器直驱外部 N-MOS VBUS 开关 + 放电 | G05-041 | 不引用，留待准则明确/放宽 | 本方案为 PD 控制器关断 VBUS 开关，未声明热插拔或限流器驱动；虽有 MOSFET 触发类别，适用文本仍不覆盖。 |
-| [QR 反激主级](../../references/typical-circuits/qr-flyback.md) | QR 控制器 + 外置高压 MOSFET + RCD/TVS 钳位 + 光耦反馈 | G03-007 | 不引用，留待准则明确/放宽 | 现有方案把 CV/CC 补偿交 PD 固件配置，未声明外接补偿网络；准则限外补偿，不由“反激”二字推定适用。 |
-| [QR 反激主级](../../references/typical-circuits/qr-flyback.md) | QR 控制器 + 外置高压 MOSFET + RCD/TVS 钳位 + 光耦反馈 | G03-008 | 不引用，留待准则明确/放宽 | 现有 CV/CC 固件补偿不能直接当作外接补偿网络，需先明确该准则对这种闭环实现的适用范围。 |
-| [宽范围偏置与故障锁定的复核做法](../../references/typical-circuits/reviewed-bias-and-latch.md) | 一次VCC供电的低电流交流指示 | G05-060 | 不引用，留待准则明确/放宽 | 该处实现方案是 VCC 交流指示，文件只声明 POWER_CONVERTER；G05-060 只命名 POWER_PROTECTION，无全板或器件触发。 |
-| [宽范围偏置与故障锁定的复核做法](../../references/typical-circuits/reviewed-bias-and-latch.md) | 比较器经高侧晶体管驱动高有效FAULT | G05-036 | 不引用，留待准则明确/放宽 | 比较器/PNP 驱动 FAULT 不属热插拔/eFuse/带限流负载开关，文件也未声明 POWER_PROTECTION。 |
-| [安规跨接（Y 电容）](../../references/typical-circuits/safety-bridging.md) | Y1/Y2 电容跨初次级 | G04-040 | 不引用，留待准则明确/放宽 | 本方案为安规 Y 电容有意跨接，适用文本要求数字隔离器或隔离接口；安规绝缘边界需准则侧明确，不能仅凭 ISOLATION 引用。 |
+| [市电输入：整流、浪涌与 EMI](../../references/typical-circuits/ac-input-protection.md) | 保险丝 + NTC + MOV + 共模扼流圈 + 桥式整流 | G03-017 | 已于 1.5.0 放宽并引用 | 适用文本列热插拔/eFuse/负载开关/缓启动/限流 LDO，未含被动 NTC 入口；正文却有“无主动限流”，需准则侧明确是否覆盖。 |
+| [辅助绕组过压锁定](../../references/typical-circuits/aux-overvoltage-latch.md) | 齐纳 + 电阻进 FAULT 引脚 | G05-036 | 已于 1.5.0 放宽并引用 | 齐纳驱动 FAULT 不属于适用文本限定的热插拔/eFuse/带限流负载开关。 |
+| [辅助绕组过压锁定](../../references/typical-circuits/aux-overvoltage-latch.md) | 齐纳 + 电阻进 FAULT 引脚 | G05-037 | 已于 1.5.0 放宽并引用 | 辅助绕组过压锁定不属于适用文本限定的热插拔/eFuse/带限流负载开关。 |
+| [隔离反馈与隔离信号](../../references/typical-circuits/isolated-feedback.md) | PD 控制器直驱光耦（无外置误差放大器） | G03-009 | 已于 1.5.0 放宽并引用 | 本方案明确为控制器内置补偿；准则适用文本仅列补偿网络外接的变换器，需先明确可配置内补偿环路的适用性。 |
+| [USB PD 输出控制](../../references/typical-circuits/pd-output-control.md) | PD 控制器直驱外部 N-MOS VBUS 开关 + 放电 | G05-041 | 已于 1.5.0 放宽并引用 | 本方案为 PD 控制器关断 VBUS 开关，未声明热插拔或限流器驱动；虽有 MOSFET 触发类别，适用文本仍不覆盖。 |
+| [QR 反激主级](../../references/typical-circuits/qr-flyback.md) | QR 控制器 + 外置高压 MOSFET + RCD/TVS 钳位 + 光耦反馈 | G03-007 | 已于 1.5.0 放宽并引用 | 现有方案把 CV/CC 补偿交 PD 固件配置，未声明外接补偿网络；准则限外补偿，不由“反激”二字推定适用。 |
+| [QR 反激主级](../../references/typical-circuits/qr-flyback.md) | QR 控制器 + 外置高压 MOSFET + RCD/TVS 钳位 + 光耦反馈 | G03-008 | 已于 1.5.0 放宽并引用 | 现有 CV/CC 固件补偿不能直接当作外接补偿网络，需先明确该准则对这种闭环实现的适用范围。 |
+| [宽范围偏置与故障锁定的复核做法](../../references/typical-circuits/reviewed-bias-and-latch.md) | 一次VCC供电的低电流交流指示 | G05-060 | 已于 1.5.0 放宽并引用 | 该处实现方案是 VCC 交流指示，文件只声明 POWER_CONVERTER；G05-060 只命名 POWER_PROTECTION，无全板或器件触发。 |
+| [宽范围偏置与故障锁定的复核做法](../../references/typical-circuits/reviewed-bias-and-latch.md) | 比较器经高侧晶体管驱动高有效FAULT | G05-036 | 已于 1.5.0 放宽并引用 | 比较器/PNP 驱动 FAULT 不属热插拔/eFuse/带限流负载开关，文件也未声明 POWER_PROTECTION。 |
+| [安规跨接（Y 电容）](../../references/typical-circuits/safety-bridging.md) | Y1/Y2 电容跨初次级 | G04-040 | 已于 1.5.0 放宽并引用 | 本方案为安规 Y 电容有意跨接，适用文本要求数字隔离器或隔离接口；安规绝缘边界需准则侧明确，不能仅凭 ISOLATION 引用。 |
 
 ## 不该引用（1 处）
 
@@ -92,3 +92,20 @@ G03-034 用于分立源极跟随预稳压时，压差由带载 VGS、齐纳偏�
 | USB | 17 / 0 | 17 / 4 | +4 |
 
 ANALOG 的 G04-052 原已被电流检测引用，本轮 NTC 新增同编号不会增加该类型去重数；ISOLATION 与 USB 可同时计入 G04-010，各类型数不能相加当成全库唯一准则总数。无类型的生产测试点新增全板 G02-018，不另造电路类型分母。
+
+## 1.5.0 放宽后的结果
+
+第二张表 10 处涉及 9 条准则（G05-036 用了两处），全部已于准则库 1.5.0 放宽适用条件并引用；准则的 `title`、`asg_action`、`sr_check`、`source` 未改。上文“判断边界”里三组待明确的判断由此定下：被动 NTC 入口归入 G03-017；固件或寄存器配置的补偿归入 G03-007/008/009，补偿参数不可配置的内补偿仍按 G03-003～G03-005；Y 电容作为有意跨接归入 G04-040，绝缘等级仍归 G06。G05-036、G05-037、G05-060 增加 POWER_CONVERTER。G04-010 已含 ISOLATION，本轮不动。G03-006 的适用文本仍只写外接补偿，不在本表范围内，未改。
+
+口径同上一节。前值为 1.4.1 与本轮修改前的典型电路，后值由 1.5.0 与当前典型电路重算；POWER_CONVERTER 的分母因上述 3 条增加而变大。全库新增引用 10 处（71 → 81），被引用的不同准则 43 → 49。
+
+| 电路类型 | 前：可引用准则数 / 已引用数 | 后：可引用准则数 / 已引用数 | 已引用净增 |
+|---|---:|---:|---:|
+| AC_MAINS | 2 / 0 | 2 / 0 | +0 |
+| ANALOG | 17 / 2 | 17 / 2 | +0 |
+| ISOLATION | 19 / 1 | 19 / 2 | +1 |
+| POWER_CONVERTER | 38 / 13 | 41 / 16 | +3 |
+| POWER_PROTECTION | 56 / 5 | 56 / 8 | +3 |
+| USB | 17 / 4 | 17 / 4 | +0 |
+
+G05-041 按器件类别 `mosfet` 触发，USB 表行不计入，所以 USB 没有净增；同一编号可同时计入多个类型，各行不能相加。

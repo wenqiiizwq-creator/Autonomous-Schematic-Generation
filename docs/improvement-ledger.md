@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.5.0：DC_24V 与典型电路补 10 处引用 (2026-11-02)
+
+典型电路映射留下的 10 处“准则侧待办”涉及 9 条准则，适用条件不覆盖对应实现方案；校准板的正 24 V 输入在词表里也没有类型。
+词表加 `DC_24V`；放宽 G03-007/008/009/017、G04-040、G05-036/037/041/060 的适用条件（G05-036/037/060 加 POWER_CONVERTER），每条 version +0.1，登记文件 G03 1.4、G04 1.1、G05 1.1。
+7 个典型电路补 10 处引用，缺的必算项各加一句。`SKILL.md` 未改，其对外接口列表仍是 6 个，加 `DC_24V` 待用户批准；目前没有准则挂 `DC_24V`，它自身不选中准则。
+
+- Event: user:2026-11-02 (可以现在就做的，放到另一个子对话里面)
+- Causes: rule_missing 1
+- Changed: references/shared/vocabulary.json, references/shared/guideline-criteria.json, references/shared/guideline-criteria.md, references/typical-circuits/ac-input-protection.md, references/typical-circuits/aux-overvoltage-latch.md, references/typical-circuits/isolated-feedback.md, references/typical-circuits/pd-output-control.md, references/typical-circuits/qr-flyback.md, references/typical-circuits/reviewed-bias-and-latch.md, references/typical-circuits/safety-bridging.md, docs/proposals/typical-circuits-criteria-gap-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1033
+
 ## 增加工业 I/O 与 PoE 传感节点两类校准需求输入 (2026-11-02)
 
 现有典型电路来自同一块 100 W USB PD 充电器，工业接口、隔离 I/O、PoE 和以太网缺少不同板型的需求输入。
