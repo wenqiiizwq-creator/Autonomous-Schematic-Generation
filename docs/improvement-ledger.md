@@ -8,6 +8,14 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 校准板说明跟上准则库 1.5.0 的 DC_24V (2026-11-02)
+
+合并 main 后，工业板需求和校准板 README 中“缺 `DC_24V`”的说法已过时，改为写明该类型可用，并把它加入工业板的预期类型表。
+目前没有准则挂在 `DC_24V` 下，只写它选不中准则，仍要同时写 `POWER_PROTECTION` 与 `POWER_CONVERTER`。`SKILL.md` 的对外接口列表未改，加入要改纲要，待用户批准。
+
+- Event: user:2026-11-02 (合并并修正)
+- Changed: evals/calibration_boards/industrial-io-rs485-can/requirements.md, evals/calibration_boards/README.md, docs/improvement-ledger.md
+
 ## 工业校准板需求写入用户答复，升 v0.2 (2026-11-02)
 
 用户答复 C02、C09、C10，采纳 9 项建议条文和各项剩余部分的建议值，并要求直接改需求文件、升 v0.2。
