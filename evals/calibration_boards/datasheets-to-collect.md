@@ -66,3 +66,31 @@
 | IEEE 802.3 现行汇编 Clause 33、14、25、28 | PoE-C01、C05 | 库内没有 |
 | IEC 61000-4-2:2025、IEC 61000-4-4:2012 | 试验方法 | 库内没有；等级已有 GB/T 17799.2—2023，4-5 已有原文 |
 | ANSI/TIA-485-A、ISO 11898-2:2026 | 工业 C05、C06 | 库内没有，已有 TI 转引 |
+
+## 采集状态（2026-11-02）
+
+已下载并放入 `HardwareWiki/raw/Datasheet/`（厂家官网原件，版次已核）：
+
+| 清单项 | 文件 | 版次 | 备注 |
+|---|---|---|---|
+| 1 | 21_电感器与磁件/变压器/LINK-PP - LP2019ANL.pdf | Rev B 2017-06-29 | 纯图片 PDF；PoE+、中心抽头引出（TXCT 15/RXCT 10）、1500 Vrms、−40～85 ℃；未写 60 s 时长 |
+| 3 | 27_连接器/IO连接器/Bel - 0826-1X1T-57-F.pdf | Rev F 2016-08-09 | 官网只给机械图，缺电气规格页，不能据此判合格；完整规格书要向 Bel 索取 |
+| 4 | 08_电源管理/以太网供电 (PoE)/TI - TPS23755.pdf | SLVSDW2B 2020-11 | |
+| 4 | 08_电源管理/以太网供电 (PoE)/TI - TPS23753A.pdf | SLVS933D 2020-12 | |
+| 4 | 08_电源管理/以太网供电 (PoE)/Microchip - PD70100.pdf | DS00003639C 2025 | 只是 PD 前端，不带 PWM；带 PWM 的是 PD70101 |
+
+未取得（厂家站拦脚本下载或连不上，第三方镜像按规矩不取；需在浏览器里手动保存）：
+
+| 清单项 | 器件 | 直接链接 |
+|---|---|---|
+| 1 | Pulse HX1198FNL（分销商标“不推荐新设计”，HX1198NL 是否带 PoE 额定待手册确认） | https://productfinder.pulseelectronics.com/api/open/part-attachments/datasheet/HX1198FNL |
+| 1 | Würth WE-LAN 749013011A | https://www.we-online.com/components/products/datasheet/749013011A.pdf |
+| 2 | Würth WR-MJ 615008137421 | https://www.we-online.com/components/products/datasheet/615008137421.pdf |
+| 2 | Amphenol RJHSE | https://www.amphenol-cs.com/media/wysiwyg/files/documentation/datasheet/inputoutput/io_modjack_rjhse.pdf |
+| 2 | Molex 屏蔽 8P8C Modular Jack | https://www.molex.com/ |
+| 3 | Würth WE-RJ45 LAN 7499010121A | https://www.we-online.com/components/products/datasheet/7499010121A.pdf |
+| 3 | Pulse JXD 系列 | https://productfinder.pulseelectronics.com/ |
+| 5 | Würth WE-POE 749119xxx、WE-FLYLT | https://www.we-online.com/ |
+| 5 | Pulse PA 系列 PoE 反激变压器 | https://productfinder.pulseelectronics.com/ |
+
+A 路线（分立磁件 + 无磁 RJ45）缺第 2 类，B 路线（集成磁件 RJ45）缺可用的电气规格页，两条路线都还凑不齐。
