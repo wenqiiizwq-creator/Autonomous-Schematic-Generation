@@ -68,3 +68,21 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 |---|---|
 | isolated-rs485 | 隔离 RS-485（集成隔离电源收发器） |
 | can-with-miswire | 非隔离 CAN（含误接保护端接） |
+
+第三批在工业 I/O 校准板 SR 审查后补写（2026-11-02 收口），已知坑引用审查发现 `review:calibration/industrial-io-rs485-can/<编号>`
+（`ASG-calibration/industrial-io-rs485-can/record/sr-review/findings.json`）：
+
+| 文件 | 功能 |
+|---|---|
+| dc-24v-input-protection | 24 V 工业入口保护（保险+压敏+电感+TVS） |
+| ideal-diode-hotswap | 理想二极管 + 过流切断控制器 |
+| hold-up | 保持电容与防反灌 |
+| cot-buck | COT Buck（宽输入同步降压） |
+| ldo | LDO（5 V 转 3.3 V） |
+| mcu-min-system | MCU 最小系统 |
+| swd-debug | SWD 调试口 |
+| industrial-di-serializer | 工业 DI 串行器 |
+| di-digital-isolation | 现场组数字隔离 |
+| high-side-quad | 四路高边输出 |
+| chassis-y-cap | 机壳单点电容 |
+| status-led | 状态指示 LED |

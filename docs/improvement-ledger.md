@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 工业 I/O 校准板收口：SR 审查归因、W-DOC 逐条证据、第三批典型电路 12 个 (2026-11-02)
+
+用 SR 按完整流程审了校准板（856 项检查、42 个功能框架；板子回路深度，门禁不 valid），22 条发现归因：真缺陷 3（D501 料号不在订货表、四颗自建符号引脚名与官方脚表不符）、误报 11、资料缺口 2、需人判 6，漏报 3；
+真缺陷在校准板设计记录里改掉，4 件需设计方取舍写成待办 W-SR-DECIDE。校准板 W-DOC 批量引用改为逐条证据并补 7 条新准则，审计 0 错误。
+按审查发现补写 12 个典型电路（已知坑引用 review:calibration/industrial-io-rs485-can/<编号>），`typical-circuits.md` 加第三批表；测试守数量与第三批已知坑都有来源。lessons.json 第 15 条的改法与归因理由改正。详见 `docs/proposals/calibration-closeout-2026-11-02.md`。
+
+- Event: user:2026-11-02 (再帮我执行"已识别但没做的改进")
+- Causes: knowledge_missing 12
+- Changed: references/typical-circuits.md, references/typical-circuits/dc-24v-input-protection.md, references/typical-circuits/ideal-diode-hotswap.md, references/typical-circuits/hold-up.md, references/typical-circuits/cot-buck.md, references/typical-circuits/ldo.md, references/typical-circuits/mcu-min-system.md, references/typical-circuits/swd-debug.md, references/typical-circuits/industrial-di-serializer.md, references/typical-circuits/di-digital-isolation.md, references/typical-circuits/high-side-quad.md, references/typical-circuits/chassis-y-cap.md, references/typical-circuits/status-led.md, tests/test_typical_circuits.py, docs/proposals/calibration-closeout-2026-11-02.md, docs/improvement-ledger.md
+
 ## 纲要 7 条文字改动：引脚表照手册、订货变体一致、未用脚处置、澄清并入需求、准则逐条指证据 (2026-11-02)
 
 `docs/proposals/asg-from-boards-2026-11-02.md` 第 2 节的 7 条纲要改动经用户确认后写入 `SKILL.md`：任务 2.1 做完的标志加"引脚表读所选订货变体的手册，每个脚照手册写引脚名和引脚类型，符号引脚名不同的写明原因"（改动 1+7）；任务 2.3 做完的标志加"值、料号与手册指同一订货变体，料号写全订货码；电容额定与 TVS 工作电压不低于所在电源轨最坏最高电压"（改动 2）；任务 2.4 正文与做完的标志加"未用脚逐脚写手册处置和页码、电源轨写最高电压、不留占位值，以 `binding_version 1` 无错误为准"（改动 3、4）；任务 1.1 做完的标志允许澄清答复并入已有需求并引用（改动 5）；任务 5.1 做完的标志要求已关闭待办引用的每条准则指到证据位置（改动 6）。P1–P7 与 O1–O8 未动。
