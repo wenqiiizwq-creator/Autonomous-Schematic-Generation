@@ -262,7 +262,7 @@ class Sheet:
             if len(pairs) > 1 and len({p[0] for p in pairs}) == len(pairs) == len({p[1] for p in pairs}):
                 for s_ref, d_ref in pairs:
                     why = f"one of {len(pairs)} repeated series+shunt lanes into {anchor}"
-                    roles[s_ref] = {"role": "lane_series", "lane": d_ref, "why": why}
+                    roles[s_ref] = {"role": "lane_series", "lane": d_ref, "anchor": anchor, "why": why}
                     roles[d_ref] = {"role": "lane_shunt", "lane": s_ref, "why": why}
         for ref, pair in two.items():
             if ref not in roles:
@@ -1165,15 +1165,18 @@ class Sheet:
         for ref, s in self.plan["parts"].items():
             if s["role"] == "bank" and not any(set(s["group"]) <= b for b in banks):
                 found.append({"rule": "bank", "subject": ref, "detail": f"bank {s['group']} is not drawn as one bank"})
-        offsets = {}
+        # Lanes repeat within one group (the lanes into one anchor); two groups on a page may differ
+        # (industrial I/O calibration board 2026-11-03: TVS+diode lanes into J601, R+zener lanes into U601).
+        groups = {}
         for ref, s in self.plan["parts"].items():
             if s["role"] == "lane_series":
                 a, b = self.placements[ref], self.placements[s["lane"]]
-                offsets[ref] = (round(b["at"][0] - a["at"][0], 3), round(b["at"][1] - a["at"][1], 3),
-                                a["rotation"], b["rotation"])
-        if len(set(offsets.values())) > 1:
-            found += [{"rule": "lanes", "subject": ref, "detail": "repeated lanes use different arrangements"}
-                      for ref in sorted(offsets)]
+                groups.setdefault(s.get("anchor"), {})[ref] = (
+                    round(b["at"][0] - a["at"][0], 3), round(b["at"][1] - a["at"][1], 3), a["rotation"], b["rotation"])
+        for offsets in groups.values():
+            if len(set(offsets.values())) > 1:
+                found += [{"rule": "lanes", "subject": ref, "detail": "repeated lanes use different arrangements"}
+                          for ref in sorted(offsets)]
         kinds = {}
         for l in labels:
             kinds.setdefault(l["net"], set()).add(l["kind"])

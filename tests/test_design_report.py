@@ -984,6 +984,13 @@ class PackDesignTests(unittest.TestCase):
         self.assertTrue(any('record/baseline-v05/' in e for e in errors))
         self.assertFalse(any('run.log' in e for e in errors), errors)
 
+    def test_an_sr_review_folder_is_a_delivery_folder(self):
+        # Industrial I/O calibration board 2026-11-03: the SR run of this version sits in record/sr-review/.
+        (self.d.record / 'sr-review').mkdir()
+        (self.d.record / 'sr-review' / 'findings.json').write_text('{}')
+        errors, _ = self.run_pack()
+        self.assertFalse(any('sr-review' in e for e in errors), errors)
+
     def test_a_missing_record_is_reported_once(self):
         (self.d.record / 'page-plan.json').unlink()
         errors, _ = self.run_pack()

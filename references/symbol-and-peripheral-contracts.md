@@ -100,6 +100,21 @@ python3 scripts/audit_symbol_integrity.py path/to/board.kicad_sch \
 | `checks` | 唯一的 `id`、`kind`、来源/定位。`component` 断言确切的值/封装/库/DNP。`same_net` 和 `distinct_nets` 对照 KiCad 分区断言至少两个不同的 `位号.引脚` 端点。 |
 | `features` | 唯一 ID、边界、来源/定位和非空的 stages。每个 stage 需要 ID、角色、真实已装配的位号和检查 ID 列表；只靠引脚表核对的 stage（MCU、驱动页）可以写空的 `checks`，这时每个位号都要有引脚表，stage 取这些引脚表的结果。必需的位号缺失或为 DNP 时 FAIL。还要复核列出的位号和检查是否真的实现了所写的角色。 |
 
+**从手册引脚表批量填 `datasheet_name`/`datasheet_type`**（工业校准板 2026-11-03：`binding_version 1` 试跑 505 条错误里 478 条是引脚表缺这两项）：
+
+```sh
+python3 scripts/fill_pin_maps.py <交付目录> [--pages U301=28-34] [--write] [--out fill-report.json]
+```
+
+脚本按设计网表每个器件的 `datasheet` 找引脚表页（Pin Functions / Pin Configuration / Pin description / pin definitions），
+用 `pdftotext -layout` 读表行：引脚名、引脚号列（多封装/多型号并列时取与符号编号对得上的那一列）、TYPE/I/O 标题下的类型码，
+按厂家类型码对照（`I`→`I`，`O`→`O`，`I/O`/`B`/`BUS I/O`→`IO`，`Output/Open drain`→`OD`，`P`/`S`/`POWER`/`Supply`→`PWR`，`G`/`GND`/`Ground`→`GND`）
+写 `datasheet_name`（照印，去掉脚注号）、`datasheet_type` 和 `datasheet_page`，并把引脚表的 `source`/`locator` 改指这份手册。
+不猜：表里没有的脚、类型列为空或“—”的脚（名字为 NC 的除外）、几行说法不一的脚都不填，按原因列出（`not_in_table`、`type_not_given`、`rows_disagree`）；
+引脚图里的引脚名只补名字，不给类型；不写 `name_note`，手册名与符号名不同由审计提出、设计者写理由或改符号。
+手册类型码比审计词表粗时如实照填：TI 的 `P` 不分输入输出，开关节点、自举脚会因此与符号的 `power_out`/`passive` 冲突，这些冲突由人判，不改词表放过。
+分立器件（MOSFET、TVS）多数只有封装图没有引脚表，填不上的照单补写。默认只预览，`--write` 才写回；已有值保留，`--overwrite` 才替换。
+
 KiCad 的引脚名/类型来自器件确切的 `libsource` → 唯一的 `libparts/libpart` → 唯一的物理引脚号。节点的 `pinfunction` 可能是
 生成的标识，如 `STAT_1`；不要去掉它的后缀，也不要把它当作厂家的引脚名。`Pin_1` 这样的真实名字保持原样。
 缺失或有歧义的库引脚元数据为 INSUFFICIENT；名字/类型不符和矛盾的 KiCad 节点电气类型仍为 FAIL。

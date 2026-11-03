@@ -12,20 +12,22 @@
 
 - **适用范围**：通道多、要节省 MCU 引脚与隔离通道；输入类型由芯片内部限流与外部输入电阻决定
 - **核心器件类**：15 工业接口(IO-Link_数字IO)（8 路串行器，内置 5 V 稳压）、28 TVS_ESD保护器件（每路）、23 整流二极管（反接）、22 电阻（门限）
-- **必需外围**：每路串联反接二极管与输入电阻；RLIM 设限流；V24 去耦与 5VOP 电容；DB0/DB1 选去抖；现场电源反接二极管
+- **必需外围**：每路串联反接二极管与输入电阻；RLIM 设限流；V24 去耦与 5VOP 电容；DB0/DB1 选去抖；现场电源反接二极管；IPx 脚侧低压钳位（SN65HVS883 IPx 绝对最大 36 V，输入级只有限流器、无内部钳位）；现场电源进线按直流电源口核浪涌时，TVS 前串抗浪涌电阻，V24 电容按吸收浪涌电荷选容量
 - **必算项**：
   - ON/OFF 门限：输入电阻容差与二极管压降下的开关点落在需求的 ON 下界与 OFF 上界之间
   - 输入电流与传感器类型（三线源型）相符
-  - TVS 工作电压高于现场电源上限；钳位对芯片输入脚绝对最大值（经输入电阻）
+  - TVS 工作电压高于现场电源上限；钳位对芯片输入脚绝对最大值（经输入电阻）：IPx 脚电压取 TVS 8/20 额定钳位减输入电阻上限流压降，超过绝对最大就在脚侧加稳压管，稳压管最低 VZ（低温）高于 DI 持续过压时的 IPx 电压
+  - 现场电源口（按直流电源口时）：TVS 电流、峰值功率对 8/20 额定；V24 脚峰值 = 现场电源上限 + 经限流电阻进入 V24 的浪涌电荷 / V24 电容最小值，对 V24 绝对最大
   - 去抖与 SPI 读取时序
 - **落实规则**：G01-032、G01-033
 - **已知坑**：
-  - TVS 钳位（约 48 V）高于输入脚绝对最大值 36 V，要按输入电阻上的压降与内部限流定界；SR 只看同一网，没穿过串联电阻找到 IC 脚（review:calibration/industrial-io-rs485-can/F11）
+  - TVS 钳位（SMAJ30CA 8/20 额定点 64.3 V）高于输入脚绝对最大值 36 V；手册输入级只有限流器（p11 图 13），经 1.2 kΩ 后 IPx 仍约 60 V，每路 IPx 脚侧要加 30 V 稳压管；SR 只看同一网，没穿过串联电阻找到 IC 脚（review:calibration/industrial-io-rs485-can/F11；datasheet:Datasheet/15_接口与隔离/工业接口(IO-Link_数字IO)/TI - SN65HVS883.pdf#p11）
   - DB1 悬空是手册规定的去抖选择，不是漏接（review:calibration/industrial-io-rs485-can/F13；datasheet:Datasheet/15_接口与隔离/工业接口(IO-Link_数字IO)/TI - SN65HVS883.pdf#p11）
   - 网络名带层次路径斜杠时 SR 认不出 INDUSTRIAL_DI 候选（review:calibration/industrial-io-rs485-can/M02）
-  - 现场电源进线 FIELD+ 是否按直流电源口核线-线浪涌要在需求里定（review:calibration/industrial-io-rs485-can/F10）
+  - 现场电源进线 FIELD+ 是否按直流电源口核线-线浪涌要在需求里定；按直流电源口（线-线 2 Ω）时端子处单颗 SMAJ 级 TVS 承受 160 A 以上，要在 TVS 前串抗浪涌电阻（review:calibration/industrial-io-rs485-can/F10）
 - **来源**：
   - raw/Datasheet/15_接口与隔离/工业接口(IO-Link_数字IO)/TI - SN65HVS883.pdf（p3 引脚、p11 去抖选择）
   - raw/Datasheet/28_保护器件/TVS_ESD保护器件/ST - SMAJ5.0A.pdf（p1 VRWM、VC）
-  - raw/Datasheet/23_分立半导体/整流二极管/Vishay - 1N4007.pdf（p1 VRRM）
+  - raw/Datasheet/23_分立半导体/整流二极管/Vishay - 1N4007.pdf（p1 VRRM、IFSM）
+  - raw/Datasheet/23_分立半导体/齐纳二极管/NXP - BZT52H.pdf（p6 B30 档 VZ、rdif、IZSM）
 

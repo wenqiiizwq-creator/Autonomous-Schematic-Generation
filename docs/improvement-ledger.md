@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 工业 I/O 校准板：SR 四件取舍落地、引脚表自动填 (2026-11-03)
+
+用户定的四件按建议落地：D102/OV 窗记为已知边界（需求 C17）；FIELD+ 按直流电源口核浪涌（C18），`CALC-FIELD-SURGE` 算出原设计 D602 线-线约 160～215 A，加 R602 22 Ω 抗浪涌电阻、C601 改 100 µF 铝电解后 D602 27.5 A、V24 脚 33.5 V；
+DI 输入 `CALC-DI-PIN-SURGE`：SN65HVS883 无内部钳位、IPx 约 59.7 V，每路加 30 V±2 % 稳压管后 IPx ≤33.1 V；U401 保留预量产 XISOW3080PDWER，交接待办 `W-U401-PRODUCTION`；W-SR-DECIDE 关闭。
+新增 `scripts/fill_pin_maps.py` 从手册引脚表填 `datasheet_name/datasheet_type/datasheet_page`（校准板 239 脚填全 165 脚，binding 试跑 505→199 条，余下按类别列出），`reference_contract.py` 允许 `datasheet_page`。
+画 DI 页时修 `recipes.Sheet` 重复支路检查（按锚点分组比较）；打包白名单加 `record/sr-review/`；典型电路 `industrial-di-serializer` 补必需外围与已知坑；核心选型加预量产料号的登记要求。详见 `docs/proposals/calibration-decisions-2026-11-03.md`。
+
+- Event: user:2026-11-03 (按建议执行)
+- Causes: rule_missing 2, rule_not_enforced 1, knowledge_missing 3
+- Changed: scripts/fill_pin_maps.py, tests/test_fill_pin_maps.py, scripts/schematic_layout/reference_contract.py, scripts/schematic_layout/part_classes.py, scripts/schematic_layout/recipes.py, tests/test_drawing_recipes.py, scripts/pack_design.py, tests/test_design_report.py, scripts/README.md, references/symbol-and-peripheral-contracts.md, references/design-closure.md, references/delivery-report.md, references/core-part-selection.md, references/typical-circuits/industrial-di-serializer.md, docs/proposals/calibration-decisions-2026-11-03.md, docs/improvement-ledger.md
+- Gates: pytest 1108
 ## 准则库 1.7.1：G04-091 的 WCH 出处核过原件；86 块板待采集资料并入清单 (2026-11-02)
 
 从 WCH 官方 GitHub `openwch/ch32v307` 取得 `EVT/PUB/CH32V30xSCH.pdf`（V3.0，提交 bb6ee13，2026-04-16），第 9 页 ETH 区 HR911105A 中心抽头 4/5 共接 3V3、C14=0.1 µF 属实；G04-091 的 `source.edition` 由"版次未核"改为核过的版次，条目版本不变，G04 登记文件 1.3，共用层重建为 1.7.1（353 条）。86 块板暴露的 31 项待采集资料并入 `evals/calibration_boards/datasheets-to-collect.md`。

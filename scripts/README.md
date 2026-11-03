@@ -32,6 +32,10 @@ evidence, freshness, packing) from the arguments in `record/deliver.json`; it
 reads each step's status from its output and goes on only on PASS, DONE,
 CONDITIONAL, INCOMPLETE, AUTOMATED_PASS or FRESH.
 See [`delivery-report.md`](../references/delivery-report.md).
+`fill_pin_maps.py <delivery>` reads each part's datasheet pin table and fills
+`datasheet_name`/`datasheet_type`/`datasheet_page` in `record/reference-input.json`
+(`--write`); pins it cannot read stay unfilled and are listed with the reason. See
+[`symbol-and-peripheral-contracts.md`](../references/symbol-and-peripheral-contracts.md).
 `schematic_layout.citations` checks `datasheet:<library path>#p<page>` citations
 for the closure audit, the report and the ledger: a missing file or a page
 beyond the document fails; a cited value the page text does not show is listed
