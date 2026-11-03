@@ -58,6 +58,9 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 （例如同系列不同包装的后缀）。这条不限核心器件：设计网表里有 `mpn` 和 `datasheet` 的每个器件，
 `render_design_report.py` 都读手册全文核对，列为停产的算记录问题；确需保留（用户指定、已有库存）时在该器件写
 `lifecycle_reason`，报告的“停产料号”一节列出。
+订货表只有 Preview、Pre-Production、ADVANCE INFORMATION 状态（预量产，常带 X/P 前缀）的料号可以用于样机，
+但要在设计待办里登记一件 `validation`/`handoff` 的投产前换料（采购/产品方，写候选与要重核的项）；
+设计网表的 `mpn` 写订货表里真有的码，不写手册正文里的去前缀名（工业校准板 U401：正文写 ISOW3080P，订货表只有 XISOW3080PDWER，2026-11-03）。
 
 **外部依赖作为比较条件。** 每个候选写 `external_dependencies`：选它之后，设计要依赖哪些手册没公开的资料或行为
 （固件默认态、内部时序、编码表、全温保证……），每条一句话，写明查过哪页没有；没有就写空列表。

@@ -137,8 +137,9 @@ def verify_reference(netlist, contract, base):
         for number, expected in spec["pins"].items():
             _text(number, f"{ref}.physical pin")
             # datasheet_type: what the datasheet pin table says the pin is; audit_design_closure (binding_version 1) holds types to it.
-            _keys(expected, {"names", "types"}, {"datasheet_name", "datasheet_type", "name_note"}, context=_field_path(pin_map_context + "/pins", number))
-            for field, aliases in ((k, v) for k, v in expected.items() if k not in ("datasheet_name", "datasheet_type", "name_note")):
+            # datasheet_page: the page fill_pin_maps.py read the name and type from.
+            _keys(expected, {"names", "types"}, {"datasheet_name", "datasheet_type", "name_note", "datasheet_page"}, context=_field_path(pin_map_context + "/pins", number))
+            for field, aliases in ((k, v) for k, v in expected.items() if k not in ("datasheet_name", "datasheet_type", "name_note", "datasheet_page")):
                 if not isinstance(aliases, list) or not aliases or any(not isinstance(x, str) for x in aliases) or len(set(aliases)) != len(aliases):
                     raise ValueError(f"{ref} physical pin {number} {field}: explicit nonempty unique alias list required")
                 if any(not x.strip() or x.strip() == "~" for x in aliases):

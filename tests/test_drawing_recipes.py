@@ -118,6 +118,20 @@ class RecipeBoardTests(unittest.TestCase):
         self.assertEqual('FAIL', bad['status'])
         self.assertEqual([('recipe', 'D3')], [(f['rule'], f['subject']) for f in bad['findings']])
 
+    def test_lane_groups_are_compared_within_their_anchor(self):
+        # Industrial I/O calibration board 2026-11-03: TVS+diode lanes into the connector and R+zener lanes into the
+        # IC are two repeated groups; each repeats its own arrangement, the two need not match each other.
+        sheet = draw()
+        sheet.build('recipe_board')
+        parts = sheet.plan['parts']
+        moved = copy.deepcopy(sheet.placements['D5'])
+        moved['at'] = [moved['at'][0] + 2.54, moved['at'][1]]
+        sheet.placements['D5'] = moved
+        lanes = lambda: [f['subject'] for f in sheet._audit([])['findings'] if f['rule'] == 'lanes']
+        self.assertEqual(['R4', 'R5'], lanes())                       # one group, two arrangements
+        parts['R5'] = dict(parts['R5'], anchor='other group')
+        self.assertEqual([], lanes())                                 # two groups, each consistent
+
     def test_a_reason_turns_a_finding_into_a_deviation(self):
         sheet = draw(bad=True)
         sheet.justify('D3', 'regression fixture keeps the reversed LED')

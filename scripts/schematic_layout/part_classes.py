@@ -368,7 +368,7 @@ IC_ROLE_CUES = (
     'microcontroller', 'microprocessor', 'systemonchip', 'mcu',
     'transceiver', 'ethernetphy', 'linedriver', 'busdriver',
     'digitalisolator', 'isolatedgatedriver', 'isolator',
-    'loadswitch', 'hotswap', 'efuse', 'idealdiode', 'powerdistributionswitch', 'currentlimitswitch', 'highsideswitch',
+    'loadswitch', 'hotswap', 'efuse', 'idealdiode', 'powerdistributionswitch', 'currentlimitswitch', 'highsideswitch', 'highsidesmartpower',
     'batterycharger', 'chargecontroller', 'chargemanagement', 'switchingcharger', 'linearcharger', 'chargeric',
     'analogtodigital', 'digitaltoanalog', 'bitadc', 'bitdac', 'channeladc', 'channeldac', 'audiodac', 'audioadc',
     'sigmadeltaadc', 'deltasigmaadc',

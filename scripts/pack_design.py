@@ -33,7 +33,9 @@ from schematic_layout.component_requirements import package_audit  # noqa: E402
 
 TOP = (REPORT, '原理图', '设计资料', 'record')
 SCHEMATIC = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
-RECORD_DIRS = ('calculations', 'scripts', 'evidence')
+# sr-review: an independent schematic-review run of this version kept with the records it reviewed
+# (industrial I/O calibration board 2026-11-03: the SR report lives in record/sr-review/ and packing refused it).
+RECORD_DIRS = ('calculations', 'scripts', 'evidence', 'sr-review')
 
 
 def sha256(path):

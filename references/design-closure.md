@@ -198,6 +198,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - `record/reference-input.json` 的每个引脚表：来源文件与设计网表该器件的 `datasheet` 是同一份手册（`pin_map_datasheet_mismatch`）；
       每个脚写 `datasheet_type`（照手册引脚表：`I`/`O`/`IO`/`OD`/`OS`/`PWR`/`PWR_OUT`/`GND`/`A`/`NC`，缺记 `pin_map_without_datasheet_type`），
       `types` 只能取与它相符的 KiCad 类型（`O`→output/tri_state，`OD`→open_collector，`PWR`→power_in……），否则 `pin_type_contradicts_datasheet`。
+      `scripts/fill_pin_maps.py` 从手册引脚表批量填这两项并列出填不上的脚（用法见 [符号与外围合同](symbol-and-peripheral-contracts.md)）。
       没有 `reference-input.json` 记待办 `reference_input_missing`。
     - **未用脚处置**（`pin_dispositions`）：连接器、测试点、机械件以外，每个 `no_connect` 脚写一行
       `{pin, disposition, net?, note?, source, locator}`：`disposition` 取 `open`（手册允许悬空，脚在 `no_connect`）、`tie_low`/`tie_high`
