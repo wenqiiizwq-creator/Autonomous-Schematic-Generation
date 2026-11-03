@@ -140,6 +140,16 @@ ALLOWED = {
 
 
 
+
+def field_failure(ref, comp):
+    """The error for a part whose Reference/Value finds no clear place; an inline performance requirement is the usual
+    long text, and moving it to a same-page note frees the place (calibration board #11, 2026-11-02)."""
+    message = f"{ref}: no clear Reference/Value position; give the part more room"
+    if ((comp or {}).get('performance_contract') or {}).get('display') == 'inline':
+        message += ("; its Performance shows the requirements inline: set display to note in "
+                    "component-requirements.json and place them with performance_notes(at)")
+    return message
+
 class Sheet:
     """Structured drawing of one sheet; see the module docstring.
 
@@ -681,6 +691,10 @@ class Sheet:
     def performance_notes(self, at, refs=None, font=1.27, width=82):
         """Place same-page contract notes at a planned free annotation anchor.
 
+        ``at`` is the left end of the block's vertical middle: the text is left-justified and KiCad centres a
+        multi-line block on ``at``, so a block of n lines reaches about n/2 lines above and below it (calibration
+        board #16). Returns the number of lines placed, to plan that height before building.
+
         Content comes only from project()'s contract snapshot; normal scene QA
         checks the generated text as obstacles. The native gate binds it back
         to the source record and actual PDF, including status and conditions.
@@ -699,8 +713,10 @@ class Sheet:
                     lines.extend(textwrap.wrap(line, width=width, break_long_words=False,
                                                break_on_hyphens=False) or [''])
                 lines.append('')
-        if lines:
-            self.text('\n'.join(lines).rstrip(), at, font)
+        block = '\n'.join(lines).rstrip()
+        if block:
+            self.text(block, at, font)
+        return len(block.splitlines()) if block else 0
 
     # ----- build ----------------------------------------------------------
     def _segments(self):
@@ -1055,7 +1071,7 @@ class Sheet:
                 boxes = self._corner_fields(s.body, specs, obstacles, page)
                 if boxes is None:
                     if not draft:
-                        raise ValueError(f"{s.ref}: no clear Reference/Value position; give the part more room")
+                        raise ValueError(field_failure(s.ref, self.components.get(s.ref)))
                     failures.append(f"fields {s.ref}")
                     continue
             angle = float(first(s.node, "at")[3])

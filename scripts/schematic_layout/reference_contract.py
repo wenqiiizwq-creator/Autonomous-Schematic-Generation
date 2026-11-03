@@ -136,8 +136,9 @@ def verify_reference(netlist, contract, base):
                 failures.append({"library_pins_missing_from_contract": sorted(unmapped)})
         for number, expected in spec["pins"].items():
             _text(number, f"{ref}.physical pin")
-            _keys(expected, {"names", "types"}, {"datasheet_name"}, context=_field_path(pin_map_context + "/pins", number))
-            for field, aliases in ((k, v) for k, v in expected.items() if k != "datasheet_name"):
+            # datasheet_type: what the datasheet pin table says the pin is; audit_design_closure (binding_version 1) holds types to it.
+            _keys(expected, {"names", "types"}, {"datasheet_name", "datasheet_type", "name_note"}, context=_field_path(pin_map_context + "/pins", number))
+            for field, aliases in ((k, v) for k, v in expected.items() if k not in ("datasheet_name", "datasheet_type", "name_note")):
                 if not isinstance(aliases, list) or not aliases or any(not isinstance(x, str) for x in aliases) or len(set(aliases)) != len(aliases):
                     raise ValueError(f"{ref} physical pin {number} {field}: explicit nonempty unique alias list required")
                 if any(not x.strip() or x.strip() == "~" for x in aliases):
@@ -221,14 +222,20 @@ def verify_reference(netlist, contract, base):
             _keys(stage, {"id", "role", "refs", "checks"}, context=f"{feature_context}/stages/{stage_index}")
             sid = _text(stage["id"], f"feature {fid}.stage.id")
             _text(stage["role"], f"feature {fid}.stage {sid}.role")
-            if sid in stage_ids or any(not isinstance(stage[k], list) or not stage[k] or any(not isinstance(x, str) or not x for x in stage[k]) or len(set(stage[k])) != len(stage[k]) for k in ("refs", "checks")):
-                raise ValueError("Stage needs unique ID and nonempty refs/checks")
+            if sid in stage_ids or any(not isinstance(stage[k], list) or (k == "refs" and not stage[k]) or any(not isinstance(x, str) or not x for x in stage[k]) or len(set(stage[k])) != len(stage[k]) for k in ("refs", "checks")):
+                raise ValueError("Stage needs unique ID, nonempty refs and a checks list")
+            # A stage proven by its parts' pin maps alone (an MCU or driver page) may list no peripheral check
+            # (calibration board #17, 2026-11-02); then every ref needs a pin map, whose status the stage takes.
+            if not stage["checks"] and not set(stage["refs"]) <= set(pin_results):
+                raise ValueError(f"Stage {sid} has no checks: every ref needs a pin map, or name a peripheral check")
             stage_ids.add(sid)
             missing = [r for r in stage["refs"] if r not in native["components"] or native["components"][r]["dnp"]]
             unknown = set(stage["checks"]) - checks.keys()
             if unknown:
                 raise ValueError("Stage refers to an unknown check ID")
             statuses = [checks[k]["status"] for k in stage["checks"]] + [basis]
+            if not stage["checks"]:
+                statuses += [pin_results[r]["status"] for r in stage["refs"]]
             status = "FAIL" if missing or "FAIL" in statuses else "INSUFFICIENT" if "INSUFFICIENT" in statuses else "PASS"
             stage_results.append({"id": sid, "role": stage["role"], "status": status, "absent_or_unfitted_refs": missing})
         statuses = [s["status"] for s in stage_results]

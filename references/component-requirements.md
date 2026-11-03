@@ -46,7 +46,10 @@
 这不是要求所有器件都计算这些参数；只在脉冲工况实际适用时使用。需要以曲线或多点包络描述时，保留源计算/包络文件，
 将决定性约束按不同参数名逐条登记，不能只写“耐脉冲”。
 
-`basis` 可为 `calculation/requirement/standard/model`；工程估计会保持有条件状态，不能变成厂家保证。
+`basis` 可为 `calculation/requirement/standard/datasheet/model`；工程估计会保持有条件状态，不能变成厂家保证。
+`datasheet` 用于核心器件手册直接规定的外围值（输出/旁路电容最小值、规定的外接电阻），`source.kind` 写 `manufacturer`。
+同一记录里的精确标称值（`capacitance`/`inductance`/`resistance` 的 `eq`）必须满足同一量的上下界，有效容量下限也约束标称容量：`capacitance eq 100 nF` 配 `effective_capacitance ge 1 uF` 记错（86 块板里 100 nF 顶替手册要求的 1 µF、4.7 µF）。
+完整定义的电容要写 `working_voltage` 或 `rated_voltage` 的 `ge` 要求，TVS 要写 `working_voltage`（VRWM）的 `ge` 要求，数值取所在节点的最坏最高电压（86 块板：25 V 电容跨 30 V 输入、SMBJ33A 并在 36 V 轨上）。
 每个 `source` 写 `path`、文件内容 `sha256`、`locator`（页码、表/图、计算项或条款）。
 路径相对交付目录；也可写 `input:datasheets/子目录/手册.pdf` 引用已声明输入。
 输入通过 `--input NAME=PATH` 或 `record/deliver.json.inputs` 登记，不能读取未声明的任意文件冒充证据。
@@ -108,7 +111,7 @@
 2. **2.3** 填采购方式及来源/候选，要求与保证值分开；只有逐项核实后才能写 `qualified`。
 3. **2.4** 准备脚本调用 `project(intent, record, artifact_root)` 后写 IR，再用 `write_bom(intent, path)` 写统一 BOM。
    或使用下面的 CLI。图纸脚本/BOM脚本不得重新手抄要求或填默认 1%。
-4. **3.1/3.2** 规划技术注释的空白区域；`Sheet.performance_notes(at, refs=None, font=1.27, width=82)` 从本页合同快照生成注释。
+4. **3.1/3.2** 规划技术注释的空白区域；`Sheet.performance_notes(at, refs=None, font=1.27, width=82)` 从本页合同快照生成注释。`at` 是文字块左端、竖直方向的中点（左对齐，多行按 `at` 上下居中），返回行数，按行数预留上下各一半的高度。`display: inline` 的器件放不下 Reference/Value 时，报错会提示改成 `note`。
    这是文字锚点，电路连接仍使用引脚几何配方。注释参加现有几何、重叠、可读性与逐页视觉审阅。
 5. **4.1** 原生 KiCad 导出后自动核对源记录、IR、BOM、XML字段、可见字段、同页注释及对应 PDF 页。
 6. **5.1/5.3** 报告重新计算这些结果；`pack_design.py` 随报告复核，`deliver.py` 出图前预检、导出后复检、再生成新鲜度证据。

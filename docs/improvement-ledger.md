@@ -17,6 +17,30 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 - Causes: rule_missing 9, rule_wrong 12
 - Changed: references/shared/guideline-criteria.json, references/shared/shared-layer.md, tests/test_guideline_closure.py, docs/improvement-ledger.md
 - Gates: pytest 1035
+## 工业 I/O 校准板的 26 条流程问题 (2026-11-02)
+
+逐条对照分支核对。放行了不该放行的五处改成拦住：自定门槛的数要写进理由、检查名写的门槛要等于 limit（#23）；已关闭待办引用准则要逐条指到证据，一处顶 3 条以上算批量（#9/#24）；
+引脚表照手册写引脚名，与符号不同要说明（#25）；检查可指定依赖的估计参数（#6）；澄清答复可并入已有需求（#8）。
+晶体按规格采购、接电源轨的连接器写额定（#7/#21），TVS 类型词加 surge protection device（#18/#19），补 isolated-rs485、can-with-miswire 两个典型电路（#13）。
+工具报错与流程：#1、#3、#5、#11、#15–17、#20、#26。#2、#4、#10 不改，#12、#14、#22 是资料缺口，写进提案；纲要建议加 3 条。
+拿校准板记录试跑新审计：9 条自定门槛没写出数，2 条检查名与门槛不符，W-DOC 批量引用被拦。
+
+- Event: user:2026-11-02 (这里面找到的问题，请提醒主对话进行修改)
+- Causes: rule_not_enforced 6, rule_missing 8, knowledge_missing 2
+- Changed: scripts/audit_design_closure.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/schematic_layout/reference_contract.py, scripts/schematic_layout/recipes.py, scripts/schematic_layout/generate.py, scripts/schematic_layout/net_roles.py, scripts/deliver.py, references/design-closure.md, references/requirement-clarifications.md, references/part-roles.md, references/component-requirements.md, references/symbol-and-peripheral-contracts.md, references/delivery-report.md, references/drawing-recipes.md, references/typical-circuits.md, references/typical-circuits/isolated-rs485.md, references/typical-circuits/can-with-miswire.md, tests/test_calibration_board_issues.py, tests/test_board_defect_guards.py, tests/test_typical_circuits.py, docs/proposals/asg-from-boards-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1095
+
+## 86 块开源板的缺陷类落到 ASG 生成侧防线 (2026-11-02)
+
+SR 在 86 块开源板上确认 201 条真缺陷。按类问“ASG 画图时怎样不犯”：占位值与未编号位号不分记录版本都拦；
+`binding_version 1` 核值/料号/手册是同一型号、晶体频率、引脚表读的手册与脚类型（新字段 `datasheet_type`）、连接器以外每个 NC 脚的手册处置、单端网络、电源轨最高电压对电容额定与 TVS 的 VRWM。
+性能记录加 `basis: datasheet`，电容与 TVS 要写电压下限，标称容量要满足有效容量下限。Type-C 受电口与 LDO 两个实现方案补必算项和落实规则。
+纲要改动 4 条与准则缺失 9 项写在提案里，未改 SKILL.md、共用层和准则条款。订货后缀、封装对料号、图注语义机械判不出，提案写明替代防线。
+
+- Event: user:2026-11-02 (把这个86块板子上找到的问题，在规则库、ASG和SR技能中进行改进)
+- Causes: rule_missing 7, knowledge_missing 2
+- Changed: scripts/audit_design_closure.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/reference_contract.py, scripts/render_design_report.py, references/design-closure.md, references/component-requirements.md, references/symbol-and-peripheral-contracts.md, references/requirements-to-intent.md, references/typical-circuits/type-c-port-protection.md, references/typical-circuits/reviewed-bias-and-latch.md, tests/test_board_defect_guards.py, tests/test_design_report.py, docs/proposals/asg-from-boards-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1062
 
 ## 准则库 1.6.1：G01-053 按 GB/T 17626.29 修订 (2026-11-02)
 

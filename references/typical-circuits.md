@@ -61,3 +61,10 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 | type-c-port-protection | Type-C 接口与 ESD |
 | ntc-temperature-sensing | NTC 温度检测 |
 | production-test-points | 生产测试点与编程焊盘 |
+
+第二批从工业 I/O 校准板（industrial-io-rs485-can，2026-11-02）提取：
+
+| 文件 | 功能 |
+|---|---|
+| isolated-rs485 | 隔离 RS-485（集成隔离电源收发器） |
+| can-with-miswire | 非隔离 CAN（含误接保护端接） |

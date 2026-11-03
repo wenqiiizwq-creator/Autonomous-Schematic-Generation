@@ -898,9 +898,12 @@ def render(root, notes=None, title=None):
     old = (['parameter_version 2（检查门槛的出处、每条需求有没有检查没核对）'] if closure.get('parameter_version') == 2 else []) + \
           (['gap_version 1（外部资料缺口没有分类）'] if closure.get('gap_version') == 1 and open_external else []) + \
           (['没有 derating_version（器件应力没有按降额等级核对）'] if closure and layered and 'derating_version' not in closure else []) + \
-          (['没有 uncertainty_version（工程估计的余量没有对不确定度核对）'] if closure and layered and 'uncertainty_version' not in closure else [])
+          (['没有 uncertainty_version（工程估计的余量没有对不确定度核对）'] if closure and layered and 'uncertainty_version' not in closure else []) + \
+          (['没有 binding_version（料号与手册、符号脚类型、未用脚处置和电源轨最高电压没有核对）']
+           if closure and layered and 'binding_version' not in closure else [])
     if old:
-        out.append('- **记录版本**：%s。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1 写。'
+        out.append('- **记录版本**：%s。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、'
+                   'binding_version 1 写。'
                    % '；'.join(old))
     derating = audit.get('derating') if isinstance(audit.get('derating'), dict) else None
     if derating:

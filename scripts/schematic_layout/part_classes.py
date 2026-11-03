@@ -39,7 +39,8 @@ KINDS = OrderedDict([
                              r'PS2[5-9]\d\d|TCMT\d|KPC\d|H11[A-Z]\d)|光耦',),
                   ('optocoupler', 'photocoupler', 'optoisolator', 'opticallycoupled', 'opticalisolator', 'opticalcoupler'))),
     ('tvs', Kind('TVS', ('TVS',), (r'TVS|POWER_PROTECTION:|' + B + r'(?:SMAJ|SMBJ|SMCJ|SMF\d|P6KE|1\.5KE|ESD\d|PESD|SM712)',),
-                 ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress'))),
+                 # surgeprotectiondevice: TI TVS3300 page 1 calls itself only a "Surge Protection Device" (calibration board #18)
+                 ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress', 'surgeprotectiondevice'))),
     ('zener', Kind('稳压管', ('ZD',), (r'ZENER|' + B + r'(?:BZX|BZT5\d|MMSZ|1N47\d)|稳压二极管',), ('zener',))),
     ('bjt', Kind('双极晶体管', (), (r'TRANSISTOR_BJT:|Q_NPN|Q_PNP|\bNPN\b|\bPNP\b|' + B + r'(?:BC[PXW]?\d{2,3}|2N\d{4}|MMBT|PBSS|S8050|S8550)|三极管',),
                  ('npn', 'pnp', 'bipolar'))),
@@ -79,6 +80,9 @@ MAGNETICS = ('inductor', 'transformer', 'common_mode_choke', 'coupled_inductor')
 SAFETY_CLASS = re.compile(r'(?<![A-Za-z0-9])[XY][12](?![A-Za-z0-9])')
 VOLTAGE = re.compile(r'\d\s*k?V(?![A-Za-z])|\d\s*k?V(?:ac|dc|AC|DC|rms)', re.I)
 CURRENT = re.compile(r'\d\s*m?A(?![A-Za-z])|\d\s*m?A(?:rms|pk|dc)', re.I)
+FREQ = re.compile(r'\d\s*[kM]?Hz', re.I)
+LOAD_PF = re.compile(r'\d\s*pF', re.I)
+PPM = re.compile(r'\d\s*ppm', re.I)
 
 
 # Subcategories are the library's second level (raw/Datasheet/<category>/<subcategory>); only resistors and
@@ -402,6 +406,8 @@ def cues(value, specific=True):
         found -= {'diode', 'bjt'}       # an optocoupler names its emitter diode and phototransistor too
     if specific and any(named_by(cue, value, flat) for cue in IC_ROLE_CUES):
         found -= ROLE_LOADS
+    if specific and 'varistor' in found:
+        found.discard('tvs')            # a varistor is a surge protection device too
     if specific and found & {'ntc', 'varistor'}:
         found.discard('fuse')           # a thermistor or varistor datasheet names its thermally fused (ThermoFuse) types
     if specific and 'relaydriver' in flat:
@@ -488,6 +494,14 @@ def audit_identity(intent, bases, touched=None):
                 lack.append('耐压（写在值或 fields.Specification 里）')
             if kind in ('inductor', 'common_mode_choke', 'coupled_inductor') and not CURRENT.search(rating):
                 lack.append('额定电流（写在值或 fields.Specification 里）')
+            # Calibration board 2026-11-02: a crystal bought to its specification writes it (#7); a common connector carrying a
+            # power rail writes its ratings, the only gate a 28.8 V port connector has once high_voltage_nets is written (#21).
+            if kind == 'crystal':
+                need = (('频率', FREQ.search(rating)), ('负载电容', LOAD_PF.search(rating)), ('频率容差', PPM.search(rating)))
+                lack += ['%s（晶体按规格采购要写）' % name for name, ok in need if not ok]
+            if kind == 'connector' and any(ctx['roles'].get(n) == 'power' for n in ctx['pins'].get(ref, ())):
+                need = (('额定电压', VOLTAGE.search(rating)), ('额定电流', CURRENT.search(rating)))
+                lack += ['%s（接电源轨的连接器要写）' % name for name, ok in need if not ok]
             cat = category(comp, kind)[0]
             if cat in (SENSE_R, POWER_R):
                 need = (('阻值', ohms(comp.get('value')) is not None),) if cat == SENSE_R else ()
@@ -498,6 +512,8 @@ def audit_identity(intent, bases, touched=None):
         lack = [x for x in lack if x != conflict]
         said = ([conflict] if conflict else []) + (['缺' + '、'.join(lack)] if lack else [])
         why = special_spec(comp, kind) if kind_cls == SPECIAL else None
+        if kind_cls == SPECIAL and not why and kind in ('connector', 'relay', 'ntc') and ctx['hv'] is None:
+            why = '设计网表没写 high_voltage_nets，按接高压处理；没有高于 30 V 的网络写空列表'
         line = '%s %s（%s%s）%s' % (CLASS_NAMES.get(kind_cls, '器件'), ref, comp.get('value', ''),
                                   '；升为特殊器件：' + why if why else '', '；'.join(said))
         (problems if touched is None or ref in touched else inherited).append(line)

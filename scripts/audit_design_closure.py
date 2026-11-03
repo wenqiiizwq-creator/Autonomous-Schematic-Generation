@@ -100,6 +100,10 @@ def text(value):
     return isinstance(value, str) and bool(value.strip())
 
 
+def squeeze(value):
+    return re.sub(r'\s+', '', str(value or ''))
+
+
 def audit_operating_points(record, work, refs, error, need):
     """Pin operating modes: one the datasheet does not specify needs every specified alternative ruled out."""
     points = {}
@@ -261,7 +265,18 @@ def audit_clarifications(record, requirements, work, error):
         if answer['decision'] == 'ADOPTED_PROPOSAL' and answer['text'] != row.get('proposed_requirement'):
             error('adopted_text_differs', key)
         if answer['decision'] != 'DEFERRED':
-            if requirements.get(key, {}).get('text') != answer['text']:
+            merged = answer.get('merged_into')
+            if merged is not None:
+                # Calibration board #8 (2026-11-02): an answer folded into an existing requirement is cited there, not copied
+                # as a duplicate requirement; the requirement carries the answer's words (or the quoted part it became).
+                target = requirements.get(merged) if isinstance(merged, str) else None
+                quote = answer.get('merged_quote') if text(answer.get('merged_quote')) else answer['text']
+                if (target is None or key not in (target.get('clarifications') or [])
+                        or squeeze(quote) not in squeeze(target.get('text')) or (quote != answer['text']
+                        and not set(re.findall(r'\d+(?:\.\d+)?', answer['text'])) <= set(re.findall(r'\d+(?:\.\d+)?', quote)))):
+                    error('clarification_not_written_back', '%s：merged_into 的需求要在 clarifications 里列它，'
+                          '需求文字含答复（或 merged_quote 引的那段，答复里的数都在其中）' % key)
+            elif requirements.get(key, {}).get('text') != answer['text']:
                 error('clarification_not_written_back', key)
             files = answer.get('requirement_files')
             if not isinstance(files, dict) or files.get('decision') not in FILE_DECISIONS:
@@ -342,6 +357,21 @@ def audit_parameters(key, row, refs, points, calculations, error, version=1, req
             error('supported_with_unguaranteed_parameter', where)
 
 
+def shown(value, words):
+    from schematic_layout.citations import _shown
+    return _shown(value, str(words or ''))
+
+
+def named_limits(c):
+    """Numbers the check's name gives on its limit side (after the last 对 or vs) in the check's unit: calibration
+    board #23 (2026-11-02) named a check 100 kbit/s and set its limit to 200 kbit/s."""
+    name, unit = str(c.get('name') or ''), str(c.get('unit') or '').strip()
+    parts = re.split(r'对|\bvs\.?\b', name)
+    if len(parts) < 2 or not unit or re.search(r'[×*÷+−%]|\d\s*-\s*\d', parts[-1]):
+        return []   # a limit written as arithmetic (1 W×0.75, 120 Ω−3 %) is checked by its reason, not read here
+    return [float(n) for n in re.findall(r'(\d+(?:\.\d+)?)\s*' + re.escape(unit) + r'(?![A-Za-z])', parts[-1])]
+
+
 def audit_limits(key, row, requirements, calculations, error):
     """Version 3: each check names where its limit comes from."""
     for i, c in enumerate(row.get('checks') or []):
@@ -358,6 +388,13 @@ def audit_limits(key, row, requirements, calculations, error):
                   'standard': source.startswith('standard:') and text(source[9:]),
                   'derived': bool(DATASHEET.match(source)) or (source.startswith('calc:') and source[5:] in calculations)}[basis]:
             error('check_limit_without_source', where)
+        elif basis == 'model' and finite(c.get('limit')) and not shown(c['limit'], c['limit_reason']):
+            error('model_limit_not_in_reason', '%s：自定门槛 %g %s 要在 limit_reason 里写出这个数和它的依据' % (
+                where, c['limit'], c.get('unit') or ''))
+        named = named_limits(c)
+        if named and finite(c.get('limit')) and not any(math.isclose(n, c['limit'], rel_tol=1e-6) for n in named):
+            error('check_name_contradicts_limit', '%s：检查名里门槛一侧写的是 %s，limit 是 %g' % (
+                where, '、'.join('%g' % n for n in named), c['limit']))
 
 
 def audit_gap_kinds(key, row, error):
@@ -566,6 +603,10 @@ def audit_citations(record, calculations, work, extra, error):
     cited += [('%s:%s 的额定' % (key, c.get('name')), c.get('rating_source'), (c.get('rating'),))
               for key, row in calculations.items() for c in row.get('checks') or []
               if isinstance(c, dict) and str(c.get('rating_source') or '').startswith('datasheet:')]
+    cited += [('pin_dispositions:%s' % r.get('pin'), r.get('source'), ())
+              for r in record.get('pin_dispositions') or [] if isinstance(r, dict)]
+    cited += [('net_voltages:%s' % r.get('net'), r.get('source'), ())
+              for r in record.get('net_voltages') or [] if isinstance(r, dict) and str(r.get('source') or '').startswith('datasheet:')]
     summary = {'checked': 0, 'not_checked': [], 'review': []}
     for where, source, values in cited:
         result = check_source(source, values, extra)
@@ -662,7 +703,7 @@ def audit_estimate_margins(calculations, error):
     risk and an improvement, like a stress risk."""
     risks = []
     for key, row in calculations.items():
-        found = []
+        found, models = [], {}
         for p in row.get('parameters') or []:
             if isinstance(p, dict) and p.get('basis') in ESTIMATE_BASES:
                 u = p.get('uncertainty')
@@ -671,22 +712,39 @@ def audit_estimate_margins(calculations, error):
                           % (key, p.get('name')))
                 else:
                     found.append(u)
+                    models[p.get('name')] = u
         for c in row.get('checks') or []:
             if not isinstance(c, dict):
                 continue
             if c.get('uncertainty') is not None and not (finite(c['uncertainty']) and 0 <= c['uncertainty'] < 1):
                 error('schema', '%s:%s：uncertainty 是 0–1 的相对值' % (key, c.get('name')))
                 continue
-            u = c['uncertainty'] if c.get('uncertainty') is not None else max(found, default=None)
+            # Calibration board #6 (2026-11-02): a check names the estimates it rests on (`estimates`, parameter names);
+            # [] means none. Without either it takes the calculation's largest, and the risk says so.
+            basis = 'check'
+            if c.get('uncertainty') is not None:
+                u = c['uncertainty']
+            elif isinstance(c.get('estimates'), list):
+                u = max((models[n] for n in c['estimates'] if n in models), default=None)
+                unknown = [n for n in c['estimates'] if n not in models]
+                if unknown:
+                    error('schema', '%s:%s：estimates 列的 %s 不是本计算写了 uncertainty 的 model 参数' % (
+                        key, c.get('name'), '、'.join(map(str, unknown))))
+                basis = 'estimates'
+            else:
+                u, basis = max(found, default=None), 'calculation_max'
             hit = estimate_margin(c, u)
             if hit is None:
                 continue
             risks.append({'calculation': key, 'check': c.get('name'), 'value': c['value'], 'limit': c[hit[1]],
                           'against': hit[1], 'unit': c.get('unit'), 'margin': hit[0], 'uncertainty': u,
-                          'improvement': c.get('improvement')})
+                          'uncertainty_from': basis, 'improvement': c.get('improvement')})
             if not text(c.get('improvement')):
                 error('estimate_margin_risk_without_improvement', '%s:%s：余量 %.2g%% 小于工程估计的不确定度 %.2g%%，'
-                      '写 improvement（加大余量，或把估计收紧到余量以内）' % (key, c.get('name'), hit[0] * 100, u * 100))
+                      '写 improvement（加大余量，或把估计收紧到余量以内）%s' % (
+                          key, c.get('name'), hit[0] * 100, u * 100,
+                          '；这个不确定度是整条计算里最大的一个，检查不依赖它时写 estimates（它用到的 model 参数名，'
+                          '不依赖估计写 []）' if basis == 'calculation_max' else ''))
     return risks
 
 
@@ -718,6 +776,32 @@ def page_plan_circuits(artifact_root, error):
         return []
 
 
+GUIDELINE_EVIDENCE_SHARE = 3
+
+
+def audit_guideline_evidence(key, row, ids, error):
+    """A closed work item covers a rule only where it points at what does it: `guideline_evidence` maps each rule it cites
+    to `<evidence id>#<locator>` in its own evidence; one locator standing for more than three rules is a batch citation
+    (calibration board #9/#24, 2026-11-02: one closed W-DOC item cited 205 rules)."""
+    found = row.get('guideline_evidence') if isinstance(row.get('guideline_evidence'), dict) else {}
+    evidence = set(row.get('evidence') or [])
+    missing, shared = [], {}
+    for gid in ids:
+        where = found.get(gid)
+        eid, _, locator = str(where or '').partition('#')
+        if eid not in evidence or not text(locator):
+            missing.append(gid)
+        else:
+            shared.setdefault(squeeze(where), []).append(gid)
+    if missing:
+        error('guideline_work_without_evidence', '%s：已关闭的待办引用 %s，guideline_evidence 要逐条写 <证据编号>#<节/表/行>，'
+              '指到落实它的那一处' % (key, '、'.join(missing)))
+    for where, gids in sorted(shared.items()):
+        if len(gids) > GUIDELINE_EVIDENCE_SHARE:
+            error('guideline_evidence_repeated', '%s：%d 条准则指向同一处 %s（%s）；每条指到落实它的那一处' % (
+                key, len(gids), where, '、'.join(gids)))
+
+
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
     (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item or component requirement,
@@ -742,6 +826,8 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
                 cited.setdefault(gid, []).append(kind + ':' + key)
                 if kind == 'work':
                     by_work.add(gid)
+            if kind == 'work' and row.get('status') == 'closed' and ids:
+                audit_guideline_evidence(key, row, ids, error)
     applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
     found = guideline_criteria.coverage(library, applicable, cited,
                                      {i['id']: i['reason'] for i in scope.get('not_applicable', [])})
@@ -766,6 +852,308 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
     found['circuit_criteria'] = {gid: refs for gid, refs in sorted(circuit['criteria'].items())}
     found['shared_sha256'] = guideline_criteria.shared_digest()   # the whole shared layer the audit ran against
     return found
+
+
+# --- Placeholders, part identity binding, unused pins and rail voltages (binding_version 1) ---------------------------
+# From the 86 open boards SR reviewed (user 2026-11-02: 把这86块板子上找到的问题，在规则库、ASG和SR技能中进行改进):
+# R_Small/C/BZT52Bxx/xx/- values shipped (DOC-D01, DEV-D01), part number, package and datasheet named three parts (DEV-D04),
+# HWSON pins wired as SO8 and outputs declared as inputs (DEV-D02), unused inputs and RSVD pins left open against the
+# datasheet (NET-A07, DEV-D05), 25 V capacitors and 33 V TVS on 36 V rails (DEV-C01, PRO-E02).
+PLACEHOLDER_VALUES = {'~', '-', '—', '?', '??', 'TBD', 'tbd', 'TBA', 'x', 'xx', 'XX', '待定', '未定',
+                      'R', 'R_Small', 'R_US', 'C', 'C_Small', 'C_Polarized', 'CP', 'CP_Small', 'L', 'L_Small',
+                      'D', 'D_Small', 'D_Zener', 'D_TVS', 'D_Schottky', 'LED', 'Crystal', 'Crystal_Small',
+                      'Crystal_GND24', 'Crystal_GND23', 'Q_NPN', 'Q_PNP', 'Q_NMOS', 'Q_PMOS', 'FerriteBead', 'Fuse'}
+# A lower-case x standing for a digit or letter of a part number (BZT52Bxx, BQ769x2), or a ? or * in it.
+WILDCARD = re.compile(r'(?<=[A-Z0-9])x+(?=[A-Z0-9]|$)|[?*]')
+# Kinds whose value is a rating or a frequency, not a part number; a value equal to the symbol name is a placeholder.
+VALUE_KINDS = ('resistor', 'capacitor', 'inductor', 'ferrite', 'crystal', 'diode', 'zener', 'tvs', 'fuse', 'bjt', 'mosfet')
+NOT_PART_NUMBER = ('resistor', 'capacitor', 'inductor', 'ferrite', 'crystal', 'connector', 'testpoint', 'mechanical',
+                   'jumper', 'switch', 'battery')
+PART_NUMBER = re.compile(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9][A-Za-z0-9.\-_/+#,()]{3,}$')
+FREQUENCY = re.compile(r'(\d+(?:\.\d+)?)\s*([kKM]?)HZ', re.I)
+# What the datasheet pin table says a pin is, and the KiCad electrical types that say the same (DEV-D02: outputs drawn as
+# inputs hide a driver conflict from ERC).
+DATASHEET_PIN_TYPES = {'I': {'input'}, 'O': {'output', 'tri_state'}, 'IO': {'bidirectional', 'tri_state'},
+                       'OD': {'open_collector'}, 'OS': {'open_emitter'}, 'PWR': {'power_in'}, 'PWR_OUT': {'power_out'},
+                       'GND': {'power_in', 'passive'}, 'A': {'passive', 'input', 'output', 'bidirectional'},
+                       'NC': {'no_connect', 'passive', 'unspecified', 'free'}}
+DISPOSITIONS = ('open', 'tie_low', 'tie_high', 'pull_down', 'pull_up', 'per_datasheet')
+NET_VOLTAGE_SOURCE = re.compile(r'^(req:|calc:)(\S+)$|^datasheet:.+#p\d+$')
+RETURN_NET = re.compile(r'(?:^|[/_])(?:[ADPS]?GND\w*|VSS\w*|RTN\w*|0V|COM)$', re.I)
+# TVS series named by their stand-off voltage VRWM: SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF<VRWM>[C]A and Nexperia PESD/PTVS<a>V<b>
+# (a.b V). Series named by breakdown voltage (P6KE, 1.5KE, P4SMA, P6SMB) are not read.
+TVS_VRWM = (re.compile(r'^(?:SMAJ|SMBJ|SMCJ|SMDJ|SMLJ|SMF)(\d+(?:\.\d+)?)C?A', re.I),
+            re.compile(r'^(?:PESD|PTVS)(\d+)V(\d+)', re.I))
+VOLTS = re.compile(r'(\d+(?:\.\d+)?)\s*(k?)V(?![A-Za-z])')
+
+
+def audit_placeholders(intent, error, strict=False):
+    """A value or part number still holding a library default or a wildcard never ships (DOC-D01: R_Small, C, BZT52Bxx,
+    xx, - on real boards); a reference still carrying ? is unannotated (DOC-Q01: K?). With ``strict`` (binding_version 1)
+    an empty value counts too."""
+    for c in intent.get('components') or []:
+        if not isinstance(c, dict):
+            continue
+        ref, value, mpn = str(c.get('ref') or ''), str(c.get('value') or '').strip(), str(c.get('mpn') or '').strip()
+        if '?' in ref:
+            error('unannotated_reference', '%s：位号没有编号，按页编好号再出图' % ref)
+        kind, problem = part_classes.kind_of(c)
+        declared = part_classes.fields(c).get('Kind')
+        if text(declared) and declared not in part_classes.KINDS:
+            # Calibration board #5 (2026-11-02): tvs_bidirectional, mosfet_n, schottky passed until the BOM was written.
+            error('kind_not_in_vocabulary', '%s：%s' % (ref, problem))
+        symbol = str(c.get('lib_id') or '').partition(':')[2]
+        generic = str(c.get('lib_id') or '').partition(':')[0] == 'Device'   # a project symbol named after its part is no default
+        if value in PLACEHOLDER_VALUES or (kind in VALUE_KINDS and value and value == symbol and generic):
+            error('placeholder_value', '%s：值 %s 是库默认名或占位，写设计值（阻值/容值/稳压值/型号）' % (ref, value))
+        elif strict and not value and kind not in ('mechanical', 'testpoint', 'connector'):
+            error('placeholder_value', '%s：没有写值' % ref)
+        for field, text_ in (('mpn', mpn), ('value', value if kind not in VALUE_KINDS[:5] else '')):
+            if text_ and WILDCARD.search(text_):
+                error('placeholder_value', '%s：%s %s 含通配符（x、?、*），写手册订货信息里的完整订货码' % (ref, field, text_))
+
+
+def datasheet_names(path):
+    """The part names a library datasheet's file name gives (`Vendor - LM5163_LM5164.pdf` → lm5163, lm5164), squashed."""
+    stem = Path(str(path)).stem.split(' - ')[-1]
+    return [n for n in (part_classes.squash(p) for p in re.split(r'[_,&/+\s]|\band\b', stem)) if len(n) >= 3]
+
+
+def names_part(name, mpn):
+    """The datasheet name covers the part: it starts the part number (a lower-case x in the name matches any one
+    character), or the part number starts it."""
+    pattern = ''.join('[0-9a-z]' if ch == 'x' else re.escape(ch) for ch in name)
+    return bool(re.match(pattern, mpn)) or name.startswith(mpn)
+
+
+def datasheet_covers(comp, bases):
+    """Whether the part's datasheet is the part's own: its file name names the part, or its text carries the part number."""
+    mpn = part_classes.squash(comp.get('mpn'))
+    if any(names_part(n, mpn) for n in datasheet_names(comp['datasheet'])):
+        return True
+    found = part_classes.find(comp['datasheet'], bases)
+    if found is None:
+        return None   # the identity audit reports a datasheet it cannot find
+    from schematic_layout.component_requirements import document_text
+    body = document_text(found)
+    return None if body is None else mpn in part_classes.squash(body)
+
+
+def hertz(text_):
+    m = FREQUENCY.search(str(text_ or ''))
+    return float(m.group(1)) * {'': 1, 'k': 1e3, 'K': 1e3, 'M': 1e6}[m.group(2)] if m else None
+
+
+def audit_identity_binding(intent, bases, error):
+    """Value, part number and datasheet name one part (DEV-D04/D01): value is the part number or its leading part, the
+    datasheet file names it or carries it, a crystal's frequency agrees with its part number (CLK-C01)."""
+    ctx = part_classes.context(intent)
+    for c in intent.get('components') or []:
+        if not isinstance(c, dict):
+            continue
+        ref, kind = c.get('ref'), part_classes.kind_of(c)[0]
+        value, mpn = str(c.get('value') or '').strip(), str(c.get('mpn') or '').strip()
+        if mpn and kind not in NOT_PART_NUMBER and PART_NUMBER.match(value):
+            a, b = part_classes.squash(value), part_classes.squash(mpn)
+            if not (a.startswith(b) or b.startswith(a)):
+                error('part_value_contradicts_mpn', '%s：值 %s 与料号 %s 不是同一型号；值写料号或它的前段' % (ref, value, mpn))
+        if kind == 'crystal' and mpn and hertz(value) and hertz(mpn) and not math.isclose(hertz(value), hertz(mpn), rel_tol=1e-6):
+            error('crystal_frequency_contradicts_mpn', '%s：值 %s 与料号 %s 的频率不同' % (ref, value, mpn))
+        if (mpn and text(c.get('datasheet')) and not part_classes.design_sheet(c)
+                and part_classes.part_class(c, ctx) in (part_classes.KEY, part_classes.SPECIAL)
+                and datasheet_covers(c, bases) is False):
+            error('part_datasheet_contradicts_mpn', '%s：数据手册 %s 不是料号 %s 的手册（文件名不含它，正文也找不到）；'
+                  '换成这个料号的手册，或把料号改成手册里的订货码' % (ref, c['datasheet'], mpn))
+
+
+def net_table(intent):
+    """{net: [ref.pin]} from either form of the design netlist."""
+    nets = intent.get('nets') or {}
+    if isinstance(nets, dict):
+        return {k: list(v) for k, v in nets.items() if isinstance(v, list)}
+    return {n['name']: list(n.get('pins') or []) for n in nets if isinstance(n, dict) and text(n.get('name'))}
+
+
+def audit_pin_maps(intent, root, bases, error, need):
+    """record/reference-input.json: each pin map reads the part's own datasheet (DEV-D04: the pin table of one part, the
+    datasheet field of another) and writes what the datasheet pin table says each pin is, whose KiCad types must say the
+    same (DEV-D02)."""
+    path = Path(root) / 'record' / 'reference-input.json'
+    if not path.is_file():
+        need('reference_input_missing', 'record/reference-input.json：核心器件的引脚表与外围核对（任务 2.1）')
+        return
+    try:
+        contract = json.loads(path.read_text(encoding='utf-8'))
+        sources, maps = contract.get('sources') or {}, contract.get('pin_maps') or {}
+    except (ValueError, AttributeError) as exc:
+        error('schema', 'record/reference-input.json: %s' % exc)
+        return
+    comps = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
+    for ref, spec in maps.items():
+        comp = comps.get(ref) or {}
+        source = (sources.get(spec.get('source')) or {}).get('path') if isinstance(spec, dict) else None
+        sheet = comp.get('datasheet')
+        if text(source) and text(sheet):
+            local = (path.parent / source).resolve()
+            if not part_classes.same_document(str(local) if local.is_file() else source, sheet, bases):
+                error('pin_map_datasheet_mismatch', '%s：引脚表读的是 %s，设计网表的数据手册是 %s；按所选料号的手册重读引脚表'
+                      % (ref, source, sheet))
+        for number, pin in ((spec.get('pins') or {}) if isinstance(spec, dict) else {}).items():
+            if not isinstance(pin, dict):
+                continue
+            # Calibration board #25 (2026-11-02): pin maps generated from the project symbol only checked the symbol's names.
+            # Each pin writes the name as the datasheet prints it; where the symbol says it otherwise the map says why.
+            printed = pin.get('datasheet_name')
+            if not text(printed):
+                error('pin_map_without_datasheet_name', '%s.%s：照手册引脚表写 datasheet_name（手册印的脚名）' % (ref, number))
+            elif pin_name(printed) not in {pin_name(n) for n in pin.get('names') or []} and not text(pin.get('name_note')):
+                error('pin_name_differs_from_datasheet', '%s.%s：手册脚名 %s，符号脚名 %s；改符号，或在 name_note 写两者为何是同一个脚'
+                      % (ref, number, printed, '/'.join(pin.get('names') or [])))
+            declared = pin.get('datasheet_type')
+            if declared is None:
+                error('pin_map_without_datasheet_type', '%s.%s：照手册引脚表写 datasheet_type（%s）'
+                      % (ref, number, '/'.join(DATASHEET_PIN_TYPES)))
+                continue
+            allowed = DATASHEET_PIN_TYPES.get(declared)
+            if allowed is None:
+                error('schema', '%s.%s：datasheet_type 取 %s' % (ref, number, '/'.join(DATASHEET_PIN_TYPES)))
+            elif not set(pin.get('types') or []) <= allowed:
+                error('pin_type_contradicts_datasheet', '%s.%s：手册是 %s，符号脚类型写了 %s（应为 %s）' % (
+                    ref, number, declared, '/'.join(pin.get('types') or []), '/'.join(sorted(allowed))))
+
+
+def pin_name(name):
+    """A pin name compared across symbol and datasheet: KiCad's ~{..} overbar and the punctuation dropped, case folded."""
+    return re.sub(r'[^0-9a-z]', '', re.sub(r'~\{([^}]*)\}', r'\1', str(name)).lower())
+
+
+def audit_pin_dispositions(record, intent, error):
+    """Each pin left unconnected on a part other than a connector has a disposition read from its datasheet, and the
+    netlist does what it says (NET-A07/DEV-D05: unused CMOS inputs and RSVD pins open against the datasheet); a net with
+    one endpoint is an open pin in disguise (NET-A01: a Type-C CC on a one-node net)."""
+    nets = net_table(intent)
+    comps = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
+    where = {p: n for n, pins in nets.items() for p in pins}
+    for name, pins in sorted(nets.items()):
+        if len(set(pins)) == 1:
+            error('single_endpoint_net', '%s：网络只接 %s 一个脚；接到它该接的网络，或放进 no_connect 并写处置' % (name, pins[0]))
+    rows = record.get('pin_dispositions') or []
+    if not isinstance(rows, list):
+        error('schema', 'pin_dispositions must be a list')
+        rows = []
+    written = {}
+    for row in rows:
+        if not isinstance(row, dict) or not text(row.get('pin')):
+            error('schema', 'pin_dispositions entry needs pin (ref.pin)')
+            continue
+        pin, disposition = row['pin'], row.get('disposition')
+        if pin in written:
+            error('duplicate_id', 'pin_dispositions:' + pin)
+        written[pin] = row
+        if disposition not in DISPOSITIONS:
+            error('schema', '%s：disposition 取 %s' % (pin, '/'.join(DISPOSITIONS)))
+            continue
+        if not (isinstance(row.get('source'), str) and DATASHEET.match(row['source']) and text(row.get('locator'))):
+            error('disposition_without_source', '%s：写手册里规定这个脚未用时怎么处理的页（source、locator）' % pin)
+        nc, net = pin in (intent.get('no_connect') or []), where.get(pin)
+        if disposition == 'open':
+            wrong = not nc
+        elif disposition in ('tie_low', 'tie_high'):
+            wrong = net is None or net != row.get('net')
+        elif disposition in ('pull_down', 'pull_up'):
+            wrong = net is None or not any(part_classes.kind_of(comps.get(p.rsplit('.', 1)[0]) or {})[0] == 'resistor'
+                                           for p in nets.get(net, []) if p != pin)
+        else:
+            wrong = not text(row.get('note'))
+        if wrong:
+            error('disposition_contradicts_netlist', '%s：处置写 %s%s，设计网表里它%s' % (
+                pin, disposition, '（%s）' % row['net'] if row.get('net') else '',
+                '在 no_connect' if nc else '在 %s' % net if net else '不在任何网络'))
+    for pin in intent.get('no_connect') or []:
+        comp = comps.get(str(pin).rsplit('.', 1)[0]) or {}
+        if pin in written or is_connector_part(comp):
+            continue
+        error('no_connect_without_disposition', '%s：不接的脚要按手册写处置（pin_dispositions：悬空、接地、上下拉…及手册页）' % pin)
+
+
+def is_connector_part(comp):
+    from schematic_layout.component_role import is_connector
+    return is_connector(comp) or part_classes.kind_of(comp)[0] in ('connector', 'testpoint', 'mechanical')
+
+
+def rated_volts(comp, parameters=('working_voltage', 'rated_voltage')):
+    """The voltage rating a part's record or fields write: its contract's ≥ requirement, else the largest voltage written."""
+    contract = comp.get('performance_contract')
+    if isinstance(contract, dict):
+        for r in contract.get('requirements') or []:
+            if isinstance(r, dict) and r.get('parameter') in parameters and r.get('op') == 'ge' and finite(r.get('value')) \
+                    and r.get('unit') in ('V', 'kV'):
+                return r['value'] * (1000 if r['unit'] == 'kV' else 1)
+    found = [float(a) * (1000 if k else 1) for a, k in VOLTS.findall(part_classes.spec_text(comp))]
+    return max(found) if found else None
+
+
+def tvs_vrwm(comp):
+    for value in (comp.get('mpn'), comp.get('value')):
+        for i, pattern in enumerate(TVS_VRWM):
+            m = pattern.match(str(value or '').strip())
+            if m:
+                return float(m.group(1)) if i == 0 else float('%s.%s' % (m.group(1), m.group(2)))
+    return rated_volts(comp)
+
+
+def audit_net_voltages(record, intent, requirements, calculations, error):
+    """Each rail writes its worst-case maximum and where it comes from; a capacitor rated below the rail it sits on, or a
+    TVS whose stand-off voltage is below it, fails (DEV-C01: 25 V across 30 V, 10 V on 15 V; PRO-E02: SMBJ33A on 36 V)."""
+    rows = record.get('net_voltages') or []
+    if not isinstance(rows, list):
+        error('schema', 'net_voltages must be a list')
+        rows = []
+    maxima = {}
+    for row in rows:
+        if not isinstance(row, dict) or not text(row.get('net')) or not finite(row.get('max')) or row.get('unit') != 'V':
+            error('schema', 'net_voltages entry needs net, finite max and unit V')
+            continue
+        m = NET_VOLTAGE_SOURCE.match(str(row.get('source') or ''))
+        if not m or (m.group(1) == 'req:' and m.group(2) not in requirements) or (
+                m.group(1) == 'calc:' and m.group(2) not in calculations):
+            error('net_voltage_without_source', '%s：最高电压写来源 req:<需求编号>、calc:<计算编号> 或 datasheet:<手册>#p<页>' % row['net'])
+        maxima[row['net']] = row['max']
+    nets = net_table(intent)
+    roles = intent.get('net_roles') or {}
+    for name, role in sorted(roles.items()):
+        if role == 'power' and name not in maxima:
+            error('net_voltage_missing', '%s：电源轨写最坏最高电压（net_voltages：含容差、纹波和需求给的输入上限）' % name)
+    where = {}
+    for name, pins in nets.items():
+        for p in pins:
+            where.setdefault(p.rsplit('.', 1)[0], []).append(name)
+    returns = {n for n in nets if roles.get(n) == 'return' or (roles.get(n) is None and RETURN_NET.search(n))}
+    for c in intent.get('components') or []:
+        kind = part_classes.kind_of(c)[0] if isinstance(c, dict) else None
+        if kind not in ('capacitor', 'tvs'):
+            continue
+        on = where.get(c.get('ref'), [])
+        live = [n for n in on if n not in returns]
+        if len(on) != 2 or len(live) != 1 or live[0] not in maxima:
+            continue
+        rail, top = live[0], maxima[live[0]]
+        rating = rated_volts(c) if kind == 'capacitor' else tvs_vrwm(c)
+        if rating is not None and rating < top:
+            error('capacitor_rating_below_net_voltage' if kind == 'capacitor' else 'tvs_vrwm_below_net_voltage',
+                  '%s：%s %g V 低于 %s 的最高电压 %g V' % (c['ref'], '额定电压' if kind == 'capacitor' else 'VRWM', rating, rail, top))
+    return maxima
+
+
+def audit_binding(record, intent, artifact_root, requirements, calculations, error, need):
+    """binding_version 1 (user 2026-11-02): the generation-side guard for the defect classes of the 86 boards."""
+    root = Path(artifact_root)
+    bases = [root, root / 'record']
+    audit_identity_binding(intent, bases, error)
+    audit_pin_maps(intent, root, bases, error, need)
+    audit_pin_dispositions(record, intent, error)
+    maxima = audit_net_voltages(record, intent, requirements, calculations, error)
+    return {'net_voltages': maxima, 'pin_dispositions': len(record.get('pin_dispositions') or [])}
 
 
 def audit(record, intent_path, artifact_root, inputs=None):
@@ -1000,6 +1388,14 @@ def audit(record, intent_path, artifact_root, inputs=None):
             guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root)
     elif guideline_criteria.load()['criteria']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
+    # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
+    audit_placeholders(intent, error, strict='binding_version' in record)
+    binding = None
+    if 'binding_version' in record:
+        if record['binding_version'] != 1:
+            error('schema', 'binding_version must be 1')
+        else:
+            binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need)
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')
@@ -1036,6 +1432,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'derating': derating if derating is not None else 'NOT_CHECKED',
             'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
+            'binding': binding if binding is not None else 'NOT_CHECKED',
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),
             'downstream_handoffs': [k for k, v in work.items() if v.get('stage') in ('validation', 'pcb') and v.get('status') == 'handoff']}
 
