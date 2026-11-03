@@ -27,6 +27,15 @@ DI 输入 `CALC-DI-PIN-SURGE`：SN65HVS883 无内部钳位、IPx 约 59.7 V，�
 - Causes: knowledge_missing 1
 - Changed: references/shared/guideline-criteria.json, evals/calibration_boards/datasheets-to-collect.md, docs/improvement-ledger.md
 - Gates: pytest 1096
+## 共用层同步 1.7.2：词表加 HOLD_UP、SIGNAL_PROTECTION (2026-11-03)
+
+SR 合并步 7（用户 2026-11-03"按建议执行"）在共用词表 `circuit_types` 加 `HOLD_UP`（掉电保持）和 `SIGNAL_PROTECTION`（信号端口保护），准则库重建为 1.7.2（353 条，条款与 1.7.1 逐条相同），指纹 3e50da53d0b5 → 48c61bb3a5e7；本仓库同字节复制。典型电路 `hold-up` 的电路类型加 `HOLD_UP`，仍保留 POWER_CONVERTER、POWER_PROTECTION，因为它落实的 G03-023/024/025/038/039、G05-090 目前只按这两类选出；准则适用类型是否加 HOLD_UP 留给人定。
+
+- Event: user:2026-11-03 (按建议执行)
+- Causes: rule_missing 2
+- Changed: references/shared/vocabulary.json, references/shared/guideline-criteria.json, references/typical-circuits/hold-up.md, docs/improvement-ledger.md
+- Gates: pytest 1109
+
 ## 纲要第 3 处文字改动：引脚表先用 fill_pin_maps.py 批量填 (2026-11-03)
 
 `docs/proposals/calibration-closeout-2026-11-02.md` 第 5 节建议 1 经用户确认后写入 `SKILL.md`：任务 2.4 做完的标志的 `binding_version 1` 括注里加"引脚表的手册引脚名与类型先用 `scripts/fill_pin_maps.py` 从符号库和手册引脚表批量填入，填不上的再逐脚补"。工具 `fill_pin_maps.py` 由校准板取舍落地一步交付（校准板 505 条错误降到 199 条）。

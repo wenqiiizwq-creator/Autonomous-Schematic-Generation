@@ -93,6 +93,14 @@
       "title": "隔离"
     },
     {
+      "name": "HOLD_UP",
+      "title": "掉电保持"
+    },
+    {
+      "name": "SIGNAL_PROTECTION",
+      "title": "信号端口保护"
+    },
+    {
       "name": "DEBUG",
       "title": "调试与烧录"
     },

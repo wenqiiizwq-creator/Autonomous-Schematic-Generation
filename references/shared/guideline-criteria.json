@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.7.1",
+  "library_version": "1.7.2",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -28,6 +28,8 @@
       "HSSERIAL",
       "AV",
       "ISOLATION",
+      "HOLD_UP",
+      "SIGNAL_PROTECTION",
       "DEBUG",
       "DC_48V",
       "DC_24V",

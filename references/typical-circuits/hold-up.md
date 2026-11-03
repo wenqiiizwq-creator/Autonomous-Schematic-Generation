@@ -4,7 +4,7 @@
 
 适用范围：逻辑功耗瓦级、保持毫秒级的工业 24 V 板；只保持逻辑，不保持外部负载。
 
-电路类型：POWER_CONVERTER、POWER_PROTECTION
+电路类型：HOLD_UP、POWER_CONVERTER、POWER_PROTECTION
 
 ## 实现方案
 
