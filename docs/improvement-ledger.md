@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.7.0：86 块开源板暴露的准则空白与 USB 适用范围 (2026-11-02)
+
+86 块开源 KiCad 板经 SR 审查归因后，14 条准则问题裁决为准则确有问题 9 条（USB 七条同根因：Type-C/PD 条款被套到 A/B/Micro-B 口）、检查器误用 1 条、归工具 2 条、需人判 1 条；201 条真缺陷里 142 条没有准则承接。草案见 SR `docs/proposals/criteria-from-boards-2026-11-02.md`。
+新增 9 条：G02-036 器件身份唯一、G02-037 原理图/BOM/图纸同版一致、G02-038 不交付占位值、G02-039 工作在手册推荐条件内、G03-059 外部前馈电容按手册窗、G04-101 符号脚按官方脚表、G04-102 未用/保留/专用脚按手册处置、G04-103 USB 外围按控制器手册、G04-104 Type-C CC 按端口角色端接。修订 12 条 39 处（G01-026/029/030/031 限定到 Type-C/PD 并保留 Type-A 默认 VBUS 例外，G03-005 关联，G04-010 加 STARTUP，G04-036/037/039 隔离类型不展开到磁珠，G04-091 改为千兆 PHY 厂家建议，G05-030/031 逐通道核且追到滤波后器件），各条版本 1.0→1.1。登记文件 G01 1.5、G02 1.3、G03 1.5、G04 1.2、G05 1.2，规范正文同步。厂家出处核过原件：PCA9517A Rev. 4.1、RP2350 2026-01-10 构建版、ADS1299 SBAS499C、DFLS1100 DS30497 Rev. 14-2；WCH CH32V30x 评估板原理图未取得原件，登记为版次未核。草案列的 5 件待定事项按草案原样入库：G01-028 不改、词表不加 USB_TYPEC、STORAGE 词表不动、新条目放 G02/G04、图面标注类不入库。
+
+- Event: user:2026-11-02 (按草案入库)
+- Causes: rule_missing 9, rule_wrong 12
+- Changed: references/shared/guideline-criteria.json, references/shared/shared-layer.md, tests/test_guideline_closure.py, docs/improvement-ledger.md
+- Gates: pytest 1035
+
 ## 准则库 1.6.1：G01-053 按 GB/T 17626.29 修订 (2026-11-02)
 
 用户取得 GB/T 17626.29-2006 全文（等同 IEC 61000-4-29:2000）。G01-053 改为按表 1a、1b 写明选定的暂降与中断组合，中断分高阻抗和低阻抗，恢复判据按 §9，低阻抗反灌接 G03-031；登记文件 G01 1.4。

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.6.1",
+  "library_version": "1.7.0",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -66,13 +66,13 @@
     ]
   },
   "specs": {
-    "G01": "1.4",
-    "G02": "1.2",
-    "G03": "1.4",
-    "G04": "1.1",
-    "G05": "1.1"
+    "G01": "1.5",
+    "G02": "1.3",
+    "G03": "1.5",
+    "G04": "1.2",
+    "G05": "1.2"
   },
-  "content_sha256": "c80035c11667b570c48a9485598dbc74904d2a50341b4d1b2b2a01638e22d0a6",
+  "content_sha256": "24808fc0bb6b0ad67609a90af4547457e1d8632582d3edaa5f30695273889379",
   "criteria": [
     {
       "id": "G01-001",
@@ -1018,21 +1018,22 @@
     },
     {
       "id": "G01-026",
-      "title": "USB 供电输入电压窗按 vSafe5V 并计线缆压降",
+      "title": "USB Type-C/PD 供电输入电压窗按 vSafe5V 并计线缆压降",
       "spec": "G01",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "shall",
       "applies_when": {
         "circuit_types": [
           "USB"
-        ]
+        ],
+        "text": "VBUS 取电的 USB Type-C 插座端口（含 PD 协商）；传统 USB 连接器（Standard-A/B、Mini/Micro-B，无 CC/PD）不套本条数值"
       },
       "inputs": [
         "端口角色（Source/Sink/DRP）"
       ],
       "asg_action": "USB 供电输入：源端 vSafe5V 4.75–5.5 V（协商电压按 ±0.5 V 有效带），设备端再减线缆压降。",
-      "sr_check": "核对输入窗按源端范围减线缆压降计算，下游转换器在最低值下能工作。",
+      "sr_check": "先定端口连接器类型（Type-C/传统）与是否 PD 协商；Type-C 端口核对输入窗按源端范围减线缆压降计算，下游转换器在最低值下能工作；传统连接器不按本条数值判，记“按 USB 2.0/3.2 另核”，取不到适用规范的记资料不足。",
       "source": [
         {
           "document": "USB Power Delivery Specification",
@@ -1042,7 +1043,7 @@
         }
       ],
       "closing_stage": "schematic",
-      "not_applicable": "USB 只作数据接口、VBUS 不取电时不适用。",
+      "not_applicable": "USB 只作数据接口、VBUS 不取电时不适用；无 CC/PD 的传统 USB 连接器不套 vSafe5V 数值，源端窗口按 USB 2.0/USB 3.2 规范或所接电源规格另核（Type-C R2.5 §4.4.2 p152：传统 USB 连接器（Standard-A、Micro-B 等）默认供 VBUS 的主机/充电器豁免“未附着不带电”与表 4-2 电容两项；Source 插座处 VBUS 按 USB 2.0/USB 3.2 规范），线缆压降与下游最低工作电压照样核。",
       "relations": {
         "related": [
           "G01-027",
@@ -1130,19 +1131,20 @@
     },
     {
       "id": "G01-029",
-      "title": "USB Sink 的 VBUS 体电容不超过 100 µF，超出须限流",
+      "title": "USB Type-C/PD Sink 的 VBUS 电容按附着与协商状态分档，协商后超过 100 µF 须限流",
       "spec": "G01",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "shall",
       "applies_when": {
         "circuit_types": [
           "USB"
-        ]
+        ],
+        "text": "Type-C 插座作 Sink 或 DRP（含 PD）；按未附着、附着后首次显式协商前、PD 协商成功后三态分别核"
       },
       "inputs": [],
       "asg_action": "协商后 Sink 的 VBUS 体电容不超过 100 µF；需要更大电容时加 VBUS 浪涌限流；非 Attached.SNK 时 VBUS 电容不超过 10 µF。",
-      "sr_check": "统计 VBUS 上的体电容，核对 ≤ 100 µF 或有限流电路。",
+      "sr_check": "先定连接器、角色与状态：Type-C 未 Attached.SNK 时 VBUS 电容不超过 10 µF（Type-C 表 4-3）；附着后首次显式协商前按 PD 表 4.7 的 cSnkBulk；仅 PD 协商成功后按 cSnkBulkPd 不超过 100 µF，超出须有限流电路。≤100 µF 不是任意 USB Sink 的充分通过条件；传统连接器记“按 USB 2.0/3.2 另核”。关闭条件：端口所处各状态逐档比较通过。",
       "source": [
         {
           "document": "USB Power Delivery Specification",
@@ -1158,7 +1160,7 @@
         }
       ],
       "closing_stage": "schematic",
-      "not_applicable": "端口不作 Sink 时不适用。",
+      "not_applicable": "端口不作 Sink 时不适用；无 CC/PD 的传统 USB 连接器（Micro-B、USB-B 等）不套本条数值，入口电容与浪涌按 USB 2.0/USB 3.2 规范另核。",
       "relations": {
         "related": [
           "G01-026",
@@ -1174,13 +1176,14 @@
       "id": "G01-030",
       "title": "USB Sink 断开检测在 40 ms 内、5 V 时门限不高于 3.67 V",
       "spec": "G01",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "shall",
       "applies_when": {
         "circuit_types": [
           "USB"
-        ]
+        ],
+        "text": "Type-C 插座作 Sink 或 DRP 时（断开判定按 Type-C 表 4-3）；传统 USB 设备的 VBUS 检测与 D+/D− 上拉撤除按 USB 2.0 与控制器手册另核"
       },
       "inputs": [],
       "asg_action": "Sink 断开判定在 40 ms 内完成，5 V 时门限不高于 3.67 V。",
@@ -1194,7 +1197,7 @@
         }
       ],
       "closing_stage": "schematic",
-      "not_applicable": "端口不作 Sink 时不适用。",
+      "not_applicable": "端口不作 Sink 时不适用；无 CC 的传统 USB 连接器不套 40 ms/3.67 V 数值。",
       "relations": {
         "related": [
           "G01-026",
@@ -1208,19 +1211,20 @@
     },
     {
       "id": "G01-031",
-      "title": "USB Source 未连接时 VBUS 不带电，电容不超过表 4-2",
+      "title": "USB Type-C Source 未连接时 VBUS 不带电，电容不超过表 4-2",
       "spec": "G01",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "shall",
       "applies_when": {
         "circuit_types": [
           "USB"
-        ]
+        ],
+        "text": "Type-C 插座作 Source 或 DRP 时；传统 USB 连接器（Standard-A、Micro-B 等）默认供 VBUS 的主机/充电器端口按 Type-C R2.5 §4.4.2 豁免"
       },
       "inputs": [],
       "asg_action": "USB 供电输出：未连接 Sink 时 VBUS 不带电（有 VBUS 开关与放电），端口电容不超过表 4-2 限值。",
-      "sr_check": "核对源端口有 VBUS 开关和放电路径，端口电容不超过表 4-2。",
+      "sr_check": "先确认端口是 Type-C 插座且作 Source/DRP；核对源端口有 VBUS 开关和放电路径、未附着时不带电，端口电容不超过表 4-2。传统连接器端口不按本条判。关闭条件：比较通过。",
       "source": [
         {
           "document": "USB Type-C Cable and Connector Specification",
@@ -1230,7 +1234,7 @@
         }
       ],
       "closing_stage": "schematic",
-      "not_applicable": "端口不作 Source 时不适用。",
+      "not_applicable": "端口不作 Source 时不适用；Standard-A、Micro-B 等传统连接器默认供 VBUS 的端口不适用（Type-C R2.5 §4.4.2 p152：传统 USB 连接器（Standard-A、Micro-B 等）默认供 VBUS 的主机/充电器豁免“未附着不带电”与表 4-2 电容两项；Source 插座处 VBUS 按 USB 2.0/USB 3.2 规范），其端口电源开关、过流与 Hub 供电模式按 USB 2.0/Hub 控制器手册另核。",
       "relations": {
         "related": [
           "G01-026",
@@ -3661,6 +3665,194 @@
       "closing_stage": "schematic"
     },
     {
+      "id": "G02-036",
+      "title": "器件身份唯一：值、料号、厂家、资料与封装指向同一订货型号",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "board": true,
+        "text": "所有进 BOM 的器件；关键/特殊器件以完整订货料号为身份，常规件（片阻、MLCC 等）以值加规格（容差、耐压/功率、介质、封装）为身份"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "实例的 Value、料号/采购码、厂家、资料链接、封装字段",
+        "原厂订货信息（后缀与封装、电压/输出档的对应）"
+      ],
+      "asg_action": "每个实例的值、料号、厂家、资料链接与封装字段指向同一订货型号：后缀对应的封装、输出档、温度档与所用手册一致；常规件不强求料号，但值、规格与封装字段互不矛盾（如图面 470 nF/1812/≥250 V 与采购码 100 nF/0805/50 V 不得并存）。证据：身份对照表（实例字段 → 原厂订货信息页）。",
+      "sr_check": "逐实例比对字段与原厂订货信息；两个字段指向不同型号、后缀与封装不对应、资料链接指向别的器件（含同系列不同后缀）的判不成立；只是库缓存来源名不同不报；缺原厂订货页记资料不足。关闭条件：每个关键/特殊器件身份唯一且与所引手册一致，常规件值、规格、封装字段一致。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.1、5.1.1.2",
+          "page": "15"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.C",
+          "page": "28–29（14–15）"
+        },
+        {
+          "document": "TI SN74HC164 数据手册（作厂家订货信息示例）",
+          "edition": "SCLS115G",
+          "clause": "Table 5 订货信息（D=SOIC、N=PDIP、PW=TSSOP）",
+          "page": "3"
+        },
+        {
+          "document": "Diodes DFLS1100 数据手册（作厂家订货信息示例）",
+          "edition": "DS30497 Rev. 14-2 2021-02",
+          "clause": "Ordering Information / Mechanical Data（PowerDI123）",
+          "page": "1"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-003",
+          "G02-037",
+          "G02-038",
+          "G04-101"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-037",
+      "title": "原理图、BOM 与发布图纸同版一致",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "board": true,
+        "text": "交付或审查的原理图、BOM（含装配/采购表）与发布 PDF/README 接口表"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "同一版本的原生原理图、BOM、发布 PDF 与接口说明"
+      ],
+      "asg_action": "交付前把 BOM、发布图与原生原理图按位号逐项对齐：位号集合、Value、料号、封装、贴/不贴状态一致；README 或图注里的接口针表与网表一致。证据：对齐报告与版本/哈希。",
+      "sr_check": "按位号做双向差集与字段比对；同一提交内 BOM 与图指定不同器件（如 OPA4991↔OPA1664、STM32G431↔STM32G473）、贴装状态矛盾、BOM 漏列图上贴装件、发布针表与网表错位的判不成立；只有格式差异不报。关闭条件：差集为空或每处差异有书面依据。",
+      "source": [
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "4.5",
+          "page": "14"
+        },
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "附录 A.5.A.1、A.7",
+          "page": "76；86"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-026",
+          "G02-036"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-038",
+      "title": "交付的器件值不得为占位值或未定档",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "board": true,
+        "text": "交付或冻结的原理图与 BOM"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "实例 Value 与规格字段",
+        "未定值的 TBR 登记（G01）"
+      ],
+      "asg_action": "交付图中每个贴装器件给出可采购、可复算的值或料号：不留库默认名（R_Small、C、Crystal_GND24）、通配后缀（BZT52Bxx、BQ769x2、xx）、只写类别（TVS、PMOS、NPN）或缺电压/输出档的系列名；确未定的按 G01 TBR 登记估计值、理由、责任方与关闭条件，并在图上标 TBR。证据：占位值清单为空或全部有 TBR 编号。",
+      "sr_check": "扫描 Value/料号字段的库默认名、通配符、纯类别名与缺档系列名；决定电压、时序或钳位的占位值判不成立，其余判风险；有 TBR 登记的记输入缺口不判缺陷。关闭条件：无未登记占位值。",
+      "source": [
+        {
+          "document": "NASA SP-2016-6105 Rev.2 系统工程手册",
+          "edition": "Rev.2 2016",
+          "clause": "附录 C.3",
+          "page": "250（印刷 237）"
+        },
+        {
+          "document": "ECSS-Q-HB-30-01A 最坏工况分析",
+          "edition": "2011-01-14",
+          "clause": "5.1.1.1、5.1.1.2",
+          "page": "15"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G01-007",
+          "G02-003",
+          "G02-036"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G02-039",
+      "title": "器件工作在手册推荐工作条件内",
+      "spec": "G02",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "device_kinds": [
+          "ic",
+          "crystal"
+        ],
+        "text": "集成电路与有源振荡器：供电、输入电平与跃迁时间、外接定时/设定元件、负载、频率、温度等级"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "准确料号手册的推荐工作条件表与外接元件允许范围",
+        "实际电路的电压、边沿、负载与外接元件值"
+      ],
+      "asg_action": "逐项核器件在推荐工作条件内：标准 CMOS 输入的跃迁率（如 ≤5 ns/V）不被慢 RC 边沿破坏、输入电平/上拉电压不超推荐范围、定时或设定电阻在允许区间、振荡器输出负载不超手册测试负载。证据：推荐条件对照行。",
+      "sr_check": "按手册推荐工作条件表逐项比较；超出且手册不保证功能的判不成立；只超典型值不报；在绝对最大额定内但超推荐条件的不能以“未损坏”放行；缺推荐条件表记资料不足。关闭条件：逐项落在保证条件内。",
+      "source": [
+        {
+          "document": "TOR-2013-00297 Rev.A 电气设计最坏工况分析指南与标准草案",
+          "edition": "2013-06-03",
+          "clause": "3.C",
+          "page": "28–29（14–15）"
+        },
+        {
+          "document": "TI SN74HC 系列数据手册（标准 CMOS 输入跃迁率，作厂家示例）",
+          "edition": "SCES224S",
+          "clause": "推荐工作条件 Δt/Δv",
+          "page": "5"
+        },
+        {
+          "document": "TXC 7C 系列振荡器数据手册（输出负载条件，作厂家示例）",
+          "edition": "Rev1.05-a",
+          "clause": "Electrical Characteristics CL=15 pF",
+          "page": "1"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-003",
+          "G02-004",
+          "G02-023"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
       "id": "G03-001",
       "title": "电源树各节点的最坏峰值电流不超过手册保证额定",
       "spec": "G03",
@@ -3833,7 +4025,7 @@
       "id": "G03-005",
       "title": "手册给出 LC 与穿越频率关系式的内补偿变换器按式满足",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -3864,7 +4056,8 @@
         ],
         "related": [
           "G03-003",
-          "G03-004"
+          "G03-004",
+          "G03-059"
         ]
       },
       "closing_stage": "schematic"
@@ -6108,6 +6301,43 @@
       "closing_stage": "schematic"
     },
     {
+      "id": "G03-059",
+      "title": "内补偿变换器的外部前馈电容与反馈网络在手册给定窗内",
+      "spec": "G03",
+      "version": "1.0",
+      "status": "active",
+      "nature": "method",
+      "applies_when": {
+        "circuit_types": [
+          "POWER_CONVERTER"
+        ],
+        "text": "内补偿开关变换器，手册给出外部前馈电容（Cff）或反馈网络的取值窗、推荐值"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "准确料号手册的 Cff/反馈电阻取值窗与推荐例",
+        "实际 FB 网络的元件值"
+      ],
+      "asg_action": "按手册给定窗选 Cff 与反馈电阻；区分手册的推荐例值、给定范围与保证边界。证据：FB 网络对照行（手册页）。",
+      "sr_check": "按手册核 Cff 与反馈电阻在给定窗内；越出手册给定范围判不成立（如 AP3441 给 10–470 pF 而用 4.7 nF）；只偏离推荐例值、仍在范围内的不报；手册未给窗口且无环路数据的记资料不足，不自动断言不稳定。关闭条件：在手册给定窗内。",
+      "source": [
+        {
+          "document": "Diodes AP3441 数据手册（内补偿降压，作厂家示例）",
+          "edition": "DS39754 Rev.3-2",
+          "clause": "Setting the Output Voltage / Figure 1（前馈电容 10–470 pF）",
+          "page": "9（PDF）"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-005",
+          "G03-006"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
       "id": "G04-001",
       "title": "每个接口写明所依据的规范版本与工作模式",
       "spec": "G04",
@@ -6573,7 +6803,7 @@
       "id": "G04-010",
       "title": "上电和复位期间关键输出有确定状态",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -6589,9 +6819,10 @@
           "CLOCK",
           "HSSERIAL",
           "DEBUG",
-          "ISOLATION"
+          "ISOLATION",
+          "STARTUP"
         ],
-        "text": "有板间、对外或跨电源域的数字接口时"
+        "text": "有板间、对外或跨电源域的数字接口时；或控制器 GPIO 直接驱动使能、片选、驱动器输入等关键控制脚时"
       },
       "not_applicable": "",
       "tailoring": "",
@@ -7602,7 +7833,7 @@
       "id": "G04-036",
       "title": "隔离器失电时的默认输出符合系统安全状态",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -7611,7 +7842,7 @@
         ],
         "text": "有数字隔离器或隔离接口时（绝缘等级归 G06）"
       },
-      "not_applicable": "",
+      "not_applicable": "模拟隔离放大器、隔离电源模块、以太网等无源磁性隔离不适用本条（其故障输出、失电状态按各自手册另核，不因没有数字默认态而放行）。",
       "tailoring": "",
       "inputs": [
         "隔离器默认输出（型号相关：ISO7710 高、ISO7710F 低）",
@@ -7638,7 +7869,7 @@
       "id": "G04-037",
       "title": "隔离器数据速率不低于接口需要",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -7647,7 +7878,7 @@
         ],
         "text": "有数字隔离器或隔离接口时（绝缘等级归 G06）"
       },
-      "not_applicable": "",
+      "not_applicable": "模拟隔离放大器、隔离电源模块、无源磁性隔离不适用（无数据速率指标）。",
       "tailoring": "",
       "inputs": [
         "接口最高速率；隔离器额定"
@@ -7715,14 +7946,14 @@
       "id": "G04-039",
       "title": "隔离器 CMTI 高于两地之间的共模瞬变",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "ISOLATION"
         ],
-        "text": "有数字隔离器或隔离接口时（绝缘等级归 G06）"
+        "text": "有数字隔离器、隔离放大器或其他带 CMTI 指标的隔离接口时（绝缘等级归 G06）"
       },
       "not_applicable": "",
       "tailoring": "",
@@ -9742,16 +9973,16 @@
     },
     {
       "id": "G04-091",
-      "title": "以太网中心抽头不并联",
+      "title": "以太网中心抽头不并联（所选 PHY/磁件原厂未许可时）",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "ETHERNET"
         ],
-        "text": "用分立以太网变压器时；集成磁性元件的 RJ45 按其手册"
+        "text": "用分立以太网变压器或集成磁性 RJ45 时；千兆 PHY 无原厂许可时适用；所选 PHY/磁件原厂手册或参考设计明确允许中心抽头共偏置的按原厂"
       },
       "not_applicable": "",
       "tailoring": "面向千兆 PHY 的厂家建议。",
@@ -9759,13 +9990,19 @@
         "变压器引脚是否单独引出中心抽头"
       ],
       "asg_action": "选中心抽头单独引出的变压器，各自交流耦合；引脚要少时用内部各自去耦的集成模块。证据：网表。",
-      "sr_check": "多个中心抽头直接或经扼流圈并联判风险。关闭条件：比较通过。",
+      "sr_check": "按所选 PHY/磁件的原厂手册与参考设计核中心抽头接法：原厂明确允许共偏置的（如 WCH CH32V30x 10/100 内置 PHY 参考图 HR911105A 的 CT 共接 3V3 加 0.1 µF）按原厂关闭；千兆 PHY 无原厂许可而多个中心抽头直接或经扼流圈并联判风险；缺 PHY/磁件资料记资料不足，不报“并联本身必错”。关闭条件：与原厂接法一致。",
       "source": [
         {
           "document": "Microchip ENT-AN0098 Magnetics Guide（原 Microsemi，面向其 PHY）",
           "edition": "Rev.2.2",
           "clause": "§3.5",
           "page": "6（印刷 4）"
+        },
+        {
+          "document": "WCH CH32V30x 评估板原理图 CH32V30xSCH.pdf（厂家参考设计，作共偏置示例）",
+          "edition": "版次未核（原件未取得，chlinknet 实板审查引用）",
+          "clause": "ETH 区 HR911105A 中心抽头 4/5 共接 3V3、C14=0.1 µF",
+          "page": "9（PDF）"
         }
       ],
       "relations": {
@@ -10116,6 +10353,189 @@
         ]
       },
       "closing_stage": "pcb"
+    },
+    {
+      "id": "G04-101",
+      "title": "符号脚集合、脚号与电气类型按准确订货封装的官方脚表",
+      "spec": "G04",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "device_kinds": [
+          "ic",
+          "diode",
+          "tvs",
+          "bridge_rectifier",
+          "crystal"
+        ],
+        "text": "有封装变体或自建符号的器件"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "准确订货封装的官方脚表（含 EP、隐藏电源脚、变体专用脚）",
+        "符号脚号、脚名与电气类型"
+      ],
+      "asg_action": "按准确订货封装（非同系列别的封装）的官方脚表建符号：脚集合双向一致（不缺 VDD2、EP，不多脚）、脚号对应、变体专用脚名正确（如 RESET#/HOLD#）、电气类型与方向同官方（输出不声明为输入，开漏标开漏，二极管极性与脚名一致）。证据：脚表双向差集与类型对照。",
+      "sr_check": "官方脚与符号脚双向差集，加脚号/脚名/类型逐脚比对；脚号错位或缺电源/EP 脚判不成立；只影响电气类型的判风险（会误导 ERC 与驱动推断）；缺准确封装脚表记资料不足。关闭条件：差集为空或每处差异有依据。",
+      "source": [
+        {
+          "document": "NXP PCA9517A 数据手册（封装变体脚序不同，作厂家示例）",
+          "edition": "Rev. 4.1 2016-05-24",
+          "clause": "Fig.4、Table 3 HWSON8 脚位",
+          "page": "3–4"
+        },
+        {
+          "document": "TI DRV8353R 数据手册（输出/开漏脚类型，作厂家示例）",
+          "edition": "SLVSDY6A",
+          "clause": "引脚功能表",
+          "page": "8–9"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G02-036",
+          "G04-102"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G04-102",
+      "title": "未用脚、保留脚与专用脚按手册处置",
+      "spec": "G04",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "device_kinds": [
+          "ic"
+        ],
+        "text": "有未用输入、NC/DNU/RSVD 脚、配置脚、片内稳压旁路脚或模拟专用脚的集成电路"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "官方脚表对每脚（含未用时）的处置要求",
+        "网表中该脚的实际连接"
+      ],
+      "asg_action": "逐脚按手册处置：未用 CMOS 输入接固定电平或手册允许的上下拉，不悬空；RSVD/DNU 按手册接地或悬空；配置脚、检测脚按所选变体接（固定输出版不接可调分压）；VCAP/REXT/PFIL 等专用脚的外接元件按手册值；电源脚即使功能未用也按手册接（如 FPGA VCCADC 不得接地）。证据：逐脚处置表。",
+      "sr_check": "按官方脚表逐脚核；悬空的 CMOS 输入、按手册必须接地/接电源却悬空或反接、专用脚外接元件偏离手册要求的判不成立；手册允许悬空或片内有保证上下拉的不报；缺脚表记资料不足。关闭条件：每脚处置都有手册依据。",
+      "source": [
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022-04-08",
+          "clause": "4.2.4 h（未用电路不产生也不受工作噪声影响；航天 shall，默认基线下作方法依据）",
+          "page": "38"
+        },
+        {
+          "document": "TI SN74HC595 数据手册（未用输入处置，作厂家示例）",
+          "edition": "SCLS041J",
+          "clause": "§6.3 注 1；§11",
+          "page": "4、15"
+        },
+        {
+          "document": "TI ADS1299 数据手册（未用 GPIO 与专用脚，作厂家示例）",
+          "edition": "SBAS499C 2017-01 修订",
+          "clause": "引脚功能表 GPIO1–4；§9.3.2.3",
+          "page": "6、27"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G03-035",
+          "G04-010",
+          "G04-101"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G04-103",
+      "title": "USB 数据线外围按所选控制器手册",
+      "spec": "G04",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ],
+        "text": "USB 控制器/桥接芯片的 D+/D− 串阻、上拉、REXT 与 VBUS 检测脚外围"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "所选控制器手册对串阻、上拉（阻值、上拉电压）、REXT、VBUS 检测脚分压/限流的要求"
+      ],
+      "asg_action": "D+/D− 串阻、全速 D+ 上拉、REXT 与 VBUS 检测脚分压按所选控制器手册取值，不照搬别的平台（如 RP2350 要求 27 Ω、STM32F103 全速 D+ 1.5 kΩ 上拉）。证据：外围对照行。",
+      "sr_check": "按手册核阻值与接法；偏离手册明确要求的判不成立；手册只给推荐范围的按范围判；缺手册记资料不足。关闭条件：比较通过。",
+      "source": [
+        {
+          "document": "ST STM32F103 数据手册（全速 D+ 上拉，作厂家示例）",
+          "edition": "DS5319 Rev.20",
+          "clause": "Table 45 注 2",
+          "page": "73（PDF）"
+        },
+        {
+          "document": "Raspberry Pi RP2350 数据手册（USB 串联端接，作厂家示例）",
+          "edition": "2026-01-10 构建版（官方 PDF）",
+          "clause": "Table 2 USB DM/DP 27 Ω",
+          "page": "17（PDF）"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G01-030",
+          "G04-005"
+        ]
+      },
+      "closing_stage": "schematic"
+    },
+    {
+      "id": "G04-104",
+      "title": "USB Type-C 端口 CC 按端口角色端接",
+      "spec": "G04",
+      "version": "1.0",
+      "status": "active",
+      "nature": "shall",
+      "applies_when": {
+        "circuit_types": [
+          "USB"
+        ],
+        "text": "Type-C 插座；无 CC 控制器、靠电阻声明角色的端口"
+      },
+      "not_applicable": "",
+      "tailoring": "",
+      "inputs": [
+        "端口角色（Sink/Source/DRP）",
+        "CC1、CC2 的端接网络"
+      ],
+      "asg_action": "Sink 端口 CC1、CC2 各自独立接 Rd（5.1 kΩ 到 GND，±20% 只作默认、要检测供电能力用 ±10%）；Source 端口各接 Rp；不并接、不悬空。证据：CC 端接对照。",
+      "sr_check": "按角色核 CC1/CC2 端接；Sink 缺 Rd 或两 CC 共用一只电阻判不成立；CC 悬空或只标 NC 判不成立；有 CC/PD 控制器的按其手册。关闭条件：比较通过。",
+      "source": [
+        {
+          "document": "USB Type-C Cable and Connector Specification",
+          "edition": "R2.5 2026-03",
+          "clause": "表 4-28 Sink CC Termination (Rd)",
+          "page": "245"
+        },
+        {
+          "document": "USB Type-C Cable and Connector Specification",
+          "edition": "R2.5 2026-03",
+          "clause": "4.4.2（VBUS 按 USB 2.0/3.2；传统连接器例外）",
+          "page": "152"
+        }
+      ],
+      "relations": {
+        "related": [
+          "G01-029",
+          "G01-030",
+          "G01-031"
+        ]
+      },
+      "closing_stage": "schematic"
     },
     {
       "id": "G05-001",
@@ -11231,7 +11651,7 @@
       "id": "G05-030",
       "title": "TVS 工作电压不低于被钳节点最高工作电压",
       "spec": "G05",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -11248,7 +11668,7 @@
         "TVS VRWM"
       ],
       "asg_action": "VRWM ≥ 节点最高工作电压；不用 VBR 判；再按降额规范 TVS-VR-S 判应力。证据：对照行。",
-      "sr_check": "独立复核；低于判不成立（漏电或误导通）；只比 VBR 的判方法错误。关闭条件：比较通过。",
+      "sr_check": "独立复核；多通道 TVS/ESD 阵列逐通道按各自所接节点的最高工作电压核 VRWM；低于判不成立（漏电或误导通）；只比 VBR 的判方法错误。关闭条件：每个通道比较通过。",
       "source": [
         {
           "document": "TI SLVAE37 How to Select a Surge Diode",
@@ -11269,7 +11689,7 @@
       "id": "G05-031",
       "title": "TVS 钳位电压不超被保护器件绝对最大值",
       "spec": "G05",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -11284,10 +11704,10 @@
       "inputs": [
         "G07 端口浪涌等级与源阻抗（得到浪涌电流和波形）",
         "钳位电压（对应电流、波形、温度）或 RDYN",
-        "被保护器件绝对最大值（含瞬态额定）"
+        "被保护器件绝对最大值（含瞬态额定）：包括同网器件，以及经磁珠、小电阻、保险等直流低阻或滤波支路能到达的后级器件"
       ],
       "asg_action": "V_CLAMP = V_BR + I_SURGE·R_DYN；按实际浪涌电流、相同波形和最高温度取值，手册只给其他波形的要写明估算。与被保护器件绝对最大值比较。证据：钳位计算行。",
-      "sr_check": "独立复算（含温度系数）；超过判不成立；手册没有该波形数据的只能定界并标估算，不放行损坏判据；G07 未给浪涌等级记资料不足。关闭条件：比较通过。",
+      "sr_check": "独立复算（含温度系数）；被保护对象沿同一事件的实际低阻/滤波路径追到后级脚，计入该路径在事件频段的阻抗、限流与次级钳位后比较；多通道阵列逐通道比较；超过判不成立；手册没有该波形数据的只能定界并标估算，不放行损坏判据；G07 未给浪涌等级记资料不足，不捏造事件。关闭条件：比较通过。",
       "source": [
         {
           "document": "TI SLVAE37 How to Select a Surge Diode",

@@ -122,6 +122,19 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertEqual(added, {'G01-051', 'G01-052', 'G01-053', 'G01-054'})
         self.assertFalse(added & (ids(['DC_48V']) - ids([])))
 
+    def test_library_1_7_0_board_identity_rules_and_usb_port_rules(self):
+        # user 2026-11-02: 按草案入库 — the nine rules drafted from the 86 open-hardware boards are in the library;
+        # the identity/placeholder rules apply board-wide, the Type-C CC rule only with USB.
+        real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+        ids = lambda types: {r['id'] for r in guideline_criteria.select(real, 'industrial_telecom', types, [])}
+        new = {'G02-036', 'G02-037', 'G02-038', 'G02-039', 'G03-059', 'G04-101', 'G04-102', 'G04-103', 'G04-104'}
+        self.assertTrue(new <= {r['id'] for r in real['criteria']})
+        self.assertTrue({'G02-036', 'G02-037', 'G02-038'} <= ids([]))
+        self.assertTrue({'G04-103', 'G04-104'} <= ids(['USB']) - ids([]))
+        by_id = {r['id']: r for r in real['criteria']}
+        self.assertIn('Type-C', by_id['G01-029']['title'])
+        self.assertEqual(by_id['G01-029']['version'], '1.1')
+
     def test_a_downstream_rule_needs_a_work_item(self):
         self.record['work_items'][0]['guidelines'] = []
         self.record['calculations'][0]['guidelines'].append('G07-001')
