@@ -68,8 +68,12 @@
 - **必算项**：
   - 最低输入、二极管后启动、电流及热、掉电两侧储能
   - 逐场景列 Vout > Vin 通路（大储能、辅助先掉电、SR 自供电、他轨经 ESD/体二极管反灌、外供/OR 电源），每个场景指向反向保护或预偏置处置并对照反向限值
-- **落实规则**：G03-031、G03-032、G03-034
-- **已知坑**：隔离SR的二极管不能保护LDO自己的输出电容反向
+  - LDO 输出电容：列手册的最小容量、容量范围与 ESR 窗口，用有效电容（直流偏压、低温、容差后）的两端对照；输入电容同样按手册最小值；
+    性能记录里写成 `basis: datasheet` 的下限，标称值要满足它
+- **落实规则**：G03-003、G03-004、G03-031、G03-032、G03-034
+- **已知坑**：
+  - 隔离SR的二极管不能保护LDO自己的输出电容反向
+  - 稳压器输出只有 1.22 µF、2.2 µF，低于手册的有效电容下限（review:sr-boards-2026-11-02/groupgets--kimchi-micro/F29、review:sr-boards-2026-11-02/solderedelectronics--soldered-inkplate-6-motion-hardware-design/F081、review:sr-boards-2026-11-02/gyrocopterllc--flatmcu/F034）
 - **来源**：Datasheet/08_电源管理/线性稳压器(LDO_标准压差)/ADI - LT3010.pdf#p12
 
 - 核心器件：辅助绕组、整流、具输出反向保护的LDO、SR侧串联二极管。

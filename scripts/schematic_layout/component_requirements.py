@@ -203,6 +203,46 @@ def nominal_value(entry):
     return None
 
 
+# A requirement may come from the core part's datasheet itself (a minimum output capacitance, a required external resistor):
+# 86 boards shipped 100 nF where the datasheet asks 1 µF or 4.7 µF (SR PWR-D02/C04/C09, user 2026-11-02).
+BASES = ('calculation', 'requirement', 'standard', 'datasheet', 'model')
+# Each capacitor states the voltage it must withstand, each TVS its stand-off voltage, from the worst case of its node
+# (SR DEV-C01: 25 V capacitors across a 30 V input; PRO-E02: SMBJ33A on a 36 V rail).
+VOLTAGE_PARAMETERS = {'capacitor': ('working_voltage', 'rated_voltage'), 'tvs': ('working_voltage',)}
+SCALES = {'F': 1, 'mF': 1e-3, 'uF': 1e-6, 'µF': 1e-6, 'nF': 1e-9, 'pF': 1e-12,
+          'H': 1, 'mH': 1e-3, 'uH': 1e-6, 'µH': 1e-6, 'nH': 1e-9,
+          'ohm': 1, 'Ω': 1, 'kohm': 1e3, 'kΩ': 1e3, 'Mohm': 1e6, 'MΩ': 1e6, 'mohm': 1e-3, 'mΩ': 1e-3}
+# The nominal and the bounds it must meet: an effective capacitance never exceeds the nominal one.
+NOMINAL_BOUNDS = {'capacitance': ('capacitance', 'effective_capacitance'), 'inductance': ('inductance',),
+                  'resistance': ('resistance',)}
+
+
+def bound_errors(entry, requirements):
+    """A complete capacitor or TVS contract writes its voltage; an exact nominal meets the bounds on the same quantity."""
+    errors = []
+    reqs = [r for r in requirements if isinstance(r, dict)]
+    voltage = VOLTAGE_PARAMETERS.get(entry.get('kind'))
+    if voltage and entry.get('definition_status') == 'complete' and not any(
+            r.get('parameter') in voltage and r.get('op') == 'ge' for r in reqs):
+        errors.append('%s needs a %s >= requirement from the worst-case voltage of its node'
+                      % (entry.get('kind'), '/'.join(voltage)))
+    for nominal in reqs:
+        if nominal.get('op') != 'eq' or nominal.get('parameter') not in NOMINAL_BOUNDS or nominal.get('unit') not in SCALES \
+                or not finite(nominal.get('value')):
+            continue
+        actual = nominal['value'] * SCALES[nominal['unit']]
+        for bound in reqs:
+            if (bound is nominal or bound.get('op') not in ('ge', 'le') or bound.get('unit') not in SCALES
+                    or bound.get('parameter') not in NOMINAL_BOUNDS[nominal['parameter']] or not finite(bound.get('value'))):
+                continue
+            limit = bound['value'] * SCALES[bound['unit']]
+            if (bound['op'] == 'ge' and actual < limit * (1 - 1e-9)) or (
+                    bound['op'] == 'le' and bound['parameter'] == nominal['parameter'] and actual > limit * (1 + 1e-9)):
+                errors.append(f"nominal {nominal['parameter']} {nominal['value']:g} {nominal['unit']} does not meet "
+                              f"{bound['parameter']} {OPS[bound['op']]} {bound['value']:g} {bound['unit']}")
+    return errors
+
+
 def entry_errors(entry, comp=None):
     """Structural validation only; evidence and pin/safety context are checked by audit()."""
     errors = []
@@ -268,13 +308,17 @@ def entry_errors(entry, comp=None):
         if req.get('op') in ('le', 'ge') and finite(req.get('value')) and significant_digits(req['value']) > 3:
             errors.append(f"{param}: 下限/上限取 2–3 位有效数字，按保守方向取整（下限向上、上限向下）："
                           f"{req['value']:g} 写成 {conservative(req['value'], req['op']):g}")
-        if req.get('basis') not in ('calculation', 'requirement', 'standard', 'model'):
-            errors.append(f'{param}: calculation/requirement/standard/model basis required')
+        if req.get('basis') not in BASES:
+            errors.append(f'{param}: calculation/requirement/standard/datasheet/model basis required')
+        elif req['basis'] == 'datasheet' and (req.get('source') or {}).get('kind') != 'manufacturer':
+            errors.append(f'{param}: a datasheet requirement (minimum bypass/output capacitance, required external value) '
+                          f'cites the manufacturer datasheet: source kind manufacturer')
         if text(param) and param.startswith('pulse_'):
             conditions = req.get('conditions') if isinstance(req.get('conditions'), dict) else {}
             missing = set(('waveform', 'duration', 'repetition', 'temperature', 'drift')) - set(conditions)
             if missing:
                 errors.append(f'{param}: pulse conditions missing {sorted(missing)}')
+    errors += bound_errors(entry, requirements)
     needed = entry.get('required_parameters')
     if not isinstance(needed, list) or not needed or any(not text(p) for p in needed):
         errors.append('required_parameters must list the purpose-driven calculation outputs')

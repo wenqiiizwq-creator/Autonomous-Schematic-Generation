@@ -95,7 +95,7 @@ python3 scripts/audit_symbol_integrity.py path/to/board.kicad_sch \
 | --- | --- |
 | `scope.core_refs`、`scope.feature_ids` | 要覆盖的独立清单。空范围被拒绝；缺少映射/功能为 INSUFFICIENT。要与页面清单和需求对照：工具发现不了每项必需的功能。 |
 | `sources` | ID 映射到 `path`、SHA256、一手 `url`、`document`、`revision`。路径相对于核对表解析，也可以是绝对路径。字节改变 FAIL；文件缺失 INSUFFICIENT。来源的权威性和解读仍需复核。 |
-| `pin_maps` | 位号映射到确切的 `identity`（`value`、`mpn`、`footprint`、`lib_id`）、来源/定位，以及完整编号的 `pins` 及显式的 `names`/`types` 别名列表。原理图阶段 `footprint` 可以是空字符串，表示明确未分配；它仍须与 KiCad 字段完全一致，从不作为已分配封装的通配。其他身份字段不得为空。优先用非空的 KiCad MPN 字段，否则用确切的 KiCad Value；通用 Value 不能代替 MPN。 |
+| `pin_maps` | 位号映射到确切的 `identity`（`value`、`mpn`、`footprint`、`lib_id`）、来源/定位，以及完整编号的 `pins` 及显式的 `names`/`types` 别名列表。原理图阶段 `footprint` 可以是空字符串，表示明确未分配；它仍须与 KiCad 字段完全一致，从不作为已分配封装的通配。其他身份字段不得为空。优先用非空的 KiCad MPN 字段，否则用确切的 KiCad Value；通用 Value 不能代替 MPN。每个脚可写 `datasheet_type`：照手册引脚表写这个脚是什么（`I`/`O`/`IO`/`OD`/`OS`/`PWR`/`PWR_OUT`/`GND`/`A`/`NC`）；`design-closure.json` 写 `binding_version: 1` 时每个脚必须写，`types` 要与它相符（输出不能写成 input，开漏写 open_collector），引脚表的来源文件要与设计网表该器件的 `datasheet` 是同一份手册（86 块板：HWSON 按 SO8 接、输出声明为输入、换料号后留着旧手册）。 |
 | `checks` | 唯一的 `id`、`kind`、来源/定位。`component` 断言确切的值/封装/库/DNP。`same_net` 和 `distinct_nets` 对照 KiCad 分区断言至少两个不同的 `位号.引脚` 端点。 |
 | `features` | 唯一 ID、边界、来源/定位和非空的 stages。每个 stage 需要 ID、角色、真实已装配的位号和检查 ID。必需的位号缺失或为 DNP 时 FAIL。还要复核列出的位号和检查是否真的实现了所写的角色。 |
 

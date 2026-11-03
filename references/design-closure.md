@@ -180,6 +180,32 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
     分页方案（`record/page-plan.json`）标注的典型电路做法声明了电路类型、列了落实规则（[典型电路库](typical-circuits.md)）：类型不在 `guideline_scope.circuit_types`，
     或落实规则按范围不适用，记 `guideline_scope_circuit`（范围写少了）；审计在 `guidelines.circuit_criteria` 列出典型电路声称落实的规则及出处。
+  - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
+    （`R`、`R_Small`、`C`、`Crystal_GND24` 等符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
+    记 `placeholder_value`；位号带 `?` 记 `unannotated_reference`。值写设计值，料号写手册订货信息里的完整订货码。
+  - **`binding_version: 1`**（新设计；用户 2026-11-02：把这86块板子上找到的问题……进行改进）：料号、手册、符号脚、未用脚和电源轨电压绑在一起核。
+    - 值为空也记 `placeholder_value`（机械件、测试点、连接器除外）。
+    - 值像型号（字母加数字）时，值与 `mpn` 要一个是另一个的前段，否则 `part_value_contradicts_mpn`（LM5163DDA 对 LM5164DDA）；
+      晶体的值与料号都写出频率时要相同，否则 `crystal_frequency_contradicts_mpn`（16 MHz 对 ABM8-24.000MHZ）。
+    - 关键/特殊器件的 `datasheet` 要是这个料号的手册：文件名（`厂商 - 型号.pdf`，型号里的小写 x 当任一字符，`_` 分隔多个型号）是料号的前段，
+      或手册正文里有这个料号；都不是记 `part_datasheet_contradicts_mpn`（TCR2EF33 挂 AP2112 手册）。手册找不到或读不出文字时不判，由选型身份检查报。
+    - `record/reference-input.json` 的每个引脚表：来源文件与设计网表该器件的 `datasheet` 是同一份手册（`pin_map_datasheet_mismatch`）；
+      每个脚写 `datasheet_type`（照手册引脚表：`I`/`O`/`IO`/`OD`/`OS`/`PWR`/`PWR_OUT`/`GND`/`A`/`NC`，缺记 `pin_map_without_datasheet_type`），
+      `types` 只能取与它相符的 KiCad 类型（`O`→output/tri_state，`OD`→open_collector，`PWR`→power_in……），否则 `pin_type_contradicts_datasheet`。
+      没有 `reference-input.json` 记待办 `reference_input_missing`。
+    - **未用脚处置**（`pin_dispositions`）：连接器、测试点、机械件以外，每个 `no_connect` 脚写一行
+      `{pin, disposition, net?, note?, source, locator}`：`disposition` 取 `open`（手册允许悬空，脚在 `no_connect`）、`tie_low`/`tie_high`
+      （脚直接接 `net`）、`pull_down`/`pull_up`（脚所在网络上有电阻）、`per_datasheet`（其他手册规定的接法，写 `note`）；
+      `source` 是手册里规定这个脚未用时怎么处理的页（`datasheet:<库内路径>#p<页>`，按手册引用核对）。缺行记 `no_connect_without_disposition`，
+      接法与设计网表不符记 `disposition_contradicts_netlist`，没写手册页记 `disposition_without_source`。只接一个脚的网络记 `single_endpoint_net`
+      （Type-C 的 CC 挂在单节点网络上、没有 Rd）。接了网络的未用脚（接地、上下拉）也可以写一行，审计同样核接法。
+    - **电源轨最高电压**（`net_voltages`）：设计网表 `net_roles` 里每个 `power` 网络写 `{net, max, unit: "V", source}`，`max` 是最坏最高电压
+      （含容差、纹波和需求给的输入上限），`source` 写 `req:<需求编号>`、`calc:<计算编号>` 或 `datasheet:<库内路径>#p<页>`；缺记 `net_voltage_missing`，
+      来源不对记 `net_voltage_without_source`。一端在回流网络（`net_roles` 为 `return`，或名字是 GND/VSS/RTN 类）、另一端在写了最高电压的网络上的电容，
+      额定电压（性能记录的 `working_voltage`/`rated_voltage` 下限，或值/规格字段里写的电压）低于它记 `capacitor_rating_below_net_voltage`；
+      TVS 的 VRWM（性能记录的 `working_voltage` 下限，或按 VRWM 命名的系列 SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF、PESD/PTVS<a>V<b> 从型号读出）
+      低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍按 `derating_version` 写在计算里；这里只拦额定低于工作电压的错。
+    - 审计在 `binding` 列出各网络最高电压和处置行数；没有 `binding_version` 的记录，报告在“记录版本”一行写明这些没有核对。
   - `parameter_version: 1` 的旧记录照旧审计（下面两段），报告写明“结论没有按依据分层”；版本 2 的旧记录照旧审计，报告在“记录版本”一行写明门槛出处和需求检查没核对。
   - `refs`：这条计算决定了哪些位号的取值，非空，且都在设计网表里。
   - `checks`：非空列表，每项是一个算出来的值和它必须满足的门槛 `{name, value, operator(<=,<,>=,>), limit, unit}`。

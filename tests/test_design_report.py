@@ -344,6 +344,10 @@ class DesignReportTests(unittest.TestCase):
         text, _ = self.d.report()
         self.assertIn('每日能量配对：218 = 218 Wh', text)
         self.assertIn('- **记录版本**：parameter_version 2（检查门槛的出处、每条需求有没有检查没核对）', text)
+        self.assertIn('没有 binding_version（料号与手册、符号脚类型、未用脚处置和电源轨最高电压没有核对）', text)
+        self.d.closure.update(binding_version=1)
+        self.d.write('design-closure.json', self.d.closure)
+        self.assertNotIn('没有 binding_version', self.d.report()[0])
 
     def test_version_3_estimates_each_say_why(self):
         c1 = self.estimate_case(3)
@@ -360,7 +364,7 @@ class DesignReportTests(unittest.TestCase):
 
     def test_an_old_gap_record_is_named_in_the_conclusion(self):
         text, _ = self.d.report()
-        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1 写。', text)
+        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、binding_version 1 写。', text)
 
     def test_derating_level_and_stress_risks_are_reported(self):
         # stress-spec.md (user 2026-10-27): the level and every stress risk with its improvement are in the report.

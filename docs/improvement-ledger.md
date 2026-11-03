@@ -8,6 +8,18 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 86 块开源板的缺陷类落到 ASG 生成侧防线 (2026-11-02)
+
+SR 在 86 块开源板上确认 201 条真缺陷。按类问“ASG 画图时怎样不犯”：占位值与未编号位号不分记录版本都拦；
+`binding_version 1` 核值/料号/手册是同一型号、晶体频率、引脚表读的手册与脚类型（新字段 `datasheet_type`）、连接器以外每个 NC 脚的手册处置、单端网络、电源轨最高电压对电容额定与 TVS 的 VRWM。
+性能记录加 `basis: datasheet`，电容与 TVS 要写电压下限，标称容量要满足有效容量下限。Type-C 受电口与 LDO 两个实现方案补必算项和落实规则。
+纲要改动 4 条与准则缺失 9 项写在提案里，未改 SKILL.md、共用层和准则条款。订货后缀、封装对料号、图注语义机械判不出，提案写明替代防线。
+
+- Event: user:2026-11-02 (把这个86块板子上找到的问题，在规则库、ASG和SR技能中进行改进)
+- Causes: rule_missing 7, knowledge_missing 2
+- Changed: scripts/audit_design_closure.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/reference_contract.py, scripts/render_design_report.py, references/design-closure.md, references/component-requirements.md, references/symbol-and-peripheral-contracts.md, references/requirements-to-intent.md, references/typical-circuits/type-c-port-protection.md, references/typical-circuits/reviewed-bias-and-latch.md, tests/test_board_defect_guards.py, tests/test_design_report.py, docs/proposals/asg-from-boards-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1062
+
 ## 准则库 1.6.1：G01-053 按 GB/T 17626.29 修订 (2026-11-02)
 
 用户取得 GB/T 17626.29-2006 全文（等同 IEC 61000-4-29:2000）。G01-053 改为按表 1a、1b 写明选定的暂降与中断组合，中断分高阻抗和低阻抗，恢复判据按 §9，低阻抗反灌接 G03-031；登记文件 G01 1.4。

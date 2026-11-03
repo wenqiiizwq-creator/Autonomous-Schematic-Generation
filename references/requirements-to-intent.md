@@ -101,7 +101,7 @@
 }
 ```
 
-- 每个物理引脚要么在一个网络里，要么在 `no_connect`；NC 要有手册依据。
+- 每个物理引脚要么在一个网络里，要么在 `no_connect`；NC 要有手册依据，逐脚写进 `design-closure.json` 的 `pin_dispositions`（手册规定未用时悬空、接地还是上下拉，见 [design-closure.md](design-closure.md) 的 `binding_version`）。
 - `fields.Circuit` 是页面 ID，`pages.page_intents()` 据此拆页。
 - `mpn`、`datasheet`、普通 `fields` 会作为隐藏属性写进原理图，`verify_schematic.py` 逐字段比对，值一律写字符串。
   新[器件性能流程](component-requirements.md)从单一记录生成 IR 与 BOM；版本标记为 `component_requirements_version: 1`。
