@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.7.1：G04-091 的 WCH 出处核过原件；86 块板待采集资料并入清单 (2026-11-02)
+
+从 WCH 官方 GitHub `openwch/ch32v307` 取得 `EVT/PUB/CH32V30xSCH.pdf`（V3.0，提交 bb6ee13，2026-04-16），第 9 页 ETH 区 HR911105A 中心抽头 4/5 共接 3V3、C14=0.1 µF 属实；G04-091 的 `source.edition` 由"版次未核"改为核过的版次，条目版本不变，G04 登记文件 1.3，共用层重建为 1.7.1（353 条）。86 块板暴露的 31 项待采集资料并入 `evals/calibration_boards/datasheets-to-collect.md`。
+
+- Event: user:2026-11-02 (再帮我执行"已识别但没做的改进")
+- Causes: knowledge_missing 1
+- Changed: references/shared/guideline-criteria.json, evals/calibration_boards/datasheets-to-collect.md, docs/improvement-ledger.md
+- Gates: pytest 1096
+
 ## 纲要 7 条文字改动：引脚表照手册、订货变体一致、未用脚处置、澄清并入需求、准则逐条指证据 (2026-11-02)
 
 `docs/proposals/asg-from-boards-2026-11-02.md` 第 2 节的 7 条纲要改动经用户确认后写入 `SKILL.md`：任务 2.1 做完的标志加"引脚表读所选订货变体的手册，每个脚照手册写引脚名和引脚类型，符号引脚名不同的写明原因"（改动 1+7）；任务 2.3 做完的标志加"值、料号与手册指同一订货变体，料号写全订货码；电容额定与 TVS 工作电压不低于所在电源轨最坏最高电压"（改动 2）；任务 2.4 正文与做完的标志加"未用脚逐脚写手册处置和页码、电源轨写最高电压、不留占位值，以 `binding_version 1` 无错误为准"（改动 3、4）；任务 1.1 做完的标志允许澄清答复并入已有需求并引用（改动 5）；任务 5.1 做完的标志要求已关闭待办引用的每条准则指到证据位置（改动 6）。P1–P7 与 O1–O8 未动。

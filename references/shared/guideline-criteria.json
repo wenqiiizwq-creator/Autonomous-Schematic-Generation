@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.7.0",
+  "library_version": "1.7.1",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -69,10 +69,10 @@
     "G01": "1.5",
     "G02": "1.3",
     "G03": "1.5",
-    "G04": "1.2",
+    "G04": "1.3",
     "G05": "1.2"
   },
-  "content_sha256": "24808fc0bb6b0ad67609a90af4547457e1d8632582d3edaa5f30695273889379",
+  "content_sha256": "b7d5069ef328b0a6aac4bca0a7180da7966e2fa8c95fa0fc28ccccbed4f9f99e",
   "criteria": [
     {
       "id": "G01-001",
@@ -10000,9 +10000,9 @@
         },
         {
           "document": "WCH CH32V30x 评估板原理图 CH32V30xSCH.pdf（厂家参考设计，作共偏置示例）",
-          "edition": "版次未核（原件未取得，chlinknet 实板审查引用）",
+          "edition": "openwch/ch32v307 EVT V3.0（仓库提交 bb6ee13，2026-04-16；PDF 创建 2026-03-30；图面无版次栏）",
           "clause": "ETH 区 HR911105A 中心抽头 4/5 共接 3V3、C14=0.1 µF",
-          "page": "9（PDF）"
+          "page": "9（ETH 区）"
         }
       ],
       "relations": {
