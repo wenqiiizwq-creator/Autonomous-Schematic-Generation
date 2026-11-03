@@ -251,7 +251,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 电气改版先按 [change-preflight.md](references/change-preflight.md) 写生成前预检。
 
 做完的标志：每个物理引脚接入网络或有依据地标 NC，NC 与未用脚的处置有手册页；`net_roles` 覆盖电源轨与阈值/反馈网络，
-每条电源轨写了最高电压；没有占位值和未编号位号（`audit_design_closure.py` 的 `binding_version 1` 无错误）；
+每条电源轨写了最高电压；没有占位值和未编号位号（`audit_design_closure.py` 的 `binding_version 1` 无错误；引脚表的手册引脚名与类型先用 `scripts/fill_pin_maps.py` 从符号库和手册引脚表批量填入，填不上的再逐脚补）；
 电气改版的生成前预检为 PASS 或 CONDITIONAL。
 
 ### ③ 原理图绘制

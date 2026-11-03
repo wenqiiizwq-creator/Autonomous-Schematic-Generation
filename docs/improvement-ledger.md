@@ -27,6 +27,17 @@ DI 输入 `CALC-DI-PIN-SURGE`：SN65HVS883 无内部钳位、IPx 约 59.7 V，�
 - Causes: knowledge_missing 1
 - Changed: references/shared/guideline-criteria.json, evals/calibration_boards/datasheets-to-collect.md, docs/improvement-ledger.md
 - Gates: pytest 1096
+## 纲要第 3 处文字改动：引脚表先用 fill_pin_maps.py 批量填 (2026-11-03)
+
+`docs/proposals/calibration-closeout-2026-11-02.md` 第 5 节建议 1 经用户确认后写入 `SKILL.md`：任务 2.4 做完的标志的 `binding_version 1` 括注里加"引脚表的手册引脚名与类型先用 `scripts/fill_pin_maps.py` 从符号库和手册引脚表批量填入，填不上的再逐脚补"。工具 `fill_pin_maps.py` 由校准板取舍落地一步交付（校准板 505 条错误降到 199 条）。
+
+- Event: user:2026-11-03 (照此写入)
+- Causes: rule_missing 1
+- Changed: SKILL.md, docs/improvement-ledger.md
+- Gates: pytest 1108（合并 calib-decide 后分支内跑）; check_ledger PASS
+- Approved: user:2026-11-03
+- Outline: 610dc3ae3c86f99d
+
 ## 纲要 2 处文字改动：交付后 SR 审查进典型电路、文档类准则挂证据条目 (2026-11-03)
 
 `docs/proposals/calibration-closeout-2026-11-02.md` 第 5 节的建议 2、3 经用户确认后写入 `SKILL.md`：任务 5.2 加"首版交付后用 SR 审一次本板，审查发现按本节归因；落在某个典型电路上的坑写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`"；任务 5.1 做完的标志改为"已关闭的待办引用的每条准则指到落实它的证据位置；文档类准则可直接挂在接口表、工况矩阵、FMEA 等证据条目的 `guidelines` 上，不以一件待办批量引用代替"。审计同步认 `evidence` 条目的 `guidelines`（覆盖记 `evidence:<编号>`，形状错记 `schema`），`design-closure.md` 同步。建议 1（引脚表自动填路径）待工具落地后再写入。
