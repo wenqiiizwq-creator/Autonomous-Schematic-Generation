@@ -369,6 +369,7 @@ IC_ROLE_CUES = (
     'transceiver', 'ethernetphy', 'linedriver', 'busdriver',
     'digitalisolator', 'isolatedgatedriver', 'isolator',
     'loadswitch', 'hotswap', 'efuse', 'idealdiode', 'powerdistributionswitch', 'currentlimitswitch', 'highsideswitch',
+    'highsidesmartpower',   # SR boards-merge6 F18: high-side smart power switch (IPS4140HQ) is a load switch
     'batterycharger', 'chargecontroller', 'chargemanagement', 'switchingcharger', 'linearcharger', 'chargeric',
     'analogtodigital', 'digitaltoanalog', 'bitadc', 'bitdac', 'channeladc', 'channeldac', 'audiodac', 'audioadc',
     'sigmadeltaadc', 'deltasigmaadc',

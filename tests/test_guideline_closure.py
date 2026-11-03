@@ -96,6 +96,17 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertNotIn('guideline_uncovered', self.codes(result))
         self.assertEqual(result['guidelines']['not_applicable'], {'G04-001': '只接本板内部总线'})
 
+    def test_an_evidence_entry_may_cite_a_rule(self):
+        # user 2026-11-03: 照此写入 — a documentation rule hangs on the evidence entry that implements it.
+        self.record['calculations'][0]['guidelines'] = ['G01-001']
+        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
+        self.record['evidence'][0]['guidelines'] = ['G04-001']
+        result = self.run_audit()
+        self.assertNotIn('guideline_uncovered', self.codes(result))
+        self.assertEqual(result['guidelines']['covered']['G04-001'], ['evidence:E1'])
+        self.record['evidence'][0]['guidelines'] = 'G04-001'
+        self.assertIn('schema', self.codes(self.run_audit()))
+
     def test_a_component_requirement_may_cite_a_rule(self):
         self.record['calculations'][0]['guidelines'] = ['G01-001']
         self.assertIn('guideline_uncovered', self.codes(self.run_audit()))

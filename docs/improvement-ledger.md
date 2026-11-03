@@ -16,6 +16,17 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 - Causes: knowledge_missing 1
 - Changed: references/shared/guideline-criteria.json, evals/calibration_boards/datasheets-to-collect.md, docs/improvement-ledger.md
 - Gates: pytest 1096
+## 纲要 2 处文字改动：交付后 SR 审查进典型电路、文档类准则挂证据条目 (2026-11-03)
+
+`docs/proposals/calibration-closeout-2026-11-02.md` 第 5 节的建议 2、3 经用户确认后写入 `SKILL.md`：任务 5.2 加"首版交付后用 SR 审一次本板，审查发现按本节归因；落在某个典型电路上的坑写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`"；任务 5.1 做完的标志改为"已关闭的待办引用的每条准则指到落实它的证据位置；文档类准则可直接挂在接口表、工况矩阵、FMEA 等证据条目的 `guidelines` 上，不以一件待办批量引用代替"。审计同步认 `evidence` 条目的 `guidelines`（覆盖记 `evidence:<编号>`，形状错记 `schema`），`design-closure.md` 同步。建议 1（引脚表自动填路径）待工具落地后再写入。
+
+- Event: user:2026-11-03 (照此写入)
+- Causes: rule_missing 2
+- Changed: SKILL.md, scripts/audit_design_closure.py, references/design-closure.md, tests/test_guideline_closure.py, docs/improvement-ledger.md
+- Gates: pytest 1098（全量跑时 1 条原生几何测试受并行 KiCad 作业干扰失败，单独重跑通过）
+- Approved: user:2026-11-03
+- Outline: 4677fc2a4c53216d
+
 ## 工业 I/O 校准板收口：SR 审查归因、W-DOC 逐条证据、第三批典型电路 12 个 (2026-11-02)
 
 用 SR 按完整流程审了校准板（856 项检查、42 个功能框架；板子回路深度，门禁不 valid），22 条发现归因：真缺陷 3（D501 料号不在订货表、四颗自建符号引脚名与官方脚表不符）、误报 11、资料缺口 2、需人判 6，漏报 3；

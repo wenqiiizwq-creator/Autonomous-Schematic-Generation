@@ -397,7 +397,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 同时核对性能定义与选型状态：可独立完成的性能要求计算须完成；仅有料号但关键性能未核实的，不能写“已核准”。有条件性能要求和真实外部依赖继续按现有计算依据分类，不因图纸已输出而转成保证。
 
-做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成；适用的共用设计准则都已在计算或待办里引用，或写明不适用的理由；已关闭的待办引用的每条准则指到落实它的证据位置，不以一件待办批量引用代替。
+做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成；适用的共用设计准则都已在计算或待办里引用，或写明不适用的理由；已关闭的待办引用的每条准则指到落实它的证据位置；文档类准则可直接挂在接口表、工况矩阵、FMEA 等证据条目的 `guidelines` 上，不以一件待办批量引用代替。
 
 #### 5.2 经验总结
 
@@ -405,7 +405,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 写来源（`review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:…`、`user:<日期>`）、归因
 （`rule_missing`/`rule_not_enforced` 改 `scripts/`，`knowledge_missing`/`knowledge_wrong` 改 `references/` 或知识库，
 `judgment` 写 `why_not_rule`）和改了哪个文件的哪一行；确实没学到的写 `cause: none` 并引用核对过的页码。
-泛泛的总结不算，报告会拒绝。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
+泛泛的总结不算，报告会拒绝。首版交付后用 SR 审一次本板，审查发现按本节归因；落在某个典型电路上的坑写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
 技能或知识库改完后，在 `docs/improvement-ledger.md` 加条目（Event/Changed 两行，`scripts/check_ledger.py` 检查），
 再跑全部合成测试。
 

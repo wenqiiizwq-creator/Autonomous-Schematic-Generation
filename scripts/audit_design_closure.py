@@ -802,10 +802,11 @@ def audit_guideline_evidence(key, row, ids, error):
                 key, len(gids), where, '、'.join(gids)))
 
 
-def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None):
+def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
-    (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item or component requirement,
-    or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
+    (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item, component requirement
+    or evidence entry (user 2026-11-03: 照此写入 — a documentation rule hangs on the interface table, operating matrix or FMEA
+    entry that implements it, not on one closed work item), or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
     downstream."""
     library = library or guideline_criteria.load()
     scope = record.get('guideline_scope')
@@ -816,7 +817,7 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         return None
     cited, by_work = {}, set()
     components = component_guidelines(artifact_root, error) if artifact_root else {}
-    for kind, table in (('calc', calculations), ('work', work), ('component', components)):
+    for kind, table in (('calc', calculations), ('work', work), ('component', components), ('evidence', evidence or {})):
         for key, row in table.items():
             ids = row.get('guidelines', [])
             if not (isinstance(ids, list) and all(isinstance(i, str) for i in ids)):
@@ -836,7 +837,7 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
         error('guideline_cited_not_applicable', '%s：设计准则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
     for gid in found['uncovered']:
-        need('guideline_uncovered', '%s：在计算、待办或器件性能要求的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
+        need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
     for gid in found['downstream']:
         if gid in found['covered'] and gid not in by_work:
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
@@ -1385,7 +1386,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
         if record['guideline_version'] != 1:
             error('schema', 'guideline_version must be 1')
         else:
-            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root)
+            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence)
     elif guideline_criteria.load()['criteria']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
