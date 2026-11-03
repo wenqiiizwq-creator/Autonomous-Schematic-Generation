@@ -58,7 +58,7 @@
 | --- | --- |
 | `Sheet(intent, rails, external, paper, dirs, power_ref_start, blocks)` | 一张页。`rails` 把网络映射到 `power:` 符号，`external` 列出离开本页的网络；两者使 `plan` 和审计可用。`power_ref_start` 让 `#PWR` 位号在各页间唯一。`blocks` 是分页方案的 `{功能块: [位号]}`；提供后审计拒绝只连接同一功能块器件的局部连接标签（HR-01）。 |
 | `plan` | `{"parts": {ref: {role, why, ...}}, "nets": {net: "power" \| "global" \| "name" \| None}}`。`intent["net_roles"]` 声明为 return 的网络是地网络；只有未声明的电源轨才退回按电源符号方向判断。电阻是 `Device:R*` 器件或 `fields.ComponentRole` 为 `resistor` 的器件。 |
-| `justify(part_or_net, reason, conflict)` | 记录一处有意的偏离；审计连同理由一起列出。间距偏离还需要 `conflict`：多出的空间避开的器件、引脚或 `text:<字段>`。 |
+| `justify(part_or_net, reason)` | 记录一处有意的偏离；审计连同理由一起列出。间距偏离的 `reason` 写明多出的空间避开的器件、引脚或 `text:<字段>`。 |
 | `place(ref, at, rotation, mirror, pin, facing, order)` | 锚点：控制器、连接器、磁件、桥。`facing={pin: direction}` 按要求的引脚出线方向选旋转/镜像（`order=(a, b, axis)` 让引脚 a 在 b 之前）；给了 `pin` 时，`at` 是该引脚的端点。 |
 | `orient(ref, facing, order)` | `facing` 会选出的 (rotation, mirror)；没有朝向能给出这些出线时报错。 |
 | `put(ref, pin, at, toward)` | 把器件的 `pin` 放在 `at`，沿 `toward` 延伸（引脚朝回）。多于两脚的器件保持正立。 |

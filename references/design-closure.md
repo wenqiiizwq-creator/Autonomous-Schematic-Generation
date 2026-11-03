@@ -128,12 +128,16 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     `uncertainty` 代替），合格但有风险：结论照常推出，检查写 `improvement`（加大余量或收紧估计，缺记
     `estimate_margin_risk_without_improvement`），审计在 `estimate_margins` 列出，报告“余量不足以覆盖估计误差”一节逐条列出，
     不挡交付。降额检查的余量对额定算（R12：降额值已是这个量的那一份余量，不再叠加）；门槛为 0 或 `==` 的检查不比。
+    检查写 `estimates`（它用到的 `model` 参数名，不依赖估计写 `[]`）时只按这些参数的不确定度比较；既没写 `uncertainty` 也没写 `estimates`
+    时取整条计算最大的一个，`estimate_margins` 的 `uncertainty_from` 记 `calculation_max`，报错提示写 `estimates`（工业校准板，2026-11-02）。
   - **`parameter_version: 3`**（新设计；R8，2026-10-27：“20 J 采购资格”“60 V 筛查值”这类自己定的门槛和手册额定、需求指标写法一样，
     成本目标写着“在选型记录中估算”却没算）。在版本 2 之上：
     - 每条 `checks` 写门槛的依据 `limit_basis` 和出处：`requirement`（`limit_source` 写 `req:<需求编号>`）、`guaranteed`/`typical`
       （`limit_source` 写 `datasheet:<库内路径>#p<页>`，门槛数值也按引用核对）、`standard`（`limit_source` 写 `standard:<标准号 条款>`）、
       `derived`（`limit_source` 写手册页或 `calc:<计算 id>`）、`model`（ASG 自己定的筛查值，写 `limit_reason`）。
-      缺依据记 `check_limit_without_basis`，出处不对记 `check_limit_without_source`。门槛是 `model` 的，结论只能是依赖工程估计；
+      缺依据记 `check_limit_without_basis`，出处不对记 `check_limit_without_source`。
+      `model` 门槛的 `limit_reason` 要写出这个数（`model_limit_not_in_reason`）；检查名在“对”或“vs”之后写了带本检查单位的数（不是 1 W×0.75 这类算式）时，
+      它要等于 `limit`（`check_name_contradicts_limit`；工业校准板：名字写 100 kbit/s，门槛填 200 kbit/s，2026-11-02）。门槛是 `model` 的，结论只能是依赖工程估计；
       门槛是 `typical` 的，结论依赖厂家资料（上表照此推出，原因写“门槛 <检查名>”）。
     - 需求里的数（输入电压范围、空载工况、电流上限、寿命小时数……）作为参数时写 `requirement`，不写成 `model`。
     - 每个 `model` 参数的 `reason` 写它自己的依据（行业常用值、厂家建议、哪段推导）；同一句理由用在 3 个以上参数上，报告列为记录问题。
@@ -175,13 +179,15 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
     计算、待办和 `record/component-requirements.json` 的性能记录可写 `guidelines`（设计准则编号列表）。审计按范围选出适用准则：每条要被它们引用，或写进 `not_applicable`，
-    否则 `guideline_uncovered`（设计没做完）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`
+    否则 `guideline_uncovered`（设计没做完）；已关闭的待办引用准则时，`guideline_evidence` 逐条写
+    `<证据编号>#<节/表/行>`（证据编号在这件待办的 `evidence` 里），缺记 `guideline_work_without_evidence`，同一处顶 3 条以上准则记
+    `guideline_evidence_repeated`（工业校准板：一件已关闭的文档待办批量引用了 205 条，2026-11-02）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`
     （补范围或去掉引用）；关闭阶段在原理图之后的规则要有待办引用，缺了记 `guideline_downstream_without_work_item`。范围写错记 `guideline_scope`。
     设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
     分页方案（`record/page-plan.json`）标注的典型电路做法声明了电路类型、列了落实规则（[典型电路库](typical-circuits.md)）：类型不在 `guideline_scope.circuit_types`，
     或落实规则按范围不适用，记 `guideline_scope_circuit`（范围写少了）；审计在 `guidelines.circuit_criteria` 列出典型电路声称落实的规则及出处。
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
-    （`R`、`R_Small`、`C`、`Crystal_GND24` 等符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
+    （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
     记 `placeholder_value`；位号带 `?` 记 `unannotated_reference`。值写设计值，料号写手册订货信息里的完整订货码。
   - **`binding_version: 1`**（新设计；用户 2026-11-02：把这86块板子上找到的问题……进行改进）：料号、手册、符号脚、未用脚和电源轨电压绑在一起核。
     - 值为空也记 `placeholder_value`（机械件、测试点、连接器除外）。

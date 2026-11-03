@@ -76,11 +76,11 @@ class BindingTests(unittest.TestCase):
             'pin_dispositions': [{'pin': 'U1.4', 'disposition': 'open', 'source': DS, 'locator': '表 4-1 NC：可悬空'}],
             'net_voltages': [{'net': 'VIN', 'max': 30, 'unit': 'V', 'source': 'req:R1'},
                              {'net': 'VOUT', 'max': 3.4, 'unit': 'V', 'source': 'calc:C1'}]}
-        self.pins = {'1': {'names': ['IN'], 'types': ['power_in'], 'datasheet_type': 'PWR'},
-                     '2': {'names': ['GND'], 'types': ['power_in'], 'datasheet_type': 'GND'},
-                     '3': {'names': ['EN'], 'types': ['input'], 'datasheet_type': 'I'},
-                     '4': {'names': ['NC'], 'types': ['no_connect'], 'datasheet_type': 'NC'},
-                     '5': {'names': ['OUT'], 'types': ['power_out'], 'datasheet_type': 'PWR_OUT'}}
+        self.pins = {'1': {'names': ['IN'], 'types': ['power_in'], 'datasheet_type': 'PWR', 'datasheet_name': 'IN'},
+                     '2': {'names': ['GND'], 'types': ['power_in'], 'datasheet_type': 'GND', 'datasheet_name': 'GND'},
+                     '3': {'names': ['~{EN}'], 'types': ['input'], 'datasheet_type': 'I', 'datasheet_name': 'EN'},
+                     '4': {'names': ['NC'], 'types': ['no_connect'], 'datasheet_type': 'NC', 'datasheet_name': 'NC'},
+                     '5': {'names': ['OUT'], 'types': ['power_out'], 'datasheet_type': 'PWR_OUT', 'datasheet_name': 'OUT'}}
         self.contract = {'sources': {'ds': {'path': '../TI - TPS709.txt', 'sha256': '0' * 64}},
                          'pin_maps': {'U1': {'identity': {}, 'source': 'ds', 'locator': 'p3 表 4-1', 'pins': self.pins}}}
 
@@ -164,6 +164,16 @@ class BindingTests(unittest.TestCase):
     def test_an_output_cannot_be_drawn_as_an_input(self):
         self.pins['5'].update(types=['input'])
         self.assertIn('pin_type_contradicts_datasheet', self.codes())
+
+    def test_each_pin_writes_the_name_the_datasheet_prints(self):
+        del self.pins['1']['datasheet_name']
+        self.assertIn('pin_map_without_datasheet_name', self.codes())
+
+    def test_a_symbol_name_unlike_the_datasheet_needs_a_note(self):
+        self.pins['5']['datasheet_name'] = 'VOUT'
+        self.assertIn('pin_name_differs_from_datasheet', self.codes())
+        self.pins['5']['name_note'] = '手册表 4-1 写 VOUT，符号沿用库名 OUT，同一物理脚 5'
+        self.assertNotIn('pin_name_differs_from_datasheet', self.codes())
 
     def test_the_reference_contract_accepts_the_datasheet_type(self):
         base = Path(self.tmp.name) / 'rc'

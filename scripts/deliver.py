@@ -138,7 +138,7 @@ def load_config(root):
     return config
 
 
-def deliver(root, log=print):
+def deliver(root, log=print, for_review=False):
     root = Path(root).resolve()
     record = root / 'record'
     steps = []
@@ -195,6 +195,14 @@ def deliver(root, log=print):
         written += copy_gates(gates, root)
         step('自动检查', status_of(gates / 'summary.json'))
 
+        if for_review:
+            # Calibration board #20 (2026-11-02): the visual review reads this run's PDF, so the first run stops here
+            # instead of failing at the report; the full run after the review regenerates the same PDF.
+            log('图面审阅：按 原理图/schematic.pdf 写 record/visual-review.json（pdf_sha256 %s），再跑全程'
+                % hashlib.sha256((root / '原理图' / 'schematic.pdf').read_bytes()).hexdigest()
+                if (root / '原理图' / 'schematic.pdf').is_file() else '图面审阅：本次没有导出 PDF')
+            return 0, steps, None
+
         if preflight.is_file() and contract.is_file():
             written.append(preflight_check('交付预检', record / 'preflight-delivery.json'))
 
@@ -236,8 +244,10 @@ def deliver(root, log=print):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('delivery', type=Path)
+    ap.add_argument('--for-review', action='store_true',
+                    help='stop after the automatic checks: the PDF is exported for the visual review, nothing is reported or packed')
     args = ap.parse_args(argv)
-    code, _, _ = deliver(args.delivery)
+    code, _, _ = deliver(args.delivery, for_review=args.for_review)
     return code
 
 

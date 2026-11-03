@@ -84,7 +84,7 @@
 |---|---|
 | `clarification_unanswered` | 问题还没有答复 |
 | `adopted_text_differs` | 采纳建议，但答复文字与建议条文不一致 |
-| `clarification_not_written_back` | 给定或采纳的需求没有以同编号、同文字写进 `requirements` |
+| `clarification_not_written_back` | 给定或采纳的需求没有以同编号、同文字写进 `requirements`；或答复写了 `merged_into: <需求编号>`（并入已有需求，不再复制一条同编号需求），而那条需求的 `clarifications` 没列它、文字不含答复（或 `merged_quote` 引的那段，答复里的数都要在其中） |
 | `deferred_without_requirement_item` | 暂缓的问题没有对应的未关闭 `requirement` 待办 |
 | `deferred_requirement_claimed_supported` | 暂缓涉及的需求写成了有设计依据 |
 | `requirement_without_clarification` | 未关闭的 `requirement` 待办没有指向一个暂缓的澄清（不再“随交付一起问”） |

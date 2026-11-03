@@ -63,6 +63,19 @@ def digest(value):
                                      separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
+def projection_digest(record):
+    """RequirementsSHA256: the record's content without its sources' file hashes. Those are checked against the files on
+    their own (source_errors); editing a calculation script left the drawn requirements unchanged yet changed the field
+    and the PDF, so the visual review had to be bound again (calibration board #26, 2026-11-02)."""
+    def strip(value):
+        if isinstance(value, dict):
+            return {k: strip(v) for k, v in value.items() if not (k == 'sha256' and 'path' in value)}
+        if isinstance(value, list):
+            return [strip(v) for v in value]
+        return value
+    return digest(strip(record))
+
+
 def finite(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
@@ -335,7 +348,9 @@ def entry_errors(entry, comp=None):
                 and not any(text(p) and p.startswith('pulse_') for p in seen)):
             errors.append('pulse duty needs finite pulse requirement and applicable conditions')
         # Performance contracts never waive actual pin, safety, approval or curve binding.
-        if procurement.get('mode') == 'spec' and (kind not in ('resistor', 'capacitor', 'inductor', 'ferrite')
+        # A common crystal is bought to its frequency, load capacitance and tolerance (calibration board #7, 2026-11-02);
+        # one the design binds to a part (special cut, temperature grade, curve) lists binding_dependencies.
+        if procurement.get('mode') == 'spec' and (kind not in ('resistor', 'capacitor', 'inductor', 'ferrite', 'crystal')
                 or part_class(comp) == KEY or (kind == 'capacitor' and category(comp, kind)[0] == SAFETY_C)
                 or entry.get('binding_dependencies')):
             errors.append('pin/safety/approval/curve-dependent part needs mpn procurement')
@@ -542,7 +557,7 @@ def project(intent, record, root, inputs=None):
         raise ValueError('; '.join(errors))
     result = copy.deepcopy(intent)
     result['component_requirements_version'] = VERSION
-    sha = digest(record)
+    sha = projection_digest(record)
     entries = {e['ref']: e for e in record['components']}
     for comp in result['components']:
         if comp['ref'] not in entries:
@@ -606,7 +621,7 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
         errors.append('IR must opt into component_requirements_version 1')
     if errors:
         return {'status': 'FAIL', 'errors': errors, 'pending': pending, 'native': 'NOT_CHECKED'}
-    sha = digest(record)
+    sha = projection_digest(record)
     entries = {e['ref']: e for e in record['components']}
     comps = {c['ref']: c for c in intent['components']}
     expected = {}

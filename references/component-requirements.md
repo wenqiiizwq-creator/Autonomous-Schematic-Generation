@@ -111,7 +111,7 @@
 2. **2.3** 填采购方式及来源/候选，要求与保证值分开；只有逐项核实后才能写 `qualified`。
 3. **2.4** 准备脚本调用 `project(intent, record, artifact_root)` 后写 IR，再用 `write_bom(intent, path)` 写统一 BOM。
    或使用下面的 CLI。图纸脚本/BOM脚本不得重新手抄要求或填默认 1%。
-4. **3.1/3.2** 规划技术注释的空白区域；`Sheet.performance_notes(at, refs=None, font=1.27, width=82)` 从本页合同快照生成注释。
+4. **3.1/3.2** 规划技术注释的空白区域；`Sheet.performance_notes(at, refs=None, font=1.27, width=82)` 从本页合同快照生成注释。`at` 是文字块左端、竖直方向的中点（左对齐，多行按 `at` 上下居中），返回行数，按行数预留上下各一半的高度。`display: inline` 的器件放不下 Reference/Value 时，报错会提示改成 `note`。
    这是文字锚点，电路连接仍使用引脚几何配方。注释参加现有几何、重叠、可读性与逐页视觉审阅。
 5. **4.1** 原生 KiCad 导出后自动核对源记录、IR、BOM、XML字段、可见字段、同页注释及对应 PDF 页。
 6. **5.1/5.3** 报告重新计算这些结果；`pack_design.py` 随报告复核，`deliver.py` 出图前预检、导出后复检、再生成新鲜度证据。

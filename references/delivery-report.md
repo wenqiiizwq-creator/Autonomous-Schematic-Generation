@@ -104,6 +104,8 @@ python3 <skill>/scripts/deliver.py <交付目录>
 只有 PASS、DONE、有条件通过、未完成、AUTOMATED_PASS、FRESH 继续往下，其余状态、没写出结果或命令出错都停下并说明是哪一步。
 下面的分步命令仍然可用。
 
+图面审阅要看本次导出的 PDF：先跑 `deliver.py <交付目录> --for-review`，到自动检查为止（不出报告、不打包），按 `原理图/schematic.pdf` 写 `record/visual-review.json`，再跑全程。全程重新出图得到同一份 PDF；器件性能记录的 `RequirementsSHA256` 不含来源文件的哈希，只改计算脚本不会让图面字段和 PDF 变化（来源文件另行按哈希核对）。
+
 ## 打包检查
 
 ```bash

@@ -8,6 +8,19 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 工业 I/O 校准板的 26 条流程问题 (2026-11-02)
+
+逐条对照分支核对。放行了不该放行的五处改成拦住：自定门槛的数要写进理由、检查名写的门槛要等于 limit（#23）；已关闭待办引用准则要逐条指到证据，一处顶 3 条以上算批量（#9/#24）；
+引脚表照手册写引脚名，与符号不同要说明（#25）；检查可指定依赖的估计参数（#6）；澄清答复可并入已有需求（#8）。
+晶体按规格采购、接电源轨的连接器写额定（#7/#21），TVS 类型词加 surge protection device（#18/#19），补 isolated-rs485、can-with-miswire 两个典型电路（#13）。
+工具报错与流程：#1、#3、#5、#11、#15–17、#20、#26。#2、#4、#10 不改，#12、#14、#22 是资料缺口，写进提案；纲要建议加 3 条。
+拿校准板记录试跑新审计：9 条自定门槛没写出数，2 条检查名与门槛不符，W-DOC 批量引用被拦。
+
+- Event: user:2026-11-02 (这里面找到的问题，请提醒主对话进行修改)
+- Causes: rule_not_enforced 6, rule_missing 8, knowledge_missing 2
+- Changed: scripts/audit_design_closure.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/schematic_layout/reference_contract.py, scripts/schematic_layout/recipes.py, scripts/schematic_layout/generate.py, scripts/schematic_layout/net_roles.py, scripts/deliver.py, references/design-closure.md, references/requirement-clarifications.md, references/part-roles.md, references/component-requirements.md, references/symbol-and-peripheral-contracts.md, references/delivery-report.md, references/drawing-recipes.md, references/typical-circuits.md, references/typical-circuits/isolated-rs485.md, references/typical-circuits/can-with-miswire.md, tests/test_calibration_board_issues.py, tests/test_board_defect_guards.py, tests/test_typical_circuits.py, docs/proposals/asg-from-boards-2026-11-02.md, docs/improvement-ledger.md
+- Gates: pytest 1095
+
 ## 86 块开源板的缺陷类落到 ASG 生成侧防线 (2026-11-02)
 
 SR 在 86 块开源板上确认 201 条真缺陷。按类问“ASG 画图时怎样不犯”：占位值与未编号位号不分记录版本都拦；

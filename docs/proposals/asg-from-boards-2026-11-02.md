@@ -19,7 +19,7 @@
 | 手册不是这个料号的（protocentral U6 TCR2EF33 挂 AP2112；jetson-nano U6 SiC477 挂 SiC471～474；hv-flyback D3 MMSZ5258B 挂 BZT52） | 新增 | `part_datasheet_contradicts_mpn`：关键/特殊器件的手册文件名要能匹配料号（小写 x 当通配，`_` 分隔多型号），或手册正文里有这个料号 |
 | 晶体值与订货码频率不同（reference-hardware Y3 16 MHz 对 ABM8-24.000MHZ） | 新增 | `crystal_frequency_contradicts_mpn` |
 | 料号含通配（greenmobi-bms D1 BZT52Bxx，U5 BQ769x2） | 新增 | `placeholder_value`（不分记录版本）：料号或型号里的小写 x、`?`、`*` |
-| 引脚表按 SO8 读、实物是 HWSON（hdmi-mipi-bridge U3/U6）；变体脚名不同（zigbee U1 RESET# 对 HOLD#） | 已有 + 新增 | 已有：`reference-input.json` 的引脚表逐脚核名字与类型、`identity` 核料号/封装字符串。新增：`pin_map_datasheet_mismatch`，引脚表读的手册要与设计网表 `datasheet` 是同一份 |
+| 引脚表按 SO8 读、实物是 HWSON（hdmi-mipi-bridge U3/U6）；变体引脚名不同（zigbee U1 RESET# 对 HOLD#） | 已有 + 新增 | 已有：`reference-input.json` 的引脚表逐脚核名字与类型、`identity` 核料号/封装字符串。新增：`pin_map_datasheet_mismatch`，引脚表读的手册要与设计网表 `datasheet` 是同一份 |
 | 输出声明为输入（flatmcu U3 开漏/输出写成 IN；gnss U2 TXD1/1PPS 写成输入） | 新增 | 引脚表每脚写 `datasheet_type`（照手册 I/O/IO/OD/PWR…），`types` 只能取相符的 KiCad 类型：`pin_map_without_datasheet_type`、`pin_type_contradicts_datasheet` |
 | 关键器件缺料号、手册或类型声明 | 已有 | `part_classes.audit_identity`（报告问题，`pack_design.py` 拒绝打包） |
 | 订货后缀缺失（breadboard-psu U2 SE5218 没给电压档；io-expander U3 输出档） | 部分做不到 | 判不出一个系列有哪些订货后缀：手册订货表的格式各不相同，SE5218 本身也出现在正文里。已有防线：值/料号一致、通配检测、引脚表 `identity.mpn` 与 KiCad 一致；靠任务 2.1 按订货变体读手册（纲要已写“确切变体”）。建议纲要改动 2.3 把它写进做完的标志 |
@@ -70,7 +70,7 @@
 
 ## 2. 建议的纲要（SKILL.md）文字改动（草案，待人确认）
 
-共 4 条。确认后写入，台账带 `Approved` 与 `Outline` 哈希。
+共 7 条（改动 1–4 来自 86 块板，改动 5–7 来自工业 I/O 校准板的流程问题）。确认后写入，台账带 `Approved` 与 `Outline` 哈希。
 
 **改动 1：任务 2.1 做完的标志**（第 179–180 行）
 
@@ -104,6 +104,26 @@
   每条电源轨写了最高电压；没有占位值和未编号位号（`audit_design_closure.py` 的 `binding_version 1` 无错误）；
   电气改版的生成前预检为 PASS 或 CONDITIONAL。
 
+**改动 5：任务 1.1 做完的标志**（第 116–117 行；校准板 #8）
+
+- 原文：……每个需求澄清都有答复
+  （用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求。有未答复的需求澄清不进入步骤 ②。
+- 新文：……每个需求澄清都有答复
+  （用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求，或并入已有需求并在该需求里引用这条澄清。有未答复的需求澄清不进入步骤 ②。
+- 理由：工业板一次答复已并入 IIO-xxx，为过审计又复制出 16 条同编号需求。审计已支持 `merged_into`，纲要原文仍写“成为一条需求”。
+
+**改动 6：任务 5.1 做完的标志**（第 395 行；校准板 #9、#24）
+
+- 原文：……适用的共用设计准则都已在计算或待办里引用，或写明不适用的理由。
+- 新文：……适用的共用设计准则都已在计算或待办里引用，或写明不适用的理由；已关闭的待办引用的每条准则指到落实它的证据位置，不以一件待办批量引用代替。
+- 理由：205 条“已引用”靠一件已关闭的 W-DOC 待办批量挂上，审计看不出是否真做了。审计已要求 `guideline_evidence` 逐条定位。
+
+**改动 7：任务 2.1 做完的标志，在改动 1 上再加一句**（校准板 #25）
+
+- 改动 1 新文中“每个脚写了手册引脚类型，符号脚类型与它相符”改为：
+  “每个脚照手册写了引脚名和引脚类型（不从符号回抄），符号引脚名与手册不同的写明原因，符号脚类型与手册相符”。
+- 理由：引脚表由项目符号生成，只核了符号引脚名能否在手册页上找到，不是独立于符号写出的核对。
+
 ## 3. 准则缺失清单（交起草准则的任务，本次不编号）
 
 | 缺什么 | 涉及缺陷 | 现有最近的准则与差距 |
@@ -117,6 +137,22 @@
 | CMOS 输入的过渡时间（RC 复位/延时直接进非施密特输入） | DEV-C05 jetson-nano F003、reference-hardware F002 | G02-022 管时序配合，不管边沿速率 |
 | 有源振荡器输出负载不超过规定负载 | DEV-C05 hdmi-mipi-bridge F29 | G04-078 是无源晶体的负载电容 |
 | 传统 USB（Micro-B、USB-A）的电压窗、体电容与断开检测 | 14 条准则问题中 7 条指 G01-026/029/030/031 只适用 Type-C/PD | 本次只把 G01-026/029/030 加到 Type-C 受电口典型电路，未用于传统 USB |
+| 准则选择按器件筛选：选了 ANALOG 电路类型就带出运放的 G04-041～049，本设计没有运放也要逐条写不适用 | 校准板 #10 | 建议这些准则的 `applies_when` 加器件类别（运放），属于共用层，本次不改 |
+
+## 3a. 资料待收集（校准板 #12、#14、#22，不改代码）
+
+| 缺什么 | 影响 | 处置 |
+|---|---|---|
+| 8/20 µs 大电流（>156 A）TVS 手册 | 24 V 入口只能 MOV+电感+TVS 分级，残压靠目视外推 MOV 曲线，参数标 model | 采集 8/20 µs 额定 >156 A 的 TVS（SMDJ/5.0SMDJ 等系列）手册入库 |
+| LM74910-Q1 的 ILIM 公式常数 12 与 IMON 增益 0.9 的关系、±2.1 mV 失调是否进入 ILIM 比较 | 过流门限按保守计入失调，是依赖厂家资料的计算 | 向 TI 应用支持确认；写成 external 待办 |
+| TIA-485-A 正文的线长—速率曲线与所选线缆衰减 | 需求 1200 m + 115.2 kbit/s 高于常见经验曲线（约 100 kbit/s），算不出通过与否 | 采集标准与线缆资料；在此之前列为实测项，**这是真实设计风险，提醒用户** |
+
+## 3b. 工业板典型电路（校准板 #13）
+
+已从校准板设计记录补写 2 个（来源为库内手册，落实规则只写正文必算项做到的）：`isolated-rs485`、`can-with-miswire`。
+其余 12 个没有补：24 V 入口保护（残压依赖 model 外推，见 3a）、理想二极管加过流切断（LM74910 资料缺口，见 3a）、保持电容与防反灌、
+COT Buck 5 V、LDO、MCU 最小系统、SWD 调试口、工业 DI 串行器、现场组数字隔离、四路高边输出、机壳单点电容、状态指示 LED。
+这些块的设计记录还没经过 SR 审查，没有可引用的已知坑；按典型电路库的规则（每条坑要有来源）等审查意见回来后补写。
 
 ## 4. 本次改动
 
@@ -128,3 +164,37 @@
   `reviewed-bias-and-latch#二次辅助经反向保护LDO和串联二极管供SR`（LDO 输入/输出电容按手册；加 G03-003、G03-004）。
 - 文档：`references/design-closure.md`、`component-requirements.md`、`symbol-and-peripheral-contracts.md`、`requirements-to-intent.md`。
 - 测试：`tests/test_board_defect_guards.py`，`tests/test_design_report.py` 加 binding 记录版本断言。
+- 校准板流程问题（第 5 节）：`audit_design_closure.py`、`component_requirements.py`、`part_classes.py`、`reference_contract.py`、`recipes.py`、`generate.py`、`net_roles.py`、`deliver.py`；典型电路 `isolated-rs485`、`can-with-miswire`；测试 `tests/test_calibration_board_issues.py`。
+
+## 5. 工业 I/O 校准板流程问题（26 条）的处理
+
+来源：`~/Documents/ASG-calibration/industrial-io-rs485-can/record/issues.md`，问题是在 main 9294cd3 上记下的，逐条对照 0cd270f 之后的分支。
+
+| # | 处理 |
+|---|---|
+| 1 | 已修：`generate.py` 的本体重叠报错写出是哪几对位号（`body_conflicts`） |
+| 2 | 不改：KiCad 库的 STM32F103 符号是外部库，脚距 2.54 mm 放不下两个全局标签时自建项目符号是支持的做法（符号脚号与类型照手册核对，见改动 7） |
+| 3 | 已修：drawing-recipes.md 的 `justify` 签名改成与代码一致的 `(part_or_net, reason)`，测试守文档与代码一致 |
+| 4 | 不改：MOS（G/D/S）和多路输出 IC 是三端及以上器件，按绘图纲要就是锚点；bank/shunt 只用于两端器件，堆叠脚不改变端子数 |
+| 5 | 已修：词表外的 `fields.Kind` 在设计完成审计就报 `kind_not_in_vocabulary`，不再等到写 BOM |
+| 6 | 已修：检查可写 `estimates` 指定依赖的估计参数；没写时 `uncertainty_from: calculation_max`，报错提示 |
+| 7 | 已修：晶体可按规格采购（依赖特殊切型/温度等级/曲线的写 `binding_dependencies` 按型号）；常规晶体脚本核频率、负载电容、频率容差 |
+| 8 | 已修：澄清答复可 `merged_into` 已有需求并由它引用，不再复制同编号需求；纲要建议改动 5 |
+| 9 | 已修（与 24 同）：已关闭待办逐条 `guideline_evidence`；纲要建议改动 6 |
+| 10 | 不改：准则选择器在共用层，列入第 3 节 |
+| 11 | 已修：inline 性能标注放不下 Reference/Value 时，报错提示改 `display: note` |
+| 12 | 不改代码：资料缺口，见 3a |
+| 13 | 部分：补 `isolated-rs485`、`can-with-miswire`，其余 12 个见 3b |
+| 14 | 不改代码：资料缺口，见 3a |
+| 15 | 已修：signal 网络放电源符号的报错提示供电节点在 `net_roles` 写 power |
+| 16 | 已修：`performance_notes` 写明 `at` 是左端、竖直居中，返回行数供预留高度 |
+| 17 | 已修：只靠引脚表核对的 stage 可写空 `checks`，位号都要有引脚表 |
+| 18 | 已修：TVS 类型词加 “surge protection device”（压敏电阻手册同样这样写时仍判压敏） |
+| 19 | 已修（随 18）：`propose_part_kinds` 用同一套类型词，TVS3300 首页能给出候选 |
+| 20 | 已修：`deliver.py --for-review` 到自动检查为止，出 PDF 供审阅，再跑全程（重新出图的 PDF 相同） |
+| 21 | 已修：没写 `high_voltage_nets` 时报告写明连接器按高压处理的原因；接电源轨的常规连接器要写额定电压与电流 |
+| 22 | 不改代码：资料缺口与设计风险，见 3a |
+| 23 | 已修：`model` 门槛的数要出现在 `limit_reason`（`model_limit_not_in_reason`），检查名“对/vs”后写的门槛数要等于 `limit`（`check_name_contradicts_limit`）。拿校准板记录试跑：9 条自定门槛没写出数，2 条名字与门槛不符（CALC-FUSE 4 A 对 3 A，CALC-CAN-TVS 66 V 对 70 V） |
+| 24 | 已修：同 9；校准板 W-DOC 一件待办批量引用的写法现在报 `guideline_work_without_evidence` |
+| 25 | 已修：`binding_version 1` 时引脚表每脚写 `datasheet_name`，与符号引脚名不同要写 `name_note`；纲要建议改动 7 |
+| 26 | 已修：`RequirementsSHA256` 不含来源文件哈希（来源仍按哈希单独核对），只改计算脚本不再让图面字段变化 |

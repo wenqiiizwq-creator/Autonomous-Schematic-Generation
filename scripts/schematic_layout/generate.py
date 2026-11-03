@@ -24,6 +24,14 @@ from .routing import (
 from .qa import FRAME_MARGIN_MM, check_scene, title_block
 
 
+
+def body_conflicts(symbols, gap_mm=1.27):
+    """Reference pairs whose bodies overlap or sit closer than ``gap_mm`` (calibration board #1, 2026-11-02: the error
+    named no part, so the pair had to be found by printing coordinates)."""
+    placed = [s for s in symbols if s.body is not None]
+    return [(a.ref, b.ref) for i, a in enumerate(placed) for b in placed[i + 1:]
+            if a.body.overlaps(b.body, gap_mm=gap_mm - 1e-6)]
+
 def digest(data):
     return hashlib.sha256(
         json.dumps(data, sort_keys=True, ensure_ascii=False).encode()
@@ -369,13 +377,12 @@ def make_root(intent, layout, name, dirs=()):
     reserved = ([Box(*b) for b in layout["reserved"]] if "reserved" in layout
                 else [title_block(scene.page)])
     bodies = [s.body for s in scene.symbols]
-    if any(
-        a.overlaps(b, gap_mm=1.27 - 1e-6)
-        for i, a in enumerate(bodies)
-        for b in bodies[i + 1 :]
-    ):
+    close = body_conflicts(scene.symbols)
+    if close:
         raise ValueError(
-            "Symbol body overlap/clearance failure; recompute layout before routing"
+            "Symbol body overlap/clearance failure between "
+            + ", ".join(f"{a}/{b}" for a, b in close)
+            + "; recompute layout before routing"
         )
     obstacles = [
         *bodies,

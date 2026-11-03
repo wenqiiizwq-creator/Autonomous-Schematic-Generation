@@ -100,6 +100,10 @@ def text(value):
     return isinstance(value, str) and bool(value.strip())
 
 
+def squeeze(value):
+    return re.sub(r'\s+', '', str(value or ''))
+
+
 def audit_operating_points(record, work, refs, error, need):
     """Pin operating modes: one the datasheet does not specify needs every specified alternative ruled out."""
     points = {}
@@ -261,7 +265,18 @@ def audit_clarifications(record, requirements, work, error):
         if answer['decision'] == 'ADOPTED_PROPOSAL' and answer['text'] != row.get('proposed_requirement'):
             error('adopted_text_differs', key)
         if answer['decision'] != 'DEFERRED':
-            if requirements.get(key, {}).get('text') != answer['text']:
+            merged = answer.get('merged_into')
+            if merged is not None:
+                # Calibration board #8 (2026-11-02): an answer folded into an existing requirement is cited there, not copied
+                # as a duplicate requirement; the requirement carries the answer's words (or the quoted part it became).
+                target = requirements.get(merged) if isinstance(merged, str) else None
+                quote = answer.get('merged_quote') if text(answer.get('merged_quote')) else answer['text']
+                if (target is None or key not in (target.get('clarifications') or [])
+                        or squeeze(quote) not in squeeze(target.get('text')) or (quote != answer['text']
+                        and not set(re.findall(r'\d+(?:\.\d+)?', answer['text'])) <= set(re.findall(r'\d+(?:\.\d+)?', quote)))):
+                    error('clarification_not_written_back', '%s：merged_into 的需求要在 clarifications 里列它，'
+                          '需求文字含答复（或 merged_quote 引的那段，答复里的数都在其中）' % key)
+            elif requirements.get(key, {}).get('text') != answer['text']:
                 error('clarification_not_written_back', key)
             files = answer.get('requirement_files')
             if not isinstance(files, dict) or files.get('decision') not in FILE_DECISIONS:
@@ -342,6 +357,21 @@ def audit_parameters(key, row, refs, points, calculations, error, version=1, req
             error('supported_with_unguaranteed_parameter', where)
 
 
+def shown(value, words):
+    from schematic_layout.citations import _shown
+    return _shown(value, str(words or ''))
+
+
+def named_limits(c):
+    """Numbers the check's name gives on its limit side (after the last 对 or vs) in the check's unit: calibration
+    board #23 (2026-11-02) named a check 100 kbit/s and set its limit to 200 kbit/s."""
+    name, unit = str(c.get('name') or ''), str(c.get('unit') or '').strip()
+    parts = re.split(r'对|\bvs\.?\b', name)
+    if len(parts) < 2 or not unit or re.search(r'[×*÷+−%]|\d\s*-\s*\d', parts[-1]):
+        return []   # a limit written as arithmetic (1 W×0.75, 120 Ω−3 %) is checked by its reason, not read here
+    return [float(n) for n in re.findall(r'(\d+(?:\.\d+)?)\s*' + re.escape(unit) + r'(?![A-Za-z])', parts[-1])]
+
+
 def audit_limits(key, row, requirements, calculations, error):
     """Version 3: each check names where its limit comes from."""
     for i, c in enumerate(row.get('checks') or []):
@@ -358,6 +388,13 @@ def audit_limits(key, row, requirements, calculations, error):
                   'standard': source.startswith('standard:') and text(source[9:]),
                   'derived': bool(DATASHEET.match(source)) or (source.startswith('calc:') and source[5:] in calculations)}[basis]:
             error('check_limit_without_source', where)
+        elif basis == 'model' and finite(c.get('limit')) and not shown(c['limit'], c['limit_reason']):
+            error('model_limit_not_in_reason', '%s：自定门槛 %g %s 要在 limit_reason 里写出这个数和它的依据' % (
+                where, c['limit'], c.get('unit') or ''))
+        named = named_limits(c)
+        if named and finite(c.get('limit')) and not any(math.isclose(n, c['limit'], rel_tol=1e-6) for n in named):
+            error('check_name_contradicts_limit', '%s：检查名里门槛一侧写的是 %s，limit 是 %g' % (
+                where, '、'.join('%g' % n for n in named), c['limit']))
 
 
 def audit_gap_kinds(key, row, error):
@@ -666,7 +703,7 @@ def audit_estimate_margins(calculations, error):
     risk and an improvement, like a stress risk."""
     risks = []
     for key, row in calculations.items():
-        found = []
+        found, models = [], {}
         for p in row.get('parameters') or []:
             if isinstance(p, dict) and p.get('basis') in ESTIMATE_BASES:
                 u = p.get('uncertainty')
@@ -675,22 +712,39 @@ def audit_estimate_margins(calculations, error):
                           % (key, p.get('name')))
                 else:
                     found.append(u)
+                    models[p.get('name')] = u
         for c in row.get('checks') or []:
             if not isinstance(c, dict):
                 continue
             if c.get('uncertainty') is not None and not (finite(c['uncertainty']) and 0 <= c['uncertainty'] < 1):
                 error('schema', '%s:%s：uncertainty 是 0–1 的相对值' % (key, c.get('name')))
                 continue
-            u = c['uncertainty'] if c.get('uncertainty') is not None else max(found, default=None)
+            # Calibration board #6 (2026-11-02): a check names the estimates it rests on (`estimates`, parameter names);
+            # [] means none. Without either it takes the calculation's largest, and the risk says so.
+            basis = 'check'
+            if c.get('uncertainty') is not None:
+                u = c['uncertainty']
+            elif isinstance(c.get('estimates'), list):
+                u = max((models[n] for n in c['estimates'] if n in models), default=None)
+                unknown = [n for n in c['estimates'] if n not in models]
+                if unknown:
+                    error('schema', '%s:%s：estimates 列的 %s 不是本计算写了 uncertainty 的 model 参数' % (
+                        key, c.get('name'), '、'.join(map(str, unknown))))
+                basis = 'estimates'
+            else:
+                u, basis = max(found, default=None), 'calculation_max'
             hit = estimate_margin(c, u)
             if hit is None:
                 continue
             risks.append({'calculation': key, 'check': c.get('name'), 'value': c['value'], 'limit': c[hit[1]],
                           'against': hit[1], 'unit': c.get('unit'), 'margin': hit[0], 'uncertainty': u,
-                          'improvement': c.get('improvement')})
+                          'uncertainty_from': basis, 'improvement': c.get('improvement')})
             if not text(c.get('improvement')):
                 error('estimate_margin_risk_without_improvement', '%s:%s：余量 %.2g%% 小于工程估计的不确定度 %.2g%%，'
-                      '写 improvement（加大余量，或把估计收紧到余量以内）' % (key, c.get('name'), hit[0] * 100, u * 100))
+                      '写 improvement（加大余量，或把估计收紧到余量以内）%s' % (
+                          key, c.get('name'), hit[0] * 100, u * 100,
+                          '；这个不确定度是整条计算里最大的一个，检查不依赖它时写 estimates（它用到的 model 参数名，'
+                          '不依赖估计写 []）' if basis == 'calculation_max' else ''))
     return risks
 
 
@@ -722,6 +776,32 @@ def page_plan_circuits(artifact_root, error):
         return []
 
 
+GUIDELINE_EVIDENCE_SHARE = 3
+
+
+def audit_guideline_evidence(key, row, ids, error):
+    """A closed work item covers a rule only where it points at what does it: `guideline_evidence` maps each rule it cites
+    to `<evidence id>#<locator>` in its own evidence; one locator standing for more than three rules is a batch citation
+    (calibration board #9/#24, 2026-11-02: one closed W-DOC item cited 205 rules)."""
+    found = row.get('guideline_evidence') if isinstance(row.get('guideline_evidence'), dict) else {}
+    evidence = set(row.get('evidence') or [])
+    missing, shared = [], {}
+    for gid in ids:
+        where = found.get(gid)
+        eid, _, locator = str(where or '').partition('#')
+        if eid not in evidence or not text(locator):
+            missing.append(gid)
+        else:
+            shared.setdefault(squeeze(where), []).append(gid)
+    if missing:
+        error('guideline_work_without_evidence', '%s：已关闭的待办引用 %s，guideline_evidence 要逐条写 <证据编号>#<节/表/行>，'
+              '指到落实它的那一处' % (key, '、'.join(missing)))
+    for where, gids in sorted(shared.items()):
+        if len(gids) > GUIDELINE_EVIDENCE_SHARE:
+            error('guideline_evidence_repeated', '%s：%d 条准则指向同一处 %s（%s）；每条指到落实它的那一处' % (
+                key, len(gids), where, '、'.join(gids)))
+
+
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
     (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item or component requirement,
@@ -746,6 +826,8 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
                 cited.setdefault(gid, []).append(kind + ':' + key)
                 if kind == 'work':
                     by_work.add(gid)
+            if kind == 'work' and row.get('status') == 'closed' and ids:
+                audit_guideline_evidence(key, row, ids, error)
     applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
     found = guideline_criteria.coverage(library, applicable, cited,
                                      {i['id']: i['reason'] for i in scope.get('not_applicable', [])})
@@ -815,9 +897,14 @@ def audit_placeholders(intent, error, strict=False):
         ref, value, mpn = str(c.get('ref') or ''), str(c.get('value') or '').strip(), str(c.get('mpn') or '').strip()
         if '?' in ref:
             error('unannotated_reference', '%s：位号没有编号，按页编好号再出图' % ref)
-        kind = part_classes.kind_of(c)[0]
+        kind, problem = part_classes.kind_of(c)
+        declared = part_classes.fields(c).get('Kind')
+        if text(declared) and declared not in part_classes.KINDS:
+            # Calibration board #5 (2026-11-02): tvs_bidirectional, mosfet_n, schottky passed until the BOM was written.
+            error('kind_not_in_vocabulary', '%s：%s' % (ref, problem))
         symbol = str(c.get('lib_id') or '').partition(':')[2]
-        if value in PLACEHOLDER_VALUES or (kind in VALUE_KINDS and value and value == symbol):
+        generic = str(c.get('lib_id') or '').partition(':')[0] == 'Device'   # a project symbol named after its part is no default
+        if value in PLACEHOLDER_VALUES or (kind in VALUE_KINDS and value and value == symbol and generic):
             error('placeholder_value', '%s：值 %s 是库默认名或占位，写设计值（阻值/容值/稳压值/型号）' % (ref, value))
         elif strict and not value and kind not in ('mechanical', 'testpoint', 'connector'):
             error('placeholder_value', '%s：没有写值' % ref)
@@ -914,6 +1001,14 @@ def audit_pin_maps(intent, root, bases, error, need):
         for number, pin in ((spec.get('pins') or {}) if isinstance(spec, dict) else {}).items():
             if not isinstance(pin, dict):
                 continue
+            # Calibration board #25 (2026-11-02): pin maps generated from the project symbol only checked the symbol's names.
+            # Each pin writes the name as the datasheet prints it; where the symbol says it otherwise the map says why.
+            printed = pin.get('datasheet_name')
+            if not text(printed):
+                error('pin_map_without_datasheet_name', '%s.%s：照手册引脚表写 datasheet_name（手册印的脚名）' % (ref, number))
+            elif pin_name(printed) not in {pin_name(n) for n in pin.get('names') or []} and not text(pin.get('name_note')):
+                error('pin_name_differs_from_datasheet', '%s.%s：手册脚名 %s，符号脚名 %s；改符号，或在 name_note 写两者为何是同一个脚'
+                      % (ref, number, printed, '/'.join(pin.get('names') or [])))
             declared = pin.get('datasheet_type')
             if declared is None:
                 error('pin_map_without_datasheet_type', '%s.%s：照手册引脚表写 datasheet_type（%s）'
@@ -925,6 +1020,11 @@ def audit_pin_maps(intent, root, bases, error, need):
             elif not set(pin.get('types') or []) <= allowed:
                 error('pin_type_contradicts_datasheet', '%s.%s：手册是 %s，符号脚类型写了 %s（应为 %s）' % (
                     ref, number, declared, '/'.join(pin.get('types') or []), '/'.join(sorted(allowed))))
+
+
+def pin_name(name):
+    """A pin name compared across symbol and datasheet: KiCad's ~{..} overbar and the punctuation dropped, case folded."""
+    return re.sub(r'[^0-9a-z]', '', re.sub(r'~\{([^}]*)\}', r'\1', str(name)).lower())
 
 
 def audit_pin_dispositions(record, intent, error):
