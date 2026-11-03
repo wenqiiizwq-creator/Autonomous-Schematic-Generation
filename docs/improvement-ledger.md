@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 纲要 7 条文字改动：引脚表照手册、订货变体一致、未用脚处置、澄清并入需求、准则逐条指证据 (2026-11-02)
+
+`docs/proposals/asg-from-boards-2026-11-02.md` 第 2 节的 7 条纲要改动经用户确认后写入 `SKILL.md`：任务 2.1 做完的标志加"引脚表读所选订货变体的手册，每个脚照手册写引脚名和引脚类型，符号引脚名不同的写明原因"（改动 1+7）；任务 2.3 做完的标志加"值、料号与手册指同一订货变体，料号写全订货码；电容额定与 TVS 工作电压不低于所在电源轨最坏最高电压"（改动 2）；任务 2.4 正文与做完的标志加"未用脚逐脚写手册处置和页码、电源轨写最高电压、不留占位值，以 `binding_version 1` 无错误为准"（改动 3、4）；任务 1.1 做完的标志允许澄清答复并入已有需求并引用（改动 5）；任务 5.1 做完的标志要求已关闭待办引用的每条准则指到证据位置（改动 6）。P1–P7 与 O1–O8 未动。
+
+- Event: user:2026-11-02 (ASG纲要7条文字改动请执行)
+- Causes: rule_missing 7
+- Changed: SKILL.md, docs/improvement-ledger.md
+- Gates: pytest 1096
+- Approved: user:2026-11-02
+- Outline: bf0d4d8e1fa74ca7
+
 ## 准则库 1.7.0：86 块开源板暴露的准则空白与 USB 适用范围 (2026-11-02)
 
 86 块开源 KiCad 板经 SR 审查归因后，14 条准则问题裁决为准则确有问题 9 条（USB 七条同根因：Type-C/PD 条款被套到 A/B/Micro-B 口）、检查器误用 1 条、归工具 2 条、需人判 1 条；201 条真缺陷里 142 条没有准则承接。草案见 SR `docs/proposals/criteria-from-boards-2026-11-02.md`。
