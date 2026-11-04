@@ -27,6 +27,15 @@ DI 输入 `CALC-DI-PIN-SURGE`：SN65HVS883 无内部钳位、IPx 约 59.7 V，�
 - Causes: knowledge_missing 1
 - Changed: references/shared/guideline-criteria.json, evals/calibration_boards/datasheets-to-collect.md, docs/improvement-ledger.md
 - Gates: pytest 1096
+## 准则库 1.7.3：G03-023、G05-090 适用类型加 HOLD_UP (2026-11-03)
+
+用户 2026-11-03 定（"这两件事也做了"）：共用词表有了 `HOLD_UP` 后，掉电保持相关的两条准则补上适用类型——G03-023（须保持的轨在中断期间的保持电容满足保持时间）与 G05-090（输出可能高于输入的支路有反向电流阻断）的 `applies_when.circuit_types` 各加 `HOLD_UP`，条目版本 1.0→1.1；HardwareWiki 登记文件 G03 1.6、G05 1.3，正文块与文末版本说明同步；共用层重建为 1.7.3（353 条），指纹 48c61bb3a5e7 → d4c79a47c214，SR 同字节。典型电路 `hold-up` 仍声明三种类型，因其余 4 条落实规则只按 POWER_CONVERTER/POWER_PROTECTION 选出。
+
+- Event: user:2026-11-03 (这两件事也做了)
+- Causes: rule_missing 2
+- Changed: references/shared/guideline-criteria.json, docs/improvement-ledger.md
+- Gates: pytest GATES_PENDING
+
 ## 共用层同步 1.7.2：词表加 HOLD_UP、SIGNAL_PROTECTION (2026-11-03)
 
 SR 合并步 7（用户 2026-11-03"按建议执行"）在共用词表 `circuit_types` 加 `HOLD_UP`（掉电保持）和 `SIGNAL_PROTECTION`（信号端口保护），准则库重建为 1.7.2（353 条，条款与 1.7.1 逐条相同），指纹 3e50da53d0b5 → 48c61bb3a5e7；本仓库同字节复制。典型电路 `hold-up` 的电路类型加 `HOLD_UP`，仍保留 POWER_CONVERTER、POWER_PROTECTION，因为它落实的 G03-023/024/025/038/039、G05-090 目前只按这两类选出；准则适用类型是否加 HOLD_UP 留给人定。
