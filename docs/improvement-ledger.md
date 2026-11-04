@@ -8,6 +8,27 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## Matrix R2 回看：离板网络声明、单器件供电复核、应力超幅挂待办 (2026-11-04)
+
+R2 跑完后找到的三处设计记录缺口。
+一、离板网络：到 MCU 板的约 40 个网络只在一页出现，全局标签必报 `single_global_label`，R2 只好逐网画局部标签加理由。设计网表新增
+`boundary_nets: [{net, to, contract}]`；`page_intents` 与 `Sheet` 把声明的网络算进 `external`（单页也画全局标签），`native.verify` 与
+`verify_schematic.py` 只对声明网络豁免 `single_global_label`、`isolated_pin_label`（列为 `boundary_waived`），其余 ERC 照常；设计记录审计核对
+接口合同文档存在、每个声明网络在其表格里有行（`boundary_contract_missing`、`boundary_net_not_in_contract`）。新模块 `schematic_layout/boundary.py`。
+二、`reviewed_circuit_supply` 原来至少两个位号，R2 的 `SW_12`（LM70880 内部开关驱动）只好把 5 颗输入电容凑进去。现在允许单位号加
+`basis: "datasheet:…#p"`，核对时按手册引用检查该页存在（页不存在记 `circuit_basis_citation`）；多位号写法不变。
+三、应力超幅：R2 U701 估算结温 146 ℃ 对 II 级 95 ℃、额定 150 ℃，只报“合格但有风险”。新规则（阈值全取共用层）：项目等级比 III 严且应力超过
+III 级降额值，至少要 P2 待办；离额定的余量小于估算所需（温度类取 G02 `est_junction_margin` 20 ℃，其他取检查的 `uncertainty`）要 P1。检查写
+`work_item` 指向未关闭的 design/validation 待办，等级由其 consequence_class/occurrence 推出；缺了或不够记 error。报告“应力风险”节写明阈值和每处要求。
+R2 副本复跑：U701 要求 P1、U401（短路重试平均结温 120 ℃）要求 P2，均因没挂待办记 error；U402（100 ℃，在 III 级 105 ℃ 内、余量 50 ℃）仍是普通应力风险。
+把两处检查挂到 W-PROTO 并补 damage/fault 后这两条 error 消失。
+共用层 stress-spec.md 写的是偏离“不另挂待办”，第三条是 ASG 设计记录在其上加的要求，未改共用层；是否同步到共用层与 SR 待用户定。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_missing 3
+- Changed: scripts/schematic_layout/boundary.py, scripts/schematic_layout/native.py, scripts/schematic_layout/pages.py, scripts/schematic_layout/recipes.py, scripts/verify_schematic.py, scripts/schematic_layout/circuit_supply.py, scripts/audit_design_closure.py, scripts/render_design_report.py, references/requirements-to-intent.md, references/drawing-recipes.md, references/schematic-drawing-standards.md, references/design-closure.md, references/reviewed-circuit-supply.md, tests/test_boundary_nets.py, tests/test_reviewed_circuit_supply.py, tests/test_derating_audit.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Gates: pytest 1124 passed, 1 failed (test_guideline_closure 共用层与已装 SR 不一致：SR 已是 1.7.4、本分支 1.7.3，未改本分支同样失败)；几何类 11 项因并发 KiCad renderer 报错，空闲时单独重跑通过
+
 ## Matrix 电源与保护 R2：补写 9 个典型电路（第四批） (2026-11-04)
 
 R2 任务 1.3 在 `lessons.json` 登记了 9 个没有典型电路的功能块（knowledge_missing），设计完成后补写：hotswap-latch-powerlimit（LM5069 类锁定热插拔 + 开漏管保持 UVLO）、efuse-aux-branch、internal-comp-buck、dcs-low-voltage-buck、ext-comp-current-mode-buck、ovp-cutoff-efuse、efuse-bfet-short-latch、fault-memory-comparator、multi-domain-reset。每个文件一种实现方案，按器件类写，必算项对应 R2 的 CALC-* 与 calculation-preflight 的类型，落实规则只写实现方案确实做到的 active 准则（环路裕量 G03-007～009、负载跃变 G03-026、保护链协调 G05-020 等 R2 交样机或没算的不引），已知坑 4～8 条全部引手册页（`datasheet:…#p`）或 R2 设计记录发现（`user:2026-11-03`，括注计算编号）。索引加第四批表，测试计数 31→40，已知坑来源检查覆盖新 9 个。

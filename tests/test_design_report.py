@@ -379,7 +379,21 @@ class DesignReportTests(unittest.TestCase):
                       '另有 1 处应力比较没点名降额规则（提示）。', text)
         self.assertNotIn('降额偏离', text)
         section = text.split('## 应力风险')[1].split('\n## ')[0]
-        self.assertIn('| C1 | Q1 | MOS-VDS-S | 560 / 520 / 650 V | 换 700 V 管 |', section)
+        self.assertIn('| C1 | Q1 | MOS-VDS-S | 560 / 520 / 650 V | 换 700 V 管 | — |', section)
+
+    def test_severe_stress_threshold_and_work_item_are_reported(self):
+        # Matrix R2 (2026-11-04): the stress-risk section says when a risk needs a work item and which one it names.
+        audit_result = json.loads((self.d.record / 'design-closure-audit.json').read_text(encoding='utf-8'))
+        audit_result['derating'] = {'level': 'II', 'source': 'req:R-DER', 'hints': [],
+                                    'severe_thresholds': {'loosest_level': 'III', 'junction_margin_c': 20, 'other_margin': 'uncertainty'},
+                                    'stress_risks': [
+            {'calculation': 'C-TJ', 'check': 'U701 结温', 'ref': 'U701', 'rule': 'IC-SW-TJ', 'value': 146.2, 'limit': 95,
+             'rating': 150, 'unit': '℃', 'improvement': '贴壳散热', 'required_severity': 'P1', 'work_item': 'W-TJ'}]}
+        self.d.write('design-closure-audit.json', audit_result)
+        section = self.d.report()[0].split('## 应力风险')[1].split('\n## ')[0]
+        self.assertIn('应力超过 III 级的降额值至少 P2', section)
+        self.assertIn('温度类 20 ℃', section)
+        self.assertIn('| C-TJ | U701 | IC-SW-TJ | 146 / 95 / 150 ℃ | 贴壳散热 | W-TJ 要求 P1 |', section)
 
     def test_kept_unspecified_operating_point_is_listed(self):
         c = self.d.closure

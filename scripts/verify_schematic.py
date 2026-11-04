@@ -27,6 +27,7 @@ sys.path.insert(0, str(HERE))
 from schematic_layout.external_supply import audit_external_supply  # noqa: E402
 from schematic_layout.discrete_semantics import audit_discrete_semantics  # noqa: E402
 from schematic_layout.native import compare_netlist, find_cli, ignored_erc_rules  # noqa: E402
+from schematic_layout.boundary import split_erc  # noqa: E402
 from schematic_layout.pages import normalize  # noqa: E402
 from schematic_layout.native_geometry_context import prepare_geometry_context, page_context_from_job  # noqa: E402
 from schematic_layout.native_circle_contacts import refine_wire_contacts  # noqa: E402
@@ -105,13 +106,15 @@ def main():
     if erc.is_file():
         report = json.loads(erc.read_text())
         violations = [v for s in report.get("sheets", []) for v in s.get("violations", [])]
+        # A declared boundary net (intent boundary_nets) may carry a single global label; nothing else is waived.
+        violations, waived = split_erc(violations, json.loads(args.intent.read_text(encoding="utf-8")))
         by_type = {}
         for v in violations:
             by_type[v.get("type", "?")] = by_type.get(v.get("type", "?"), 0) + 1
         # A rule the project ignores is a rule nobody checked (P5); list it instead of passing.
         ignored = ignored_erc_rules(report)
         gates["erc"] = {"status": "FAIL" if violations or ignored else "PASS", "violations": len(violations),
-                        "by_type": by_type, "ignored_rules": ignored}
+                        "by_type": by_type, "ignored_rules": ignored, "boundary_waived": len(waived)}
     else:
         gates["erc"] = {"status": "INSUFFICIENT", "reason": "ERC report not written"}
 

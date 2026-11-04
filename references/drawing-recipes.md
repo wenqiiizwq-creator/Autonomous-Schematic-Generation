@@ -70,7 +70,7 @@
 | `connect(a, b, first, x, y)` | 引脚/点之间的 L 形（`first` 为 h/v）或 Z 形（中段在 `x` 或 `y`）。 |
 | `wire(*pins_or_points, net)` | 显式的正交折线；每个引脚都必须在 `net` 上。 |
 | `power(target, symbol, net, length)` | Value 为网络名的电源轨/地网络符号（默认用声明的符号）；垂直方向的引脚会侧向引出，足以避开器件本体。 |
-| `label(target, kind, length, outward, net, reason)` | 网络离开本页处的全局标签，或带 `reason` 的局部连接标签。沿引脚方向或 `outward`（left、right、up、down）延伸。 |
+| `label(target, kind, length, outward, net, reason)` | 网络离开本页处的全局标签，或带 `reason` 的局部连接标签。沿引脚方向或 `outward`（left、right、up、down）延伸。设计网表 `boundary_nets` 声明的离板网络由 `Sheet` 算进 `external`，单页出现也画全局标签，不写局部标签加理由（见 [requirements-to-intent.md](requirements-to-intent.md)）。 |
 | `name_run_steps(net, font=1.0)` | 只读的必需直线段预算：对声明的原始逻辑网络/字号，取已有局部 `label_geometry` 的宽度加两格，向上取整到格数。不添加摆放或标签。 |
 | `name(net, at, font=1.0)` | 网络自身导线上的小局部网络名，放在线段中部并避开引脚和点：水平导线在上方，否则在竖直导线旁。只用于尚无该网络标签或电源轨符号的连通片段；每个片段都已显示名字时 `build()` 跳过它（`report["names_skipped_already_labelled"]`），对这样的片段显式给 `at` 会报错。 |
 | `select_local_names(intent, external, rails)` | 默认选择：接到三脚及以上器件的页内局部网络。 |

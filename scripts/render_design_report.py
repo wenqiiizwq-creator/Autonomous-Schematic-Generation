@@ -1186,13 +1186,20 @@ def render(root, notes=None, title=None):
 
     risks = (derating or {}).get('stress_risks') or []
     if risks:
+        severe = (derating or {}).get('severe_thresholds') or {}
         out += ['## 应力风险', '',
-                '这些应力在器件额定之内，但超过了本项目降额等级的降额值：合格但有风险（应力），不挡定稿（见 stress-spec.md）。', '',
-                '| 计算 | 位号 | 降额规则 | 应力 / 降额值 / 额定 | 改进 |', '|---|---|---|---|---|']
+                '这些应力在器件额定之内，但超过了本项目降额等级的降额值：合格但有风险（应力），不挡定稿（见 stress-spec.md）。', '']
+        if severe:
+            out += ['超幅较大的要挂未关闭的 design 或 validation 待办（design-closure.md“应力超幅”）：项目等级比 %s 级严时，'
+                    '应力超过 %s 级的降额值至少 P2；离额定的余量小于估算所需的余量（温度类 %g ℃，即共用层 G02 '
+                    'est_junction_margin；其他应力取该检查的 uncertainty）为 P1。' % (
+                        severe.get('loosest_level'), severe.get('loosest_level'), severe.get('junction_margin_c')), '']
+        out += ['| 计算 | 位号 | 降额规则 | 应力 / 降额值 / 额定 | 改进 | 超幅待办 |', '|---|---|---|---|---|---|']
         for d in risks:
-            out.append('| %s | %s | %s | %s / %s / %s %s | %s |' % (d['calculation'], d.get('ref') or '', d['rule'], num(d.get('value')),
-                                                              num(d.get('limit')), num(d.get('rating')), d.get('unit') or '',
-                                                              cell(d.get('improvement') or '')))
+            owed = ('%s 要求 %s' % (d.get('work_item') or '缺', d['required_severity'])) if d.get('required_severity') else '—'
+            out.append('| %s | %s | %s | %s / %s / %s %s | %s | %s |' % (d['calculation'], d.get('ref') or '', d['rule'], num(d.get('value')),
+                                                                   num(d.get('limit')), num(d.get('rating')), d.get('unit') or '',
+                                                                   cell(d.get('improvement') or ''), owed))
         out.append('')
     if margins:
         out += ['## 余量不足以覆盖估计误差', '',

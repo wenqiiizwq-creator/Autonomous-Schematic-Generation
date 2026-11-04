@@ -82,7 +82,9 @@ class DeratingAuditTests(unittest.TestCase):
     def test_a_check_within_the_derated_limit_passes(self):
         result = self.run_audit()
         self.assertEqual('PASS', result['status'], result['errors'])
-        self.assertEqual({'level': 'III', 'source': 'req:R-DER', 'stress_risks': [], 'hints': []}, result['derating'])
+        self.assertEqual({'level': 'III', 'source': 'req:R-DER', 'stress_risks': [], 'hints': [],
+                          'severe_thresholds': {'loosest_level': 'III', 'junction_margin_c': 20, 'other_margin': 'uncertainty'}},
+                         result['derating'])
 
     def test_the_level_is_a_requirement_or_a_deferred_clarification(self):
         self.record['derating']['level'] = 'IV'
@@ -298,6 +300,88 @@ class DeratingAuditTests(unittest.TestCase):
     def test_derating_needs_a_layered_record(self):
         self.record['parameter_version'] = 1
         self.assertIn('schema', self.codes())
+
+
+class SevereStressTests(unittest.TestCase):
+    """Matrix R2 (2026-11-04): LM70880 estimated at 146 °C against 95 °C (level II IC-SW-TJ) and 150 °C absolute was only
+    a pass with risk. Beyond the loosest level's value, or within est_junction_margin of the rating, needs an unclosed
+    design/validation work item: P1 when the margin is short, P2 when only beyond every level."""
+
+    def setUp(self):
+        base = DeratingAuditTests('run_audit')
+        base.setUp()
+        self.addCleanup(base.tmp.cleanup)
+        self.base = base
+        base.intent.write_text(json.dumps({'components': [{'ref': 'U1', 'lib_id': 'MATRIX:LM70880-Q1', 'value': 'LM70880',
+                                                            'mpn': 'LM70880QRRXRQ1'}]}))
+        base.record['intent_sha256'] = sha256(base.intent)
+        base.record['derating'] = {'level': 'II', 'source': 'req:R-DER'}
+        base.record['requirements'][0]['refs'] = ['U1']
+        calc = base.record['calculations'][0]
+        calc.update(id='C-TJ', refs=['U1'])
+        calc['checks'] = [{'name': 'U1 结温', 'value': 146.2, 'operator': '<=', 'limit': 95, 'unit': '℃', 'ref': 'U1',
+                           'derating_rule': 'IC-SW-TJ', 'rating': 150, 'limit_basis': 'standard',
+                           'limit_source': 'standard:derating-rules#IC-SW-TJ', 'improvement': '贴壳散热',
+                           'rating_source': 'datasheet:Datasheet/08/TI - LM70880-Q1.pdf#p6'}]
+
+    @property
+    def check(self):
+        return self.base.record['calculations'][0]['checks'][0]
+
+    def item(self, **kw):
+        row = {'id': 'W-TJ', 'stage': 'validation', 'status': 'handoff', 'requirements': ['R1'], 'evidence': ['E1'],
+               'owner': '验证方', 'action': '样机测结温', 'consequence_class': 'damage', 'occurrence': 'fault'}
+        row.update(kw)
+        self.base.record['work_items'] = [row]
+        self.base.record['requirements'][0]['depends_on'] = ['W-TJ']
+        self.check['work_item'] = 'W-TJ'
+
+    def codes(self):
+        return {e['code'] for e in self.base.run_audit()['errors']}
+
+    def test_near_the_rating_needs_a_p1_item(self):
+        self.assertIn('severe_stress_without_work_item', self.codes())
+        risk = self.base.run_audit()['derating']['stress_risks'][0]
+        self.assertEqual(('P1', True, 105), (risk['required_severity'], risk['beyond_levels'], risk['loosest_limit']))
+        self.item(consequence_class='margin', occurrence='normal')        # P2 is not enough
+        self.assertIn('severe_stress_work_item_severity', self.codes())
+        self.item()                                                       # damage, fault: P1
+        self.assertEqual(set(), self.codes())
+        self.item(status='closed')
+        self.assertIn('severe_stress_work_item_not_open', self.codes())
+        self.item(stage='external', status='open')
+        self.assertIn('severe_stress_work_item_not_open', self.codes())
+
+    def test_beyond_every_level_with_margin_needs_p2(self):
+        self.check['value'] = 120                                         # R2 U401 short-circuit retry: 120 > 105, 30 °C left
+        self.assertIn('severe_stress_without_work_item', self.codes())
+        self.item(stage='design', status='open', consequence_class='margin', occurrence='condition')
+        self.base.record['requirements'][0]['status'] = 'conditional'
+        self.assertEqual(set(), self.codes())
+        self.assertEqual('P2', self.base.run_audit()['derating']['stress_risks'][0]['required_severity'])
+
+    def test_within_the_next_level_is_a_plain_risk(self):
+        self.check['value'] = 100.1                                       # R2 U402: over 95, within III's 105, 50 °C left
+        result = self.base.run_audit()
+        self.assertEqual('PASS', result['status'], result['errors'])
+        self.assertNotIn('required_severity', result['derating']['stress_risks'][0])
+
+    def test_at_the_loosest_level_only_the_margin_counts(self):
+        self.base.record['derating']['level'] = 'III'
+        self.check.update(limit=105, value=120)
+        self.assertEqual(set(), self.codes())
+        self.check['value'] = 135
+        self.assertIn('severe_stress_without_work_item', self.codes())
+
+    def test_other_stresses_use_the_checks_uncertainty(self):
+        self.base.intent.write_text(json.dumps({'components': [
+            {'ref': 'U1', 'lib_id': 'Transistor_FET:Q_NMOS_GDS', 'value': 'NMOS', 'mpn': 'X650N'}]}))
+        self.base.record['intent_sha256'] = sha256(self.base.intent)
+        self.check.update(name='漏源电压', value=530, limit=520, unit='V', derating_rule='MOS-VDS-S', rating=650,
+                          limit_source='standard:derating-rules#MOS-VDS-S')  # II 80 %: 520; III 90 %: 585
+        self.assertEqual(set(), self.codes())
+        self.check['uncertainty'] = 0.25                                   # 18 % left to the rating < 25 %
+        self.assertIn('severe_stress_without_work_item', self.codes())
 
 
 if __name__ == '__main__':

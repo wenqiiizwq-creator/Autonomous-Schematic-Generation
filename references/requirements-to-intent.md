@@ -119,6 +119,13 @@
 - 电源轨和地网络的网络名就是图上电源符号的 Value；不同地网络（初级地、次级地、端口地）用不同网络名，
   不能为了好看合并。跨页网络在每页用同名全局标签。
 - 引脚编号来自确切 MPN 的数据手册，符号库只是载体。
+- 离开本设计、另一端在别的板或别的设计里的网络（如到 MCU 板的使能、故障、复位、ADC 网络）逐网声明
+  `boundary_nets: [{"net": "EN_N1", "to": "MCU 板", "contract": "设计资料/MCU与固件接口.md"}]`：`to` 写对端，
+  `contract` 写接口合同文档（相对交付目录），文档里要有一张表、该网络占一行（整词出现在以 `|` 开头的行里）。
+  声明的网络即使只在一页出现也画全局标签（`page_intents` 把它算进该页的 `external`，`Sheet` 也自动算进），
+  KiCad 对它报的 `single_global_label`、`isolated_pin_label` 在 ERC 检查项里按声明豁免并列为 `boundary_waived`，
+  其余 ERC 结论照常；没声明的网络仍按原规则。设计记录审计核对合同文档存在、每个声明网络在表里有行
+  （`boundary_contract_missing`、`boundary_net_not_in_contract`）。不要再逐网写局部标签加理由（Matrix R2 约 40 个 MCU 网络）。
 
 ### 连接器角色与外部供电
 

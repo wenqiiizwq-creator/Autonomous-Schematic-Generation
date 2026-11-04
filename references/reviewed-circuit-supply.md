@@ -7,7 +7,11 @@
 和供电负载限值。反馈、阈值、基准测量或其他信号网络不能用这个机制。只有 power 角色不算证据。
 
 `reviewed_circuit_supply` 每条恰好有 `net`、输出 `pin`、`refs`、`reason`、`binding_sha256` 和
-`evidence: {path, sha256, locator}`。`refs` 列出来源路径上所有相关器件，至少两个。证据是 artifact root
+`evidence: {path, sha256, locator}`，可选 `basis`。`refs` 列出来源路径上所有相关器件，一般至少两个。
+网络由单个器件自己驱动、来源路径上没有第二个器件时（IC 内部开关驱动的开关节点，如 Matrix R2 的 `SW_12`），
+`refs` 只写这一个位号，并用 `basis: "datasheet:<库内路径>#p<页>"` 引出手册上说明该引脚由内部开关驱动的那一页；
+不要为凑够两个位号把输入电容等不在来源路径上的器件写进去。审计按 [手册引用](../scripts/schematic_layout/citations.py)
+核对该页存在（找不到知识库时不核，记 NOT_CHECKED 不拦），页不存在记 `circuit_basis_citation`。证据是 artifact root
 （`verify_schematic.py --artifact-root`，通常是交付目录，复核文档可放在 `record/evidence/`；默认是根图所在目录）
 内一份可读的复核文档，哈希和确切定位必须对得上。
 复核写完后用 `schematic_layout.circuit_supply.binding(intent, refs)` 计算绑定值。它绑定器件身份、值、字段、
