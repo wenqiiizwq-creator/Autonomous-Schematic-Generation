@@ -12,7 +12,7 @@ import re
 from .design_change import read_native
 from .project_audit import audit_project, properties
 from .native_hierarchy import NativeHierarchy
-from .scene import is_hidden, transform, xy
+from .scene import is_hidden, physical_numbers, transform, xy
 from .sexpr import all_nodes, dump, first, value
 
 
@@ -110,13 +110,23 @@ def attachment_rows(lib, unit, style, tolerance=0.16):
                 status = "INSUFFICIENT"
             else:
                 status = "CANDIDATE"
-            rows.append({"pin": str(value(pin, "number", "")), "name": str(value(pin, "name", "")),
-                         "electrical_type": str(pin[1]), "hidden": hidden, "length_mm": length,
-                         "tip_local": tip, "inner_local": inner, "angle": angle,
-                         "distance_to_ink_mm": round(distance, 6) if distance is not None else None,
-                         "unsupported_primitives": sorted(unsupported), "attachment": status})
-            if status == "NOT_APPLICABLE":
-                rows[-1]["reason"] = "hidden pin" if hidden else "zero-length pin" if length == 0 else "bodyless separate power unit"
+            number = str(value(pin, "number", ""))
+            try:
+                pads = physical_numbers(number)
+            except ValueError as exc:
+                gaps.append(str(exc))
+                pads = [number]
+            # A KiCad stacked pin ([17,18]) is one drawn pin and one row per pad.
+            for pad in pads:
+                rows.append({"pin": pad, "name": str(value(pin, "name", "")),
+                             "electrical_type": str(pin[1]), "hidden": hidden, "length_mm": length,
+                             "tip_local": tip, "inner_local": inner, "angle": angle,
+                             "distance_to_ink_mm": round(distance, 6) if distance is not None else None,
+                             "unsupported_primitives": sorted(unsupported), "attachment": status})
+                if len(pads) > 1:
+                    rows[-1]["stacked_number"] = number
+                if status == "NOT_APPLICABLE":
+                    rows[-1]["reason"] = "hidden pin" if hidden else "zero-length pin" if length == 0 else "bodyless separate power unit"
     return rows, gaps
 
 
@@ -185,6 +195,19 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
             digest = hashlib.sha256(dump(lib).encode()).hexdigest()
             pins, pin_gaps = attachment_rows(lib, unit, style, tolerance)
             gaps.extend(f"{ref} unit {unit}: {g}" for g in pin_gaps)
+            if not is_hidden(first(lib, "pin_numbers", [])):
+                # Separate visible pins drawn on one point print their numbers on top of each other
+                # (Matrix R2: TPS26630 OUT 17/18); one stacked pin [17,18] lists them legibly.
+                at_tip = {}
+                for p in pins:
+                    if not p["hidden"]:
+                        at_tip.setdefault(tuple(p["tip_local"]), set()).add(p.get("stacked_number", p["pin"]))
+                for tip, numbers in sorted(at_tip.items()):
+                    if len(numbers) > 1:
+                        errors.append({"kind": "overprinted_pin_numbers", "reference": ref, "unit": unit,
+                                       "instance": page["instance"], "pins": sorted(numbers),
+                                       "reason": "visible pins share one point and their numbers overprint; "
+                                                 "draw one pin with KiCad stacked number [a,b]"})
             for p in pins:
                 key = (page["instance"], ref, unit, p["pin"])
                 if key in allowed:
@@ -228,8 +251,9 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
                              "xml_only_references": sorted(native["components"].keys() - source_refs)}
     # Hidden physical supply pins must not inherit the graphic attachment NA as
     # electrical qualification. Virtual power symbols were excluded above.
-    # Coincident supply copies remain unsupported, even when XML binds them;
-    # the generator contract currently supports hidden passive copies only.
+    # Coincident supply copies remain unsupported, even when XML binds them:
+    # same-net supply pads are one visible stacked pin ([17,18]) with the
+    # datasheet type; hidden copies stay passive.
     hidden_power_rows = []
     for pin in rows:
         if not pin["hidden"] or pin["electrical_type"] not in ("power_in", "power_out"):
@@ -244,7 +268,7 @@ def audit_symbols(root, netlist=None, project=None, exceptions=None, tolerance=0
                      and native["pin_nets"].get(f'{peer["reference"]}.{peer["pin"]}') == native["pin_nets"][key]]
         if connected or (peers and native is None):
             disposition = "INSUFFICIENT"
-            reason = "unsupported coincident hidden power; explicit physical-power contract required"
+            reason = "unsupported coincident hidden power; draw the pads as one stacked pin [a,b] or make the copy passive"
             gaps.append(f'{key}: {reason}')
         else:
             disposition = "FAIL"

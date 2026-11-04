@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 同网同功能多脚改用 KiCad 叠脚编号 [a,b]，可见叠放记 overprinted_pin_numbers (2026-11-04)
+
+R2 发现规则互相卡：引脚合同要求手册 PWR_OUT 的脚在符号里是 power_out；`symbol_integrity` 的 `hidden_power` 只认隐藏的 passive 副本（隐藏电源副本 INSUFFICIENT）；KiCad 只在同位置同名时豁免同网 power_out 互连；场景、符号完整性、电路 IR 又不认 KiCad 的叠脚编号。结果 TPS26630 OUT 17/18 只能可见叠放（PDF 引脚号叠印，R2 图面审阅记 9 处），LM70880 SW1～SW4 只能读成 power_in 再用 PWR_FLAG 和供电声明补来源。
+定的规则（候选 a）：同网同功能多脚画成一个可见引脚，引脚号用 KiCad 10 叠脚写法 `[17,18]`、`[20-22,5]`，类型照手册。KiCad 10.0.7 实测：XML 按物理脚展开成同名同类型节点，ERC 当一个脚、不报互连，PDF 引脚号竖排不叠印；官方库已用这种写法。不选 (b)：隐藏电源副本仍要靠"同网"推断，图上看不到第二个脚号，且 ERC 仍会报同符号电源输出互连。
+实现：`scene.physical_numbers` 解析叠脚号（逗号、带同一字母前缀的范围，空项/空格/逆序/重复拒绝），场景把叠脚展开成同一点上的各物理脚（`Sheet` 用 `U1.17`、`U1.18` 引用），`generate` 实例引脚按库引脚号写一次；`symbol_integrity` 按物理脚出行（`stacked_number`），XML 覆盖照常核；新加 `overprinted_pin_numbers`：显示引脚号的符号里几个可见引脚落在同一点即 FAIL；`circuit_ir.symbol_catalog` 也展开。旧的隐藏 passive 副本照旧，隐藏电源副本仍 INSUFFICIENT，提示改叠脚。
+R2 副本验证：符号改 OUT [17,18]、SW [20-22,5]（power_out），去掉 SW_12 的 PWR_FLAG 与供电声明，引脚表 SW 四脚改 PWR_OUT + name_note；`deliver.py --for-review` 自动检查 ERC 0、符号完整性 PASS、引脚合同 PASS、供电声明 PASS，PDF 第 4/6/10 页引脚号竖排不叠印；用新代码审原 R2 图，9 个 TPS26630 记 `overprinted_pin_numbers`。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_wrong 1
+- Changed: scripts/schematic_layout/scene.py, scripts/schematic_layout/symbol_integrity.py, scripts/schematic_layout/generate.py, scripts/schematic_layout/circuit_ir.py, tests/test_stacked_pins.py, references/symbol-and-peripheral-contracts.md, references/drawing-recipes.md, references/design-closure.md, docs/improvement-ledger.md
+- Gates: pytest 1117 passed, 1 failed (test_schematic_review_holds_the_same_shared_layer：main 已是准则库 1.7.4、本分支 1.7.3，合并 main 后消失)；R2 副本 deliver --for-review：ERC 0、符号完整性/引脚合同/供电声明/几何 PASS（几何第 3 次重跑，前两次 renderer configuration changed）
 ## 自动检查误报与脆弱：分立件极性语义认 Unicode 减号与 TVS 后缀说明；几何检查遇配置变化自动重试 (2026-11-04)
 
 Matrix 电源与保护 R2 的 discrete_semantics 17 处 INSUFFICIENT 全是误报：BSS123LT1 手册首页写 `N−Channel`（U+2212），正则只认 ASCII `-`；30KPA 系列手册单向/双向混排，前 3 页计数 4:5 判 ambiguous，而第 6 页订货说明写明 "CA Bi-Directional"。改为手册文字先把 `−‐‒–—` 等统一成 `-`；TVS 先读整本手册的后缀说明（行首代号 + Bi/Uni-directional，代号区分大小写），与料号后缀（30KPA28CA → CA）对上才判定，依据页码与句子写进 `evidence_page`/`evidence_text`，说明里没有该后缀或自相矛盾再回到前 3 页计数。
