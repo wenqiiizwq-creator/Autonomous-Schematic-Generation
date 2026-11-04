@@ -1,10 +1,13 @@
-import copy, hashlib, sys, tempfile, unittest
+import copy, hashlib, json, os, shutil, sys, tempfile, unittest
+from unittest import mock
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from schematic_layout.external_supply import judge
 from schematic_layout.circuit_supply import binding, declarations
 from test_filtered_supply import xml
 from schematic_layout.native import compare_netlist
+from schematic_layout import citations
+from test_citations import pdf
 
 class ReviewedCircuitSupplyTests(unittest.TestCase):
  def setUp(self):
@@ -39,6 +42,25 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
   self.assertEqual(judge(f,self.i,{'FLGX1':'#FLG1'})['status'],'FAIL')
   self.assertEqual(judge(f,self.i,{'FLGX1':'#FLG1'},self.p)['status'],'PASS')
  def test_single_component_is_not_converter_review(self):self.i['reviewed_circuit_supply'][0]['refs']=['D1'];self.assertRaises(ValueError,declarations,self.i)
+
+ def single_part(self,basis):
+  # Matrix R2 SW_12: an IC switch node has one source part; the datasheet page says so instead of padded capacitors.
+  wiki=self.p/'wiki';sheet=wiki/'raw/Datasheet/08/Vendor - D.pdf';sheet.parent.mkdir(parents=True,exist_ok=True)
+  sheet.write_bytes(pdf(['SW switch node driven by internal switches','p2']))
+  env=mock.patch.dict(os.environ,{'HARDWARE_WIKI':str(wiki)});env.start();self.addCleanup(env.stop)
+  citations._pages.clear();citations._texts.clear()
+  d=self.i['reviewed_circuit_supply'][0];d['refs']=['D1'];d['basis']=basis;d['binding_sha256']=binding(self.i,['D1'])
+  return self.run_case()
+ @unittest.skipUnless(shutil.which('pdfinfo'),'poppler is not installed')
+ def test_single_component_with_datasheet_basis_passes(self):
+  self.assertEqual(self.single_part('datasheet:Datasheet/08/Vendor - D.pdf#p1')['status'],'PASS')
+ @unittest.skipUnless(shutil.which('pdfinfo'),'poppler is not installed')
+ def test_single_component_basis_beyond_document_fails(self):
+  r=self.single_part('datasheet:Datasheet/08/Vendor - D.pdf#p9')
+  self.assertEqual(r['status'],'FAIL');self.assertIn('circuit_basis_citation',json.dumps(r))
+ def test_basis_must_be_a_datasheet_citation(self):
+  d=self.i['reviewed_circuit_supply'][0];d['refs']=['D1'];d['basis']='手册 p20'
+  self.assertRaises(ValueError,declarations,self.i)
 
  def test_explicit_empty_mpn_remains_empty(self):
   for c in self.i['components']:c['mpn']=''

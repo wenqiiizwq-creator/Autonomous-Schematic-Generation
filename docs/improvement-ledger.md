@@ -8,6 +8,26 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## Matrix R2 回看：离板网络声明、单器件供电复核、应力超幅挂待办 (2026-11-04)
+
+R2 跑完后找到的三处设计记录缺口。
+一、离板网络：到 MCU 板的约 40 个网络只在一页出现，全局标签必报 `single_global_label`，R2 只好逐网画局部标签加理由。设计网表新增
+`boundary_nets: [{net, to, contract}]`；`page_intents` 与 `Sheet` 把声明的网络算进 `external`（单页也画全局标签），`native.verify` 与
+`verify_schematic.py` 只对声明网络豁免 `single_global_label`、`isolated_pin_label`（列为 `boundary_waived`），其余 ERC 照常；设计记录审计核对
+接口合同文档存在、每个声明网络在其表格里有行（`boundary_contract_missing`、`boundary_net_not_in_contract`）。新模块 `schematic_layout/boundary.py`。
+二、`reviewed_circuit_supply` 原来至少两个位号，R2 的 `SW_12`（LM70880 内部开关驱动）只好把 5 颗输入电容凑进去。现在允许单位号加
+`basis: "datasheet:…#p"`，核对时按手册引用检查该页存在（页不存在记 `circuit_basis_citation`）；多位号写法不变。
+三、应力超幅：R2 U701 估算结温 146 ℃ 对 II 级 95 ℃、额定 150 ℃，只报“合格但有风险”。新规则（阈值全取共用层）：项目等级比 III 严且应力超过
+III 级降额值，至少要 P2 待办；离额定的余量小于估算所需（温度类取 G02 `est_junction_margin` 20 ℃，其他取检查的 `uncertainty`）要 P1。检查写
+`work_item` 指向未关闭的 design/validation 待办，等级由其 consequence_class/occurrence 推出；缺了或不够记 error。报告“应力风险”节写明阈值和每处要求。
+R2 副本复跑：U701 要求 P1、U401（短路重试平均结温 120 ℃）要求 P2，均因没挂待办记 error；U402（100 ℃，在 III 级 105 ℃ 内、余量 50 ℃）仍是普通应力风险。
+把两处检查挂到 W-PROTO 并补 damage/fault 后这两条 error 消失。
+共用层 stress-spec.md 写的是偏离“不另挂待办”，第三条是 ASG 设计记录在其上加的要求，未改共用层；是否同步到共用层与 SR 待用户定。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_missing 3
+- Changed: scripts/schematic_layout/boundary.py, scripts/schematic_layout/native.py, scripts/schematic_layout/pages.py, scripts/schematic_layout/recipes.py, scripts/verify_schematic.py, scripts/schematic_layout/circuit_supply.py, scripts/audit_design_closure.py, scripts/render_design_report.py, references/requirements-to-intent.md, references/drawing-recipes.md, references/schematic-drawing-standards.md, references/design-closure.md, references/reviewed-circuit-supply.md, tests/test_boundary_nets.py, tests/test_reviewed_circuit_supply.py, tests/test_derating_audit.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Gates: pytest 1124 passed, 1 failed (test_guideline_closure 共用层与已装 SR 不一致：SR 已是 1.7.4、本分支 1.7.3，未改本分支同样失败)；几何类 11 项因并发 KiCad renderer 报错，空闲时单独重跑通过
 ## Matrix R2 问题修改：引脚表 type_note、性能标注按实际宽度、设计资料正文型号核对 (2026-11-04)
 
 R2 跑完后找到的三处工具问题。（1）引脚表每个脚加可选 `type_note`（非空文字）：手册类型码怎么读成 `datasheet_type`（TI 的 `P` 功能栏写输出按 `PWR_OUT` 记）或符号类型为何不同，R2 只能写在 `设计资料/外围电路核对表.md`；`reference_contract.py` 接受并把它原样带进 `reference-contract.json` 该器件的 `type_notes`，`audit_design_closure.py` 只查非空（空记 `schema`），不放过 `pin_type_contradicts_datasheet`；`fill_pin_maps.py` 不写它。（2）`Sheet.performance_notes` 的 `width` 改为按几何检查的 `text_extent` 量的西文字符宽（中文约 1.24），不再按字数换行：换行的标题在 `pdftotext -layout` 里与旁边文字交错，PDF 核对就找不到这条标注；有一行超宽即在构建时报错，指出 CR、该行、多宽和够用的 `width`。测试样本用 R2 的 CR-R301（按字数 57 ≤ 60，量得 62.5 列）。（3）`pack_design.py` 加 `设计资料/*.md` 正文“位号 型号”核对：位号字母是设计网表用到的前缀、紧随的词含数字和大写字母且至少 4 个字符、不是带单位的数值、不是 Pin3/4 这类词加编号；位号不在网表、或型号与 mpn 对不上（忽略大小写和连字符，可省封装/变体后缀和 SN74 类前缀）即打包 error，带文件和行号；表格行和代码块不核。R2 的 9 份 Markdown 试跑：正文命中 14 处全部与网表一致，误报候选 J201 Pin3/4、Pin1/2 由“词加编号”规则排除，R301 3.3 等数值不算，表格行与代码块 39 处跳过；在副本第 22 行植入“U801 LM5060”即报出。

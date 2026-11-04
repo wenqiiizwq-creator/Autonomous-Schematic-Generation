@@ -98,6 +98,9 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 
 - `coverage`：全部适用需求/设计工作均已审查才填 `complete`；抽查或历史回放填 `partial`。这不是工具自动证明的完整性。
 - 需求状态 `design_supported` / `conditional` / `open`；`implementation` 描述功能而非只列料号。
+- 设计网表声明了 `boundary_nets`（离板网络，见 [requirements-to-intent.md](requirements-to-intent.md)）时，审计核对每条的
+  `contract` 文档在交付目录或声明的输入里存在（`boundary_contract_missing`），该网络在文档的表格里有一行
+  （`boundary_net_not_in_contract`）；声明本身格式错、网络不存在或重复记 `boundary_schema`。审计结果的 `boundary_nets` 列出声明的网络。
 - `clarifications`：问用户的需求问题和答复，给定或采纳的以同编号、`text` 等于答复写进 `requirements`；字段与核对见 [需求澄清](requirement-clarifications.md)。
 - `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb`；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的 `gap_version 2` 写（旧记录 1）；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
 - 计算：`coverage` 为 `bounded` / `partial`；`conclusion` 为 `supported` / `conditional` / `failed`。无适用计算时提供 `no_calculations_reason`，不能用空列表绕过。
@@ -172,8 +175,20 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       写错记 `derating_limit_mismatch`，这几种判据缺 `rating` 记 `derating_rating_missing`。规则编号不存在记 `derating_rule_unknown`，
       规则的器件类型与位号不符记 `derating_rule_kind`。
     - **结论**：超过额定为 `failed`；在额定内但超过降额值为合格但有风险（应力）：计算照常推出结论（不因此 `conditional`），
-      检查写 `improvement`（换额定更高的件或降低应力，缺记 `stress_risk_without_improvement`），不挂待办，也不要用户签认；
+      检查写 `improvement`（换额定更高的件或降低应力，缺记 `stress_risk_without_improvement`），一般不挂待办，也不要用户签认；
       审计在 `derating.stress_risks` 列出每一处，报告的“应力风险”一节逐条列出，不挡交付。降额值以内是普通的满足。
+    - **应力超幅**（Matrix R2，2026-11-04：LM70880 估算结温 146 ℃，II 级降额值 95 ℃、额定 150 ℃，只报“合格但有风险”）：
+      应力风险（点名规则的，或按唯一适用规则重算的）满足下面任一条时不只是降额偏离，检查另写 `work_item`，指向一件未关闭的
+      `design`（`open`）或 `validation`（`open`/`handoff`）待办，该待办写 `consequence_class`/`occurrence`，推出的等级不低于要求：
+      - 项目等级比最宽一级（III）严，且应力超过 III 级的降额值（降额规范任何一级都不允许）——至少 P2；
+      - 离额定的余量小于估算所需的余量——P1。温度类判据（`max_c`、`tj_percent`、`margin_c`，`rating` 为最高结温）取共用层
+        G02 工程取值 `est_junction_margin`（20 ℃，凭估算判器件损坏所需的结温余量）；其他应力取该检查的 `uncertainty`
+        （相对额定），没写不按余量判。
+      阈值都取共用层（降额表的等级取值、G02 工程取值），脚本不另设数。缺 `work_item` 记 `severe_stress_without_work_item`，
+      待办阶段/状态不对记 `severe_stress_work_item_not_open`，等级不够记 `severe_stress_work_item_severity`。审计在该条
+      `stress_risks` 里加 `required_severity`、`loosest_limit`、`margin_to_rating`，`derating.severe_thresholds` 写所用阈值；
+      报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
+      共用层 stress-spec.md 说偏离“不另挂待办”，这里是 ASG 设计记录在其上加的要求，SR 的判法不变。
     - 没有 `derating_version` 的记录照旧审计，报告在“记录版本”一行写明器件应力没有按降额等级核对。
   - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用设计准则（G01–G09，见[共用设计准则库](shared/guideline-criteria.md)）。
     `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、

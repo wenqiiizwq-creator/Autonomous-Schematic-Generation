@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 
+from .boundary import split_erc
+
 # KiCad automatic names; the pin names inside may themselves contain "/".
 AUTO_NET_NAME = re.compile(r"(?:^|/)(?:Net|unconnected)-\(")
 # kicad-cli versions whose SVG export the native geometry controls were run on (10.0.7: 2026-10-30, every
@@ -240,10 +242,13 @@ def verify(schematic, intent, layout, output, cli=None, reference_contract=None)
         violations = [
             v for s in report.get("sheets", []) for v in s.get("violations", [])
         ]
+        # A declared boundary net's single global label is the drawing of the declaration (boundary.py).
+        violations, waived = split_erc(violations, intent)
         ignored = ignored_erc_rules(report)
         result["erc"] = {
-            "status": "PASS" if erc_run.returncode == 0 and not violations and not ignored else "FAIL",
+            "status": "PASS" if (erc_run.returncode == 0 or waived) and not violations and not ignored else "FAIL",
             "violations": violations,
+            "boundary_waived": waived,
             "ignored_checks": report.get("ignored_checks", []),
             "ignored_rules": ignored,
         }

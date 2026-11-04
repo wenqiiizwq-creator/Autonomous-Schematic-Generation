@@ -16,6 +16,7 @@ import json
 import math
 from collections import Counter
 
+from .boundary import declarations as boundary_declarations
 from .component_role import is_connector
 from .field_placer import FieldSpec, autoplace_fields, swapped_label_pairs
 from .generate import Libraries, library_dirs, make_root, pin_clipped_body, pin_net_map
@@ -190,7 +191,8 @@ class Sheet:
         self.reasons = {}
         self._shapes = {}
         self.rails = dict(rails or {})
-        self.external = sorted(external)
+        # A declared boundary net leaves the design, so it takes a global label even on one page (boundary.py).
+        self.external = sorted(set(external) | set(boundary_declarations(intent)))
         unknown = (set(self.rails) | set(self.external)) - {n["name"] for n in intent["nets"]}
         if unknown:
             raise ValueError(f"Unknown rail/external nets: {sorted(unknown)}")

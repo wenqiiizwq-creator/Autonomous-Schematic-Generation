@@ -14,7 +14,7 @@ from design_frontier import frontier
 import typical_circuits
 import guideline_criteria
 import stress_check
-from schematic_layout import part_classes
+from schematic_layout import boundary as boundary_nets, part_classes
 from schematic_layout.citations import check_source
 
 
@@ -519,7 +519,58 @@ def implied_rule(c, comp, kind, rules, level):
     return (fits[0], judged[1]) if judged and judged[0] != stress_check.OK else None
 
 
-def audit_derating(record, intent, calculations, requirements, clarifications, error, loaded=None):
+# A stress risk that is more than a deviation (Matrix R2, 2026-11-04: LM70880 estimated at 146 °C against 95 °C at level II and
+# 150 °C absolute, reported only as a pass with risk). Both thresholds come from the shared layer, none is set here:
+# for a project below the loosest level, beyond the loosest level's derated value (no level of the spec allows it); or closer to the rating than the margin
+# an estimate needs (temperatures: G02 est_junction_margin; other stresses: the check's own uncertainty).
+TEMPERATURE_MEASURES = ('max_c', 'tj_percent', 'margin_c')
+JUNCTION_MARGIN = guideline_criteria.engineering_value('est_junction_margin')
+
+
+def severe_stress(c, rule, rating, level):
+    """(required severity, detail) for a stress risk that needs an unclosed design or validation work item, else None.
+    P1 when the stress is closer to the rating than the margin an estimate needs, P2 when it is only beyond every level."""
+    loosest = stress_check.LEVELS[-1]
+    widest = stress_check.derated_limit(rule, loosest, rating) if level != loosest else None
+    beyond = widest is not None and holds({'value': c.get('value'), 'operator': c.get('operator'), 'limit': widest,
+                                           'rating': rating}) is False
+    margin = need = None
+    if finite(rating) and finite(c.get('value')) and c.get('operator') in ('<=', '<'):
+        if rule['measure'] in TEMPERATURE_MEASURES:
+            margin, need = rating - c['value'], JUNCTION_MARGIN
+        elif finite(c.get('uncertainty')) and c['uncertainty'] > 0 and rating:
+            margin, need = (abs(rating) - abs(c['value'])) / abs(rating), c['uncertainty']
+    short = margin is not None and margin < need
+    if not (beyond or short):
+        return None
+    return ('P1' if short else 'P2'), {'loosest_level': loosest, 'loosest_limit': widest, 'beyond_levels': beyond,
+                                       'margin_to_rating': margin, 'margin_needed': need}
+
+
+def audit_severe_stress(where, c, risk, rule, rating, level, work, error):
+    """A severe stress risk names an unclosed design or validation work item (`work_item`) at least as urgent as it needs."""
+    found = severe_stress(c, rule, rating, level)
+    if found is None:
+        return
+    required, detail = found
+    risk.update(detail, required_severity=required, work_item=c.get('work_item'))
+    why = ('超过最宽一级（%s 级）的降额值 %g' % (detail['loosest_level'], detail['loosest_limit'])) if detail['beyond_levels'] else ''
+    if detail['margin_to_rating'] is not None and detail['margin_to_rating'] < detail['margin_needed']:
+        why += ('，' if why else '') + '距额定 %.3g 小于要求的 %.3g' % (detail['margin_to_rating'], detail['margin_needed'])
+    item = work.get(c.get('work_item')) if isinstance(c.get('work_item'), str) else None
+    if item is None:
+        error('severe_stress_without_work_item', '%s：%s，不只是降额偏离；写 work_item 指向一件未关闭的 design 或 validation 待办'
+              '（不做的后果定级至少 %s）' % (where, why, required))
+        return
+    if item.get('stage') not in ('design', 'validation') or item.get('status') == 'closed':
+        error('severe_stress_work_item_not_open', '%s：%s 要是未关闭的 design 或 validation 待办' % (where, c['work_item']))
+    level = severity_of(item)
+    if level is None or SEVERITIES.index(level) > SEVERITIES.index(required):
+        error('severe_stress_work_item_severity', '%s：%s 按 consequence_class/occurrence 定级 %s，这处应力要求至少 %s' % (
+            where, c['work_item'], level or '未定', required))
+
+
+def audit_derating(record, intent, calculations, requirements, clarifications, error, loaded=None, work=None):
     """derating_version 1, judged by stress-spec.md (user 2026-10-27): the level and where it was decided; each check that
     names a rule uses that rule's limit for the level; over the derated value but within the rating is a stress risk with
     an improvement; only the stresses written are checked, and a stress compared with a rating that names no rule while
@@ -558,6 +609,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                     risks.append({'calculation': key, 'check': c.get('name'), 'ref': ref, 'rule': rule['id'],
                                   'value': c.get('value'), 'limit': derated, 'rating': c.get('limit'),
                                   'unit': c.get('unit'), 'improvement': c.get('improvement')})
+                    audit_severe_stress(where, c, risks[-1], rule, c.get('limit'), level, work or {}, error)
                     if not text(c.get('improvement')):
                         error('stress_risk_without_improvement', '%s：应力超过 %s 级 %s 的降额值 %g %s，写 improvement'
                               '（换额定更高的件或降低应力）' % (where, level, rule['id'], derated, c.get('unit')))
@@ -584,9 +636,12 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                 risks.append({'calculation': key, 'check': c.get('name'), 'ref': ref, 'rule': rule['id'],
                               'value': c.get('value'), 'limit': c.get('limit'), 'rating': c.get('rating'),
                               'unit': c.get('unit'), 'improvement': c.get('improvement')})
+                audit_severe_stress(where, c, risks[-1], rule, c.get('rating'), level, work or {}, error)
                 if not text(c.get('improvement')):
                     error('stress_risk_without_improvement', where + '：写 improvement（换额定更高的件或降低应力）')
-    return {'level': level, 'source': info.get('source'), 'stress_risks': risks, 'hints': hints}
+    return {'level': level, 'source': info.get('source'), 'stress_risks': risks, 'hints': hints,
+            'severe_thresholds': {'loosest_level': stress_check.LEVELS[-1], 'junction_margin_c': JUNCTION_MARGIN,
+                                  'other_margin': 'uncertainty'}}
 
 
 def audit_citations(record, calculations, work, extra, error):
@@ -1378,7 +1433,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
         if record['derating_version'] != 1 or version not in (2, 3):
             error('schema', 'derating_version must be 1, with parameter_version 2 or 3')
         else:
-            derating = audit_derating(record, intent, calculations, requirements, clarifications, error)
+            derating = audit_derating(record, intent, calculations, requirements, clarifications, error, work=work)
     margins = None
     if 'uncertainty_version' in record:
         if record['uncertainty_version'] != 1 or version not in (2, 3):
@@ -1395,6 +1450,8 @@ def audit(record, intent_path, artifact_root, inputs=None):
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
     audit_placeholders(intent, error, strict='binding_version' in record)
+    # Nets declared to leave the design to another board each have a row in their interface contract (Matrix R2).
+    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error)
     binding = None
     if 'binding_version' in record:
         if record['binding_version'] != 1:
@@ -1438,6 +1495,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
             'binding': binding if binding is not None else 'NOT_CHECKED',
+            'boundary_nets': boundary,
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),
             'downstream_handoffs': [k for k, v in work.items() if v.get('stage') in ('validation', 'pcb') and v.get('status') == 'handoff']}
 

@@ -81,9 +81,13 @@ def page_intents(board, field="Circuit", page_of=None, rails=()):
                     if pages.get(str(d.get("pin", "")).rsplit(".", 1)[0]) == page]
         if reviewed:
             intent["reviewed_circuit_supply"] = reviewed
-        external = sorted(n["name"] for n in local if n["name"] not in rails
-                          and any(pages[p.rsplit(".", 1)[0]] != page for p in n["pins"]))
         names = {n["name"] for n in local}
+        boundary = [copy.deepcopy(d) for d in board.get("boundary_nets", []) if d.get("net") in names]
+        if boundary:  # Leaves the design to another board: a global label on this page (boundary.py).
+            intent["boundary_nets"] = boundary
+        external = sorted({n["name"] for n in local if n["name"] not in rails
+                           and any(pages[p.rsplit(".", 1)[0]] != page for p in n["pins"])}
+                          | {d["net"] for d in boundary})
         if "net_roles" in board:
             intent["net_roles"] = {n: role for n, role in board["net_roles"].items() if n in names}
         page_rails = ({n: s for n, s in symbols.items() if n in names} if symbols is not None
