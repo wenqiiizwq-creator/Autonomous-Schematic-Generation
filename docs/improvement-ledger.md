@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## Matrix R2 问题修改：引脚表 type_note、性能标注按实际宽度、设计资料正文型号核对 (2026-11-04)
+
+R2 跑完后找到的三处工具问题。（1）引脚表每个脚加可选 `type_note`（非空文字）：手册类型码怎么读成 `datasheet_type`（TI 的 `P` 功能栏写输出按 `PWR_OUT` 记）或符号类型为何不同，R2 只能写在 `设计资料/外围电路核对表.md`；`reference_contract.py` 接受并把它原样带进 `reference-contract.json` 该器件的 `type_notes`，`audit_design_closure.py` 只查非空（空记 `schema`），不放过 `pin_type_contradicts_datasheet`；`fill_pin_maps.py` 不写它。（2）`Sheet.performance_notes` 的 `width` 改为按几何检查的 `text_extent` 量的西文字符宽（中文约 1.24），不再按字数换行：换行的标题在 `pdftotext -layout` 里与旁边文字交错，PDF 核对就找不到这条标注；有一行超宽即在构建时报错，指出 CR、该行、多宽和够用的 `width`。测试样本用 R2 的 CR-R301（按字数 57 ≤ 60，量得 62.5 列）。（3）`pack_design.py` 加 `设计资料/*.md` 正文“位号 型号”核对：位号字母是设计网表用到的前缀、紧随的词含数字和大写字母且至少 4 个字符、不是带单位的数值、不是 Pin3/4 这类词加编号；位号不在网表、或型号与 mpn 对不上（忽略大小写和连字符，可省封装/变体后缀和 SN74 类前缀）即打包 error，带文件和行号；表格行和代码块不核。R2 的 9 份 Markdown 试跑：正文命中 14 处全部与网表一致，误报候选 J201 Pin3/4、Pin1/2 由“词加编号”规则排除，R301 3.3 等数值不算，表格行与代码块 39 处跳过；在副本第 22 行植入“U801 LM5060”即报出。
+注意：工业 I/O 校准板 `record/scripts/draw_iio.py` 用 `width=48`，其 CR 标题量得最宽 61.2 列，重跑会在构建时报错，需改 `width=62` 以上（校准板只读，本次未改）。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_missing 1, rule_wrong 1, rule_not_enforced 1
+- Changed: scripts/schematic_layout/reference_contract.py, scripts/audit_design_closure.py, scripts/fill_pin_maps.py, scripts/schematic_layout/recipes.py, scripts/pack_design.py, references/symbol-and-peripheral-contracts.md, references/design-closure.md, references/component-requirements.md, references/delivery-report.md, tests/test_board_defect_guards.py, tests/test_calibration_board_issues.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Gates: pytest tests 1101 passed, 12 failed；其中 11 个原生几何用例报 renderer configuration changed during job（并行 KiCad，干净 HEAD 同时同样失败），KiCad 空闲后单独重跑 39 passed + 7 passed；余 1 个 test_guideline_closure 共用层比对失败，因 SR 工作树有别的子任务未提交的准则库 1.7.4（本分支未动共用层）；改动相关 6 个测试文件 213 passed
 ## 同网同功能多脚改用 KiCad 叠脚编号 [a,b]，可见叠放记 overprinted_pin_numbers (2026-11-04)
 
 R2 发现规则互相卡：引脚合同要求手册 PWR_OUT 的脚在符号里是 power_out；`symbol_integrity` 的 `hidden_power` 只认隐藏的 passive 副本（隐藏电源副本 INSUFFICIENT）；KiCad 只在同位置同名时豁免同网 power_out 互连；场景、符号完整性、电路 IR 又不认 KiCad 的叠脚编号。结果 TPS26630 OUT 17/18 只能可见叠放（PDF 引脚号叠印，R2 图面审阅记 9 处），LM70880 SW1～SW4 只能读成 power_in 再用 PWR_FLAG 和供电声明补来源。

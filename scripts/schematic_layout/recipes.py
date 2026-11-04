@@ -695,24 +695,37 @@ class Sheet:
         multi-line block on ``at``, so a block of n lines reaches about n/2 lines above and below it (calibration
         board #16). Returns the number of lines placed, to plan that height before building.
 
+        ``width`` is the line budget in Latin-character columns, measured with the geometry check's
+        text_extent (a CJK glyph counts about 1.24 columns), not in characters. Lines are never wrapped: the
+        PDF gate looks each line up in ``pdftotext -layout`` text, where a wrapped title interleaves with
+        whatever sits beside it and the note is no longer found (Matrix R2, 2026-11-04). A line over budget
+        raises here, naming the line, its width and the width that fits.
+
         Content comes only from project()'s contract snapshot; normal scene QA
         checks the generated text as obstacles. The native gate binds it back
         to the source record and actual PDF, including status and conditions.
         """
-        import textwrap
         from .component_requirements import note_lines
         chosen = set(refs) if refs is not None else set(self.components)
         unknown = chosen - set(self.components)
         if unknown:
             raise ValueError(f'Performance note references outside this page: {sorted(unknown)}')
-        lines = []
+        column = text_extent('0', font)[0]
+        lines, over = [], []
         for ref, comp in self.components.items():
             entry = comp.get('performance_contract')
             if ref in chosen and entry and entry.get('display') == 'note':
                 for line in note_lines(entry):
-                    lines.extend(textwrap.wrap(line, width=width, break_long_words=False,
-                                               break_on_hyphens=False) or [''])
+                    measured = text_extent(line, font)[0]
+                    if measured > width * column + 1e-9:
+                        over.append(f'CR-{ref} "{line}" {measured:.1f} mm = {measured / column:.1f} columns'
+                                    f' > width={width} ({width * column:.1f} mm)')
+                    lines.append(line)
                 lines.append('')
+        if over:
+            need = math.ceil(max(text_extent(line, font)[0] for line in lines) / column - 1e-9)
+            raise ValueError('Performance note lines wider than width (a wrapped line is not found on the PDF): '
+                             + '; '.join(over) + f'; use width={need} or shorten the purpose/requirement text')
         block = '\n'.join(lines).rstrip()
         if block:
             self.text(block, at, font)

@@ -108,6 +108,7 @@ def verify_reference(netlist, contract, base):
             raise ValueError("Pin map must enumerate every physical pin, including NC/EP")
         failures = []
         pin_gaps = []
+        type_notes = {}
         basis = evidence(spec, ref)
         component = native["components"].get(ref)
         if component is None:
@@ -138,8 +139,13 @@ def verify_reference(netlist, contract, base):
             _text(number, f"{ref}.physical pin")
             # datasheet_type: what the datasheet pin table says the pin is; audit_design_closure (binding_version 1) holds types to it.
             # datasheet_page: the page fill_pin_maps.py read the name and type from.
-            _keys(expected, {"names", "types"}, {"datasheet_name", "datasheet_type", "name_note", "datasheet_page"}, context=_field_path(pin_map_context + "/pins", number))
-            for field, aliases in ((k, v) for k, v in expected.items() if k not in ("datasheet_name", "datasheet_type", "name_note", "datasheet_page")):
+            # type_note: how the datasheet's type code was read, or why the symbol type differs (Matrix R2, 2026-11-04:
+            # TI's P read as PWR_OUT was written only in 设计资料/外围电路核对表.md); carried into the report as written.
+            note_keys = ("datasheet_name", "datasheet_type", "name_note", "type_note", "datasheet_page")
+            _keys(expected, {"names", "types"}, set(note_keys), context=_field_path(pin_map_context + "/pins", number))
+            if "type_note" in expected:
+                type_notes[number] = _text(expected["type_note"], f"{ref} physical pin {number} type_note")
+            for field, aliases in ((k, v) for k, v in expected.items() if k not in note_keys):
                 if not isinstance(aliases, list) or not aliases or any(not isinstance(x, str) for x in aliases) or len(set(aliases)) != len(aliases):
                     raise ValueError(f"{ref} physical pin {number} {field}: explicit nonempty unique alias list required")
                 if any(not x.strip() or x.strip() == "~" for x in aliases):
@@ -166,6 +172,8 @@ def verify_reference(netlist, contract, base):
         pin_results[ref] = {"status": "FAIL" if failures or basis == "FAIL" else "INSUFFICIENT" if pin_gaps else basis,
                             "source": spec["source"], "locator": spec["locator"], "failures": failures,
                             "coverage_gaps": pin_gaps}
+        if type_notes:
+            pin_results[ref]["type_notes"] = type_notes
     # Every part with three or more pins needs a pin map, apart from connectors and pinless objects.
     pin_counts = {}
     for p in native["pin_nets"]:

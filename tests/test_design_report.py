@@ -1023,6 +1023,30 @@ class PackDesignTests(unittest.TestCase):
         self.assertTrue(any('BOM约束.csv line 3: C7 is not in the design' in e for e in errors), errors)
         self.assertFalse(any(' U1 ' in e or ' R1 ' in e for e in errors), errors)
 
+    def test_design_document_prose_names_the_parts_the_design_has(self):
+        # Matrix R2 (2026-11-04): 供电路径复核.md kept "U801 LM5060" after U801 became an LTC4367.
+        self.d.write('electrical-intent.json', {'components': [
+            {'ref': 'U1', 'mpn': 'LTC4367HMS8#PBF', 'value': 'LTC4367HMS8'},
+            {'ref': 'U2', 'mpn': 'LM5069MM-1/NOPB', 'value': 'LM5069MM-1'},
+            {'ref': 'U3', 'mpn': 'SN74LVC07APWR', 'value': 'SN74LVC07APWR'},
+            {'ref': 'J1', 'mpn': '3915-P04-1ZW4WDBR1', 'value': '3915-P04'}, {'ref': 'R1', 'value': '10k'}]})
+        self.d.closure['intent_sha256'] = sha256(self.d.record / 'electrical-intent.json')
+        self.d.write('design-closure.json', self.d.closure)
+        (self.d.root / '设计资料' / '供电路径复核.md').write_text('\n'.join([
+            '# 复核',
+            'U1 LM5060 的 OV 门限按 Rev D p4 取。',             # line 2: stale part number
+            'U1 LTC4367 关断 ≤16 µs；U2 LM5069-1 限流；U3 LVC07A 缓冲。',  # base, variant and family prefix agree
+            'J1 Pin3/4 接 24 V，R1 10kΩ，C7 ~100uF，CR-R301: 检流，TPS62903 SW 开关节点。',  # not part numbers / not refs
+            '| U1 | LM5060 | 表格行按列核 |',
+            '```', 'U1 LM5060', '```',
+            'U9 TPS259814 已删除。']), encoding='utf-8')   # line 9: not in the design
+        errors, _ = self.run_pack()
+        prose = [e for e in errors if '供电路径复核.md' in e]
+        self.assertEqual(2, len(prose), prose)
+        self.assertTrue(any('供电路径复核.md line 2: text says U1 LM5060, the design has U1 LTC4367HMS8#PBF' in e
+                            for e in prose), prose)
+        self.assertTrue(any('供电路径复核.md line 9: U9 TPS259814 is not in the design' in e for e in prose), prose)
+
     def test_design_document_mpn_and_value_must_match(self):
         self.d.write('electrical-intent.json', {'components': [{'ref': 'U1', 'mpn': 'TPS7A4001DGNR', 'value': 'TPS7A4001DGNR'},
                                                                {'ref': 'R1', 'value': '10k'}]})

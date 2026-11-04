@@ -14,7 +14,7 @@ KiCad types (industrial I/O calibration board, 2026-11-02: 478 of 505 binding er
      at the datasheet.
 
 Nothing is guessed: a pin whose number is not in the table, whose type column is empty or a dash, or whose rows
-disagree stays unfilled and is listed with the reason. `name_note` is never written: where the printed name and
+disagree stays unfilled and is listed with the reason. `name_note` and `type_note` are never written: where the printed name and
 the symbol name differ, the audit asks the designer why (pin_name_differs_from_datasheet). Existing values are
 kept unless --overwrite.
 

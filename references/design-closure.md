@@ -200,6 +200,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       `types` 只能取与它相符的 KiCad 类型（`O`→output/tri_state，`OD`→open_collector，`PWR`→power_in……），否则 `pin_type_contradicts_datasheet`。
       TI 的 `P` 不分输入输出：功能栏写明是器件输出的电源、开关、自举节点按 `PWR_OUT` 记，不为避开 ERC 改记 `PWR`；
       同网的几个这样的脚画成一个叠脚 `[a,b]`（[符号与外围合同](symbol-and-peripheral-contracts.md)），引脚表仍逐物理脚写。
+      手册类型码的读法（TI 的 `P` 按 `PWR_OUT` 记等）写在该脚可选的 `type_note`（非空文字，空记 `schema`），只作说明，不放过类型不符。
       `scripts/fill_pin_maps.py` 从手册引脚表批量填这两项并列出填不上的脚（用法见 [符号与外围合同](symbol-and-peripheral-contracts.md)）。
       没有 `reference-input.json` 记待办 `reference_input_missing`。
     - **未用脚处置**（`pin_dispositions`）：连接器、测试点、机械件以外，每个 `no_connect` 脚写一行
