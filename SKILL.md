@@ -142,7 +142,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   至少两个候选、写明决定性条件和每个候选选中/淘汰的理由。原厂资料在本机知识库
   `~/Documents/知识库/HardwareWiki/raw/`（数据手册、参考设计、应用笔记），用 `scripts/find_parts.py` 检索；
   每类器件干什么、选它看什么参数见 [part-roles.md](references/part-roles.md)，从"按功能找类"定二级类再找候选。
-  库里没有合适候选才外部检索，下载的手册按任务 2.1 的资料规则入库。
+  库里没有合适候选才外部检索，下载的手册按任务 2.1 的资料规则存入工程资料目录。
 - **外部条件不确定时给出方案**：推荐候选依赖未公开的资料或行为（会产生外部资料待办）时，列出 2–3 个选型方案，
   比较各自的外部依赖、代价和优缺点，给出 ASG 的建议，交用户决定。用户定下来之前不进入步骤 ②。
   格式见 [core-part-selection.md](references/core-part-selection.md)。
@@ -168,17 +168,18 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   有可行的就必须采用；确实没有才保留，在 `operating_points` 写明已评估的替代做法和不可行的理由，并挂 external 厂家确认待办。
   有可行替代却保留手册未规定的方式，审计 FAIL，`pack_design.py` 拒绝打包。
 - 原理图阶段 `footprint` 可以留空。必须核实所选订货变体、实际物理引脚号（含EP/Kelvin）及电气/热额定适用条件；PCB封装库制作、焊盘尺寸、孔径、钢网、courtyard、布线与DFM交给PCB阶段，不能作为原理图设计定型的门槛。既有封装候选仅作为未确认的后续环节输入，不用填充率证明电气选型完成。
-- **资料规则**：新下载的数据手册存入工程，同时复制到
-  `~/Documents/知识库/HardwareWiki/raw/Datasheet/<分类>/<子类>/`，文件名为 `Vendor - PartNumber.pdf`
-  （厂商简称按 `raw/Datasheet/VENDORS.yaml`，分类按 `raw/Datasheet/元器件体系/器件统一分类大表.md`，
-  无分类放 `ZZ_其他` 并报告）。raw/ 中已有相同哈希或型号时跳过。只复制原文件，不改工程路径，
-  也不触发知识库入库。`pack_design.py` 核对 `datasheets` 目录里的每个 PDF 都已在库内（同哈希或同文件名），没入库的拒绝打包。
+- **资料规则**（2026-11-04 改）：本项目用到的数据手册存在当前设计工程的资料目录（打包输入 `datasheets`，
+  通常是交付目录 `设计资料/datasheets/`），文件名为 `Vendor - PartNumber.pdf`（厂商简称按知识库 `raw/Datasheet/VENDORS.yaml`）；
+  设计期间不复制进知识库 `~/Documents/知识库/HardwareWiki/raw/`，也不触发知识库入库。
+  `pack_design.py` 核对 `datasheets` 目录里哪些 PDF 还不在知识库（同哈希或同文件名），不拒绝打包，
+  列进 `record/manifest.json` 的 `datasheets_to_file`；设计完成后在汇报里提示用户把它们复制到
+  `raw/Datasheet/<分类>/<子类>/`（分类按 `raw/Datasheet/元器件体系/器件统一分类大表.md`，无分类放 `ZZ_其他`），何时入库由用户定。
   参考设计和评估板手册放 `raw/Designexample/<拓扑>/<板名>/`，
   文件名为 `Vendor - BoardName - Title.pdf`；应用笔记和标准不放 Datasheet 目录。
 
 做完的标志：每个核心器件在外围电路核对表 `reference-input.json` 里有引脚表与外围检查，核对通过或列出资料不足的项；
 引脚表读的是所选订货变体的手册（与设计网表的 `datasheet` 同一份），每个脚照手册写了引脚名和引脚类型（不从符号回抄），符号引脚名与手册不同的写明原因，符号脚类型与手册相符；
-分立器件的符号含义与料号一致；新数据手册已入库（`pack_design.py` 的入库检查通过）。
+分立器件的符号含义与料号一致；新数据手册已存入工程资料目录（打包输入 `datasheets`）。
 
 #### 2.2 设计计算与性能要求
 
@@ -438,7 +439,8 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 报告如实写出各项自检的 PASS/FAIL/INSUFFICIENT 及数量（含零）。历史版本快照、日志、仿真中间文件、
 审查方的结果都不放进交付目录。
 
-做完的标志：`deliver.py` 各步为 DONE、PASS、CONDITIONAL、INCOMPLETE 或 FRESH 且跑到打包，打包 PASS。
+做完的标志：`deliver.py` 各步为 DONE、PASS、CONDITIONAL、INCOMPLETE 或 FRESH 且跑到打包，打包 PASS；
+打包列出的 `datasheets_to_file`（本项目用到、知识库还没有的手册）在汇报里提示用户复制进知识库。
 
 ## 在任务流程中运行
 

@@ -120,5 +120,6 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 表格给出的型号（mpn）和值（value）与设计网表一致——说明文字里提到的位号和描述不在自动检查范围，改版时要人工清理；
 `record/` 只有允许的子目录；没有日志和超大文件；`design-closure.json` 在交付目录内重新审核不出错；
 报告用到的记录没有问题——可读性或几何检查 FAIL 也算问题（画图问题要改图到 PASS），打包失败；
-`datasheets` 目录里的每个 PDF 都已在知识库 `~/Documents/知识库/HardwareWiki/raw/`（同哈希或同文件名，`find_parts.py --file <pdf>` 可查），
-没入库的列出来，按 SKILL.md 任务 2.1 的资料规则入库后重跑。通过后写 `record/manifest.json`。
+通过后写 `record/manifest.json`。`datasheets` 目录里还不在知识库 `~/Documents/知识库/HardwareWiki/raw/` 的 PDF
+（同哈希或同文件名都算在库，`find_parts.py --file <pdf>` 可查）不挡打包，列进 manifest 的 `datasheets_to_file` 并打印出来，
+设计完成后提示用户复制进知识库（SKILL.md 任务 2.1 的资料规则）。

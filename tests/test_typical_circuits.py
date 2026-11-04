@@ -24,7 +24,7 @@ CIRCUITS = typical_circuits.load()
 class PatternFileTests(unittest.TestCase):
     def test_every_pattern_declares_vocabulary_circuit_types(self):
         names = set(guideline_criteria.vocabulary()['vocabulary']['circuit_types'])
-        self.assertEqual(len(CIRCUITS), 31)
+        self.assertEqual(len(CIRCUITS), 40)
         for pid, info in CIRCUITS.items():
             self.assertIsNotNone(info['circuit_types'], '%s 缺 电路类型： 一行（没有对应类型写 无）' % pid)
             self.assertTrue(set(info['circuit_types']) <= names, (pid, info['circuit_types']))
@@ -48,11 +48,14 @@ class PatternFileTests(unittest.TestCase):
                                     '%s#%s 引用 %s，但它既不是全板规则、不按器件类别触发，也不命名典型电路声明的电路类型' % (pid, name, gid))
 
     def test_every_known_pitfall_cites_a_review_item_or_datasheet_page(self):
-        # typical-circuits.md 规则：已知坑每条引用审查待办或手册页（校准板收口 2026-11-02 补写的 12 个；早期文件另行整理）
+        # typical-circuits.md 规则：已知坑每条引用审查待办或手册页（校准板收口 2026-11-02 补写的 12 个、Matrix R2 2026-11-04 补写的 9 个；早期文件另行整理）
         import re
         cite = re.compile(r'review:[^/\s]+/\S+|datasheet:\S.*?#p\d+|test:\S+|user:\d{4}-\d{2}-\d{2}')
         third = ('dc-24v-input-protection', 'ideal-diode-hotswap', 'hold-up', 'cot-buck', 'ldo', 'mcu-min-system', 'swd-debug',
-                 'industrial-di-serializer', 'di-digital-isolation', 'high-side-quad', 'chassis-y-cap', 'status-led')
+                 'industrial-di-serializer', 'di-digital-isolation', 'high-side-quad', 'chassis-y-cap', 'status-led',
+                 'hotswap-latch-powerlimit', 'efuse-aux-branch', 'internal-comp-buck', 'dcs-low-voltage-buck',
+                 'ext-comp-current-mode-buck', 'ovp-cutoff-efuse', 'efuse-bfet-short-latch', 'fault-memory-comparator',
+                 'multi-domain-reset')
         for md in (typical_circuits.CIRCUITS_DIR / (n + '.md') for n in third):
             inside = False
             for line in md.read_text(encoding='utf-8').splitlines():

@@ -13,8 +13,9 @@ copied. Anything else at the top level, history snapshots and design
 evidence that the closure record cites but the folder does not contain all fail the pack.
 Design documents must also agree with the design: every part a 设计资料/ table or assembly file
 names must exist in the electrical intent, with the same MPN and value where the table gives them.
-Every PDF in the datasheets input must already be in the HardwareWiki library (same SHA-256 or
-file name ignoring spaces, hyphens and case); packing lists the ones that are not and refuses until they are filed.
+PDFs in the datasheets input that the HardwareWiki library does not hold yet (same SHA-256 or
+file name ignoring spaces, hyphens and case) do not block packing: they are listed in the manifest's
+``datasheets_to_file`` and printed, so the user can file them into the library after delivery.
 """
 import argparse
 import csv
@@ -235,17 +236,13 @@ def pack(root, inputs, wiki=DEFAULT_WIKI):
             errors.append('input %s does not exist: %s' % (name, path))
         else:
             declared[name] = fingerprint(path)
-    if 'datasheets' in declared:
-        missing = datasheets_not_in_library(inputs['datasheets'], Path(wiki))
-        if missing:
-            errors.append('%d datasheets are not in the library %s yet; file them per SKILL.md task 2.1 '
-                          '(find_parts.py --file <pdf> shows where one already is): %s'
-                          % (len(missing), wiki, ', '.join(missing[:8]) + ('…' if len(missing) > 8 else '')))
+    to_file = datasheets_not_in_library(inputs['datasheets'], Path(wiki)) if 'datasheets' in declared else []
     if errors:
         return errors, None
     packed = {p.relative_to(root).as_posix(): sha256(p) for p in sorted(root.rglob('*'))
               if p.is_file() and p.name != 'manifest.json'}
-    manifest = {'schema_version': 1, 'skill_version': skill_version(), 'inputs': declared, 'packed': packed}
+    manifest = {'schema_version': 1, 'skill_version': skill_version(), 'inputs': declared, 'packed': packed,
+                'datasheets_to_file': to_file}
     (root / 'record' / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
                                                    encoding='utf-8')
     return [], manifest
@@ -258,9 +255,11 @@ def main(argv=None):
                         help='requirements, datasheets, previous version ... (referenced, not copied)')
     parser.add_argument('--wiki', type=Path, default=DEFAULT_WIKI, help='HardwareWiki root (env HARDWARE_WIKI)')
     args = parser.parse_args(argv)
-    errors, _ = pack(args.delivery, dict(item.split('=', 1) for item in args.input), args.wiki)
+    errors, manifest = pack(args.delivery, dict(item.split('=', 1) for item in args.input), args.wiki)
     for e in errors:
         print('ERROR:', e)
+    for pdf in (manifest or {}).get('datasheets_to_file') or []:
+        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, SKILL.md task 2.1)' % args.wiki)
     print('FAIL' if errors else 'PASS')
     return 1 if errors else 0
 

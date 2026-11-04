@@ -230,6 +230,10 @@ def deliver(root, log=print, for_review=False):
         if packed.returncode:
             log('\n'.join((packed.stdout + packed.stderr).strip().splitlines()[-8:]))
         step('打包', 'PASS' if packed.returncode == 0 else 'FAIL')
+        to_file = [line.split(' ', 1)[1] for line in packed.stdout.splitlines() if line.startswith('TO_FILE: ')]
+        if to_file:
+            log('手册待入库（本项目用到、知识库还没有，设计完成后提示用户复制进知识库）：\n' + '\n'.join(to_file))
+            step('手册待入库', '%d 份' % len(to_file))
         if config.get('check_inputs'):
             run(fill(config['check_inputs'], root, work / 'check-inputs'), root, '输入核对')
             step('输入核对', 'PASS')

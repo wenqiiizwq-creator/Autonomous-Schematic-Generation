@@ -8,6 +8,26 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## Matrix 电源与保护 R2：补写 9 个典型电路（第四批） (2026-11-04)
+
+R2 任务 1.3 在 `lessons.json` 登记了 9 个没有典型电路的功能块（knowledge_missing），设计完成后补写：hotswap-latch-powerlimit（LM5069 类锁定热插拔 + 开漏管保持 UVLO）、efuse-aux-branch、internal-comp-buck、dcs-low-voltage-buck、ext-comp-current-mode-buck、ovp-cutoff-efuse、efuse-bfet-short-latch、fault-memory-comparator、multi-domain-reset。每个文件一种实现方案，按器件类写，必算项对应 R2 的 CALC-* 与 calculation-preflight 的类型，落实规则只写实现方案确实做到的 active 准则（环路裕量 G03-007～009、负载跃变 G03-026、保护链协调 G05-020 等 R2 交样机或没算的不引），已知坑 4～8 条全部引手册页（`datasheet:…#p`）或 R2 设计记录发现（`user:2026-11-03`，括注计算编号）。索引加第四批表，测试计数 31→40，已知坑来源检查覆盖新 9 个。
+未决：multi-domain-reset 只能引 G04-010——G03-025（复位门限高于负载最低工作电压，R2 CALC-RESET 做了）的适用类型不含 STARTUP，是否给它加 STARTUP 待用户定（准则库改动）。
+
+- Event: user:2026-11-04 (现在开始补ASG典型电路库缺的 9 个功能块)
+- Causes: knowledge_missing 9
+- Changed: references/typical-circuits/hotswap-latch-powerlimit.md, references/typical-circuits/efuse-aux-branch.md, references/typical-circuits/internal-comp-buck.md, references/typical-circuits/dcs-low-voltage-buck.md, references/typical-circuits/ext-comp-current-mode-buck.md, references/typical-circuits/ovp-cutoff-efuse.md, references/typical-circuits/efuse-bfet-short-latch.md, references/typical-circuits/fault-memory-comparator.md, references/typical-circuits/multi-domain-reset.md, references/typical-circuits.md, tests/test_typical_circuits.py, docs/improvement-ledger.md
+- Gates: pytest tests/test_typical_circuits.py tests/test_find_parts.py 21
+
+## 资料规则：项目手册留在工程资料目录，打包不再拒绝，交付后提示入库 (2026-11-04)
+
+Matrix 电源与保护 R2 打包时因 LTC4359、LTC4367、30KPA、PSMN1R4-100ASE 四份手册不在 HardwareWiki 而 FAIL，设计子任务按"知识库只读"的约束停下来等人。用户定：当前设计项目用到的手册放在当前工程的资料目录就够，设计完成后再提示用户放进 HardwareWiki。任务 2.1 资料规则、2.1/5.3 做完的标志与 delivery-report 照改；`pack_design.py` 不再因手册不在库拒绝打包，改为把不在库的列进 `manifest.json` 的 `datasheets_to_file` 并打印 `TO_FILE:` 行，`deliver.py` 据此多一步"手册待入库 N 份"；核对规则（同哈希或同文件名算在库）不变。
+
+- Event: user:2026-11-04 (这个规则现在先改成，在当前设计项目里面用到的手册，放到当前设计项目的元器件手册里面就可以。在设计完了之后，提示用户要放到hardwarewiki里面)
+- Approved: user:2026-11-04
+- Outline: 381fc9fb3f368e47
+- Changed: SKILL.md, references/delivery-report.md, scripts/pack_design.py, scripts/deliver.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Gates: pytest tests/test_design_report.py tests/test_deliver.py tests/test_delivery_freshness.py 95
+
 ## 工业 I/O 校准板：W-BUCK-RIPPLE 按 LM5160 式 8 复核，典型电路 cot-buck 补纹波注入必算项 (2026-11-03)
 
 校准板 LM5160 Type 3 纹波注入（R206 100 kΩ、C206 1 nF、C207 100 nF）原按参考值取、留了 W-BUCK-RIPPLE。新计算 `CALC-BUCK-RIPPLE` 按手册 SNVSA03E 8.1.1 Table 3 式 8（p16，本版手册在 8.1.1 而非 7.3）与 TI AN-1481（SNVA166A，2013-04 修订，从 ti.com 取得）p8 核：20.4 V、TON 保证下限外推、CA +20 %、分压泄放下 FB 注入斜坡最小约 75 mV ≥ 25 mV，RA·CA 121 µs ≤ 式 8 上限 380 µs，CB×(R204∥R205)×fSW 约 113 ≥ 5，CB/CA 约 67 ≥ 3，输出纹波峰峰上限约 22 mV、5 V 带 4.87～5.11 V 在 ±5 % 内；器件不改，W-BUCK-RIPPLE 关闭。`cot-buck` 必算项加“注入斜坡最小幅值对 25 mV、CB 交流耦合”，已知坑写明方程位置与 CB 取值来源。

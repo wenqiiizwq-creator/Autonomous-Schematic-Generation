@@ -911,7 +911,8 @@ class PackDesignTests(unittest.TestCase):
     def run_pack(self):
         return pack(self.d.root, {'requirements': str(self.inputs)})
 
-    def test_datasheets_input_must_be_in_the_library(self):
+    def test_datasheets_not_in_the_library_are_listed_not_rejected(self):
+        # 2026-11-04 (user): project datasheets stay in the project; filing them into HardwareWiki is prompted after delivery
         wiki = Path(self.d.tmp.name) / 'wiki'
         (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X').mkdir(parents=True)
         (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X' / 'X - XYZ100.pdf').write_bytes(b'%PDF-lib')
@@ -919,14 +920,13 @@ class PackDesignTests(unittest.TestCase):
         sheets.mkdir()
         (sheets / 'X - XYZ100.pdf').write_bytes(b'%PDF-copy')
         (sheets / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
-        errors, _ = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, wiki)
-        self.assertEqual(1, len(errors), errors)
-        self.assertIn('1 datasheets are not in the library', errors[0])
-        self.assertIn('Y - ABC200.pdf', errors[0])
-        (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X' / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
         errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, wiki)
         self.assertEqual([], errors)
+        self.assertEqual(['Y - ABC200.pdf'], manifest['datasheets_to_file'])
         self.assertIn('datasheets', manifest['inputs'])
+        (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X' / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
+        errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, wiki)
+        self.assertEqual(([], []), (errors, manifest['datasheets_to_file']))
 
     def test_failed_drawing_gate_cannot_be_packed(self):
         self.d.write('summary.json', {'status': 'FAIL', 'sheets': ['a', 'b'], 'gates': {

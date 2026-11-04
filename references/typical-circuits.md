@@ -86,3 +86,17 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 | high-side-quad | 四路高边输出 |
 | chassis-y-cap | 机壳单点电容 |
 | status-led | 状态指示 LED |
+
+第四批从 Matrix 综合控制板电源与保护 R2（2026-11-04）提取，已知坑引用手册页或 R2 设计记录发现（`user:2026-11-03`，括注计算编号）：
+
+| 文件 | 功能 |
+|---|---|
+| hotswap-latch-powerlimit | 带锁定与功率限的热插拔控制器（外置 N-MOS，开漏管保持 UVLO） |
+| efuse-aux-branch | eFuse 保护的常供辅助支路（自动重试 + 下游 Buck） |
+| internal-comp-buck | 内补偿峰值电流模式同步 Buck |
+| dcs-low-voltage-buck | DCS-Control 低压 Buck |
+| ext-comp-current-mode-buck | 外部 Type-II 补偿电流模式同步 Buck（混合电容输出） |
+| ovp-cutoff-efuse | 独立过压切断 + 低压 eFuse 输出通道 |
+| efuse-bfet-short-latch | 带 B-FET 反向阻断的 eFuse 通道与短路判据锁存 |
+| fault-memory-comparator | 比较器 + 触发器的故障记忆与清锁 |
+| multi-domain-reset | 多域复位监督与单向开漏组合 |
