@@ -43,7 +43,7 @@ DI 输入 `CALC-DI-PIN-SURGE`：SN65HVS883 无内部钳位、IPx 约 59.7 V，�
 - Event: user:2026-11-03 (这两件事也做了)
 - Causes: rule_missing 2
 - Changed: references/shared/guideline-criteria.json, docs/improvement-ledger.md
-- Gates: pytest GATES_PENDING
+- Gates: pytest 1109（合并 calib-ripple 后在 main 上跑）
 
 ## 共用层同步 1.7.2：词表加 HOLD_UP、SIGNAL_PROTECTION (2026-11-03)
 
