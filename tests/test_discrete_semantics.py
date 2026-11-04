@@ -9,6 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from schematic_layout import discrete_semantics as ds
 from schematic_layout.discrete_semantics import audit_discrete_semantics, mpn_meaning
 
+LIBRARY = Path.home() / 'Documents' / '知识库' / 'HardwareWiki' / 'raw' / 'Datasheet'
+
 SYMBOLS = {
     'Device:D_TVS': ('Bidirectional transient-voltage-suppression diode', ('A1', 'A2')),
     'Device:D_Zener': ('Zener diode', ('K', 'A')),
@@ -97,6 +99,48 @@ class DiscreteSemanticsTests(unittest.TestCase):
         self.assertEqual('FAIL', self.run_case([('Q1', 'Device:Q_PMOS', 'X')], None, fields=declared)['status'])
         self.assertEqual('INSUFFICIENT', self.run_case([('Q1', 'Device:Q_NMOS', 'X')], None,
                                                        fields={'SymbolPolarity': 'N-channel'})['status'])
+
+    def test_unicode_dash_channel_is_read(self):
+        # onsemi BSS123LT1 prints "N\u2212Channel" (U+2212 minus sign)
+        for dash in ('\u2212', '\u2010', '\u2013', '-'):
+            text = 'Power MOSFET 170 mA, 100 V N%sChannel SOT%s23' % (dash, dash)
+            self.assertEqual('PASS', self.run_case([('Q902', 'Device:Q_NMOS', 'BSS123LT1G')], text)['status'], dash)
+            self.assertEqual('FAIL', self.run_case([('Q902', 'Device:Q_PMOS', 'BSS123LT1G')], text)['status'], dash)
+        self.assertEqual('PASS', self.run_case([('Q1', 'Device:Q_PMOS', 'X')], 'p\u2212channel enhancement')['status'])
+
+    def test_family_suffix_legend_decides_mixed_tvs_datasheet(self):
+        mixed = ('Uni-directional\nBi-directional\nUnidirectional only. Bi-directional. Uni-directional\n'
+                 '\f\fPart numbering\nType Code:\nA Uni-Directional (5 % VBR Voltage Tolerance)\n'
+                 'CA Bi-Directional (5% VBR Voltage Tolerance)\n')
+        r = self.run_case([('D201', 'Device:D_TVS', '30KPA28CA')], mixed)
+        self.assertEqual('PASS', r['status'], r)
+        row = r['checked'][0]
+        self.assertEqual((3, 'CA Bi-Directional (5% VBR Voltage Tolerance)'), (row['evidence_page'], row['evidence_text']))
+        self.assertIn('MPN suffix CA', row['evidence'])
+        self.assertEqual('FAIL', self.run_case([('D201', 'Device:D_TVS', '30KPA28A-B')], mixed)['status'])
+        # suffix not in the legend: fall back to the first-pages count, still ambiguous
+        self.assertEqual('INSUFFICIENT', self.run_case([('D201', 'Device:D_TVS', '30KPA28')], mixed)['status'])
+        # a legend that contradicts itself for the suffix decides nothing
+        self.assertIsNone(ds.legend_meaning('C = bidirectional\nC = unidirectional\n', 'XYZ12C'))
+        self.assertIsNone(ds.legend_meaning('For bidirectional types the IR limit is double\n', 'XYZ12For'))
+        self.assertEqual('CA', ds.mpn_suffix('30KPA28CA-B'))
+
+    @unittest.skipUnless(LIBRARY.is_dir() and ds.shutil.which('pdftotext'), 'HardwareWiki or pdftotext not installed')
+    def test_real_datasheets_from_matrix_r2(self):
+        """R2 had 17 INSUFFICIENT false alarms from these two datasheets."""
+        with tempfile.TemporaryDirectory() as tmp:
+            sheet = Path(tmp) / 'page.kicad_sch'
+            sheet.write_text(cache(['Device:D_TVS', 'Device:Q_NMOS']))
+            intent = {'components': [
+                {'ref': 'D201', 'lib_id': 'Device:D_TVS', 'mpn': '30KPA28CA',
+                 'datasheet': str(LIBRARY / '28_保护器件/TVS_ESD保护器件/Littelfuse - 30KPA.pdf')},
+                {'ref': 'Q902', 'lib_id': 'Device:Q_NMOS', 'mpn': 'BSS123LT1G',
+                 'datasheet': str(LIBRARY / '09_功率半导体/MOSFET/onsemi - BSS123LT1.pdf')}]}
+            r = audit_discrete_semantics([sheet], intent, [tmp])
+        self.assertEqual(('PASS', []), (r['status'], r['unresolved']), r)
+        tvs = next(row for row in r['checked'] if row['ref'] == 'D201')
+        self.assertEqual(('bidirectional', 6), (tvs['part'], tvs['evidence_page']))
+        self.assertIn('CA Bi-Directional', tvs['evidence_text'])
 
 
 if __name__ == '__main__':

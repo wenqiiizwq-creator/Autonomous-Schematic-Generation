@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import time
 import uuid
 
 from .native import QUALIFIED_VERSIONS
@@ -21,11 +22,26 @@ from .sexpr import parse, all_nodes, first, value
 def sha(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def now(): return datetime.now(timezone.utc).isoformat()
 
+# Session state, not rendering: every kicad-cli launch writes its own working
+# directory here, so concurrent KiCad jobs in other folders rewrite it constantly.
+VOLATILE={'kicad_common.json':(('system','working_dir'),)}
+
+def config_sha(p):
+    keys=VOLATILE.get(p.name)
+    if not keys: return sha(p)
+    try: data=json.loads(p.read_text())
+    except (ValueError,UnicodeDecodeError): return sha(p)
+    for path in keys:
+        node=data
+        for k in path[:-1]: node=node.get(k,{}) if isinstance(node,dict) else {}
+        if isinstance(node,dict): node.pop(path[-1],None)
+    return hashlib.sha256(json.dumps(data,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
 def configuration_hashes():
     config=os.environ.get('KICAD_CONFIG_HOME')
     dirs=[Path(config)] if config else [Path.home()/'Library/Preferences/kicad/10.0',Path.home()/'.config/kicad/10.0']
     extra=[Path(os.environ[k]) for k in ('FONTCONFIG_FILE','KICAD_FONTCONFIG_FILE') if os.environ.get(k)]
-    return {str(p):sha(p) for p in [*extra,*[p for d in dirs if d.is_dir() for p in d.rglob('*') if p.is_file()]] if p.is_file()}
+    return {str(p):config_sha(p) for p in [*extra,*[p for d in dirs if d.is_dir() for p in d.rglob('*') if p.is_file()]] if p.is_file()}
 
 def producer_hashes():
     return {p.name:sha(p) for p in (Path(__file__),Path(__file__).with_name('native_geometry.py'))}
@@ -79,9 +95,38 @@ def context_files(root,hierarchy):
     if any(p.is_symlink() for p in files): raise ValueError('symlink context input unsupported')
     return {p.relative_to(root.parent).as_posix():p for p in files}
 
+# Another session's KiCad can rewrite the shared renderer configuration while
+# this job exports. Every export of one job must see one configuration, so the
+# whole job is redone from a fresh folder after a wait; only then INSUFFICIENT.
+RETRYABLE=('renderer configuration changed during job','renderer configuration changed between exports',
+           'geometry configuration changed during job')
+RETRY_WAITS=(30,60,90)  # seconds before each retry: doubling from 30 s, capped so the waits total 3 min
+
 def prepare_geometry_context(root, project, cli, workdir, pin_names=True):
-    root=Path(root).resolve(); work=Path(workdir)
+    work=Path(workdir)
     if work.exists(): raise ValueError('native geometry output must be fresh')
+    retries=[]
+    for attempt,wait in enumerate((*RETRY_WAITS,None),1):
+        result=_prepare_once(root,project,cli,work,pin_names)
+        reason=next((g for g in result['gaps'] if any(r in g for r in RETRYABLE)),None)
+        if reason is None: break
+        if wait is None:
+            result['gaps'].append('native geometry context: renderer configuration still changing after %d retries'%len(retries))
+            break
+        seen=[result.get('configuration_sha256',{})]+[c[k] for c in result['commands'] for k in ('config_before','config_after')]
+        changed=sorted({k for c in seen for k in set(c)|set(seen[0]) if c.get(k)!=seen[0].get(k)})
+        retries.append({'attempt':attempt,'reason':reason,'changed_files':changed,'wait_s':wait,'failed_utc':now()})
+        shutil.rmtree(work); time.sleep(wait)
+    result['retries']=retries
+    result['finished_utc']=now()
+    result['export_count']=sum('svg' in c['argv'] for c in result['commands'])
+    (work/'context.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+    result._workdir=str(work.resolve())
+    result._sealed_sha256=result.digest()
+    return result
+
+def _prepare_once(root, project, cli, work, pin_names):
+    root=Path(root).resolve()
     work.mkdir(parents=True); (work/'tmp').mkdir()
     result=FreshGeometryJob({'schema':'native-geometry-context-v1','root':str(root),'project':project or root.stem,
             'status':'INSUFFICIENT','commands':[],'pages':{},'gaps':[], 'started_utc':now()})
@@ -353,11 +398,6 @@ def prepare_geometry_context(root, project, cli, workdir, pin_names=True):
         result['status']='PASS'  # binding; per-object coverage is in pages/gaps
     except (ValueError,OSError,KeyError,IndexError,TypeError,subprocess.SubprocessError) as exc:
         result['gaps'].append('native geometry context: '+str(exc))
-    result['finished_utc']=now()
-    result['export_count']=sum('svg' in c['argv'] for c in result['commands'])
-    (work/'context.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
-    result._workdir=str(work.resolve())
-    result._sealed_sha256=result.digest()
     return result
 
 def hidden(node):

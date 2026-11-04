@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 自动检查误报与脆弱：分立件极性语义认 Unicode 减号与 TVS 后缀说明；几何检查遇配置变化自动重试 (2026-11-04)
+
+Matrix 电源与保护 R2 的 discrete_semantics 17 处 INSUFFICIENT 全是误报：BSS123LT1 手册首页写 `N−Channel`（U+2212），正则只认 ASCII `-`；30KPA 系列手册单向/双向混排，前 3 页计数 4:5 判 ambiguous，而第 6 页订货说明写明 "CA Bi-Directional"。改为手册文字先把 `−‐‒–—` 等统一成 `-`；TVS 先读整本手册的后缀说明（行首代号 + Bi/Uni-directional，代号区分大小写），与料号后缀（30KPA28CA → CA）对上才判定，依据页码与句子写进 `evidence_page`/`evidence_text`，说明里没有该后缀或自相矛盾再回到前 3 页计数。
+几何检查：同一任务的所有导出须见同一份配置，别的会话跑 KiCad 时报 "renderer configuration changed during job/between exports"（收尾时 "geometry configuration changed during job"）整版 INSUFFICIENT。改为删掉本次输出、按 30/60/90 s 等待后整任务重做（只重做单次导出不行，已做的导出用的是旧配置），最多 3 次，原因、变了的配置文件、等待写进 `context.json` 的 `retries` 和 verify 几何门禁的 `native_retries`，仍变才 INSUFFICIENT。查原因时发现每次启动 kicad-cli 都把 `kicad_common.json` 的 `system.working_dir` 改成自己的工作目录，多个工作树并发跑测试时它一直在变（第一次 R2 复跑 4 次全因此失败），这个键不影响渲染，算配置哈希时剔除。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_not_enforced 2
+- Changed: scripts/schematic_layout/discrete_semantics.py, scripts/schematic_layout/native_geometry_context.py, scripts/verify_schematic.py, tests/test_discrete_semantics.py, tests/test_native_geometry_context.py, references/symbol-and-peripheral-contracts.md, references/native-geometry.md, docs/improvement-ledger.md
+- Gates: pytest 1114 passed, 2 failed：test_guideline_closure 的 SR 共用层比对（SR 已是准则库 1.7.4，本分支从 2584064 分出仍是 1.7.3，与本改动无关，合并 main 后消失）、test_native_circle_controls 并发 flake（单独重跑 7 passed）；R2 副本 verify_schematic：discrete_semantics PASS、unresolved 0（checked 34），geometry PASS（并发下重试 1 次）
+
 ## Matrix 电源与保护 R2：补写 9 个典型电路（第四批） (2026-11-04)
 
 R2 任务 1.3 在 `lessons.json` 登记了 9 个没有典型电路的功能块（knowledge_missing），设计完成后补写：hotswap-latch-powerlimit（LM5069 类锁定热插拔 + 开漏管保持 UVLO）、efuse-aux-branch、internal-comp-buck、dcs-low-voltage-buck、ext-comp-current-mode-buck、ovp-cutoff-efuse、efuse-bfet-short-latch、fault-memory-comparator、multi-domain-reset。每个文件一种实现方案，按器件类写，必算项对应 R2 的 CALC-* 与 calculation-preflight 的类型，落实规则只写实现方案确实做到的 active 准则（环路裕量 G03-007～009、负载跃变 G03-026、保护链协调 G05-020 等 R2 交样机或没算的不引），已知坑 4～8 条全部引手册页（`datasheet:…#p`）或 R2 设计记录发现（`user:2026-11-03`，括注计算编号）。索引加第四批表，测试计数 31→40，已知坑来源检查覆盖新 9 个。
