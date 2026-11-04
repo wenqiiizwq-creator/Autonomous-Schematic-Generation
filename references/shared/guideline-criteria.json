@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.7.3",
+  "library_version": "1.7.4",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -70,11 +70,11 @@
   "specs": {
     "G01": "1.5",
     "G02": "1.3",
-    "G03": "1.6",
+    "G03": "1.7",
     "G04": "1.3",
     "G05": "1.3"
   },
-  "content_sha256": "ea42a7013ece79fbb2d02827193211de420dfd478d2c4f89b09b0c9dd9122cdf",
+  "content_sha256": "17f23094a76c7e62219eaec782d6d15b7891ae59bd09c313051dd0439dec3d5f",
   "criteria": [
     {
       "id": "G01-001",
@@ -4918,13 +4918,14 @@
       "id": "G03-025",
       "title": "复位门限高于各负载最低工作电压，掉电先复位",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
         "circuit_types": [
           "POWER_CONVERTER",
-          "POWER_PROTECTION"
+          "POWER_PROTECTION",
+          "STARTUP"
         ],
         "text": "有复位监控或 PG 复位的数字负载"
       },

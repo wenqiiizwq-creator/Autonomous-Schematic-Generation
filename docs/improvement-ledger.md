@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.7.4：G03-025 加 STARTUP；chassis-y-cap 去掉 ISOLATION；电感类编号 (2026-11-04)
+
+R2 绘图暴露的三处知识层问题：(1) G03-025（复位门限高于负载最低工作电压）适用类型不含 STARTUP，multi-domain-reset 做了核算却不能引用——HardwareWiki G03 登记表 1.6→1.7，G03-025 条目 1.0→1.1 加 STARTUP，共用层重建 1.7.4（353 条，指纹 d4c79a47c214 → ea8f1a727df3），SR 同字节；multi-domain-reset 落实规则加 G03-025。(2) chassis-y-cap 声明 ISOLATION，无隔离板引用它会把隔离器、RS-485 等 18 条准则拉进适用范围（R2 lessons knowledge_wrong）——电路类型改 无、落实规则改 无（G04-040 由隔离接口的典型电路落实），已知坑记录原因。(3) cot-buck、dc-24v-input-protection 的"24 功率电感"按 part-roles.md 改为"21 功率电感"。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_missing 1, knowledge_wrong 2
+- Changed: references/shared/guideline-criteria.json, references/typical-circuits/multi-domain-reset.md, references/typical-circuits/chassis-y-cap.md, references/typical-circuits/cot-buck.md, references/typical-circuits/dc-24v-input-protection.md, docs/improvement-ledger.md
+- Gates: pytest tests/test_typical_circuits.py tests/test_find_parts.py tests/test_guideline_closure.py tests/test_calibration_board_issues.py tests/test_design_closure.py 139；全量在合并修改分支后跑
+
 ## Matrix 电源与保护 R2：补写 9 个典型电路（第四批） (2026-11-04)
 
 R2 任务 1.3 在 `lessons.json` 登记了 9 个没有典型电路的功能块（knowledge_missing），设计完成后补写：hotswap-latch-powerlimit（LM5069 类锁定热插拔 + 开漏管保持 UVLO）、efuse-aux-branch、internal-comp-buck、dcs-low-voltage-buck、ext-comp-current-mode-buck、ovp-cutoff-efuse、efuse-bfet-short-latch、fault-memory-comparator、multi-domain-reset。每个文件一种实现方案，按器件类写，必算项对应 R2 的 CALC-* 与 calculation-preflight 的类型，落实规则只写实现方案确实做到的 active 准则（环路裕量 G03-007～009、负载跃变 G03-026、保护链协调 G05-020 等 R2 交样机或没算的不引），已知坑 4～8 条全部引手册页（`datasheet:…#p`）或 R2 设计记录发现（`user:2026-11-03`，括注计算编号）。索引加第四批表，测试计数 31→40，已知坑来源检查覆盖新 9 个。

@@ -4,7 +4,7 @@
 
 适用范围：功能绝缘 ≤60 V DC，耐压 1500 Vrms 60 s 的工业板。
 
-电路类型：ISOLATION
+电路类型：无（机壳接法不是接口类型；板上有隔离域时隔离本身由 isolated-rs485、di-digital-isolation 等典型电路声明 ISOLATION）
 
 ## 实现方案
 
@@ -17,8 +17,9 @@
   - 电容耐压覆盖隔离耐压试验与工作电压
   - 共模浪涌电荷在各端口 TVS 能承受的范围（限电荷）
   - 隔离两侧的电容不经机壳形成跨隔离带的直接通路
-- **落实规则**：G04-040
+- **落实规则**：无（G04-040 按 ISOLATION 触发，由隔离接口的典型电路落实；本电路声明 ISOLATION 会把隔离器、RS-485 的 18 条准则拉进无隔离板的适用范围）
 - **已知坑**：
+  - 无隔离的 24 V 板引用本电路时不要声明 ISOLATION，否则审计把隔离器、RS-485 等 18 条无关准则拉进适用范围（user:2026-11-03（Matrix R2 lessons knowledge_wrong））
   - 电容的器件性能要求同时写工作电压与耐压两项，只写耐压会被器件性能核对拒收（test:ASG-calibration/industrial-io-rs485-can#27）
 - **来源**：
   - evals/calibration_boards/industrial-io-rs485-can/requirements.md（澄清 C10：功能绝缘、≥1500 Vrms、屏蔽经电容单点接现场地）
