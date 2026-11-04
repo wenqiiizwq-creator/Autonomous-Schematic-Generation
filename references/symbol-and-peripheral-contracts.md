@@ -96,7 +96,7 @@ python3 scripts/audit_symbol_integrity.py path/to/board.kicad_sch \
 | `scope.core_refs`、`scope.feature_ids` | 要覆盖的独立清单。空范围被拒绝；缺少映射/功能为 INSUFFICIENT。要与页面清单和需求对照：工具发现不了每项必需的功能。 |
 | `sources` | ID 映射到 `path`、SHA256、一手 `url`、`document`、`revision`。路径相对于核对表解析，也可以是绝对路径。字节改变 FAIL；文件缺失 INSUFFICIENT。来源的权威性和解读仍需复核。 |
 | `pin_maps` | 位号映射到确切的 `identity`（`value`、`mpn`、`footprint`、`lib_id`）、来源/定位，以及完整编号的 `pins` 及显式的 `names`/`types` 别名列表。原理图阶段 `footprint` 可以是空字符串，表示明确未分配；它仍须与 KiCad 字段完全一致，从不作为已分配封装的通配。其他身份字段不得为空。优先用非空的 KiCad MPN 字段，否则用确切的 KiCad Value；通用 Value 不能代替 MPN。每个脚可写 `datasheet_name`（手册印的引脚名）和 `datasheet_type`；`binding_version: 1` 时两项都必须写，`datasheet_name` 与符号引脚名
-（去掉 `~{}` 上划线和标点后）不同时要在 `name_note` 写明为什么是同一个脚（`pin_name_differs_from_datasheet`），这样引脚表是照手册独立写出的，不是从符号抄的。`datasheet_type`：照手册引脚表写这个脚是什么（`I`/`O`/`IO`/`OD`/`OS`/`PWR`/`PWR_OUT`/`GND`/`A`/`NC`）；`design-closure.json` 写 `binding_version: 1` 时每个脚必须写，`types` 要与它相符（输出不能写成 input，开漏写 open_collector），引脚表的来源文件要与设计网表该器件的 `datasheet` 是同一份手册（86 块板：HWSON 按 SO8 接、输出声明为输入、换料号后留着旧手册）。 |
+（去掉 `~{}` 上划线和标点后）不同时要在 `name_note` 写明为什么是同一个脚（`pin_name_differs_from_datasheet`），这样引脚表是照手册独立写出的，不是从符号抄的。`datasheet_type`：照手册引脚表写这个脚是什么（`I`/`O`/`IO`/`OD`/`OS`/`PWR`/`PWR_OUT`/`GND`/`A`/`NC`）；`design-closure.json` 写 `binding_version: 1` 时每个脚必须写，`types` 要与它相符（输出不能写成 input，开漏写 open_collector），引脚表的来源文件要与设计网表该器件的 `datasheet` 是同一份手册（86 块板：HWSON 按 SO8 接、输出声明为输入、换料号后留着旧手册）。可选 `type_note`（非空文字）写手册类型码怎么读成 `datasheet_type`、或符号类型为何与手册印的码不同（如 TI 的 `P` 功能栏写输出开关节点，按 `PWR_OUT` 记；Matrix R2 这些读法只能写在 `设计资料/外围电路核对表.md`）；核对原样带进 `reference-contract.json` 该器件的 `type_notes`，审计只查它非空，不因它放过 `pin_type_contradicts_datasheet`。 |
 | `checks` | 唯一的 `id`、`kind`、来源/定位。`component` 断言确切的值/封装/库/DNP。`same_net` 和 `distinct_nets` 对照 KiCad 分区断言至少两个不同的 `位号.引脚` 端点。 |
 | `features` | 唯一 ID、边界、来源/定位和非空的 stages。每个 stage 需要 ID、角色、真实已装配的位号和检查 ID 列表；只靠引脚表核对的 stage（MCU、驱动页）可以写空的 `checks`，这时每个位号都要有引脚表，stage 取这些引脚表的结果。必需的位号缺失或为 DNP 时 FAIL。还要复核列出的位号和检查是否真的实现了所写的角色。 |
 
@@ -111,8 +111,8 @@ python3 scripts/fill_pin_maps.py <交付目录> [--pages U301=28-34] [--write] [
 按厂家类型码对照（`I`→`I`，`O`→`O`，`I/O`/`B`/`BUS I/O`→`IO`，`Output/Open drain`→`OD`，`P`/`S`/`POWER`/`Supply`→`PWR`，`G`/`GND`/`Ground`→`GND`）
 写 `datasheet_name`（照印，去掉脚注号）、`datasheet_type` 和 `datasheet_page`，并把引脚表的 `source`/`locator` 改指这份手册。
 不猜：表里没有的脚、类型列为空或“—”的脚（名字为 NC 的除外）、几行说法不一的脚都不填，按原因列出（`not_in_table`、`type_not_given`、`rows_disagree`）；
-引脚图里的引脚名只补名字，不给类型；不写 `name_note`，手册名与符号名不同由审计提出、设计者写理由或改符号。
-手册类型码比审计词表粗时如实照填：TI 的 `P` 不分输入输出，开关节点、自举脚会因此与符号的 `power_out`/`passive` 冲突，这些冲突由人判，不改词表放过。
+引脚图里的引脚名只补名字，不给类型；不写 `name_note`、`type_note`，手册名与符号名不同由审计提出、设计者写理由或改符号。
+手册类型码比审计词表粗时如实照填：TI 的 `P` 不分输入输出，开关节点、自举脚会因此与符号的 `power_out`/`passive` 冲突，这些冲突由人判，不改词表放过；判定的读法写进该脚的 `type_note`。
 分立器件（MOSFET、TVS）多数只有封装图没有引脚表，填不上的照单补写。默认只预览，`--write` 才写回；已有值保留，`--overwrite` 才替换。
 
 KiCad 的引脚名/类型来自器件确切的 `libsource` → 唯一的 `libparts/libpart` → 唯一的物理引脚号。节点的 `pinfunction` 可能是

@@ -77,18 +77,72 @@ def _refs(value):
     return [r for item in items if isinstance(item, str) for r in re.split(r'[,;\s]+', item.strip()) if r]
 
 
-def document_refs(root, intent):
-    """Parts named in 设计资料/ tables and assembly files that the design does not have, or describes differently.
+# Prose "<ref> <part number>" in 设计资料/*.md (Matrix R2, 2026-11-04: 供电路径复核.md kept "U801 LM5060" after U801
+# became an LTC4367). The ref is a reference-like word not glued to a longer name (CR-R301, TPS62903 are not refs);
+# the next word looks like a part number: a digit and an uppercase letter, four characters or more, not a value with
+# a unit (100uF, 4.7UH) and not a capitalised word with a number (Pin3/4, Rev2).
+PROSE_PART = re.compile(r'(?<![A-Za-z0-9_\-./#])([A-Z]{1,3})(\d{1,4})(?![A-Za-z0-9_\-])\s+([A-Za-z0-9][A-Za-z0-9\-#/.+]*)')
+VALUE_WITH_UNIT = re.compile(r'\d+(?:\.\d+)?[A-Za-zµμΩ]*')
 
-    Covers CSV tables with a reference column (and their mpn/value columns) and JSON values under
-    ref/refs/fit/dnp keys. Free text is not parsed: a stale part mentioned only in prose is not found.
+
+def _part_like(token):
+    token = token.rstrip('.')
+    return (len(token) >= 4 and re.search(r'\d', token) and re.search(r'[A-Z]', token)
+            and not VALUE_WITH_UNIT.fullmatch(token) and not re.match(r'[A-Z][a-z]', token))
+
+
+def _same_part(written, mpn):
+    """The written part number names the design's mpn: ignoring case, hyphens and other punctuation, it is a
+    piece of the mpn or the mpn of it, or its base (letters and the first run of digits: LM5069 of LM5069-1,
+    LVC07 of LVC07A) is; package/variant suffixes and family prefixes such as SN74 do not matter."""
+    flat = lambda s: re.sub(r'[^0-9A-Z]', '', s.upper())
+    w, m = flat(written), flat(mpn)
+    base = re.match(r'[A-Z]*\d+', written.upper())
+    base = flat(base.group(0)) if base and re.search(r'[A-Z]', base.group(0)) and len(base.group(0)) >= 4 else w
+    return bool(w and m) and (w in m or m in w or base in m)
+
+
+def prose_parts(path, rel, parts):
+    """"<ref> <part number>" in a Markdown file's prose against the design netlist. Table rows and code blocks
+    are skipped (tables are read by their columns); a ref whose letters no part of the design uses (LM, TPS) is
+    a part name, not a ref."""
+    prefixes = {re.match(r'[A-Z]*', r).group(0) for r in parts if isinstance(r, str)}
+    errors, fenced = [], False
+    for number, line in enumerate(path.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
+        if line.lstrip().startswith(('```', '~~~')):
+            fenced = not fenced
+            continue
+        if fenced or line.lstrip().startswith('|'):
+            continue
+        for match in PROSE_PART.finditer(line):
+            letters, digits, token = match.groups()
+            ref, token = letters + digits, token.rstrip('.')
+            if letters not in prefixes or not _part_like(token):
+                continue
+            part = parts.get(ref)
+            if part is None:
+                errors.append('%s line %d: %s %s is not in the design' % (rel, number, ref, token))
+                continue
+            mpn = str(part.get('mpn') or part.get('value') or '').strip()
+            if mpn and not _same_part(token, mpn):
+                errors.append('%s line %d: text says %s %s, the design has %s %s' % (rel, number, ref, token, ref, mpn))
+    return errors
+
+
+def document_refs(root, intent):
+    """Parts named in 设计资料/ tables, assembly files and prose that the design does not have, or describes differently.
+
+    Covers CSV tables with a reference column (and their mpn/value columns), JSON values under
+    ref/refs/fit/dnp keys, and "<ref> <part number>" in Markdown prose (prose_parts). Other prose is not parsed.
     """
     parts = {c.get('ref'): c for c in intent.get('components', []) if isinstance(c, dict)}
     errors = []
     docs = root / '设计资料'
     for path in sorted(docs.rglob('*')) if docs.is_dir() else []:
         rel = path.relative_to(root).as_posix()
-        if path.suffix.lower() == '.csv':
+        if path.suffix.lower() == '.md':
+            errors += prose_parts(path, rel, parts)
+        elif path.suffix.lower() == '.csv':
             with open(path, encoding='utf-8-sig', newline='') as f:
                 rows = csv.DictReader(f)
                 columns = {c.strip().lower(): c for c in rows.fieldnames or [] if c}

@@ -183,6 +183,28 @@ class BindingTests(unittest.TestCase):
             pin['datasheet_type'] = 'A'
         self.assertEqual('PASS', verify_reference(base / 'netlist.xml', contract, base)['status'])
 
+    def test_the_reference_contract_carries_the_type_note_into_its_report(self):
+        # Matrix R2 (2026-11-04): TI's P read as PWR_OUT could only be written in 外围电路核对表.md.
+        base = Path(self.tmp.name) / 'rc'
+        shutil.copytree(ROOT / 'tests/fixtures/reference_contract', base)
+        contract = json.loads((base / 'contract.json').read_text())
+        number, pin = next(iter(contract['pin_maps']['U1']['pins'].items()))
+        pin['type_note'] = '手册类型列印 P，功能栏写器件输出的开关节点，按 PWR_OUT 记'
+        result = verify_reference(base / 'netlist.xml', contract, base)
+        self.assertEqual('PASS', result['status'])
+        self.assertEqual({number: pin['type_note']}, result['pin_maps']['U1']['type_notes'])
+        pin['type_note'] = ' '
+        with self.assertRaises(ValueError):
+            verify_reference(base / 'netlist.xml', contract, base)
+
+    def test_the_audit_accepts_a_type_note_but_it_waives_nothing(self):
+        self.pins['5']['type_note'] = '手册印 P，功能栏写输出，按 PWR_OUT 记'
+        self.assertNotIn('schema', self.codes())
+        self.pins['5']['datasheet_type'] = 'I'
+        self.assertIn('pin_type_contradicts_datasheet', self.codes())
+        self.pins['5']['type_note'] = ''
+        self.assertIn('schema', self.codes())
+
     # --- unused pins (NET-A07 eegfrontier DAISY_IN, nixie SN74HC595; NET-A01 rs485-spy CC on a one-node net) ---
     def test_an_open_pin_needs_its_datasheet_disposition(self):
         self.record['pin_dispositions'] = []

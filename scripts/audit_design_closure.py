@@ -1010,6 +1010,10 @@ def audit_pin_maps(intent, root, bases, error, need):
             elif pin_name(printed) not in {pin_name(n) for n in pin.get('names') or []} and not text(pin.get('name_note')):
                 error('pin_name_differs_from_datasheet', '%s.%s：手册脚名 %s，符号脚名 %s；改符号，或在 name_note 写两者为何是同一个脚'
                       % (ref, number, printed, '/'.join(pin.get('names') or [])))
+            # type_note (Matrix R2, 2026-11-04): how the vendor code was read (TI P → PWR_OUT) or why the symbol type
+            # differs; an explanation only — it does not waive pin_type_contradicts_datasheet.
+            if 'type_note' in pin and not text(pin.get('type_note')):
+                error('schema', '%s.%s：type_note 写手册类型码的读法或与符号类型不同的原因（非空文字）' % (ref, number))
             declared = pin.get('datasheet_type')
             if declared is None:
                 error('pin_map_without_datasheet_type', '%s.%s：照手册引脚表写 datasheet_type（%s）'
