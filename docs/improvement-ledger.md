@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 准则库 1.8.0：G05-098 外部锁存判据在正常动作下不成立、G03-017 加热插入负载；两个典型电路补 SR 审查坑 (2026-11-04)
+
+SR 首审 Matrix 电源与保护 R2 发现两处 P1：通道命令关断时 EN_DLY 只随 SHDN 放电、PG 先变低，短路锁被误置（F-001）；已开通道热插入电容负载 PG 跌破门限、充回时间远长于消抖，锁被误置（F-002）。G05-060/063、G03-017 都没问到。用户 2026-11-04 批准写入：新增 G05-098"外部锁存判据在正常动作与允许负载下不成立"（POWER_PROTECTION，method；来源 TPS2663 SLVSE94G V(SHUTF)/tPGOODF/图 8-23，ECSS 4.2.1.1 n、5.7.4 f 方法延伸），G03-017 1.1→1.2 加"已开通道热插入允许负载"工况与输入；登记文件 G03 1.8、G05 1.4，共用层重建 1.8.0（354 条，指纹 ea8f1a727df3 → 9208f5369375），SR 同字节。典型电路 efuse-bfet-short-latch、fault-memory-comparator 落实规则加 G05-098，已知坑写 review:matrix/power-protection-r2/F-001、F-002。
+
+- Event: user:2026-11-04 (写入)
+- Causes: rule_missing 2, knowledge_missing 2
+- Changed: references/shared/guideline-criteria.json, references/typical-circuits/efuse-bfet-short-latch.md, references/typical-circuits/fault-memory-comparator.md, docs/improvement-ledger.md
+- Gates: pytest tests/test_typical_circuits.py tests/test_guideline_closure.py 24；合并后全量 1145（befe983）
+
 ## Matrix R2 回看：离板网络声明、单器件供电复核、应力超幅挂待办 (2026-11-04)
 
 R2 跑完后找到的三处设计记录缺口。
