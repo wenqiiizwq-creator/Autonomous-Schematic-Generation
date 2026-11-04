@@ -10,6 +10,8 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from schematic_layout.scratch import scratch_base
 from schematic_layout.native import find_cli
+from unittest import mock
+from schematic_layout import native_geometry_context as ngc
 from schematic_layout.native_geometry_context import prepare_geometry_context,page_context_from_job,sha,spans,hidden,visible_name
 from schematic_layout.sexpr import form as f,Atom as A,dump,parse,first,all_nodes
 from schematic_layout.scene import read_scene
@@ -141,3 +143,67 @@ class RenderReviewItemTests(unittest.TestCase):
         self.assertEqual('PASS',report['status'],report)
         self.assertEqual(['pin-number:x: physical pin numbers need native render review'],report['coverage']['render_review_items'])
         self.assertEqual([],report['coverage']['gaps'])
+
+class ConfigurationHashTests(unittest.TestCase):
+    def test_working_dir_written_by_every_kicad_launch_is_not_configuration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp)/'kicad_common.json'
+            def h(data):
+                p.write_text(json.dumps(data))
+                with mock.patch.dict(os.environ,{'KICAD_CONFIG_HOME':tmp}):
+                    return ngc.configuration_hashes()[str(p)]
+            base=h({'system':{'working_dir':'/a','text_editor':'x'},'graphics':{'canvas_type':1}})
+            self.assertEqual(base,h({'graphics':{'canvas_type':1},'system':{'text_editor':'x','working_dir':'/b'}}))
+            self.assertNotEqual(base,h({'system':{'working_dir':'/a','text_editor':'x'},'graphics':{'canvas_type':2}}))
+
+class ConcurrentConfigurationRetryTests(unittest.TestCase):
+    """Another session's KiCad rewriting the renderer configuration mid-job is waited out, not reported."""
+    @classmethod
+    def setUpClass(cls):
+        cls.cli=find_cli()
+        if not cls.cli: raise unittest.SkipTest('KiCad native tool missing')
+        tempbase=scratch_base()/'native-geometry-tests';tempbase.mkdir(parents=True,exist_ok=True)
+        cls.temp=tempfile.TemporaryDirectory(prefix='asg-native-retry-',dir=tempbase);cls.base=Path(cls.temp.name)
+    @classmethod
+    def tearDownClass(cls): cls.temp.cleanup()
+    def run_with(self,hashes,name):
+        folder=self.base/name;folder.mkdir();a,b=fixture('clear')
+        (folder/'native.kicad_sch').write_text(dump(a)+'\n');(folder/'child.kicad_sch').write_text(dump(b)+'\n')
+        (folder/'native.kicad_pro').write_text(json.dumps({'meta':{'filename':'native.kicad_pro','version':1}}))
+        waits=[]
+        with mock.patch.object(ngc,'configuration_hashes',side_effect=hashes),mock.patch.object(ngc.time,'sleep',side_effect=waits.append):
+            ctx=prepare_geometry_context(folder/'native.kicad_sch',None,self.cli,folder/'context')
+            page=page_context_from_job(ctx,folder/'native.kicad_sch') if ctx['status']=='PASS' else None
+        return ctx,page,waits,folder
+    def test_change_during_first_attempt_is_retried_and_recorded(self):
+        calls=[0]
+        def hashes():
+            calls[0]+=1  # the 3rd read (after the version command) sees another session's rewrite
+            return {'kicad_common.json':'old' if calls[0]<=2 else 'new'}
+        ctx,page,waits,folder=self.run_with(hashes,'once')
+        self.assertEqual('PASS',ctx['status'],ctx['gaps'])
+        self.assertIsNotNone(page)
+        self.assertEqual([30],waits)
+        self.assertEqual(1,len(ctx['retries']))
+        self.assertIn('renderer configuration changed during job',ctx['retries'][0]['reason'])
+        self.assertEqual(['kicad_common.json'],ctx['retries'][0]['changed_files'])
+        self.assertEqual(ctx['retries'],json.loads((folder/'context/context.json').read_text())['retries'])
+    def test_change_between_exports_is_retried(self):
+        calls=[0]
+        def hashes():
+            calls[0]+=1  # changes between commands, never inside one
+            return {'kicad_common.json':'old' if calls[0]<=3 else 'new'}
+        ctx,page,waits,_=self.run_with(hashes,'between')
+        self.assertEqual('PASS',ctx['status'],ctx['gaps'])
+        self.assertEqual([30],waits)
+        self.assertTrue(any(r in ctx['retries'][0]['reason'] for r in ('between exports','geometry configuration changed')),ctx['retries'])
+    def test_configuration_that_keeps_changing_stays_insufficient(self):
+        calls=[0]
+        def hashes():
+            calls[0]+=1
+            return {'kicad_common.json':str(calls[0])}
+        ctx,page,waits,_=self.run_with(hashes,'always')
+        self.assertEqual('INSUFFICIENT',ctx['status'])
+        self.assertEqual([30,60,90],waits)
+        self.assertEqual(3,len(ctx['retries']))
+        self.assertIn('still changing after 3 retries',ctx['gaps'][-1])

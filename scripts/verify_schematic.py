@@ -218,6 +218,9 @@ def main():
     if review:
         # Pin text the native channel cannot qualify; the render review must cover it.
         gates["geometry"]["render_review_items"] = review
+    if native is not None and native.get("retries"):
+        # Renderer configuration changed under the job (another KiCad session); it was redone.
+        gates["geometry"]["native_retries"] = native["retries"]
 
     if xml.is_file():
         try:

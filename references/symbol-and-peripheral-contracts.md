@@ -37,7 +37,9 @@ KiCad `Device:D_TVS` **只表示双向**（描述为 "Bidirectional transient-vo
 单向 TVS，如 PESD5V0L1UA（1=K, 2=A）或 SMBJ24A（"A" 后缀；"CA" 是双向），需要单向符号：`Diode` 库中带 K/A 引脚的 TVS
 （如 SMAJxxA 系列，先核对 1=K 2=A）或项目符号。在工程脚本里不要只按器件类别名选符号。
 `verify_schematic.py` 运行 `discrete_semantics`：它把每个放置符号的缓存描述/引脚名与数据手册前几页及标准 TVS MPN 后缀比较，
-有矛盾就 FAIL。没有描述的项目符号不分类，所以自定义分立符号要写一段说明极性/沟道/类型的 `Description`。
+有矛盾就 FAIL。手册里的 `−`（U+2212）、`‐`、`–` 等按 `-` 读，`N−Channel` 与 `N-channel` 等同。单向/双向混排的 TVS 系列手册
+（如 Littelfuse 30KPA 订货说明 "CA Bi-Directional"、"A Uni-Directional"）先按手册里的后缀说明对料号后缀判定，
+依据的页码与句子写进 `evidence_page`/`evidence_text`；说明里查不到该后缀或自相矛盾，才按前几页计数，仍分不出记 ambiguous。没有描述的项目符号不分类，所以自定义分立符号要写一段说明极性/沟道/类型的 `Description`。
 
 分配了封装时，核对封装的焊盘编号集合，再独立核对厂家的封装图、间距、裸焊盘、焊盘尺寸和方向。焊盘编号集合一致不能证明机械封装正确。
 原理图阶段封装可以留空；确切 MPN 的引脚映射仍然必需。缺少 MPN、未解析的库路径或拿不到封装图都保持为明确的缺口。
