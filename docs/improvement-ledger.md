@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## IC 角色线索对齐 SR p24：protectioncontroller、surgestopper 归负载开关 (2026-11-04)
+
+SR 修 Matrix R2 首审误报 1.11（LTC4367 被当线性稳压器问压差）时给 load_switch 角色加了两条手册标题线索；ASG `part_classes.IC_ROLE_CUES` 同步，保持两边分类线索对等（`tests/test_part_classes.py` 的包含关系测试）。
+
+- Event: user:2026-11-04 (你用新修改的SR技能跑一遍修改好的R2…总结问题，发现SR技能的不足)
+- Causes: knowledge_wrong 1
+- Changed: scripts/schematic_layout/part_classes.py, docs/improvement-ledger.md
+- Gates: pytest tests/test_part_classes.py 30
+
 ## 准则库 1.8.0：G05-098 外部锁存判据在正常动作下不成立、G03-017 加热插入负载；两个典型电路补 SR 审查坑 (2026-11-04)
 
 SR 首审 Matrix 电源与保护 R2 发现两处 P1：通道命令关断时 EN_DLY 只随 SHDN 放电、PG 先变低，短路锁被误置（F-001）；已开通道热插入电容负载 PG 跌破门限、充回时间远长于消抖，锁被误置（F-002）。G05-060/063、G03-017 都没问到。用户 2026-11-04 批准写入：新增 G05-098"外部锁存判据在正常动作与允许负载下不成立"（POWER_PROTECTION，method；来源 TPS2663 SLVSE94G V(SHUTF)/tPGOODF/图 8-23，ECSS 4.2.1.1 n、5.7.4 f 方法延伸），G03-017 1.1→1.2 加"已开通道热插入允许负载"工况与输入；登记文件 G03 1.8、G05 1.4，共用层重建 1.8.0（354 条，指纹 ea8f1a727df3 → 9208f5369375），SR 同字节。典型电路 efuse-bfet-short-latch、fault-memory-comparator 落实规则加 G05-098，已知坑写 review:matrix/power-protection-r2/F-001、F-002。

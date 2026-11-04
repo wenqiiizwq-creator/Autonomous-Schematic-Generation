@@ -370,6 +370,7 @@ IC_ROLE_CUES = (
     'digitalisolator', 'isolatedgatedriver', 'isolator',
     'loadswitch', 'hotswap', 'efuse', 'idealdiode', 'powerdistributionswitch', 'currentlimitswitch', 'highsideswitch',
     'highsidesmartpower',   # SR boards-merge6 F18: high-side smart power switch (IPS4140HQ) is a load switch
+    'protectioncontroller', 'surgestopper',   # SR p24 (Matrix R2 1.11): LTC4367 "... Protection Controller" drives a series FET, not an LDO
     'batterycharger', 'chargecontroller', 'chargemanagement', 'switchingcharger', 'linearcharger', 'chargeric',
     'analogtodigital', 'digitaltoanalog', 'bitadc', 'bitdac', 'channeladc', 'channeldac', 'audiodac', 'audioadc',
     'sigmadeltaadc', 'deltasigmaadc',
