@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 主流程加两处固定暂停点：1.4 选型确认、2.3 与已确认决定矛盾时停下 (2026-11-04)
+
+Matrix R2 绘图时子任务把澄清与选型确认全推迟到报告里，①②里何时该停下来问设计师只靠任务书临时定。1.1 的需求澄清暂停点原本就有；补 1.4"选型确认（固定暂停点）"——选型清单汇总一次确认、用户 `decision` 前不进步骤 ②、与方案文档一致的只列不问、证明不成立的列为建议改动连证据问；补 2.3 第 4 点——处理差距要改用户已确认的器件方向/结构/取值时停在本任务，交 2–3 个改法由用户定，不自行换方案。草案 2026-11-04 交用户，答复"照此写入"。
+
+- Event: user:2026-11-04 (照此写入)
+- Approved: user:2026-11-04
+- Outline: 7d2be268d7fbe45e
+- Changed: SKILL.md, docs/improvement-ledger.md
+- Gates: pytest tests/test_terminology.py tests/test_skill_steps.py tests/test_ledger.py 15
+
 ## 准则库 1.7.4：G03-025 加 STARTUP；chassis-y-cap 去掉 ISOLATION；电感类编号 (2026-11-04)
 
 R2 绘图暴露的三处知识层问题：(1) G03-025（复位门限高于负载最低工作电压）适用类型不含 STARTUP，multi-domain-reset 做了核算却不能引用——HardwareWiki G03 登记表 1.6→1.7，G03-025 条目 1.0→1.1 加 STARTUP，共用层重建 1.7.4（353 条，指纹 d4c79a47c214 → ea8f1a727df3），SR 同字节；multi-domain-reset 落实规则加 G03-025。(2) chassis-y-cap 声明 ISOLATION，无隔离板引用它会把隔离器、RS-485 等 18 条准则拉进适用范围（R2 lessons knowledge_wrong）——电路类型改 无、落实规则改 无（G04-040 由隔离接口的典型电路落实），已知坑记录原因。(3) cot-buck、dc-24v-input-protection 的"24 功率电感"按 part-roles.md 改为"21 功率电感"。
