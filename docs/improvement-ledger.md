@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 工业 I/O 校准板：W-BUCK-RIPPLE 按 LM5160 式 8 复核，典型电路 cot-buck 补纹波注入必算项 (2026-11-03)
+
+校准板 LM5160 Type 3 纹波注入（R206 100 kΩ、C206 1 nF、C207 100 nF）原按参考值取、留了 W-BUCK-RIPPLE。新计算 `CALC-BUCK-RIPPLE` 按手册 SNVSA03E 8.1.1 Table 3 式 8（p16，本版手册在 8.1.1 而非 7.3）与 TI AN-1481（SNVA166A，2013-04 修订，从 ti.com 取得）p8 核：20.4 V、TON 保证下限外推、CA +20 %、分压泄放下 FB 注入斜坡最小约 75 mV ≥ 25 mV，RA·CA 121 µs ≤ 式 8 上限 380 µs，CB×(R204∥R205)×fSW 约 113 ≥ 5，CB/CA 约 67 ≥ 3，输出纹波峰峰上限约 22 mV、5 V 带 4.87～5.11 V 在 ±5 % 内；器件不改，W-BUCK-RIPPLE 关闭。`cot-buck` 必算项加“注入斜坡最小幅值对 25 mV、CB 交流耦合”，已知坑写明方程位置与 CB 取值来源。
+
+- Event: user:2026-11-03 (这两件事也做了)
+- Causes: knowledge_missing 1
+- Changed: references/typical-circuits/cot-buck.md, docs/improvement-ledger.md
+- Gates: pytest tests/test_typical_circuits.py 10
+
 ## 工业 I/O 校准板：SR 四件取舍落地、引脚表自动填 (2026-11-03)
 
 用户定的四件按建议落地：D102/OV 窗记为已知边界（需求 C17）；FIELD+ 按直流电源口核浪涌（C18），`CALC-FIELD-SURGE` 算出原设计 D602 线-线约 160～215 A，加 R602 22 Ω 抗浪涌电阻、C601 改 100 µF 铝电解后 D602 27.5 A、V24 脚 33.5 V；
