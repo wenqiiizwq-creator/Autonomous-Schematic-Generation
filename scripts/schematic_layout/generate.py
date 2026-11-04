@@ -368,9 +368,10 @@ def make_root(intent, layout, name, dirs=()):
                 )
         coords[p.point] = p
     for s in scene.symbols:
-        for p in s.pins:
+        # One instance entry per library pin; a stacked pin's pads share it.
+        for number in dict.fromkeys(p.number or p.id.split(".")[-1] for p in s.pins):
             s.node.append(
-                form("pin", p.id.split(".")[-1], form("uuid", uid("pin:" + p.id)))
+                form("pin", number, form("uuid", uid("pin:" + s.ref + "." + number)))
             )
     # Make geometry obstacles before adding fields or wires.
     page = scene.page.expanded(-FRAME_MARGIN_MM)

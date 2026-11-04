@@ -103,6 +103,36 @@ def points_box(points):
     )
 
 
+_STACKED_RANGE = re.compile(r"([A-Za-z]*)(\d+)-([A-Za-z]*)(\d+)")
+
+
+def physical_numbers(number):
+    """Physical pad numbers of one library pin.
+
+    KiCad 10 stacked notation ``[17,18]`` or ``[20-22,5]`` is one drawn pin for
+    several pads: the netlist lists every pad, ERC sees one pin. A range keeps
+    its letter prefix (``[A1-A3]``). Anything else is a single pad number.
+    """
+    text = str(number)
+    if not (text.startswith("[") and text.endswith("]")):
+        return [text]
+    result = []
+    for item in text[1:-1].split(","):
+        if not item or item != item.strip():
+            raise ValueError(f"Malformed stacked pin number {text!r}")
+        match = _STACKED_RANGE.fullmatch(item)
+        if match and match[1] == match[3]:
+            lo, hi = int(match[2]), int(match[4])
+            if lo > hi:
+                raise ValueError(f"Descending stacked pin range {text!r}")
+            result += [f"{match[1]}{n}" for n in range(lo, hi + 1)]
+        else:
+            result.append(item)
+    if len(set(result)) != len(result):
+        raise ValueError(f"Repeated pad in stacked pin number {text!r}")
+    return result
+
+
 def is_hidden(node):
     for holder in (node, first(node, "effects", [])):
         if "hide" in holder or value(holder, "hide") == "yes":
@@ -138,6 +168,7 @@ class Pin:
     direction: Point
     kind: str
     hidden: bool = False
+    number: str = ""  # library pin number; differs from the id suffix for a stacked pin
 
 
 @dataclass
@@ -488,16 +519,24 @@ def read_scene(root, native_context=None):
                     out = trans((p[0] - inward[0], p[1] - inward[1]))
                     direction = (round(out[0] - tip[0]), round(out[1] - tip[1]))
                     number = str(value(item, "number", ""))
-                    pins.append(
-                        Pin(
-                            f"{ref}.{number}",
-                            tip,
-                            ip,
-                            direction,
-                            str(item[1]),
-                            is_hidden(item),
+                    # A stacked pin is one terminal per pad, all at the same point.
+                    try:
+                        pads = physical_numbers(number)
+                    except ValueError as exc:
+                        scene.gaps.append(f"{ref}: {exc}")
+                        pads = [number]
+                    for pad in pads:
+                        pins.append(
+                            Pin(
+                                f"{ref}.{pad}",
+                                tip,
+                                ip,
+                                direction,
+                                str(item[1]),
+                                is_hidden(item),
+                                number,
+                            )
                         )
-                    )
                 elif kind == "text":
                     # Treat library legends as protected symbol graphics. They
                     # retain their native text and expand the routing obstacle.

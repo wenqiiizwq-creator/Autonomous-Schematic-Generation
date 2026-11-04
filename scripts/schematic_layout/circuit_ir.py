@@ -8,6 +8,7 @@ Presentation is a separate document. No implicit same-name merging or NC fill.
 import copy
 import re
 from .generate import Libraries, library_dirs, digest, pin_net_map
+from .scene import physical_numbers
 from .sexpr import all_nodes, value, dump
 
 
@@ -33,16 +34,16 @@ def symbol_catalog(lib):
         if not m or int(m[2]) not in (0, 1):
             continue
         for p in all_nodes(sub, "pin"):
-            number = str(value(p, "number"))
-            item = {
-                "number": number,
-                "name": str(value(p, "name", "")),
-                "unit": int(m[1]),
-                "type": str(p[1]),
-            }
-            if number in pins and pins[number] != item:
-                raise ValueError(f"Stacked/duplicate physical pin {number}")
-            pins[number] = item
+            for number in physical_numbers(value(p, "number")):  # KiCad [17,18]: one pin, several pads
+                item = {
+                    "number": number,
+                    "name": str(value(p, "name", "")),
+                    "unit": int(m[1]),
+                    "type": str(p[1]),
+                }
+                if number in pins and pins[number] != item:
+                    raise ValueError(f"Stacked/duplicate physical pin {number}")
+                pins[number] = item
     if not pins:
         raise ValueError("Symbol has no physical pin data")
     return pins

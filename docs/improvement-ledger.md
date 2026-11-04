@@ -8,6 +8,18 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 同网同功能多脚改用 KiCad 叠脚编号 [a,b]，可见叠放记 overprinted_pin_numbers (2026-11-04)
+
+R2 发现规则互相卡：引脚合同要求手册 PWR_OUT 的脚在符号里是 power_out；`symbol_integrity` 的 `hidden_power` 只认隐藏的 passive 副本（隐藏电源副本 INSUFFICIENT）；KiCad 只在同位置同名时豁免同网 power_out 互连；场景、符号完整性、电路 IR 又不认 KiCad 的叠脚编号。结果 TPS26630 OUT 17/18 只能可见叠放（PDF 引脚号叠印，R2 图面审阅记 9 处），LM70880 SW1～SW4 只能读成 power_in 再用 PWR_FLAG 和供电声明补来源。
+定的规则（候选 a）：同网同功能多脚画成一个可见引脚，引脚号用 KiCad 10 叠脚写法 `[17,18]`、`[20-22,5]`，类型照手册。KiCad 10.0.7 实测：XML 按物理脚展开成同名同类型节点，ERC 当一个脚、不报互连，PDF 引脚号竖排不叠印；官方库已用这种写法。不选 (b)：隐藏电源副本仍要靠"同网"推断，图上看不到第二个脚号，且 ERC 仍会报同符号电源输出互连。
+实现：`scene.physical_numbers` 解析叠脚号（逗号、带同一字母前缀的范围，空项/空格/逆序/重复拒绝），场景把叠脚展开成同一点上的各物理脚（`Sheet` 用 `U1.17`、`U1.18` 引用），`generate` 实例引脚按库引脚号写一次；`symbol_integrity` 按物理脚出行（`stacked_number`），XML 覆盖照常核；新加 `overprinted_pin_numbers`：显示引脚号的符号里几个可见引脚落在同一点即 FAIL；`circuit_ir.symbol_catalog` 也展开。旧的隐藏 passive 副本照旧，隐藏电源副本仍 INSUFFICIENT，提示改叠脚。
+R2 副本验证：符号改 OUT [17,18]、SW [20-22,5]（power_out），去掉 SW_12 的 PWR_FLAG 与供电声明，引脚表 SW 四脚改 PWR_OUT + name_note；`deliver.py --for-review` 自动检查 ERC 0、符号完整性 PASS、引脚合同 PASS、供电声明 PASS，PDF 第 4/6/10 页引脚号竖排不叠印；用新代码审原 R2 图，9 个 TPS26630 记 `overprinted_pin_numbers`。
+
+- Event: user:2026-11-04 (跑完这个ASG test并提交后，就开始修改你找到的这些问题)
+- Causes: rule_wrong 1
+- Changed: scripts/schematic_layout/scene.py, scripts/schematic_layout/symbol_integrity.py, scripts/schematic_layout/generate.py, scripts/schematic_layout/circuit_ir.py, tests/test_stacked_pins.py, references/symbol-and-peripheral-contracts.md, references/drawing-recipes.md, references/design-closure.md, docs/improvement-ledger.md
+- Gates: pytest 1117 passed, 1 failed (test_schematic_review_holds_the_same_shared_layer：main 已是准则库 1.7.4、本分支 1.7.3，合并 main 后消失)；R2 副本 deliver --for-review：ERC 0、符号完整性/引脚合同/供电声明/几何 PASS（几何第 3 次重跑，前两次 renderer configuration changed）
+
 ## Matrix 电源与保护 R2：补写 9 个典型电路（第四批） (2026-11-04)
 
 R2 任务 1.3 在 `lessons.json` 登记了 9 个没有典型电路的功能块（knowledge_missing），设计完成后补写：hotswap-latch-powerlimit（LM5069 类锁定热插拔 + 开漏管保持 UVLO）、efuse-aux-branch、internal-comp-buck、dcs-low-voltage-buck、ext-comp-current-mode-buck、ovp-cutoff-efuse、efuse-bfet-short-latch、fault-memory-comparator、multi-domain-reset。每个文件一种实现方案，按器件类写，必算项对应 R2 的 CALC-* 与 calculation-preflight 的类型，落实规则只写实现方案确实做到的 active 准则（环路裕量 G03-007～009、负载跃变 G03-026、保护链协调 G05-020 等 R2 交样机或没算的不引），已知坑 4～8 条全部引手册页（`datasheet:…#p`）或 R2 设计记录发现（`user:2026-11-03`，括注计算编号）。索引加第四批表，测试计数 31→40，已知坑来源检查覆盖新 9 个。
