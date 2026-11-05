@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 设计准则覆盖方式 coverage：基线和交接批量覆盖，item 不放松 (2026-11-04)
+
+加入 G07、G08 后 R2 适用准则从 185 升到 277，新增的很多只是项目基线输入或下游交接，逐条引用只会逼出批量凑数。准则加可选字段 `coverage`，缺省 `item`，行为不变。`project_input` 由 `guideline_project_input` 的 `baseline` 和 `answers` 一次回答（需求、需求澄清、`<基线>#<节>` 或 `TBR`），别处引用不能代替；`handoff` 由一件待办或一条证据覆盖多条，不要逐条 `guideline_evidence`。`item` 写进批量证据或 `answers` 记 `guideline_batch_mixed_item`；`guideline_evidence_repeated` 仍拦 `item`。`handoff` 的 `closing_stage` 不能是 `schematic`。报告把这两类各合成一张表。
+
+校准板与 Matrix R2 的记录新旧代码审计输出逐字节相同（去掉 `shared_sha256` 后比）。库内容未改，分类和升版由主会话做。
+
+- Event: user:2026-11-04 (主会话转达：规则库升版前让非逐条的准则批量处理，ASG、SR 只对原理图负责)
+- Causes: audit_gap 1
+- Changed: scripts/guideline_criteria.py, scripts/audit_design_closure.py, scripts/render_design_report.py, references/design-closure.md, references/shared/guideline-criteria.md, tests/test_guideline_closure.py, docs/improvement-ledger.md
+- Gates: python3 -m pytest tests -q 1185 passed（配对 ASG_SR_SHARED_ROOT=sr-criteria-coverage）；scripts/check_ledger.py
+
 ## 工况输入的需求数值连单位一起核；多个候选值取不利值 (2026-11-04)
 
 上一条的核对只比数字且接受 SI 换算，1500 µF 引只写 1.5 A 的需求能靠 1.5 通过；启动计算里没写 `input_role`、依据是 `requirement` 的负载电容则根本不核。现在数和单位一起比，同一量纲才换算前缀，范围下端取上端的单位，没有单位的参数只比数；负载电容按名字核时也包括 `requirement`。
