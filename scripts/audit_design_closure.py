@@ -873,12 +873,42 @@ def audit_guideline_evidence(key, row, ids, error):
                 key, len(gids), where, '、'.join(gids)))
 
 
-def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None):
+def audit_project_input(record, classes, requirements, clarifications, evidence, error):
+    """guideline_project_input (user 2026-11-04): one requirement baseline answers the project_input rules. The record
+    names the baseline (evidence or clarification ids) and, rule by rule, the item that answers it (a requirement, a
+    clarification or <baseline>#<locator>) or TBR. Returns {rule id: answer}; an item rule never gets an answer here."""
+    section = record.get('guideline_project_input')
+    if section is None:
+        return {}
+    if not (isinstance(section, dict) and not set(section) - {'baseline', 'answers'} and isinstance(section.get('baseline'), list)
+            and section['baseline'] and isinstance(section.get('answers'), dict)):
+        error('guideline_project_input', 'guideline_project_input 写 baseline（证据或需求澄清编号的列表）和 answers（{准则编号: 回答项或 TBR}）')
+        return {}
+    baseline = section['baseline']
+    absent = [b for b in baseline if b not in (evidence or {}) and b not in clarifications]
+    if absent:
+        error('guideline_project_input', '需求基线 %s 不在 evidence 或 clarifications 里' % '、'.join(map(str, absent)))
+        return {}
+    answered = {}
+    for gid, answer in section['answers'].items():
+        if classes.get(gid, 'project_input') != 'project_input':
+            error('guideline_batch_mixed_item', '%s：覆盖方式是 %s，不能由需求基线批量回答' % (gid, classes[gid]))
+        elif (answer == 'TBR' or answer in requirements or answer in clarifications
+              or (isinstance(answer, str) and answer.partition('#')[0] in baseline and text(answer.partition('#')[2]))):
+            answered[gid] = answer
+        else:
+            error('guideline_project_input', '%s：回答项 %s 不是需求、需求澄清、<基线>#<节/表/行> 或 TBR' % (gid, answer))
+    return answered
+
+
+def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None,
+                     requirements=None, clarifications=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
     (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item, component requirement
     or evidence entry (user 2026-11-03: 照此写入 — a documentation rule hangs on the interface table, operating matrix or FMEA
     entry that implements it, not on one closed work item), or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
-    downstream."""
+    downstream. Rules whose library card says so are covered in bulk (user 2026-11-04): project_input by the baseline's
+    answers, handoff by one work item or evidence entry. An item rule is never carried along with them."""
     library = library or guideline_criteria.load()
     scope = record.get('guideline_scope')
     problems = guideline_criteria.scope_errors(scope, library)
@@ -886,7 +916,9 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         error('guideline_scope', problem)
     if problems:
         return None
-    cited, by_work = {}, set()
+    classes = {r['id']: guideline_criteria.coverage_class(r) for r in library['criteria']}
+    answered = audit_project_input(record, classes, requirements or {}, clarifications or {}, evidence, error)
+    cited, by_work, by_evidence = {gid: ['baseline:' + answer] for gid, answer in answered.items()}, set(), set()
     components = component_guidelines(artifact_root, error) if artifact_root else {}
     for kind, table in (('calc', calculations), ('work', work), ('component', components), ('evidence', evidence or {})):
         for key, row in table.items():
@@ -898,19 +930,29 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
                 cited.setdefault(gid, []).append(kind + ':' + key)
                 if kind == 'work':
                     by_work.add(gid)
-            if kind == 'work' and row.get('status') == 'closed' and ids:
-                audit_guideline_evidence(key, row, ids, error)
+                elif kind == 'evidence':
+                    by_evidence.add(gid)
+            items = [i for i in ids if classes.get(i, 'item') == 'item']
+            if kind in ('work', 'evidence') and items and len(items) < len(ids):
+                error('guideline_batch_mixed_item', '%s：%s 是逐条覆盖的准则，不能和批量覆盖的 %s 写在同一条里；分开写' % (
+                    key, '、'.join(items), '、'.join(i for i in ids if i not in items)))
+            if kind == 'work' and row.get('status') == 'closed' and items:
+                audit_guideline_evidence(key, row, items, error)
     applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
     found = guideline_criteria.coverage(library, applicable, cited,
-                                     {i['id']: i['reason'] for i in scope.get('not_applicable', [])})
+                                     {i['id']: i['reason'] for i in scope.get('not_applicable', [])}, answered)
     for gid in found['unknown_cited']:
         error('guideline_unknown', gid)
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
         error('guideline_cited_not_applicable', '%s：设计准则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
     for gid in found['uncovered']:
-        need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
+        if classes.get(gid) == 'project_input':
+            need('guideline_uncovered', '%s：写进 guideline_project_input.answers（由哪项需求回答或 TBR），或在 guideline_scope.not_applicable 写理由' % gid)
+        else:
+            need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
     for gid in found['downstream']:
-        if gid in found['covered'] and gid not in by_work:
+        if gid in found['covered'] and gid not in by_work and not (classes.get(gid) == 'handoff' and gid in by_evidence) \
+                and classes.get(gid) != 'project_input':
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
     # The typical-circuit implementations the page plan names (typical_circuits.py) declare circuit types and the rules they put into
     # practice: the scope must list those types, and a claimed rule the scope leaves inapplicable means the scope is short.
@@ -923,6 +965,8 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
             error('guideline_scope_circuit', '%s：典型电路 %s 的实现方案落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
     found['circuit_criteria'] = {gid: refs for gid, refs in sorted(circuit['criteria'].items())}
     found['shared_sha256'] = guideline_criteria.shared_digest()   # the whole shared layer the audit ran against
+    if found.get('by_coverage'):
+        found['project_input_tbr'] = [g for g in found['by_coverage']['project_input'] if answered.get(g) == 'TBR']
     return found
 
 
@@ -1466,7 +1510,8 @@ def audit(record, intent_path, artifact_root, inputs=None):
         if record['guideline_version'] != 1:
             error('schema', 'guideline_version must be 1')
         else:
-            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence)
+            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
+                                          requirements=requirements, clarifications=clarifications)
     elif guideline_criteria.load()['criteria']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.

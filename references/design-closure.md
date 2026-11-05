@@ -198,6 +198,10 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     `<证据编号>#<节/表/行>`（证据编号在这件待办的 `evidence` 里），缺记 `guideline_work_without_evidence`，同一处顶 3 条以上准则记
     `guideline_evidence_repeated`（工业校准板：一件已关闭的文档待办批量引用了 205 条，2026-11-02）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`
     （补范围或去掉引用）；关闭阶段在原理图之后的规则要有待办引用，缺了记 `guideline_downstream_without_work_item`。范围写错记 `guideline_scope`。
+    准则的 `coverage`（用户 2026-11-04）决定怎样覆盖，缺省是 `item`，即上面的逐条引用。`project_input` 由一份需求基线回答：`guideline_project_input` 写
+    `baseline`（证据或需求澄清编号的列表）和 `answers`（`{准则编号: 回答项}`，回答项是需求编号、需求澄清编号、`<基线>#<节/表/行>` 或 `TBR`），不要求逐条证据；没写进 `answers` 记 `guideline_uncovered`，别处引用不能代替，基线不在记录里或回答项不成立记 `guideline_project_input`。
+    `handoff` 进下游交接清单：一件待办或一条证据（交接表）可以引用多条，不要 `guideline_evidence`，不记 `guideline_evidence_repeated`，也满足 `guideline_downstream_without_work_item`。
+    逐条的不跟批量的混：`item` 准则和批量准则写在同一件待办或同一条证据里、或 `item`、`handoff` 准则写进 `answers`，都记 `guideline_batch_mixed_item`。审计的 `guidelines.by_coverage` 分列三类（全是 `item` 时没有这一项），报告把 `project_input`、`handoff` 各合成一张表。
     设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
     分页方案（`record/page-plan.json`）标注的典型电路做法声明了电路类型、列了落实规则（[典型电路库](typical-circuits.md)）：类型不在 `guideline_scope.circuit_types`，
     或落实规则按范围不适用，记 `guideline_scope_circuit`（范围写少了）；审计在 `guidelines.circuit_criteria` 列出典型电路声称落实的规则及出处。

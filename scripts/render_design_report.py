@@ -737,6 +737,33 @@ def render_operating_inputs(found):
     return out
 
 
+def render_batch_guidelines(guidelines, cards):
+    """The rules covered in bulk (user 2026-11-04), one table per class: which baseline item answers each project_input
+    rule, and the downstream handoff list."""
+    classes = guidelines.get('by_coverage') or {}
+    out = []
+    if classes.get('project_input'):
+        out += ['## 需求基线回答的设计准则', '',
+                '这些设计准则由一份需求基线或需求澄清记录一次回答；TBR 是还没有答复的项。', '',
+                '| 设计准则 | 内容 | 回答项 |', '|---|---|---|']
+        for gid in classes['project_input']:
+            answer = '不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else \
+                '、'.join(w.partition(':')[2] for w in guidelines['covered'].get(gid) or []) or '未回答'
+            out.append('| %s | %s | %s |' % (gid, cell(cards.get(gid, {}).get('title', '')), cell(answer)))
+        out.append('')
+    down = [gid for gid in classes.get('handoff') or [] if gid not in guidelines['not_applicable']]
+    if down:
+        out += ['## 下游交接清单', '',
+                '这些设计准则进下游交接清单，由所列待办或交接表带给下游；原理图阶段只列出，不宣布已满足。', '',
+                '| 设计准则 | 关闭阶段 | 交接处 | 下游要做的（设计准则 asg_action） |', '|---|---|---|---|']
+        for gid in down:
+            c = cards.get(gid, {'closing_stage': '', 'asg_action': ''})
+            where = '、'.join(w for w in guidelines['covered'].get(gid) or [] if w.startswith(('work:', 'evidence:')))
+            out.append('| %s | %s | %s | %s |' % (gid, STAGE_WORDS.get(c['closing_stage'], ''), where or '无', cell(c['asg_action'])))
+        out.append('')
+    return out
+
+
 def render_guidelines(guidelines):
     """共用设计准则覆盖与下游约束（references/shared/guideline-criteria.md）：适用准则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
     if not (guidelines and guidelines.get('applicable')):
@@ -747,13 +774,18 @@ def render_guidelines(guidelines):
     out = ['## 共用设计准则覆盖', '',
            '本设计按设计准则库 %s 适用的共用设计准则；“落实处”是引用它的计算（calc）、待办（work）或器件性能要求（component）。' % guidelines['library_version'], '',
            '| 设计准则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
+    classes = guidelines.get('by_coverage') or {}
+    batch = set(classes.get('project_input') or ()) | set(classes.get('handoff') or ())
     for gid in guidelines['applicable']:
+        if gid in batch:
+            continue
         c = cards.get(gid, {'title': '', 'source': [], 'closing_stage': ''})
         source = '；'.join('%s %s %s 第%s页' % (s['document'], s['edition'], s['clause'], s['page']) for s in c['source'])
         out.append('| %s | %s | %s | %s | %s |' % (gid, cell(c['title']), cell(source), cell(where(gid)),
                                                     STAGE_WORDS.get(c['closing_stage'], '')))
     out.append('')
-    down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable']]
+    out += render_batch_guidelines(guidelines, cards)
+    down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable'] and gid not in batch]
     if down:
         out += ['## 下游约束（共用规范）', '',
                 '这些设计准则在原理图之后的环节关闭，由所列待办交给下游；原理图阶段不宣布它们已满足。', '',
@@ -957,9 +989,12 @@ def render(root, notes=None, title=None):
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
     guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
     if guidelines and guidelines.get('applicable'):
-        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用设计准则覆盖”。' % (
+        classes = guidelines.get('by_coverage') or {}
+        batch = '其中需求基线回答 %d 条（TBR %d 条）、进交接清单 %d 条；' % (
+            len(classes['project_input']), len(guidelines.get('project_input_tbr') or ()), len(classes['handoff'])) if classes else ''
+        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；%s交下游 %d 条。见“共用设计准则覆盖”。' % (
             guideline_criteria.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
-            len(guidelines['not_applicable']), len(guidelines['uncovered']), len(guidelines['downstream'])))
+            len(guidelines['not_applicable']), len(guidelines['uncovered']), batch, len(guidelines['downstream'])))
     inputs_found = audit.get('operating_inputs') if isinstance(audit.get('operating_inputs'), dict) else None
     if inputs_found:
         out.append('- **工况输入**：声明了来源的 %d 项；启动计算 %d 条。见“工况输入来源”。' % (

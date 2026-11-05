@@ -3,6 +3,7 @@ guideline rules it meets in its calculations and work items, holds the others no
 a rule closing after the schematic downstream with a work item. An empty rule library asks nothing."""
 import copy
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -15,7 +16,7 @@ import render_design_report
 from audit_design_closure import audit, sha256
 
 ASG = Path(__file__).resolve().parents[1]
-SR = Path.home() / '.agents' / 'skills' / 'schematic-review'
+SR = Path(os.environ.get('ASG_SR_SHARED_ROOT') or Path.home() / '.agents' / 'skills' / 'schematic-review')   # a paired branch checkout
 SHARED = guideline_criteria.SHARED_FILES   # the whole shared layer, references/shared/ plus the script (2026-11-02: 目录制)
 
 
@@ -188,6 +189,138 @@ class GuidelineClosureTests(unittest.TestCase):
         listed = {Path(n).name for n in SHARED if n.startswith('references/shared/')}
         self.assertEqual(sorted(p.name for p in guideline_criteria.SHARED_DIR.iterdir() if p.name != '__pycache__'), sorted(listed))
         self.assertRegex(guideline_criteria.shared_label(), r'^共用层 [0-9a-f]{12}，设计准则库 \S+，降额 v\d+$')
+
+    def batch_library(self):
+        return library(card('G01-001'), card('G04-001', applies_when={'circuit_types': ['RS485']}),
+                       card('G07-001', closing_stage='pcb', coverage='handoff'),
+                       card('G07-002', closing_stage='pcb', coverage='handoff'),
+                       card('G08-001', coverage='project_input'), card('G08-002', coverage='project_input'))
+
+    def batch_record(self):
+        self.record['work_items'][0]['guidelines'] = ['G07-001', 'G07-002']
+        self.record['evidence'][0].pop('guidelines', None)
+        self.record['clarifications'] = []
+        self.record['guideline_project_input'] = {'baseline': ['E1'], 'answers': {'G08-001': 'R1', 'G08-002': 'TBR'}}
+
+    def test_a_record_and_library_without_coverage_are_audited_as_before(self):
+        result = self.run_audit()
+        self.assertNotIn('by_coverage', result['guidelines'])
+        self.assertNotIn('project_input_tbr', result['guidelines'])
+        with mock.patch.object(guideline_criteria, 'load', lambda *args: LIBRARY):
+            report = '\n'.join(render_design_report.render_guidelines(result['guidelines']))
+        self.assertNotIn('需求基线回答', report)
+        self.assertNotIn('下游交接清单', report)
+        self.assertIn('下游约束', report)
+
+    def test_a_baseline_answers_project_input_rules_and_one_work_item_hands_off_many(self):
+        self.batch_record()
+        result = self.run_audit(self.batch_library())
+        self.assertFalse({c for c in self.codes(result) if c.startswith('guideline')}, result)
+        found = result['guidelines']
+        self.assertEqual(found['by_coverage'], {'item': ['G01-001', 'G04-001'], 'project_input': ['G08-001', 'G08-002'],
+                                                'handoff': ['G07-001', 'G07-002']})
+        self.assertEqual(found['covered']['G08-001'], ['baseline:R1'])
+        self.assertEqual(found['project_input_tbr'], ['G08-002'])
+
+    def test_a_project_input_rule_needs_its_answer_and_the_baseline_in_the_record(self):
+        self.batch_record()
+        del self.record['guideline_project_input']['answers']['G08-002']
+        self.record['calculations'][0]['guidelines'].append('G08-002')   # a citation does not stand in for the answer
+        self.assertIn('guideline_uncovered', self.codes(self.run_audit(self.batch_library())))
+        self.batch_record()
+        self.record['guideline_project_input']['baseline'] = ['E9']
+        codes = self.codes(self.run_audit(self.batch_library()))
+        self.assertIn('guideline_project_input', codes)
+        self.assertIn('guideline_uncovered', codes)
+        self.batch_record()
+        self.record['guideline_project_input']['answers']['G08-001'] = 'R9'
+        self.assertIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
+        self.record['guideline_project_input']['answers']['G08-001'] = 'E1#§3.2'
+        self.assertNotIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
+        self.record['guideline_project_input'] = {'answers': {}}
+        self.assertIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
+        self.batch_record()
+        self.record['guideline_project_input']['answers']['G09-999'] = 'R1'
+        self.assertIn('guideline_unknown', self.codes(self.run_audit(self.batch_library())))
+
+    def test_a_clarification_can_be_the_baseline_and_the_answer(self):
+        self.batch_record()
+        self.record['clarifications'] = [{'id': 'CL-ENV', 'question': '环境', 'requirement_field': 'x', 'blocks': [],
+                                          'answer': {'decision': 'ANSWERED', 'text': '室内'}, 'merged_into': ['R1']}]
+        self.record['guideline_project_input'] = {'baseline': ['CL-ENV'], 'answers': {'G08-001': 'CL-ENV', 'G08-002': 'CL-ENV#答复'}}
+        self.assertNotIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
+
+    def test_handoff_rules_share_a_closed_item_or_a_table_without_per_rule_evidence(self):
+        self.batch_record()
+        self.record['work_items'][0].update(status='closed', closure={'type': 'x'})
+        codes = self.codes(self.run_audit(self.batch_library()))
+        self.assertNotIn('guideline_evidence_repeated', codes)
+        self.assertNotIn('guideline_work_without_evidence', codes)
+        self.batch_record()
+        self.record['work_items'][0]['guidelines'] = []
+        self.record['evidence'][0]['guidelines'] = ['G07-001', 'G07-002']
+        result = self.run_audit(self.batch_library())
+        self.assertNotIn('guideline_downstream_without_work_item', self.codes(result))
+        self.assertEqual(result['guidelines']['covered']['G07-001'], ['evidence:E1'])
+
+    def test_a_calculation_does_not_hand_a_rule_off(self):
+        self.batch_record()
+        self.record['work_items'][0]['guidelines'] = []
+        self.record['calculations'][0]['guidelines'] += ['G07-001', 'G07-002']
+        self.assertIn('guideline_downstream_without_work_item', self.codes(self.run_audit(self.batch_library())))
+
+    def test_an_item_rule_in_a_batch_is_refused(self):
+        self.batch_record()
+        self.record['work_items'][0]['guidelines'] = ['G07-001', 'G07-002', 'G01-001']
+        self.assertIn('guideline_batch_mixed_item', self.codes(self.run_audit(self.batch_library())))
+        self.batch_record()
+        self.record['evidence'][0]['guidelines'] = ['G08-001', 'G01-001']
+        self.assertIn('guideline_batch_mixed_item', self.codes(self.run_audit(self.batch_library())))
+        self.batch_record()
+        self.record['guideline_project_input']['answers']['G01-001'] = 'R1'
+        result = self.run_audit(self.batch_library())
+        self.assertIn('guideline_batch_mixed_item', self.codes(result))
+        self.assertEqual(result['guidelines']['covered']['G01-001'], ['calc:C1'])   # the refused answer covers nothing
+
+    def test_a_handoff_rule_cannot_be_answered_by_the_baseline(self):
+        self.batch_record()
+        self.record['guideline_project_input']['answers']['G07-001'] = 'R1'
+        self.assertIn('guideline_batch_mixed_item', self.codes(self.run_audit(self.batch_library())))
+
+    def test_item_rules_still_trip_the_repeated_evidence_check_beside_a_batch(self):
+        # the calibration board's single closed item citing 205 rules stays refused
+        rules = ['G01-%03d' % n for n in range(1, 5)]
+        lib = library(*[card(r) for r in rules], card('G07-001', closing_stage='pcb', coverage='handoff'))
+        self.record['calculations'][0]['guidelines'] = []
+        self.record['work_items'][0].update(status='closed', closure={'type': 'x'}, guidelines=rules,
+                                            guideline_evidence={r: 'E1#一处' for r in rules})
+        self.assertIn('guideline_evidence_repeated', self.codes(self.run_audit(lib)))
+
+    def test_the_report_folds_each_batch_class_into_one_table(self):
+        self.batch_record()
+        lib = self.batch_library()
+        found = self.run_audit(lib)['guidelines']
+        with mock.patch.object(guideline_criteria, 'load', lambda *args: lib):
+            lines = render_design_report.render_guidelines(found)
+        text = '\n'.join(lines)
+        self.assertEqual(lines.count('## 需求基线回答的设计准则'), 1)
+        self.assertEqual(lines.count('## 下游交接清单'), 1)
+        self.assertIn('| G08-001 | 示例规则 G08-001 | R1 |', text)
+        self.assertIn('| G08-002 | 示例规则 G08-002 | TBR |', text)
+        self.assertIn('| G07-001 | PCB | work:W1 | 设计动作 |', text)
+        self.assertNotIn('## 下游约束', text)     # every downstream rule here is in the handoff table
+        main = text.split('## 需求基线回答')[0]
+        self.assertNotIn('G08-001', main)
+        self.assertNotIn('G07-001', main)
+        self.assertIn('G01-001', main)
+
+    def test_the_library_checks_the_field(self):
+        field_errors = lambda *cards: [e for e in guideline_criteria.bundle_errors(library(*cards))
+                                       if ': coverage must' in e or 'a handoff rule closes' in e]
+        self.assertEqual(field_errors(card('G01-001'), card('G07-001', closing_stage='pcb', coverage='handoff'),
+                                      card('G08-001', coverage='project_input'), card('G08-002', coverage='item')), [])
+        self.assertEqual(len(field_errors(card('G07-001', coverage='batch'))), 1)
+        self.assertEqual(len(field_errors(card('G07-001', coverage='handoff'))), 1)   # closing_stage is schematic
 
     @unittest.skipUnless((SR / SHARED[1]).is_file(), 'schematic-review without the rule library')
     def test_schematic_review_holds_the_same_shared_layer(self):
