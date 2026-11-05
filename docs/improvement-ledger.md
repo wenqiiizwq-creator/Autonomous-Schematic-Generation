@@ -8,6 +8,14 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 电路评测集搬到规范目录，新增按电路跑的入口 (2026-11-05)
+
+`evals/calibration_boards/` 搬到 `原理图设计规范/评测集/案例/校准板/`，与 SR 共用。新增 `evals/circuit_cases/run.py`：只把一个电路的需求摘录交给 ASG，案例答案不进工作目录。历史回放基准（overstrict、mutation、delivery）依赖本地冻结来源，不动。
+
+- Event: user:2026-11-05 (能否将这些电路做成给SR和ASG两项技能进行评测和改进的，专门的评测集合？放在电路设计规范里。改现在的SR、ASG的架构)
+- Changed: evals/eval_set.py, evals/circuit_cases/run.py, evals/calibration_boards/, evals/README-calibration.md, references/typical-circuits/chassis-y-cap.md, tests/test_circuit_cases.py, docs/improvement-ledger.md
+- Gates: pytest 1148 passed；评测集不在时 test_circuit_cases 3 skipped
+
 ## IC 角色线索对齐 SR p24：protectioncontroller、surgestopper 归负载开关 (2026-11-04)
 
 SR 修 Matrix R2 首审误报 1.11（LTC4367 被当线性稳压器问压差）时给 load_switch 角色加了两条手册标题线索；ASG `part_classes.IC_ROLE_CUES` 同步，保持两边分类线索对等（`tests/test_part_classes.py` 的包含关系测试）。

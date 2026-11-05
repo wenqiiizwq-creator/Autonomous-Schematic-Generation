@@ -1,5 +1,7 @@
 # ASG calibration benchmarks
 
+Circuit cases live in the evaluation set shared with schematic-review (`原理图设计规范/评测集/`, located by `evals/eval_set.py`, override with `CIRCUIT_EVAL_SET`). `python3 evals/circuit_cases/run.py prepare --case <id> --out <new dir>` gives ASG one circuit's requirements only; results go to `运行结果/ASG/` in that set. The benchmarks below are separate and stay here.
+
 Three independent runners, with all third-party sources and outputs outside Git:
 
 - `overstrict_bench/prepare.py --cache <scratch-cache>` copies and verifies SHA256-pinned historical originals. If absent, recover from the pinned GitHub commit and accept only exact SHA256. Derived native sources require the original historical cache. Actual per-item labels are in `labels.json`, with per-round extraction notes in `mapping.json`. `run.py --cache ... --out <new-scratch-output>` produces the G1/G2 matrix. Unavailable source/report, conflicting adjudications or indistinguishable coordinate entities stay UNMAPPED. Identical-verdict duplicate raw gate rows are retained as diagnostic units, not unique defects.
