@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 资料覆盖待办与知识问题分离，准确描述运行覆盖（2026-11-05）
+
+按已确认草案 A、C 实施；B 等待 R3 后规则库升级。先用 schema 2 反例复现一条 knowledge_missing 全局放行两块，再加入 library_gaps 的逐页逐块绑定、文件/条目定位、closed 与页计划交叉检查；真实知识事件区分 observed 与 uncertain，覆盖待办不进事件索引。旧版与缺版本保留历史语义并标注未复核，不改冻结输入。新交付强制版本与受控历史身份尚无明确入口，保留兼容并如实列明限制，未扩展迁移工具。共用层不变。
+
+- Event: user:2026-11-05
+- Approved: user:2026-11-05
+- Outline: 55065d7228ecfda1
+- Causes: rule_not_enforced 1（全局豁免未绑定功能块）；judgment 2（覆盖待办混作问题归因、运行覆盖描述超出证据；用户确认修订）
+- Changed: SKILL.md, references/typical-circuits.md, scripts/render_design_report.py, references/review-comments.md, references/delivery-report.md, docs/improvement-plan.md, docs/operating-cadence.md, tests/test_lessons_v2.py, docs/improvement-ledger.md
+- Gates: 缺陷复现 1 failed in 0.06s；首次全量 1 failed, 1178 passed（5.2 段落位置触发任务结尾结构检查，移动原文后修复）；最终定向 121 passed in 8.33s；结构与台账 11 passed in 0.05s；最终全量 1185 passed in 361.95s (0:06:01)；check_ledger.py PASS；git diff --check 通过；冻结 helper ready=0，十轮回放 NOT_RUN，未改冻结输入。
+
 ## 电路评测集搬到规范目录，新增按电路跑的入口 (2026-11-05)
 
 `evals/calibration_boards/` 搬到 `原理图设计规范/评测集/案例/校准板/`，与 SR 共用。新增 `evals/circuit_cases/run.py`：只把一个电路的需求摘录交给 ASG，案例答案不进工作目录。历史回放基准（overstrict、mutation、delivery）依赖本地冻结来源，不动。

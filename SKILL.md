@@ -109,7 +109,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 用户暂缓的，按建议条文作为写明的假设设计，相关需求和计算为有条件成立，记成 `requirement` 待办。
 降额等级（I/II/III 级，见[降额规范](references/shared/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
 附按产品失效后果和工作方式给出的建议等级；答复写回需求清单。用户暂缓的，按建议等级作为写明的假设设计。
-共用设计准则（G01–G09，与 schematic-review 同一版，见[共用设计准则库](references/shared/guideline-criteria.md)）按产品基线和本设计的功能电路类型、器件类别适用：
+共用设计准则按产品基线和本设计的功能电路类型、器件类别适用；当前运行包 1.8.0 仅含 G01–G05 的已编入条目，不代表 G01–G09 全部规则均已接入。实际适用范围与覆盖以[共用设计准则库](references/shared/guideline-criteria.md)及其 JSON 为准，未编入条目作为已知覆盖缺口登记；两技能同版情况以共用层校验为准：
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、正 24 V 工业直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
@@ -129,11 +129,11 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 #### 1.3 功能块实现方案
 
 每个功能块先在 [典型电路库](references/typical-circuits.md) 里找实现方案（`find_parts.py --circuits <功能>`）：
-实现方案给出核心器件类、必需外围、必算项和已知坑；没有合适实现方案的功能块在 `lessons.json` 登记 `knowledge_missing`，设计完成后补写典型电路文件。
+实现方案给出核心器件类、必需外围、必算项和已知坑；库内没有适用文件的功能块在 `lessons.json.library_gaps` 逐块登记资料覆盖待办，设计完成后补写典型电路文件。发现缺少知识导致具体设计问题时，另在 `events` 登记 `knowledge_missing`，写明缺少的途径、判据或已知坑及后果证据；已有规则未落实的按 `rule_not_enforced` 归因。
 
 实现方案同时指出器件的设计用途、工作状态和需要核算的性能。放电、吸收、检流、限流、滤波等用途触发相应核算；“脉冲/浪涌”等关键词触发性能要求核验，不自动推出某个具体料号。普通器件可复用受控标准物料规范，仍须确认本设计工况在其适用范围内。
 
-做完的标志：每个功能块有选定的典型电路与实现方案，或在 `lessons.json` 登记了 `knowledge_missing`；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。
+做完的标志：每个功能块有选定的典型电路与实现方案，或在 `lessons.json.library_gaps` 有对应功能块的资料覆盖待办（任务 3.1 完成后绑定图页）；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。资料覆盖待办不代替实际设计依据与核算。
 
 #### 1.4 核心器件选型与方案确认
 
@@ -413,6 +413,8 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 技能或知识库改完后，在 `docs/improvement-ledger.md` 加条目（Event/Changed 两行，`scripts/check_ledger.py` 检查），
 再跑全部合成测试。
 
+资料覆盖待办写入 `library_gaps`，真实事件写入 `events`。`knowledge_missing` 区分有证据后果与待核归因；后果和来源分开登记。只有覆盖待办、没有真实事件时允许 `events` 为空；两者均空时仍用 `cause: none` 写明核对内容，不为凑事件数虚报知识缺陷。
+
 做完的标志：报告不拒绝 `lessons.json`；技能有改动时 `check_ledger.py` 为 PASS，全部合成测试通过。
 
 #### 5.3 报告与打包
@@ -482,7 +484,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
-| 共用设计准则（G01–G09）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
+| 共用设计准则（当前运行包 1.8.0 仅含 G01–G05 的已编入条目）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
 | 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
