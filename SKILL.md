@@ -109,7 +109,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 用户暂缓的，按建议条文作为写明的假设设计，相关需求和计算为有条件成立，记成 `requirement` 待办。
 降额等级（I/II/III 级，见[降额规范](references/shared/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
 附按产品失效后果和工作方式给出的建议等级；答复写回需求清单。用户暂缓的，按建议等级作为写明的假设设计。
-共用设计准则按产品基线和本设计的功能电路类型、器件类别适用；当前运行包 1.8.0 仅含 G01–G05 的已编入条目，不代表 G01–G09 全部规则均已接入。实际适用范围与覆盖以[共用设计准则库](references/shared/guideline-criteria.md)及其 JSON 为准，未编入条目作为已知覆盖缺口登记；两技能同版情况以共用层校验为准：
+共用设计准则（G01–G09，运行包 1.9.0，与 schematic-review 同版情况已经核对，见[共用设计准则库](references/shared/guideline-criteria.md)）按产品基线和本设计的功能电路类型、器件类别适用：
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、正 24 V 工业直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
@@ -484,7 +484,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
-| 共用设计准则（当前运行包 1.8.0 仅含 G01–G05 的已编入条目）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
+| 共用设计准则（G01–G09，运行包 1.9.0）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
 | 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |

@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "library_version": "1.9.0",
+  "registry": "/Users/skyfend/Documents/知识库/HardwareWiki/原理图设计规范/准则登记",
+  "sources": {
+    "G01_准则登记.json": "c2a3f284b289d68d4c553d82964eca34e7d8cb273e991a5696521a4a41ddda3c",
+    "G02_准则登记.json": "f53e8914fd22f52f6390055bf0ab212833c7e73bbfad6f36a18338b0bd6a3b7b",
+    "G03_准则登记.json": "29adbdefb0bd6ffcae619ff5d576f91260abc03ff09e0792389094095cab9406",
+    "G04_准则登记.json": "d09e8c01fd00033ea90a9a797b9ab26736ab51f97ce164aa995c6f7f0dad1504",
+    "G05_准则登记.json": "820dd4bdd6310809f23d5af6f41cb2f7e29f3b740098c1dd61b51d9547c5a315",
+    "G06_准则登记.json": "95f22e8d4ed948ca0a7145caa381535b4714b93dc39259aae05c4625faf91e78",
+    "G07_准则登记.json": "af03c6536bf0df58d95f899614fd3450789c8870c8d975fe3724aafde19c42a5",
+    "G08_准则登记.json": "245e7778bbbd136f1fc53fd1672deda08468a2a0352ea53fbf9346a6deb40f2a",
+    "G09_准则登记.json": "7ee020fa42d9403118ae04e8521ccf07f1d6cabe522c798d5711e4a39a662b91"
+  },
+  "source_count": 534,
+  "expected_count": 534,
+  "brief_expected_count": 529,
+  "count_note": "当前源534条已不含5个排除编号，不能再次减5；不额外删除规则。",
+  "exclude": {
+    "G06-025": "防火外壳、板材阻燃是结构和制造，原理图判不了",
+    "G08-012": "大件加固是结构设计，原理图判不了，也无需逐板交接",
+    "G08-046": "焊点疲劳和功率循环只列清单，原理图无判据，属工艺与结构",
+    "G09-003": "并联路径单路验证是生产测试策略，依据偏航天，原理图没有确定判据",
+    "G09-006": "探针意外短接属操作和可触达问题，不做原理图判据"
+  },
+  "patches": {
+    "G06-001": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "产品类别和适用安全标准由需求澄清回答"
+    },
+    "G06-002": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "人员、过电压类别、污染等级、海拔等安全输入由需求回答"
+    },
+    "G06-015": {
+      "set": {
+        "coverage": "item"
+      },
+      "reason": "只比器件封装自身的爬电和间隙，不够就换料；板上爬电距离交 PCB"
+    },
+    "G06-024": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "爬电、间隙只写一行约束交 PCB，不作原理图判据"
+    },
+    "G06-026": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "耐压和认证试验只写一行约束交样机，原理图不判通过"
+    },
+    "G07-001": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "选用哪个 EMC 标准、场所和发射等级，需求澄清一次回答"
+    },
+    "G07-002": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "选用哪个 EMC 标准、场所和发射等级，需求澄清一次回答"
+    },
+    "G07-003": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "选用哪个 EMC 标准、场所和发射等级，需求澄清一次回答"
+    },
+    "G07-005": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "抗扰度矩阵和各标准等级表，选定标准后查表一次写入基线"
+    },
+    "G07-006": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "抗扰度矩阵和各标准等级表，选定标准后查表一次写入基线"
+    },
+    "G07-007": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "抗扰度矩阵和各标准等级表，选定标准后查表一次写入基线"
+    },
+    "G07-008": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "抗扰度矩阵和各标准等级表，选定标准后查表一次写入基线"
+    },
+    "G07-009": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "抗扰度矩阵和各标准等级表，选定标准后查表一次写入基线"
+    },
+    "G07-010": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "抗扰度矩阵和各标准等级表，选定标准后查表一次写入基线"
+    },
+    "G07-011": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "发射项目与限值，选定标准后一次写入基线"
+    },
+    "G07-012": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "发射项目与限值，选定标准后一次写入基线"
+    },
+    "G07-013": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "−48 V 话音设备是否声明窄带噪声，由项目需求回答"
+    },
+    "G07-014": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "−48 V 话音设备是否声明窄带噪声，由项目需求回答"
+    },
+    "G07-016": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "项目等级与豁免的取舍属需求决定"
+    },
+    "G07-017": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "外部一次保护由系统需求声明"
+    },
+    "G07-051": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "军用项目、CS117 和军车 EMI 适用规范由项目声明一次确定"
+    },
+    "G07-052": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "军用项目、CS117 和军车 EMI 适用规范由项目声明一次确定"
+    },
+    "G07-053": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "军用项目、CS117 和军车 EMI 适用规范由项目声明一次确定"
+    },
+    "G08-001": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "环境参考点和参数项由需求回答"
+    },
+    "G08-002": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "环境参考点和参数项由需求回答"
+    },
+    "G08-003": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "环境温度不设默认，由需求澄清回答"
+    },
+    "G08-004": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "ETSI 类别查表取值，声明类别后写入工况"
+    },
+    "G08-005": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "ETSI 类别查表取值，声明类别后写入工况"
+    },
+    "G08-008": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "电解电容长期贮存上电处理，交生产维护一行约束"
+    },
+    "G08-010": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "涂覆防潮要求和高阻节点清单，关闭在样机后"
+    },
+    "G08-019": {
+      "set": {
+        "coverage": "handoff",
+        "closing_stage": "pcb"
+      },
+      "reason": "贴片电阻允许 PCB 温度写一行约束，功率比较已由降额规则判",
+      "format_reason": "handoff 不得在 schematic 关闭；按原文交接对象标记阶段，正文不变"
+    },
+    "G08-029": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "实测换算结温属样机测试计划"
+    },
+    "G08-037": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "任务剖面由需求一次回答"
+    },
+    "G08-045": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "MTBF 方法由用户选定"
+    },
+    "G08-047": {
+      "set": {
+        "coverage": "handoff",
+        "closing_stage": "pcb"
+      },
+      "reason": "散热接口表是交给 PCB 和结构的约束",
+      "format_reason": "handoff 不得在 schematic 关闭；按原文交接对象标记阶段，正文不变"
+    },
+    "G08-051": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "温升实测项，分析不代替实测"
+    },
+    "G08-053": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "环境试验列下游"
+    },
+    "G08-054": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "实测后复算寿命在样机阶段"
+    },
+    "G08-055": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "军用 LCEP 属项目输入"
+    },
+    "G08-056": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "军用试验矩阵，关闭在试验"
+    },
+    "G08-057": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "可靠性预计数据来源由客户指定"
+    },
+    "G08-058": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "航天降额标准由项目确认"
+    },
+    "G08-059": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "航天热真空裕量，关闭在试验"
+    },
+    "G08-060": {
+      "set": {
+        "coverage": "handoff"
+      },
+      "reason": "可触及表面温度写清单交样机实测，原理图只估算"
+    },
+    "G09-001": {
+      "set": {
+        "coverage": "project_input"
+      },
+      "reason": "调试、生产、现场的测试和编程方法由需求回答"
+    },
+    "G09-002": {
+      "set": {
+        "coverage": "handoff",
+        "closing_stage": "production"
+      },
+      "reason": "生产发现手段依赖测试方法和夹具，只交接",
+      "format_reason": "handoff 不得在 schematic 关闭；按原文交接对象标记阶段，正文不变"
+    },
+    "G09-025": {
+      "set": {
+        "coverage": "handoff",
+        "closing_stage": "production"
+      },
+      "reason": "ESD 敏感清单交生产，一行约束",
+      "format_reason": "handoff 不得在 schematic 关闭；按原文交接对象标记阶段，正文不变"
+    },
+    "G09-028": {
+      "set": {
+        "coverage": "handoff",
+        "closing_stage": "production"
+      },
+      "reason": "镀层预搪锡属工艺，只交接",
+      "format_reason": "handoff 不得在 schematic 关闭；按原文交接对象标记阶段，正文不变"
+    },
+    "G05-031": {
+      "set": {
+        "asg_action": "V_CLAMP = V_BR + I_SURGE·R_DYN；按实际浪涌电流、相同波形和最高温度取值，手册只给其他波形的只能定界并标估算，不据此放行损坏判据。被保护对象沿同一事件的实际低阻/滤波路径，从 TVS/压敏节点追到同网及后级器件的具体引脚；计入磁珠、小电阻、保险等路径在事件频段的阻抗、限流与次级钳位，求各脚承受的电压上下界，并逐脚与对应极性和持续时间的绝对最大值（含适用的瞬态额定）比较；多通道阵列逐通道核对。不得用击穿下限代替最大钳位，也不得只核保护器件所在网而遗漏后级脚。缺实际事件等级、波形或后级脚限值时登记资料缺口并保留条件结论，不捏造保证。证据：事件与路径、到达的位号/脚号、路径模型、钳位及脚应力计算行、逐脚限值出处与比较结果。",
+        "version": "1.2"
+      },
+      "reason": "已批准草案 B 原文，条目版本加一"
+    }
+  }
+}

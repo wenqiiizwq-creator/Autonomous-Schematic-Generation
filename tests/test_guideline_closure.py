@@ -131,8 +131,9 @@ class GuidelineClosureTests(unittest.TestCase):
         real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
         ids = lambda types: {r['id'] for r in guideline_criteria.select(real, 'industrial_telecom', types, [])}
         added = ids(['DC_24V']) - ids([])
-        self.assertEqual(added, {'G01-051', 'G01-052', 'G01-053', 'G01-054'})
-        self.assertFalse(added & (ids(['DC_48V']) - ids([])))
+        self.assertEqual(added, {'G01-051', 'G01-052', 'G01-053', 'G01-054',
+                                'G07-009', 'G07-012', 'G07-023', 'G07-034'})
+        self.assertFalse({i for i in added if i.startswith('G01-')} & (ids(['DC_48V']) - ids([])))
 
     def test_library_1_7_0_board_identity_rules_and_usb_port_rules(self):
         # user 2026-11-02: 按草案入库 — the nine rules drafted from the 86 open-hardware boards are in the library;

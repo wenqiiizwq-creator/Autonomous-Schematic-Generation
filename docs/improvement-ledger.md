@@ -8,6 +8,20 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## G01–G09 运行包 1.9.0 与登记只读覆盖层（2026-11-05）
+
+按 integration brief 升级；当前登记 534 条已不含指定排除的五个编号，故运行包为 534 而非 brief 预期 529，不再任意删规则。ASG 覆盖层锁定九份源哈希；G05-031 动作逐字采用批准草案、版本 1.1→1.2；五条 handoff 的关闭阶段按原文交接对象最小修正，正文不动。合入 main 时才把覆盖层写回登记，本次不写登记、不提交。共享层两边同字节。
+
+只恢复 SKILL 的两处 G01–G09 表述，其余纲要不动。旧 DC_24V 选择测试增加 G07 四条，仍核 G01 不混入 −48 V 专用输入。覆盖层测试核可复现、源只读、源漂移拒绝及真实运行包逐字段匹配。
+
+- Approved: user:2026-11-05
+- Outline: 482b047d825d22fc
+- Event: user:2026-11-05
+- Causes: rule_not_enforced 2, rule_missing 2
+- Changed: SKILL.md, references/shared/guideline-criteria.json, references/shared/shared-layer.md, tests/test_guideline_closure.py, docs/registry-overlay-2026-11-05.json, scripts/build_registry_overlay.py, tests/test_registry_overlay.py, docs/improvement-ledger.md
+- Gates: 1227 passed in 396.37s (0:06:36)；check_ledger.py PASS；git diff --check 通过；配对 ASG_SR_SHARED_ROOT=SR integration；完整日志见指定 integration/实施说明.md。
+
+
 ## 设计准则覆盖方式 coverage：基线和交接批量覆盖，item 不放松 (2026-11-04)
 
 加入 G07、G08 后 R2 适用准则从 185 升到 277，新增的很多只是项目基线输入或下游交接，逐条引用只会逼出批量凑数。准则加可选字段 `coverage`，缺省 `item`，行为不变。`project_input` 由 `guideline_project_input` 的 `baseline` 和 `answers` 一次回答（需求、需求澄清、`<基线>#<节>` 或 `TBR`），别处引用不能代替；`handoff` 由一件待办或一条证据覆盖多条，不要逐条 `guideline_evidence`。`item` 写进批量证据或 `answers` 记 `guideline_batch_mixed_item`；`guideline_evidence_repeated` 仍拦 `item`。`handoff` 的 `closing_stage` 不能是 `schematic`。报告把这两类各合成一张表。
