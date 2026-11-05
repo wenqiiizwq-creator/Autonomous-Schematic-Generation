@@ -49,7 +49,7 @@
   |---|---|---|
   | `rule_missing` | 没有规则或自动检查覆盖这件事 | 在 `scripts/` 加检查，`lessons.json` 写明文件 |
   | `rule_not_enforced` | 规则有，但没有脚本强制，被跳过了 | 把规则做成自动检查，`lessons.json` 写明文件 |
-  | `knowledge_missing` | 技能和知识库都没有这条知识 | 补 `references/` 或知识库，`lessons.json` 写明文件和行 |
+  | `knowledge_missing` | 设计当时缺少可复用知识并有具体问题证据（schema 2 区分 observed/uncertain） | 补 `references/` 或知识库，`lessons.json` 写明文件和行 |
   | `knowledge_wrong` | 有这条知识但是错的 | 改正并记来源，`lessons.json` 写明文件和行 |
   | `judgment` | 规则和知识都在，判断还是错了 | `lessons.json` 写 `why_not_rule`：为什么规则和知识拦不住 |
   | `none` | 意见不反映技能缺口（需求取舍、审查方自身限制） | 无 |
@@ -67,7 +67,7 @@ SR 按其 `references/selection-review.md` 独立复核 `selection.json` 和上�
 
 - 角色 `DISAGREE` 并给出候选之外的型号：按 `DESIGN` 登记，把该型号加进候选、按决定性条件判定后再定；改了选定型号的记 `REDESIGN`。
 - `DISAGREE` 指出淘汰理由有误：改 `selection.json` 里该候选的 `values`/`reason`，`cause` 多为 `knowledge_wrong`。
-- `conditions_complete: false`：缺的决定性条件补进 `references/core-part-selection.md` 或 `part-roles.md`，`cause` 为 `knowledge_missing`。
+- `conditions_complete: false`：缺的决定性条件补进 `references/core-part-selection.md` 或 `part-roles.md`，有具体问题证据时 `cause` 为 `knowledge_missing`，按 observed/uncertain 登记；仅缺文件的另记 library_gaps。
 - 归因不同意：改 `lessons.json` 与 `review-responses.json` 的 `cause`，按新的归因改对应文件；复发的意见按上面的 `recurs_from` 处理，不能归 `judgment`。
 
 ## 2. 意见附带的改法
@@ -88,3 +88,5 @@ SR 按其 `references/selection-review.md` 独立复核 `selection.json` 和上�
 `REDESIGN` 的 `changes` 要点名位号或页；`CALC_DOC` 的 `changes` 要是计算编号或设计资料文件。
 `sources` 的 `path` 读得到时核对 `sha256`，不一致算记录问题；读不到时报告写明“来源未核对”。
 报告在摘要后会写明本版多少条意见真正改了图或补了计算、多少条只是登记。
+
+schema 2 中，`knowledge_missing` 只记录缺少可复用途径、判据或已知坑而导致具体问题的事件，写 knowledge_kind、problem 和 impact。有证据后果（observed）写 consequence 和 evidence；疑似归因（uncertain）写 uncertainty 和 pending，单列待核、不计已证实知识缺陷。规则当时已有且适用但未落实的按 rule_not_enforced 复核；只缺典型电路文件的登记 library_gaps，不能满足审查意见必须有对应 events 的要求。来源可定位不证明因果成立。旧版保持历史语义，标注尚未按新口径复核。字段与引用定位见 [交付与设计报告](delivery-report.md#lessons-schema-2新交付)。

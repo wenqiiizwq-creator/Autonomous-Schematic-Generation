@@ -22,6 +22,6 @@
   - 无隔离的 24 V 板引用本电路时不要声明 ISOLATION，否则审计把隔离器、RS-485 等 18 条无关准则拉进适用范围（user:2026-11-03（Matrix R2 lessons knowledge_wrong））
   - 电容的器件性能要求同时写工作电压与耐压两项，只写耐压会被器件性能核对拒收（test:ASG-calibration/industrial-io-rs485-can#27）
 - **来源**：
-  - evals/calibration_boards/industrial-io-rs485-can/requirements.md（澄清 C10：功能绝缘、≥1500 Vrms、屏蔽经电容单点接现场地）
+  - 原理图设计规范/评测集/案例/校准板/_整板需求/industrial-io-rs485-can-需求.md（澄清 C10：功能绝缘、≥1500 Vrms、屏蔽经电容单点接现场地）
   - raw/Datasheet/15_接口与隔离/隔离 RS-485_CAN 收发器/TI - ISOW3080.pdf（p1 隔离耐压）
 
