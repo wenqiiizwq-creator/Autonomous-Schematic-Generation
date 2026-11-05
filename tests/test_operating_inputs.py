@@ -73,6 +73,40 @@ class StartupLoadTests(unittest.TestCase):
         self.assertEqual(['operating_input_without_source'], codes)
         self.assertIn('没有 0.7', errors[0][1])
 
+    def test_requirement_number_is_compared_with_its_unit(self):
+        only_amps, millifarad = {'text': '单路最大1.5 A'}, {'text': '负载输入电容 ≤1.5 mF'}
+        written = lambda value, unit, req: oi.written_with_unit(value, unit, req['text'], closure.shown)
+        self.assertFalse(written(1500, 'µF', only_amps), '量纲不同，1.5 不算写明')
+        self.assertTrue(written(1.5, 'A', only_amps))
+        self.assertTrue(written(1500, 'mA', only_amps))
+        self.assertTrue(written(1500, 'µF', millifarad))
+        self.assertFalse(written(1.5, 'A', {'text': '数字 1.5 没有单位'}))
+        self.assertTrue(written(20.4, 'V', {'text': '连续输入 20.4～28.8 V'}), '范围下端取上端的单位')
+        self.assertTrue(written(1000, 'Ω', {'text': '1～2 kΩ'}))
+        self.assertTrue(written(85, '℃', {'text': '−40～+85 °C'}))
+        self.assertTrue(written(32, '', {'text': '不超过 32 单位负载'}), '没有单位的只比数')
+        self.assertTrue(written(100, 'kbit/s', {'text': '速率 100 kbit/s'}))
+        self.assertFalse(written(100, 'kbit/s', {'text': '速率 200 kbit/s，长 100 m'}))
+
+    def test_whole_check_on_units(self):
+        role_cap = dict(CAP, input_role='load_capacitance')
+        amps = {'R1': {'id': 'R1', 'text': '单路最大1.5 A'}}
+
+        def codes(p, reqs):
+            errors = []
+            oi.audit_roles({'C1': calc([p, LOAD], 1.5)}, reqs, {}, {}, {'components': COMPONENTS}, lambda c, i: errors.append(c), closure.shown)
+            return errors
+        self.assertEqual(['operating_input_without_source'], codes(role_cap, amps))
+        self.assertEqual(['operating_input_without_source'], codes(CAP, amps), '没写 input_role 的负载电容在启动计算里一样核')
+        self.assertEqual([], codes(role_cap, {'R1': {'id': 'R1', 'text': '单路最大1.5 A，负载输入电容 ≤1.5 mF'}}))
+
+    def test_other_values_the_requirement_writes_are_listed_not_judged(self):
+        row = calc([dict(LOAD, value=1)], 1.0)
+        reqs = {'R1': {'text': '单路最大1.5 A，预算各路1 A，输入 24 V'}}
+        listed = oi.checklist({'C1': row}, reqs, guideline_criteria.load(), [], set(), {})['multiple_candidates']
+        self.assertEqual([1.5], listed[0]['others'])
+        self.assertEqual([], oi.checklist({'C1': calc([LOAD], 1.5)}, {'R1': {'text': '单路最大1.5 A'}}, guideline_criteria.load(), [], set(), {})['multiple_candidates'])
+
     def test_sources_that_are_accepted(self):
         for p in (dict(LOAD, value=0.8, source='req:CL-A'),
                   dict(LOAD, basis='guaranteed', ref='U2', source='datasheet:x.pdf#p3', locator='表 1'),
@@ -210,6 +244,8 @@ class ChecklistTests(unittest.TestCase):
                                'calculations': [{'calculation': 'C3', 'missing': {'ambient_temperature': ['G02-006']}}],
                                'roles': [{'role': 'ambient_temperature', 'title': '环境温度', 'rules': 3, 'requirements': []}]}}
         words = '\n'.join(render_design_report.render_operating_inputs(found))
+        found['checklist']['multiple_candidates'] = [{'calculation': 'C1', 'parameter': '启动期负载电流', 'value': 1, 'unit': 'A', 'requirement': 'R1', 'others': [1.5]}]
+        self.assertIn('不利值', '\n'.join(render_design_report.render_operating_inputs(found)))
         for piece in ('启动期负载电流', 'req:R1', '负载电容', 'U9', '环境温度', '**没有**', 'C3'):
             self.assertIn(piece, words)
         self.assertEqual([], render_design_report.render_operating_inputs(None))

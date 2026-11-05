@@ -65,6 +65,59 @@ _VALUE_BEFORE = re.compile(r'\d\s*[pnµumkM]?(?:A|V|W|F|Ω|H|s|J|Hz)$')
 _UNIT = re.compile(r'^([pnµumkM]?)(A|V|W|F|Ω|H|s|J|Hz)$')
 
 
+# A number written with its unit in a requirement. Prefixes convert only within one base unit: 1.5 mF is 1500 µF, 1.5 A is not.
+_BASES = ('Hz', 'A', 'V', 'W', 'F', 'Ω', 'H', 's', 'J', '℃', '%')
+_PREFIXES = dict(_SI, G=1e9)
+_NUMBER = r'(?<![\d.])(\d+(?:\.\d+)?)'
+_MEASURE = re.compile(_NUMBER + r'\s*([pnµumkMG]?)(Hz|A|V|W|F|Ω|H|s|J|℃|%)(?![A-Za-z])')
+# The lower end of a range takes the upper end's unit: 20.4～28.8 V, 1～2 kΩ.
+_RANGE = re.compile(_NUMBER + r'\s*[～~–—至到-]\s*[+\-−]?\s*(\d+(?:\.\d+)?)\s*([pnµumkMG]?)(Hz|A|V|W|F|Ω|H|s|J|℃|%)(?![A-Za-z])')
+
+
+def _clean(words):
+    return (str(words or '').replace('μ', 'µ').replace('°C', '℃').replace('kohm', 'kΩ').replace('ohm', 'Ω').replace('欧姆', 'Ω'))
+
+
+def split_unit(unit):
+    """(scale, base) of a unit the audit can convert, else None: 'µF' is (1e-6, 'F')."""
+    unit = _clean(unit).strip()
+    if unit in _BASES:
+        return 1, unit
+    if len(unit) > 1 and unit[1:] in _BASES and unit[0] in _PREFIXES:
+        return _PREFIXES[unit[0]], unit[1:]
+    return None
+
+
+def measures(words):
+    """[(value in the base unit, base unit)] written in a text."""
+    words = _clean(words)
+    found = [(float(m.group(1)) * _PREFIXES[m.group(2)], m.group(3)) for m in _MEASURE.finditer(words)]
+    found += [(float(m.group(1)) * _PREFIXES[m.group(3)], m.group(4)) for m in _RANGE.finditer(words)]
+    return found
+
+
+def written_with_unit(value, unit, words, shown):
+    """A requirement writes this number in this unit, or the same quantity in another prefix. A parameter with no unit
+    to compare (a ratio, a count) falls back to the number alone; a unit the audit cannot convert must appear literally."""
+    split = split_unit(unit)
+    if split is not None:
+        target = abs(value) * split[0]
+        return any(base == split[1] and math.isclose(v, target, rel_tol=1e-6) for v, base in measures(words))
+    unit = _clean(unit).strip()
+    if not unit or unit == '1':
+        return shown(value, words)
+    return re.search(_NUMBER.replace(r'(\d+(?:\.\d+)?)', re.escape('%g' % abs(value))) + r'\s*' + re.escape(unit), _clean(words)) is not None
+
+
+def other_candidates(p, words):
+    """Other values of the same quantity the requirement writes beside the one declared, in the parameter's unit."""
+    split = split_unit(p.get('unit'))
+    if split is None or not finite(p.get('value')):
+        return []
+    target = abs(p['value']) * split[0]
+    return sorted({round(v / split[0], 9) for v, base in measures(words) if base == split[1] and not math.isclose(v, target, rel_tol=1e-6)})
+
+
 def text(value):
     return isinstance(value, str) and bool(value.strip())
 
@@ -291,8 +344,9 @@ def source_problem(key, p, calculations, requirements, clarifications, work, com
     basis, source = p.get('basis'), str(p.get('source') or '')
     if basis == 'requirement':
         req = requirements.get(source[4:]) if source.startswith('req:') else None
-        if req is not None and finite(p.get('value')) and not shown(p['value'], req.get('text')):
-            return '需求 %s 的文字里没有 %g；写需求给的数，换算出来的写 derived 和 formula' % (source[4:], p['value'])
+        if req is not None and finite(p.get('value')) and not written_with_unit(p['value'], p.get('unit'), req.get('text'), shown):
+            return '需求 %s 的文字里没有 %g %s（数和单位一起比，同一量纲才换算前缀）；写需求给的数，换算出来的写 derived 和 formula' % (
+                source[4:], p['value'], p.get('unit') or '')
         return None     # a missing requirement is already requirement_parameter_without_requirement
     if basis in ('guaranteed', 'typical'):
         return None     # the datasheet citation is checked with every parameter
@@ -383,7 +437,7 @@ def audit_roles(calculations, requirements, clarifications, work, intent, error,
                       key, why if why == 'G03-017' else '%s 的启动' % why,
                       '；疑似的参数：%s' % '、'.join(map(str, looks)) if looks else ''))
         for p in params:    # the load's capacitance is the same kind of number: G03-017 lists both
-            if p.get('input_role') is None and p.get('basis') in ('model', 'design_choice') and _PARAM['load_capacitance'].search(str(p.get('name') or '')):
+            if p.get('input_role') is None and p.get('basis') in ('model', 'design_choice', 'requirement') and _PARAM['load_capacitance'].search(str(p.get('name') or '')):
                 problem = source_problem(key, p, calculations, requirements, clarifications, work, comps, hot, by_name, shown)
                 if problem:
                     error('operating_input_without_source', '%s:%s（%s，%s）：%s' % (key, p.get('name'), ROLES['load_capacitance'][0], p.get('basis'), problem))
@@ -438,7 +492,7 @@ def checklist(calculations, requirements, library, applicable, hot, startup):
     """Nothing here is an error. By calculation: the condition inputs the rules it cites list and it does not declare. By
     role: whether the requirements or any parameter give it at all. Plus declared-looking parameters ASG set itself."""
     rules = {r['id']: r for r in library['criteria']}
-    calcs, weak = [], []
+    calcs, weak, candidates = [], [], []
     for key, row in calculations.items():
         missing = {}
         for gid in row.get('guidelines') or []:
@@ -448,6 +502,12 @@ def checklist(calculations, requirements, library, applicable, hot, startup):
         if missing:
             calcs.append({'calculation': key, 'missing': {r: sorted(set(g)) for r, g in missing.items()}})
         for p in params_of(row):
+            source = str(p.get('source') or '')
+            if p.get('input_role') and p.get('basis') == 'requirement' and source.startswith('req:'):
+                others = other_candidates(p, (requirements.get(source[4:]) or {}).get('text'))
+                if others:
+                    candidates.append({'calculation': key, 'parameter': p.get('name'), 'value': p.get('value'), 'unit': p.get('unit'),
+                                       'requirement': source[4:], 'others': others, 'reason': p.get('reason')})
             if p.get('input_role') is None and p.get('basis') in ('model', 'design_choice'):
                 for role in ROLE_NAMES:
                     if _PARAM[role].search(str(p.get('name') or '')):
@@ -465,5 +525,5 @@ def checklist(calculations, requirements, library, applicable, hot, startup):
         roles.append({'role': role, 'title': ROLES[role][0], 'rules': len(ids), 'rule_ids': ids[:12],
                       'requirements': reqs[:8], 'calculations': params[:8], 'sourced': bool(reqs or params)})
     covered = {r for key in startup for r in calculations[key].get('refs') or []}
-    return {'calculations': calcs, 'weak_sources': weak, 'roles': roles,
+    return {'calculations': calcs, 'weak_sources': weak, 'roles': roles, 'multiple_candidates': candidates,
             'switch_parts_without_startup_calculation': sorted(hot - covered)}

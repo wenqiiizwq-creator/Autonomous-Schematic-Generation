@@ -208,7 +208,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     没人给过这个数，换成需求的单路 1.5 A 结论就反了）。工况是板子外面定的量：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆。词表与判法在 `scripts/operating_inputs.py`。
     - **`input_role`**：计算参数写 `input_role`（`startup_load`、`load_capacitance`、`load_demand`、`source_impedance`、`input_window`、`ambient_temperature`、
       `external_transient`、`cable_topology`）就声明它是工况，审计核来源，没有来源记 `operating_input_without_source`。接受的来源：
-      - `requirement`（`req:<编号>`，用户答复写回的需求同样引 `req:<澄清编号>`），需求文字要写出这个数；换算出来的写 `derived` 和 `formula`；
+      - `requirement`（`req:<编号>`，用户答复写回的需求同样引 `req:<澄清编号>`），需求文字要写出这个数和单位：同一量纲才换算前缀（1500 µF 对 1.5 mF 算写明，对 1.5 A 不算），范围下端取上端的单位（20.4～28.8 V）；没有单位的参数（比值、个数）只比数。换算出来的写 `derived` 和 `formula`；
       - `guaranteed`、`typical` 引手册页（负载器件的手册）；
       - `derived`：`source` 指向声明了它的另一条计算，或写 `formula`，算式用到的参数自己有来源；
       - `model`、`design_choice`、`unspecified` 只有两种情况：负载在本板上，写 `load_refs`（位号，不能是开关自身或连接器）；或用户暂缓，写 `clarification: <澄清编号>`，
@@ -217,7 +217,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       8/20 µs 这类脉冲不算）的计算。这种计算：
       - 要有 `input_role: startup_load` 的参数（阻性/恒流/恒功率的值；后级 UVLO 开启前没有负载的，写 0 并引后级手册的 UVLO 页），否则 `startup_load_undeclared`。
         需求没给，取值又会改变选型或取值时，按[需求澄清](requirement-clarifications.md)问用户，不自定。别的计算已声明的，写 `derived`、`source: calc:<那条计算>`；
-      - 负载电容估计（名字像负载电容、`model`/`design_choice`）同样要有来源，否则 `operating_input_without_source`；
+      - 名字像负载电容的参数（`model`/`design_choice`/`requirement`）同样核来源，否则 `operating_input_without_source`；
       - 浪涌检查（检查名含启动浪涌、合闸浪涌、浪涌电流、启动电流、充电电流，单位是电流）的值要是本计算的一个参数（`startup_surge_unbound`），该参数写 `formula`
         （`startup_surge_without_formula`），算式用到声明的负载（`startup_surge_ignores_load`；负载为 0 不要求）。
     - **`formula`**：`{"expr": "C*S*1e-3+I", "vars": {"C": "<参数名>", "S": "<参数名>", "I": "<参数名>"}}`，只能用四则、乘方和 sqrt、log、exp、abs、min、max。任何参数写了都复算：
@@ -228,7 +228,9 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - **核对清单**（`operating_inputs.checklist`，不挡交付，报告“工况输入来源”一节列出）：
       按关键词把引用准则的 `inputs` 文字归到上面的类别，不逐条维护；列每类工况的适用准则数、需求里有没有提到、引用这些准则却没写它的计算；名字像工况、由 ASG 自定、没写 `input_role` 的参数；
       没有启动计算的 eFuse、热插拔或负载开关。脚本判不了这些是否真缺：一条计算只落实准则的一部分时，没写它不算错。
-    - **查不到的**：有来源不等于取对了。需求同时写了“单路最大 1.5 A”和“预算各路 1 A”时，声明 1 A 也通过，只有报告的表能让人看到。
+    - **有多个候选值时取不利值，理由写进参数**（`reason`）：一条需求同时写了“单路最大 1.5 A”和“预算各路 1 A”，启动计算取 1.5 A。
+      审计查不出取错：声明 1 A 也通过，只在核对清单 `multiple_candidates` 和报告里列出需求写的其他值和理由，由人看。
+    - **查不到的**：有来源不等于取对了，同上。
       没写成计算的工况、按比例藏在系数里的量（×1.2）只有声明后才查。
   - **`binding_version: 1`**（新设计；用户 2026-11-02：把这86块板子上找到的问题……进行改进）：料号、手册、符号脚、未用脚和电源轨电压绑在一起核。
     - 值为空也记 `placeholder_value`（机械件、测试点、连接器除外）。

@@ -713,6 +713,12 @@ def render_operating_inputs(found):
         out += ['**看名字像工况、由 ASG 自定的参数**（没写 `input_role`）：'
                 + '；'.join('%s 的 %s（%s %s，%s）' % (w['calculation'], w['parameter'], num(w.get('value')), w.get('unit') or '', w['basis']) for w in weak)
                 + '。外部给定的要有来源，本板自己的不用管。', '']
+    several = listed.get('multiple_candidates') or []
+    if several:
+        out += ['**需求里还写了同一量的其他值**（有多个候选时取不利值，理由写进参数；审计不判取得对不对）：'
+                + '；'.join('%s 的 %s 取 %s %s，%s 还写了 %s（理由：%s）' % (
+                    c['calculation'], c['parameter'], num(c.get('value')), c.get('unit') or '', c['requirement'],
+                    '、'.join(num(v) for v in c['others']), c.get('reason') or '**没写**') for c in several) + '。', '']
     parts = listed.get('switch_parts_without_startup_calculation') or []
     if parts:
         out += ['**没有启动计算的 eFuse、热插拔或负载开关**：%s。没有启动限流问题的不用管。' % '、'.join(parts), '']

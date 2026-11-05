@@ -8,6 +8,17 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 工况输入的需求数值连单位一起核；多个候选值取不利值 (2026-11-04)
+
+上一条的核对只比数字且接受 SI 换算，1500 µF 引只写 1.5 A 的需求能靠 1.5 通过；启动计算里没写 `input_role`、依据是 `requirement` 的负载电容则根本不核。现在数和单位一起比，同一量纲才换算前缀，范围下端取上端的单位，没有单位的参数只比数；负载电容按名字核时也包括 `requirement`。
+
+同一条需求同时写 1.5 A 和 1 A、声明 1 A 仍能通过，这次不修：`design-closure.md` 写明多个候选值取不利值、理由写进参数，核对清单 `multiple_candidates` 和报告列出来由人看。
+
+- Event: user:2026-11-04 (主会话转达：修掉数值核对不看单位的放行漏洞)
+- Causes: audit_gap 1
+- Changed: scripts/operating_inputs.py, scripts/render_design_report.py, references/design-closure.md, tests/test_operating_inputs.py, docs/improvement-ledger.md
+- Gates: python3 -m pytest tests -q; scripts/check_ledger.py
+
 ## 设计审计核工况输入的来源：启动期负载硬检查，其余工况分层 (2026-11-04)
 
 Matrix R2 的 CALC-CH-START 核“启动浪涌 ≤ I(OL) 下限”，浪涌＝负载电容充电电流＋写死在算式里的 1 A，参数名写“负载电容上限 + 1 A”，基准是 `derived`；这 1 A 没有来源，用户没被问过，换成需求的单路 1.5 A 约 2.14 A，超过下限 1.80 A，结论反了。G03-017 的 `inputs` 早已列出启动期负载，但 `inputs` 是自由文本，审计不读。
