@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
+import operating_inputs  # noqa: E402
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
@@ -694,6 +695,42 @@ def worst(levels):
 STAGE_WORDS = {'schematic': '原理图', 'pcb': 'PCB', 'simulation': '仿真', 'prototype': '样机', 'production': '生产'}
 
 
+def render_operating_inputs(found):
+    """The declared condition inputs and the review list of design-closure.md 工况输入; an error is listed with the others."""
+    if not found:
+        return []
+    out = ['## 工况输入来源', '', '计算用到的外部工况（负载、源阻抗、环境温度……）从哪来。第一张表审计核过来源；后面是核对清单，脚本判不了，不挡交付，要人看。', '']
+    declared = found.get('declared') or []
+    if declared:
+        out += ['| 计算 | 输入 | 类别 | 值 | 依据 | 来源 |', '|---|---|---|---|---|---|']
+        for d in declared:
+            out.append('| %s | %s | %s | %s %s | %s | %s |' % (d['calculation'], cell(d.get('parameter') or ''), operating_inputs.ROLES[d['role']][0],
+                                                              num(d.get('value')), d.get('unit') or '', d.get('basis'), cell(str(d.get('source') or ''))))
+        out.append('')
+    listed = found.get('checklist') or {}
+    weak = listed.get('weak_sources') or []
+    if weak:
+        out += ['**看名字像工况、由 ASG 自定的参数**（没写 `input_role`）：'
+                + '；'.join('%s 的 %s（%s %s，%s）' % (w['calculation'], w['parameter'], num(w.get('value')), w.get('unit') or '', w['basis']) for w in weak)
+                + '。外部给定的要有来源，本板自己的不用管。', '']
+    parts = listed.get('switch_parts_without_startup_calculation') or []
+    if parts:
+        out += ['**没有启动计算的 eFuse、热插拔或负载开关**：%s。没有启动限流问题的不用管。' % '、'.join(parts), '']
+    missing = {}
+    for row in listed.get('calculations') or []:
+        for role in row['missing']:
+            missing.setdefault(role, []).append(row['calculation'])
+    roles = listed.get('roles') or []
+    if roles:
+        out += ['| 工况 | 适用准则列它的条数 | 需求里提到 | 引用这些准则、参数里没写它的计算 |', '|---|---|---|---|']
+        for r in roles:
+            calcs = missing.get(r['role']) or []
+            out.append('| %s | %d | %s | %s |' % (r['title'], r['rules'], '、'.join(r.get('requirements') or []) or '**没有**',
+                                                  ('、'.join(calcs[:5]) + ('等 %d 条' % len(calcs) if len(calcs) > 5 else '')) or '—'))
+        out.append('')
+    return out
+
+
 def render_guidelines(guidelines):
     """共用设计准则覆盖与下游约束（references/shared/guideline-criteria.md）：适用准则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
     if not (guidelines and guidelines.get('applicable')):
@@ -917,6 +954,10 @@ def render(root, notes=None, title=None):
         out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用设计准则覆盖”。' % (
             guideline_criteria.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
             len(guidelines['not_applicable']), len(guidelines['uncovered']), len(guidelines['downstream'])))
+    inputs_found = audit.get('operating_inputs') if isinstance(audit.get('operating_inputs'), dict) else None
+    if inputs_found:
+        out.append('- **工况输入**：声明了来源的 %d 项；启动计算 %d 条。见“工况输入来源”。' % (
+            len(inputs_found.get('declared') or []), len(inputs_found.get('startup_calculations') or {})))
     margins = audit.get('estimate_margins') if isinstance(audit.get('estimate_margins'), list) else []
     if margins:
         out.append('- **估计余量**：%d 处检查的余量小于所依赖工程估计的不确定度，合格但有风险，见“余量不足以覆盖估计误差”。' % len(margins))
@@ -1212,6 +1253,7 @@ def render(root, notes=None, title=None):
                 '（额定）' if m.get('against') == 'rating' else '', m.get('unit') or '', m['margin'] * 100,
                 m['uncertainty'] * 100, cell(m.get('improvement') or '')))
         out.append('')
+    out += render_operating_inputs(inputs_found)
     out += render_guidelines(guidelines)
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:

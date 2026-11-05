@@ -13,6 +13,7 @@ from pathlib import Path
 from design_frontier import frontier
 import typical_circuits
 import guideline_criteria
+import operating_inputs
 import stress_check
 from schematic_layout import boundary as boundary_nets, part_classes
 from schematic_layout.citations import check_source
@@ -642,6 +643,21 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
     return {'level': level, 'source': info.get('source'), 'stress_risks': risks, 'hints': hints,
             'severe_thresholds': {'loosest_level': stress_check.LEVELS[-1], 'junction_margin_c': JUNCTION_MARGIN,
                                   'other_margin': 'uncertainty'}}
+
+
+def audit_operating_inputs(record, calculations, requirements, clarifications, work, intent, error):
+    """references/design-closure.md 工况输入: the hard layer and the review list (operating_inputs.py)."""
+    found = operating_inputs.audit_roles(calculations, requirements, clarifications, work, intent, error, shown)
+    operating_inputs.audit_hidden_literals(calculations, error)
+    library = guideline_criteria.load()
+    scope = record.get('guideline_scope') if isinstance(record.get('guideline_scope'), dict) else {}
+    applicable = []
+    if all(isinstance(scope.get(k), list) for k in ('circuit_types', 'device_kinds')):
+        applicable = [r['id'] if isinstance(r, dict) else r for r in guideline_criteria.select(
+            library, scope.get('baseline') or library['default_baseline'], scope['circuit_types'], scope['device_kinds'])]
+    found['checklist'] = operating_inputs.checklist(calculations, requirements, library, applicable,
+                                                    set(found['hot_parts']), found['startup_calculations'])
+    return found
 
 
 def audit_citations(record, calculations, work, extra, error):
@@ -1434,6 +1450,11 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'derating_version must be 1, with parameter_version 2 or 3')
         else:
             derating = audit_derating(record, intent, calculations, requirements, clarifications, error, work=work)
+    # Inputs that describe the board's surroundings have a source, whatever the record version since parameter_version 2
+    # (Matrix R2, user 2026-11-04: a 1 A startup load written into a script and a parameter's name reversed a check).
+    inputs_found = None
+    if version in (2, 3):
+        inputs_found = audit_operating_inputs(record, calculations, requirements, clarifications, work, intent, error)
     margins = None
     if 'uncertainty_version' in record:
         if record['uncertainty_version'] != 1 or version not in (2, 3):
@@ -1492,6 +1513,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'calculation_basis': derived,
             'gaps': 'CHECKED' if gaps else 'NOT_CHECKED', 'citations': citations,
             'derating': derating if derating is not None else 'NOT_CHECKED',
+            'operating_inputs': inputs_found if inputs_found is not None else 'NOT_CHECKED',
             'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
             'binding': binding if binding is not None else 'NOT_CHECKED',

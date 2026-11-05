@@ -32,6 +32,9 @@ evidence, freshness, packing) from the arguments in `record/deliver.json`; it
 reads each step's status from its output and goes on only on PASS, DONE,
 CONDITIONAL, INCOMPLETE, AUTOMATED_PASS or FRESH.
 See [`delivery-report.md`](../references/delivery-report.md).
+`operating_inputs.py` is the closure audit's check that a calculation's external
+conditions (startup load, source impedance, ambient temperature...) have a source, and
+its review list; see `design-closure.md` 工况输入的来源.
 `fill_pin_maps.py <delivery>` reads each part's datasheet pin table and fills
 `datasheet_name`/`datasheet_type`/`datasheet_page` in `record/reference-input.json`
 (`--write`); pins it cannot read stay unfilled and are listed with the reason. See

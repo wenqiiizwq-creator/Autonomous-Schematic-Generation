@@ -8,6 +8,22 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 设计审计核工况输入的来源：启动期负载硬检查，其余工况分层 (2026-11-04)
+
+Matrix R2 的 CALC-CH-START 核“启动浪涌 ≤ I(OL) 下限”，浪涌＝负载电容充电电流＋写死在算式里的 1 A，参数名写“负载电容上限 + 1 A”，基准是 `derived`；这 1 A 没有来源，用户没被问过，换成需求的单路 1.5 A 约 2.14 A，超过下限 1.80 A，结论反了。G03-017 的 `inputs` 早已列出启动期负载，但 `inputs` 是自由文本，审计不读。
+
+新增 `scripts/operating_inputs.py`，`audit_design_closure.py` 对 `parameter_version` 2、3 的记录都跑：
+- 硬检查：参数写 `input_role` 就核来源（需求且文字写出这个数、手册页、有来源的推导；本板负载写 `load_refs`，用户暂缓走 `clarification`）；引用 G03-017 或对 eFuse、热插拔、负载开关做启动检查的计算必须声明 `startup_load`，浪涌值要是一个写了 `formula` 的参数，审计复算、不许写死的数、必须用到声明的负载；任何计算的名字和推导里“+ 1 A”这种没声明的数报错。
+- 核对清单（不挡交付，报告“工况输入来源”）：按关键词把引用准则的 `inputs` 归成 8 类工况（354 条里 105 条有），不逐条维护。
+- 回归：Matrix R2 副本从 INCOMPLETE 变 FAIL，新增 7 条错，1 A 以三种方式报出；工业校准板副本原有 4 条错，新增 2 条（同一条 CALC-INRUSH，浪涌检查值 1.29 A 里的逻辑电流没声明），都是真问题。
+
+没改 `references/shared/`、SKILL.md。没有来源的判断只查有没有，查不出取错了（需求同时写 1.5 A 和 1 A 时声明 1 A 也过）。
+
+- Event: user:2026-11-04 (用户确认要做，并推广到其他准则列出的输入)
+- Causes: audit_gap 1
+- Changed: scripts/operating_inputs.py, scripts/audit_design_closure.py, scripts/render_design_report.py, scripts/README.md, references/design-closure.md, references/requirement-clarifications.md, tests/test_operating_inputs.py, docs/improvement-ledger.md
+- Gates: pytest tests/test_operating_inputs.py 26; python3 -m pytest tests -q
+
 ## IC 角色线索对齐 SR p24：protectioncontroller、surgestopper 归负载开关 (2026-11-04)
 
 SR 修 Matrix R2 首审误报 1.11（LTC4367 被当线性稳压器问压差）时给 load_switch 角色加了两条手册标题线索；ASG `part_classes.IC_ROLE_CUES` 同步，保持两边分类线索对等（`tests/test_part_classes.py` 的包含关系测试）。

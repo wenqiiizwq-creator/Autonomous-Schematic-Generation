@@ -204,6 +204,32 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
     （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
     记 `placeholder_value`；位号带 `?` 记 `unannotated_reference`。值写设计值，料号写手册订货信息里的完整订货码。
+  - **工况输入的来源**（`parameter_version` 2、3 的记录都核，不另设版本；用户 2026-11-04：Matrix R2 的 CALC-CH-START 把 1 A 启动负载写死在脚本和参数名里，
+    没人给过这个数，换成需求的单路 1.5 A 结论就反了）。工况是板子外面定的量：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆。词表与判法在 `scripts/operating_inputs.py`。
+    - **`input_role`**：计算参数写 `input_role`（`startup_load`、`load_capacitance`、`load_demand`、`source_impedance`、`input_window`、`ambient_temperature`、
+      `external_transient`、`cable_topology`）就声明它是工况，审计核来源，没有来源记 `operating_input_without_source`。接受的来源：
+      - `requirement`（`req:<编号>`，用户答复写回的需求同样引 `req:<澄清编号>`），需求文字要写出这个数；换算出来的写 `derived` 和 `formula`；
+      - `guaranteed`、`typical` 引手册页（负载器件的手册）；
+      - `derived`：`source` 指向声明了它的另一条计算，或写 `formula`，算式用到的参数自己有来源；
+      - `model`、`design_choice`、`unspecified` 只有两种情况：负载在本板上，写 `load_refs`（位号，不能是开关自身或连接器）；或用户暂缓，写 `clarification: <澄清编号>`，
+        答复是 `DEFERRED`，有未关闭的 `requirement` 待办在 `calculations` 里列这条计算。
+    - **启动计算**：引用 G03-017 的计算，以及位号含 eFuse、热插拔、负载开关，且有启动类检查（检查名含启动、合闸、软启、缓启、预充、dV/dt，单位是电流、功率、能量或时间；
+      8/20 µs 这类脉冲不算）的计算。这种计算：
+      - 要有 `input_role: startup_load` 的参数（阻性/恒流/恒功率的值；后级 UVLO 开启前没有负载的，写 0 并引后级手册的 UVLO 页），否则 `startup_load_undeclared`。
+        需求没给，取值又会改变选型或取值时，按[需求澄清](requirement-clarifications.md)问用户，不自定。别的计算已声明的，写 `derived`、`source: calc:<那条计算>`；
+      - 负载电容估计（名字像负载电容、`model`/`design_choice`）同样要有来源，否则 `operating_input_without_source`；
+      - 浪涌检查（检查名含启动浪涌、合闸浪涌、浪涌电流、启动电流、充电电流，单位是电流）的值要是本计算的一个参数（`startup_surge_unbound`），该参数写 `formula`
+        （`startup_surge_without_formula`），算式用到声明的负载（`startup_surge_ignores_load`；负载为 0 不要求）。
+    - **`formula`**：`{"expr": "C*S*1e-3+I", "vars": {"C": "<参数名>", "S": "<参数名>", "I": "<参数名>"}}`，只能用四则、乘方和 sqrt、log、exp、abs、min、max。任何参数写了都复算：
+      结果差 0.1 % 以上记 `formula_mismatch`；算式里写死的数记 `formula_hidden_literal`（只允许单位换算的 10 的幂、½CV² 这类 0.5/2/3/4 的系数、指数、1+R1/R2 的 1）；写法不对记 `formula_schema`。
+      不要求给所有 `derived` 写算式，只有上面的浪涌参数必须写。
+    - **名字里加的数**：`derived` 参数的名字、`derivation` 和检查名里写的“上限 + 1 A”“VBR＋1 V”，这个数不是本计算任何参数的值时记 `hidden_literal_in_name`
+      （任何计算都查）。“+5V 轨”“共模 +7 V”是符号，不算。
+    - **核对清单**（`operating_inputs.checklist`，不挡交付，报告“工况输入来源”一节列出）：
+      按关键词把引用准则的 `inputs` 文字归到上面的类别，不逐条维护；列每类工况的适用准则数、需求里有没有提到、引用这些准则却没写它的计算；名字像工况、由 ASG 自定、没写 `input_role` 的参数；
+      没有启动计算的 eFuse、热插拔或负载开关。脚本判不了这些是否真缺：一条计算只落实准则的一部分时，没写它不算错。
+    - **查不到的**：有来源不等于取对了。需求同时写了“单路最大 1.5 A”和“预算各路 1 A”时，声明 1 A 也通过，只有报告的表能让人看到。
+      没写成计算的工况、按比例藏在系数里的量（×1.2）只有声明后才查。
   - **`binding_version: 1`**（新设计；用户 2026-11-02：把这86块板子上找到的问题……进行改进）：料号、手册、符号脚、未用脚和电源轨电压绑在一起核。
     - 值为空也记 `placeholder_value`（机械件、测试点、连接器除外）。
     - 值像型号（字母加数字）时，值与 `mpn` 要一个是另一个的前段，否则 `part_value_contradicts_mpn`（LM5163DDA 对 LM5164DDA）；
