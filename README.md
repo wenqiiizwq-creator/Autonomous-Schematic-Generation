@@ -79,4 +79,4 @@ Copyright (c) 2026 wenqiii.zwq
 ## 共用层更新入口
 
 共用工程判据由硬件设计规范的 `工具/guideline_criteria.py release` 发布，再用 `install --target <选定worktree>` 从同一正式包安装；维护源在规范 `准则登记/`、`共用层/` 和 `工具/`，技能内不得编辑共用载荷。安装路径与 import 不变。
-当前机制与完整清单见 [共用层说明](references/shared/shared-layer.md)，迁移验收见 [迁移记录](docs/shared-release-migration.md)。M3/M4 的测试与指纹边界另批实施。
+当前机制与完整清单见 [共用层说明](references/shared/shared-layer.md)，迁移验收见 [迁移记录](docs/shared-release-migration.md)。本地测试只核自己的固定发布包；工程指纹采用包内声明的格式。外部评测显式指定 --guideline-release，现行用法见评测集 发布绑定.md。M0–M6 迁移总验收见硬件设计规范维护目录。

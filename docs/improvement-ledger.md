@@ -14,6 +14,17 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+
+## M6：最终集成与过时入口清理（2026-11-06）
+
+清理 README 中 M3/M4 尚待实施的过时说法，指向各自本地发布检查与显式评测入口。核查草案所列无用 SR_PASSIVE、G02 未接入/登记1.1、G06–G09 待接入和旧双向同步已在 M2/M3/M4 消除，不重复修改发布包或历史文字。N/E 当前入口局部更新，原有历史台账与记录保留；正式包仍为 1.9.4，工程输入与数值不变。ASG 历史回放输入缺失，按 NOT_RUN 独立披露，不作为 PASS。
+
+- Event: user:2026-11-06（按关系梳理草案推荐方案完成更改，本批 M6）
+- Causes: rule_not_enforced 1
+- Changed: README.md, docs/improvement-ledger.md
+- Gates: 不设配对变量：ASG 全量 1336 passed（499.43 s，无跳过），SR 全量 3078 passed（168.81 s，无跳过，5 条既有 warnings）；SR 官方 --changed aee8b4b --tier unit 260/260 KILLED（仅临时排序，未变异副本先通过）；M1665/M1666 独立功能变异 2/2 KILLED；SR 原生回放新约定13例195/195 MATCH、0 KNOWN/0 MISMATCH，父约定不改；ASG 历史10轮因缺源 NOT_RUN，不计 PASS；E 工具28 passed、规范工具4 passed、文档/最弱档 --check PASS；两边 check_ledger.py、diff --check、quick_validate PASS；十载荷与1.9.4同字节同指纹，N十八受控输入同快照。
+
+
 ## M5：显式绑定外部评测发布输入（2026-11-06）
 
 E 校验、评测运行与打分显式选择准则发布包，ID/状态只读该包；核安装件一致，记录版/指纹/格式、E 提交与实际工作区、案例原件哈希、技能提交与字节身份。ASG prepare 不给答案且先写来源记录；SR 保存原始运行、成绩与汇总，清除测试替代准则并核实际计划。缺 E 单独报告外部评测 skip；旧成绩不自动晋升。只改评测与维护入口，不改五步、判断责任、准则或工程数值。
