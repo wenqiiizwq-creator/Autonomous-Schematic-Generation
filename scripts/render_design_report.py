@@ -1009,6 +1009,10 @@ def check_scheme_criteria(data, closure, bundle=None):
             if item.get('basis') not in EXCLUSION_BASES:
                 problems.append('%s 的 %s 要写 basis（%s 之一）：只有需求、标准原文或手册绝对额定能硬排除，工程推论写 inference'
                                 % (where, gid, '/'.join(EXCLUSION_BASES)))
+            elif item.get('basis') == 'standard' and cards[gid].get('nature') not in ('shall', 'should'):
+                problems.append('%s 的 %s 写 basis: standard，但规则卡 nature 为 %s；standard 只用于 shall/should，'
+                                'method 是工程方法，project 是项目输入，请按实际依据改成 requirement 或 inference'
+                                % (where, gid, cards[gid].get('nature')))
             defer = item.get('defer', [])
             if not (isinstance(defer, list) and all(text(d) for d in defer)):
                 problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))

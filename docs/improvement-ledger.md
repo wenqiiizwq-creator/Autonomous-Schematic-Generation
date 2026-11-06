@@ -8,6 +8,21 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 任务 1.3 方案准则核对入口与 basis 性质核对（2026-11-06）
+
+方案阶段重跑发现：PT100 记录读过格式说明仍使用自用字段，现有核对只在报告阶段运行；部分工程方法被标成 `standard`，核对未报问题。各项先写测试确认失败，再做最小修改。
+
+- 新增 `check_scheme_criteria.py <设计目录>`，读取 `record/design-closure.json` 和方案准则记录，调用报告里的原有核对函数，打印问题并用非零退出码表示失败；PT100 原记录逐字节复制为测试夹具，格式正例通过，记录缺失或读不出来时报告问题。
+- 按已确认文字，仅在 SKILL.md 任务 1.3 的“做完的标志”后加一句运行核对的要求。
+- `basis: standard` 只接受规则卡 `nature: shall/should`，其余提示按实际依据改成 `requirement` 或 `inference`；格式说明补充工程方法/项目输入、绝对额定与推荐工作条件的区别，以及没有排除候选的规则放 `searched`。原格式正例继续通过。
+
+- Event: test:评测集/运行结果/ASG/2026-11-05-km-analysis/scheme-criteria/rerun-main-a820e80；user:2026-11-06
+- Causes: rule_missing 2, rule_not_enforced 1
+- Changed: scripts/check_scheme_criteria.py, scripts/render_design_report.py, SKILL.md, references/typical-circuits.md, tests/test_scheme_criteria.py, tests/test_skill_steps.py, tests/fixtures/scheme-criteria/rt-afe-pt100.json, docs/improvement-ledger.md
+- Approved: user:2026-11-06（AskUserQuestion 答复“照草案写入（建议）”）
+- Outline: a8c8e1ea87150f50
+- Gates: 1273 passed in 356.52s（ASG_SR_SHARED_ROOT=/Users/skyfend/.agents/skills/schematic-review；首轮 PATH 缺 Poppler 中止，补齐 PATH 后全量重跑通过）；新增 15 项测试，其中 13 项先失败后通过、2 项为 shall/should 正向对照；check_ledger.py PASS；git diff --check 通过；SKILL.md 仅加指定一句；references/shared/、R3 设计目录与准则登记未改
+
 ## G09 定稿的 ASG 接入项：BOM 装配状态列、MLCC 介质、swd-debug 落实规则（2026-11-06）
 
 G09 定稿（2026-11-05）列的三项技能侧接入。代码类先写失败测试再修。

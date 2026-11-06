@@ -47,6 +47,11 @@ class SkillStepTests(unittest.TestCase):
         body = [(title, ['%s %s' % (num, name) for num, name, _ in tasks]) for title, tasks in body_steps()]
         self.assertEqual(body, table_steps())
 
+    def test_task_1_3_ends_with_the_scheme_record_check(self):
+        task = next(text for _, tasks in body_steps() for num, _, text in tasks if num == '1.3')
+        self.assertTrue(task.rstrip().endswith(
+            '写完运行 `check_scheme_criteria.py <设计目录>`，无问题再结束任务 1.3。'))
+
     def test_design_steps_never_write_new_datasheets_into_the_library(self):
         # SKILL.md 2.1 资料规则 (2026-11-04); Matrix R3 S01: references and the cadence still said to file into HardwareWiki.
         root = Path(__file__).resolve().parents[1]
