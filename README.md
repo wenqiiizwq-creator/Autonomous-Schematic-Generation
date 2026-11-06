@@ -75,3 +75,8 @@ Copyright (c) 2026 wenqiii.zwq
 
 改编部分另保留 tscircuit Inc. 和 Osman Aslan 的 MIT 声明，见
 [上游许可证](references/upstream-licenses/)及[来源记录](references/upstream-sources.json)。
+
+## 共用层更新入口
+
+共用工程判据由硬件设计规范的 `工具/guideline_criteria.py release` 发布，再用 `install --target <选定worktree>` 从同一正式包安装；维护源在规范 `准则登记/`、`共用层/` 和 `工具/`，技能内不得编辑共用载荷。安装路径与 import 不变。
+当前机制与完整清单见 [共用层说明](references/shared/shared-layer.md)，迁移验收见 [迁移记录](docs/shared-release-migration.md)。M3/M4 的测试与指纹边界另批实施。

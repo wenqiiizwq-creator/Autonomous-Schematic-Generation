@@ -39,7 +39,7 @@ ASG 设计和 SR 审查用同一套判据、同一张降额表、同一种判法
 ## 三、指纹与版本
 
 `python3 scripts/guideline_criteria.py shared` 打印每份文件的 sha256 和一行标签：**共用层 <指纹前 12 位>，设计准则库 <版本>，降额 v<版本>**。
-指纹是 `SHARED_FILES` 里各文件 sha256 列表的 sha256，由已装文件现算，没有另一份要同步的清单。
+指纹仍是 `SHARED_FILES` 顺序里各文件 sha256 的 LF 连接（无末尾 LF）的 sha256，由已装文件现算；发布清单记录同一结果和逐文件哈希。
 
 - SR 出计划时把指纹写进 `review-plan.json` 的 `guidelines.shared_sha256`，门禁核对它与已装共用层一致，不一致要求重生成计划；报告的“共用设计准则覆盖”一节首行印这行标签。
 - ASG 设计完成核对把指纹写进审计的 `guidelines.shared_sha256`，报告“共用规范”一行印这行标签。
@@ -47,12 +47,13 @@ ASG 设计和 SR 审查用同一套判据、同一张降额表、同一种判法
 
 ## 四、怎么改
 
-1. 在一边改（设计准则库从规范工作目录重建：`python3 scripts/guideline_criteria.py build --from <规范工作目录> --library-version <新版本> --out references/shared/guideline-criteria.json`；
-   降额表、应力规范、本页直接改）。
-2. 把 `references/shared/` 整个目录和 `scripts/guideline_criteria.py`、`scripts/stress_check.py` 复制到另一边。
-3. 两边 `python3 scripts/guideline_criteria.py shared` 打出同一指纹。
-4. 两边跑全量测试（SR `python3 -m pytest scripts/tests -q`，ASG `python3 -m pytest tests -q`）。
-5. 共用层属于两个技能的工程规则身份：指纹变化后，受影响的设计和审查按各自的复验规则重新打开。
+1. 唯一维护源是硬件设计规范的 `准则登记/`、`共用层/` 和 `工具/`，**技能内不得编辑共用载荷**。
+2. 从规范入口调用 `工具/guideline_criteria.py release`，显式指定九份直接子登记所在目录、共用源、工具源和词表；正式包在 `发布/<设计准则库版本>/`，含输入快照、逐文件哈希、指纹及格式说明。同版不同字节拒绝覆盖。
+3. 调用同一工具的 `install <正式包> --target <选定技能worktree>`。先复制到 `/tmp/codex-work/` 并核全部清单，再整批替换十个受控文件和根目录 `shared-release.json`；失败回滚。两技能均从同一正式包安装，不互相复制。
+4. 逐文件核对安装结果，分别跑 ASG/SR 全量测试与台账检查。M3 完成前仍保留原配对测试；M4 完成前仍用完整十文件指纹，包括本页和共用代码，格式名 `shared-files-sha256-lines-v1`。
+5. 指纹变化后，受影响的设计和审查按各自的复验规则重新打开。发布版使用设计准则库版本；降额 v1 仍是载荷内数据版次。完整命令见规范 `README.md`。
+
+生产默认装载固定安装包；`GUIDELINE_CRITERIA` 替代输入仅在显式 `GUIDELINE_CRITERIA_TESTING=1` 的测试模式允许。生产误设替代输入会报错，不继续配上安装包指纹。检查其他文件使用显式路径，发布与安装不读取测试替代输入。
 
 ## 五、同名不共用
 

@@ -3,14 +3,17 @@
 """共用设计准则库（G01–G09）：校验、汇编、按适用条件选出规则、统计覆盖；共用层指纹。
 
 本文件、scripts/stress_check.py（共用应力核对）和 references/shared/ 下的文件是 ASG 与 SR 的共用层，两个技能里是同一份字节，
-改动时两边一起改（见 references/shared/shared-layer.md；两边的对齐测试逐字节比对）。只用标准库，不导入任一技能的模块。
+由硬件设计规范统一维护和发布；技能内不得编辑（见 references/shared/shared-layer.md）。只用标准库，不导入任一技能的模块。
 
     python3 guideline_criteria.py check BUNDLE                       校验汇编文件
-    python3 guideline_criteria.py build --from DIR --library-version V --out PATH
-                                                                  从 DIR 下各 G0x_准则登记.json 汇编（词表取自 vocabulary.json）
+    python3 guideline_criteria.py build --from DIR --vocabulary PATH --library-version V --out PATH
+                                                                  只从 DIR 的直接子登记文件汇编（显式词表）
     python3 guideline_criteria.py select BUNDLE [--baseline B] [--circuit-type T ...] [--device-kind K ...]
                                                                   列出适用准则
     python3 guideline_criteria.py value NAME [BUNDLE]                 读一项工程取值
+    python3 guideline_criteria.py release --help                    确定性发布（保存输入快照）
+    python3 guideline_criteria.py verify-release DIR                校验正式发布目录
+    python3 guideline_criteria.py install DIR --target SKILL         核清单后整批安装
     python3 guideline_criteria.py shared                              共用层指纹与逐文件 sha256
 """
 import argparse
@@ -19,6 +22,8 @@ import json
 import os
 import re
 import sys
+import shutil
+import tempfile
 from pathlib import Path
 
 BUNDLE_SCHEMA_VERSION = 1
@@ -92,8 +97,11 @@ def value_errors(name, entry):
 
 
 def load(path=None):
-    """The bundle at path, else at $GUIDELINE_CRITERIA (the tests point it at a library without rules), else the installed one."""
-    return json.loads(Path(path or os.environ.get('GUIDELINE_CRITERIA') or BUNDLE_PATH).read_text(encoding='utf-8'))
+    """Explicit inspection path, or the installed bundle. Environment substitution requires explicit test mode."""
+    override = os.environ.get('GUIDELINE_CRITERIA')
+    if not path and override and os.environ.get('GUIDELINE_CRITERIA_TESTING') != '1':
+        raise ValueError('GUIDELINE_CRITERIA is test-only; use an explicit path for inspection, or install a release')
+    return json.loads(Path(path or override or BUNDLE_PATH).read_text(encoding='utf-8'))
 
 
 def vocabulary(path=None):
@@ -180,7 +188,7 @@ def rule_errors(rule, vocabulary, default_baseline):
     return errors
 
 
-def bundle_errors(bundle):
+def bundle_errors(bundle, vocabulary_path=None):
     if not isinstance(bundle, dict):
         return ['bundle is not an object']
     errors = []
@@ -194,8 +202,8 @@ def bundle_errors(bundle):
     default = bundle.get('default_baseline')
     if default not in vocabulary['baselines']:
         errors.append('default_baseline must be in vocabulary.baselines')
-    if VOCABULARY_PATH.is_file():   # the bundle carries a copy of the shared vocabulary; a changed vocabulary.json needs a rebuild
-        shared = globals()['vocabulary']()
+    if Path(vocabulary_path or VOCABULARY_PATH).is_file():   # the bundle carries a copy of the shared vocabulary; a changed vocabulary.json needs a rebuild
+        shared = globals()['vocabulary'](vocabulary_path)
         if vocabulary != shared['vocabulary'] or default != shared['default_baseline']:
             errors.append('vocabulary or default_baseline differs from references/shared/vocabulary.json: rebuild the bundle')
     rules = bundle.get('criteria')
@@ -332,13 +340,19 @@ def coverage(bundle, applicable, cited, not_applicable=None, answered=None):
     return found
 
 
-def build(registry_dir, library_version):
-    """Gather the rules of every G0x_准则登记.json under registry_dir into one bundle; the vocabulary and default
-    baseline come from references/shared/vocabulary.json."""
-    base = vocabulary()
+def build(registry_dir, library_version, vocabulary_path=None):
+    """Build direct child registries only; release requires all nine, tests may build a subset.
+    Existing import callers may omit vocabulary_path; the publishing CLI always supplies it."""
+    base = vocabulary(vocabulary_path)
     rules, specs, values = [], {}, {}
-    for path in sorted(Path(registry_dir).rglob('G0*_准则登记.json')):
+    for path in sorted(Path(registry_dir).glob('G0*_准则登记.json')):
         registry = json.loads(path.read_text(encoding='utf-8'))
+        if registry['spec'] in specs:
+            raise ValueError('duplicate spec: %s' % registry['spec'])
+        if not re.fullmatch(r'G0[1-9]', str(registry['spec'])):
+            raise ValueError('unknown spec: %s' % registry['spec'])
+        if any(rule.get('spec') != registry['spec'] for rule in registry['criteria']):
+            raise ValueError('rule spec differs from its registry')
         specs[registry['spec']] = registry['version']
         rules.extend(registry['criteria'])
         for name, entry in (registry.get('engineering_values') or {}).items():
@@ -360,6 +374,165 @@ def dump(bundle):
     return json.dumps(bundle, ensure_ascii=False, indent=2) + '\n'
 
 
+# 发布源由规范维护；此处函数随同一文件安装，运行时装载路径保持不变。
+FINGERPRINT_FORMAT = 'shared-files-sha256-lines-v1'
+
+
+def _sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _inventory(root):
+    root = Path(root)
+    return {p.relative_to(root).as_posix(): _sha(p) for p in sorted(root.rglob('*')) if p.is_file()}
+
+
+def _safe_file(root, name):
+    relative = Path(name)
+    if relative.is_absolute() or '..' in relative.parts or relative.as_posix() != name:
+        raise ValueError('unsafe manifest path: %s' % name)
+    root = Path(root).resolve()
+    path = root / relative
+    if any(p.is_symlink() for p in (path, *path.parents) if p != root and root in p.parents):
+        raise ValueError('symlink is not a controlled file: %s' % name)
+    return path
+
+
+def verify_release(release):
+    """校验完整发布目录；清单覆盖载荷、持久输入与附加身份记录。"""
+    release = Path(release)
+    manifest = json.loads((release / 'manifest.json').read_text(encoding='utf-8'))
+    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') != FINGERPRINT_FORMAT:
+        raise ValueError('unsupported manifest or fingerprint format')
+    if manifest.get('fingerprint_order') != list(SHARED_FILES) or set(manifest.get('payload', {})) != set(SHARED_FILES):
+        raise ValueError('manifest must name exactly the ten controlled payload files')
+    expected = dict(manifest['payload'])
+    expected.update({'inputs/' + name: digest for name, digest in manifest['inputs'].items()})
+    expected.update(manifest.get('auxiliary', {}))
+    for name, digest in expected.items():
+        if _sha(_safe_file(release, name)) != digest:
+            raise ValueError('sha256 mismatch: %s' % name)
+    actual = set(_inventory(release))
+    if actual != set(expected) | {'manifest.json'}:
+        raise ValueError('unlisted or missing release files')
+    if shared_digest(release) != manifest['fingerprint']:
+        raise ValueError('fingerprint mismatch')
+    bundle = load(release / SHARED_FILES[1])  # 明确路径，不使用测试替代输入
+    errors = bundle_errors(bundle, release / 'references/shared/vocabulary.json')
+    if errors or bundle['library_version'] != manifest['library_version']:
+        raise ValueError('invalid release bundle: %s' % errors)
+    return manifest
+
+
+def publish(registry_dir, shared_source, tools_source, vocabulary_path, library_version, releases_dir,
+            scratch_root='/tmp/codex-work/shared-release'):
+    """从显式源构建确定性包；正式版本只增不改，快照是复现输入。"""
+    registry_dir, shared_source, tools_source = map(Path, (registry_dir, shared_source, tools_source))
+    names = sorted(registry_dir.glob('G0*_准则登记.json'))
+    if len(names) != 9:
+        raise ValueError('release requires nine direct registry files')
+    bundle = build(registry_dir, library_version, vocabulary_path)
+    if set(bundle['specs']) != {'G0%d' % n for n in range(1, 10)}:
+        raise ValueError('release requires G01 through G09 exactly once')
+    errors = bundle_errors(bundle, vocabulary_path)
+    if errors:
+        raise ValueError('\n'.join(errors))
+    if not re.fullmatch(r'\d+\.\d+\.\d+', library_version):
+        raise ValueError('library version must be X.Y.Z')
+    if (tools_source / 'guideline_criteria.py').read_bytes() != Path(__file__).read_bytes():
+        raise ValueError('builder source differs from the executing publisher')
+    scratch_root = Path(scratch_root)
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='publish-', dir=scratch_root) as tmp:
+        candidate = Path(tmp) / library_version
+        candidate.mkdir()
+        inputs = candidate / 'inputs'
+        for source in names:
+            dest = inputs / '准则登记' / source.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, dest)
+        for name in SHARED_FILES:
+            dest = candidate / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if name == 'references/shared/guideline-criteria.json':
+                dest.write_text(dump(bundle), encoding='utf-8')
+                continue
+            source = (Path(vocabulary_path) if name == 'references/shared/vocabulary.json' else
+                      shared_source / Path(name).name if name.startswith('references/') else tools_source / Path(name).name)
+            shutil.copyfile(source, dest)
+            snapshot = inputs / name
+            snapshot.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(dest, snapshot)
+        # 从已固定的输入再构建，拒绝构建期间发生的源变化。
+        rebuilt = build(inputs / '准则登记', library_version, inputs / 'references/shared/vocabulary.json')
+        if dump(rebuilt) != dump(bundle):
+            raise ValueError('inputs changed during publication')
+        manifest = {'manifest_version': 1, 'library_version': library_version,
+                    'fingerprint_format': FINGERPRINT_FORMAT,
+                    'fingerprint_algorithm': 'SHA-256 of lowercase file SHA-256 digests joined by LF, no trailing LF; fingerprint_order is authoritative.',
+                    'fingerprint_order': list(SHARED_FILES), 'fingerprint': shared_digest(candidate),
+                    'payload': shared_files(candidate), 'inputs': _inventory(inputs), 'auxiliary': {}}
+        (candidate / 'manifest.json').write_text(dump(manifest), encoding='utf-8')
+        verify_release(candidate)
+        target = Path(releases_dir) / library_version
+        if target.exists():
+            verify_release(target)
+            if _inventory(target) != _inventory(candidate):
+                raise ValueError('immutable release already exists with different bytes: %s' % library_version)
+            return target
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # 临时文件只在 /tmp/codex-work；跨文件系统时明确失败，不留下半包。
+        candidate.rename(target)
+        return target
+
+
+def install_release(release, target, scratch_root='/tmp/codex-work/shared-release'):
+    """临时副本先核全清单；作为一批替换十个受控文件及清单，异常恢复原文件。"""
+    target = Path(target)
+    if not target.is_dir():
+        raise ValueError('explicit installation target must already exist')
+    scratch_root = Path(scratch_root)
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='install-', dir=scratch_root) as tmp:
+        staged = Path(tmp) / 'release'
+        shutil.copytree(release, staged, symlinks=True)
+        manifest = verify_release(staged)  # 所有验证发生在目标第一次写入之前
+        replacements = {name: (staged / name).read_bytes() for name in SHARED_FILES}
+        replacements['shared-release.json'] = (staged / 'manifest.json').read_bytes()
+        paths = {name: _safe_file(target, name) for name in replacements}
+        original = {name: path.read_bytes() if path.exists() else None for name, path in paths.items()}
+        modes = {name: path.stat().st_mode & 0o777 if path.exists() else 0o644 for name, path in paths.items()}
+        changed = []
+        try:
+            for name, data in replacements.items():
+                path = paths[name]
+                path.parent.mkdir(parents=True, exist_ok=True)
+                # 每文件同文件系统原子替换；批次失败则回滚全部已替换文件。
+                with tempfile.NamedTemporaryFile(dir=tmp, prefix='shared-', delete=False) as stream:
+                    temporary = Path(stream.name)
+                    try:
+                        stream.write(data)
+                        stream.flush()
+                        temporary.chmod(modes[name])
+                        os.replace(temporary, path)
+                    finally:
+                        temporary.unlink(missing_ok=True)
+                changed.append(name)
+            if shared_files(target) != manifest['payload'] or shared_digest(target) != manifest['fingerprint']:
+                raise ValueError('installed payload differs from the verified release')
+        except BaseException:
+            for name in reversed(changed):
+                path, data = paths[name], original[name]
+                if data is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_bytes(data)
+                    path.chmod(modes[name])
+            raise
+    return manifest
+
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='command', required=True)
@@ -367,6 +540,7 @@ def main(argv=None):
     check.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
     make = sub.add_parser('build')
     make.add_argument('--from', dest='source', required=True)
+    make.add_argument('--vocabulary', required=True)
     make.add_argument('--library-version', required=True)
     make.add_argument('--out', required=True)
     pick = sub.add_parser('select')
@@ -380,15 +554,43 @@ def main(argv=None):
     read.add_argument('name')
     read.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
     sub.add_parser('shared')
+    release = sub.add_parser('release')
+    release.add_argument('--from', dest='source', required=True)
+    release.add_argument('--shared-source', required=True)
+    release.add_argument('--tools-source', required=True)
+    release.add_argument('--vocabulary', required=True)
+    release.add_argument('--library-version', required=True)
+    release.add_argument('--releases', required=True)
+    release.add_argument('--scratch-root', default='/tmp/codex-work/shared-release')
+    verify = sub.add_parser('verify-release')
+    verify.add_argument('release')
+    install = sub.add_parser('install')
+    install.add_argument('release')
+    install.add_argument('--target', required=True)
+    install.add_argument('--scratch-root', default='/tmp/codex-work/shared-release')
     args = parser.parse_args(argv)
+    if args.command in ('release', 'verify-release', 'install'):
+        try:
+            if args.command == 'release':
+                result = publish(args.source, args.shared_source, args.tools_source, args.vocabulary,
+                                 args.library_version, args.releases, args.scratch_root)
+            elif args.command == 'verify-release':
+                result = verify_release(args.release)['fingerprint']
+            else:
+                result = install_release(args.release, args.target, args.scratch_root)['fingerprint']
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(result)
+        return 0
     if args.command == 'shared':
         for name, digest in shared_files().items():
             print('%s  %s' % (digest, name))
         print(shared_label())
         return 0
     if args.command == 'build':
-        bundle = build(args.source, args.library_version)
-        errors = bundle_errors(bundle)
+        bundle = build(args.source, args.library_version, args.vocabulary)
+        errors = bundle_errors(bundle, args.vocabulary)
         if not errors:
             Path(args.out).write_text(dump(bundle), encoding='utf-8')
     else:

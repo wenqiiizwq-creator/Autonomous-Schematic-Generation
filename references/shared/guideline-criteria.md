@@ -77,10 +77,10 @@ ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独�
 
 ## 六、更新设计准则库
 
-1. 在规范工作目录改 `G0x_准则登记.json`（文件为 `{spec, version, rules}`）。
-2. `python3 scripts/guideline_criteria.py build --from <规范工作目录> --library-version <新版本> --out references/shared/guideline-criteria.json`（词表取自 `vocabulary.json`）。
-3. 把 `references/shared/` 整个目录和两份共用脚本复制到另一个技能，两边跑全量测试（见 [shared-layer.md](shared-layer.md) 第四节）。
-4. 设计准则库进入两个技能的工程规则身份：版本变化后，受影响的设计和审查按各自的复验规则重新打开。
+1. 在硬件设计规范的 `准则登记/` 修改登记，并同步对应正文；词表、降额表、最弱档、应力规范及共用代码只在规范源目录维护。
+2. 唯一构建、发布和安装入口是规范 `工具/guideline_criteria.py`，操作见 [shared-layer.md](shared-layer.md) 第四节及规范 `README.md`。词表显式指定，只读取九份直接子登记；正式包保存完整输入快照，同版不同字节拒绝覆盖。
+3. 两个选定技能 worktree 均从同一发布包核清单后安装并各跑全量测试；技能内不得编辑共用载荷，不从一个技能向另一个复制。
+4. 版本或指纹变化后，受影响的设计和审查按各自的复验规则重新打开；本次不改变既有指纹算法。
 
 ## 七、工程取值
 

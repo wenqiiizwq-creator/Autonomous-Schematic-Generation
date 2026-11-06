@@ -10,6 +10,17 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+
+## M1：共用源收回规范并确定性发布 1.9.1（2026-11-06）
+
+按已批准关系梳理草案方案 A 第 4、6 节：规范维护共用源及两个脚本，显式九份直接子登记与词表构建；确定性清单、持久输入快照、同版不覆盖、核清单后整批安装与失败回滚。生产默认固定安装包，替代输入显式声明测试模式；现有合成测试按原用途声明模式。两边从同一包安装，工程数据不变；SKILL.md、主流程和指纹算法不改，M2–M6 不提前做。SR 架构决定同步记录用户原话。验收、四个有意字节变化及回退见 docs/shared-release-migration.md。
+
+- Event: user:2026-11-06（“按照这个草案的推荐方案，逐个完成这个草案的更改，都按照你推荐的方式来”；本批 M0/M1）
+- Causes: rule_missing 2, rule_not_enforced 1
+- Changed: README.md, references/shared/shared-layer.md, references/shared/guideline-criteria.md, references/shared/guideline-criteria.json, scripts/guideline_criteria.py, shared-release.json, tests/test_shared_release.py, tests/test_board_defect_guards.py, tests/test_derating_audit.py, tests/test_design_closure.py, docs/shared-release-migration.md, docs/improvement-ledger.md
+- Gates: ASG 全量 1293 passed；SR 全量 3024 passed（5 warnings）；SR mutation --changed aee8b4b --tier unit 15/15 KILLED；新增 M1631–M1638 仅发布功能测试 8/8 KILLED；新增 20 项测试在旧码失败、最终两边通过；两边 check_ledger.py PASS；git diff --check PASS；ASG 术语与 SR 阅读路径 PASS；两位置完整发布目录同字节，快照重建同字节，十文件两边与发布件相同；原内容除 library_version 外全等；指纹 f62f9e757234 → 702e9b357e13。
+
+
 ## M0：固定共用层 1.9.0 发布输入（2026-11-06）
 
 按关系梳理草案方案 A 归档现行十文件与 19 个持久构建输入，固定完整指纹、逐文件哈希及评测集实际工作区身份；不改载荷。验收与回退锚点见 docs/shared-release-migration.md 和规范 发布/1.9.0/manifest.json。

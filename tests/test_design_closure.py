@@ -27,7 +27,7 @@ def setUpModule():
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria.json'
     empty.write_text(guideline_criteria.dump(library), encoding='utf-8')
     _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library'),
-                                          'GUIDELINE_CRITERIA': str(empty)})
+                                          'GUIDELINE_CRITERIA': str(empty), 'GUIDELINE_CRITERIA_TESTING': '1'})
     _env.start()
 
 
