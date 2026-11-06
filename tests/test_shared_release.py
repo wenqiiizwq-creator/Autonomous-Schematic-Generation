@@ -206,3 +206,15 @@ def test_production_load_does_not_silently_bind_test_data_to_installed_identity(
     assert g.load(custom)['library_version'] == 'synthetic-test-data'  # 显式文件检查
     monkeypatch.setenv('GUIDELINE_CRITERIA_TESTING', '1')
     assert g.load()['library_version'] == 'synthetic-test-data'
+
+
+def test_maintenance_only_candidates_have_same_engineering_fingerprint_and_distinct_integrity(source):
+    _, shared, _, publish = source
+    left = publish('maintenance-before')
+    (shared / 'shared-layer.md').write_text((shared / 'shared-layer.md').read_text() + '\n合成维护历史。\n')
+    right = publish('maintenance-after')  # 同一版本与工程输入，不覆盖原发布目录。
+    before, after = g.verify_release(left), g.verify_release(right)
+    assert before['fingerprint_format'] == after['fingerprint_format'] == 'shared-paths-sha256-v2'
+    assert before['fingerprint'] == after['fingerprint']
+    assert before['payload'] != after['payload']
+    assert before['inputs'] != after['inputs']

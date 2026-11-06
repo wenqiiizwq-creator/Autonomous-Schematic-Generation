@@ -13,6 +13,18 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## M4：分离工程身份与维护文字（2026-11-06）
+
+工程指纹 v2 绑定八个受控工程文件的相对路径与哈希，纯说明和维护历史不进工程身份；十文件完整性不减。保留旧 v1 算法与身份校验，历史缺格式只解释 v1，新包下重生成计划/审计并复验，不静默重算或转移旧 PASS。替代输入绑定真实字节，修复 P15。新 ASG 审计和 SR 格式 8 计划明确 fingerprint_format，SR 历次架构决定同步；报告按记录显示身份。未改准则含义、工程数值或五步流程，未做 M5/M6。
+
+- Event: user:2026-11-06（“按照这个草案的推荐方案，逐个完成这个草案的更改，都按照你推荐的方式来”；本批明确批准第 7 节 M4 行文字）
+- Causes: rule_not_enforced 2, rule_missing 1
+- Changed: SKILL.md, docs/improvement-ledger.md, docs/shared-release-migration.md, references/shared/guideline-criteria.json, references/shared/guideline-criteria.md, references/shared/shared-layer.md, scripts/audit_design_closure.py, scripts/guideline_criteria.py, scripts/render_design_report.py, shared-release.json, tests/test_engineering_fingerprint.py, tests/test_guideline_closure.py, tests/test_shared_release.py
+- Approved: user:2026-11-06（批准关系梳理草案推荐方案，按草案第 7 节文字）
+- Outline: 6cf0a9d8e914dd11
+- Gates: 不设配对变量：ASG 全量 1333 passed（447.37 s，无跳过），SR 全量 3069 passed（115.16 s，5 条既有 warnings，无跳过）；SR 官方 mutation --changed aee8b4b --tier unit 252/252 KILLED，未变异副本先通过；新增 M1649–M1658 限定指纹/计划功能测试独立 10/10 KILLED（不跑实际安装件一致断言）；规范工具测试 4 passed；正式包 29 文件独立重建全等，两安装件 10/10 与正式包相同；旧发布 1.9.0–1.9.3 全部校验且字节保持；两边 check_ledger.py、git diff --check、术语/架构/阅读路径 PASS。
+
+
 ## M3：本地发布包独立校验与批准的依赖边界文字（2026-11-06）
 
 按已批准草案第 4.4、6、7 节移除 D07/D08/D09 的对方源码、工作区/HEAD 读取及无用 SR_PASSIVE。各自核本地已安装包的十文件清单、版本、指纹与准则有效性；配对字节检查移入规范显式发布验收。原分类、应力、覆盖、BASIS 可达性与独立性测试保留，分类对照改为明确预期（全 25 类线索、原 15 引用例、全部本地 IC 角色排除负载），不再由另一技能给答案。指定 SKILL.md 段落逐字采用批准文字；项目基线可核代替另一安装目录必须同版，五步与判断责任不变。共用校验入口与说明变化按规范发布 1.9.3，保持现行指纹格式；M4/M5 不提前做。

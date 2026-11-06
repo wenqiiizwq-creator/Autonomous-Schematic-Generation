@@ -33,12 +33,18 @@ BUNDLE_PATH = SHARED_DIR / 'guideline-criteria.json'
 DERATING_PATH = SHARED_DIR / 'derating-rules.json'
 VOCABULARY_PATH = SHARED_DIR / 'vocabulary.json'       # 词表的唯一出处：基线、电路类型、器件类别（名字与标题）
 COMMODITY_PATH = SHARED_DIR / 'commodity-floors.json'  # 常规件最弱档：片式电阻、MLCC 可订购档、触点（厂家目录给的数）
-# 共用层的全部文件（相对技能根目录）：references/shared/ 里的每一份加本脚本。两技能同字节，指纹由它们现算。
+# 全部发布载荷均逐文件核完整性；工程身份只覆盖 ENGINEERING_FILES。
 SHARED_FILES = ('references/shared/shared-layer.md', 'references/shared/guideline-criteria.json',
                 'references/shared/guideline-criteria.md', 'references/shared/derating-rules.json',
                 'references/shared/derating-rules.md', 'references/shared/stress-spec.md',
                 'references/shared/vocabulary.json', 'references/shared/commodity-floors.json',
                 'scripts/guideline_criteria.py', 'scripts/stress_check.py')
+LEGACY_FINGERPRINT_FORMAT = 'shared-files-sha256-lines-v1'
+FINGERPRINT_FORMAT = 'shared-paths-sha256-v2'
+# 降额 Markdown 含规范性取值规则，不能作为纯说明排除。
+ENGINEERING_FILES = tuple(name for name in SHARED_FILES if name not in (
+    'references/shared/shared-layer.md', 'references/shared/guideline-criteria.md'))
+
 RULE_ID = re.compile(r'^G0[1-9]-\d{3}$')
 STATUSES = ('draft', 'active', 'retired')
 NATURES = ('shall', 'should', 'method', 'project')
@@ -250,25 +256,78 @@ def shared_files(root=SKILL_ROOT):
     return {name: hashlib.sha256((Path(root) / name).read_bytes()).hexdigest() for name in SHARED_FILES}
 
 
-def shared_digest(root=SKILL_ROOT):
-    """One fingerprint of the whole shared layer: the sha256 of its files' sha256 list in SHARED_FILES order.
-    Reports bind to it; a plan or audit written against another digest is stale."""
-    return hashlib.sha256('\n'.join(shared_files(root)[n] for n in SHARED_FILES).encode('utf-8')).hexdigest()
+def _engineering_digest(files):
+    """Canonical relative-path -> file SHA-256 map; input enumeration order has no meaning."""
+    controlled = {name: files[name] for name in sorted(ENGINEERING_FILES)}
+    return hashlib.sha256(json.dumps(controlled, sort_keys=True, separators=(',', ':')).encode('utf-8')).hexdigest()
 
 
-def shared_versions(root=SKILL_ROOT):
-    """The versions the shared layer carries: the rule library's and the derating table's."""
+def shared_digest(root=SKILL_ROOT, fingerprint_format=FINGERPRINT_FORMAT):
+    """Installed engineering identity; retain the exact v1 algorithm for historical records/packages."""
+    files = shared_files(root)
+    if fingerprint_format == LEGACY_FINGERPRINT_FORMAT:
+        return hashlib.sha256('\n'.join(files[n] for n in SHARED_FILES).encode('utf-8')).hexdigest()
+    if fingerprint_format != FINGERPRINT_FORMAT:
+        raise ValueError('unsupported fingerprint format: %s' % fingerprint_format)
+    return _engineering_digest(files)
+
+
+def shared_versions(root=SKILL_ROOT, bundle=None):
+    """Identity of the data actually consumed; alternate data never borrows the installed fingerprint."""
     root = Path(root)
-    library = json.loads((root / SHARED_FILES[1]).read_text(encoding='utf-8'))
-    derating = json.loads((root / SHARED_FILES[3]).read_text(encoding='utf-8'))
-    return {'shared_sha256': shared_digest(root), 'library_version': library['library_version'],
-            'derating_version': derating['version']}
+    installed = json.loads((root / 'references/shared/guideline-criteria.json').read_text(encoding='utf-8'))
+    library = bundle if bundle is not None else load() if root == SKILL_ROOT else installed
+    derating = json.loads((root / 'references/shared/derating-rules.json').read_text(encoding='utf-8'))
+    manifest = json.loads((root / 'shared-release.json').read_text(encoding='utf-8'))
+    fmt = manifest['fingerprint_format']
+    digest = shared_digest(root, fmt)
+    override = os.environ.get('GUIDELINE_CRITERIA') if root == SKILL_ROOT else None
+    input_identity = None
+    if override or library != installed:
+        if fmt != FINGERPRINT_FORMAT:
+            raise ValueError('alternate guideline input requires v2 identity; install a current release')
+        # Explicit in-memory test inputs use canonical JSON; environment inputs bind their real bytes.
+        raw = dump(library).encode('utf-8')
+        if override:
+            alternate = Path(override).read_bytes()
+            if json.loads(alternate) != library:
+                raise ValueError('alternate guideline input changed during identity binding')
+            raw = alternate
+        input_identity = {'kind': 'alternate', 'sha256': hashlib.sha256(raw).hexdigest()}
+        files = shared_files(root)
+        files['references/shared/guideline-criteria.json'] = input_identity['sha256']
+        digest = _engineering_digest(files)
+    identity = {'shared_sha256': digest, 'fingerprint_format': fmt,
+                'library_version': library['library_version'], 'content_sha256': library['content_sha256'],
+                'derating_version': derating['version']}
+    if input_identity:
+        identity['guideline_input'] = input_identity
+    return identity
 
 
-def shared_label(root=SKILL_ROOT):
-    """共用层 <指纹前 12 位>，设计准则库 <版本>，降额 v<版本> — the one line both reports print."""
-    v = shared_versions(root)
-    return '共用层 %s，设计准则库 %s，降额 v%s' % (v['shared_sha256'][:12], v['library_version'], v['derating_version'])
+def identity_errors(record, root=SKILL_ROOT, bundle=None):
+    """Missing format means v1, never v2. Do not rewrite history or migrate an old PASS."""
+    if not isinstance(record, dict):
+        return ['missing shared identity: regenerate the plan/audit']
+    current = shared_versions(root, bundle)
+    fmt = record.get('fingerprint_format', LEGACY_FINGERPRINT_FORMAT)
+    if fmt not in (LEGACY_FINGERPRINT_FORMAT, FINGERPRINT_FORMAT) or fmt != current['fingerprint_format']:
+        return ['shared fingerprint format changed/unknown: regenerate the plan/audit; retain the historical record']
+    errors = []
+    for key in ('library_version', 'shared_sha256'):
+        if record.get(key) != current[key]:
+            errors.append('shared %s changed: regenerate the plan/audit' % key)
+    if record.get('guideline_input') != current.get('guideline_input'):
+        errors.append('shared guideline input changed: regenerate the plan/audit')
+    return errors
+
+
+def shared_label(root=SKILL_ROOT, identity=None):
+    """Print recorded identity when supplied; absent historical format explicitly means v1."""
+    v = shared_versions(root) if identity is None else identity
+    fmt = v.get('fingerprint_format', LEGACY_FINGERPRINT_FORMAT)
+    label = '共用层 %s [%s]，设计准则库 %s' % (v['shared_sha256'][:12], fmt, v['library_version'])
+    return label + ('，降额 v%s' % v['derating_version'] if 'derating_version' in v else '')
 
 
 def select(bundle, baseline=None, circuit_types=(), device_kinds=(), typed_only=False, ports=False):
@@ -381,9 +440,6 @@ def dump(bundle):
 
 
 # 发布源由规范维护；此处函数随同一文件安装，运行时装载路径保持不变。
-FINGERPRINT_FORMAT = 'shared-files-sha256-lines-v1'
-
-
 def _sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -408,9 +464,9 @@ def verify_release(release):
     """校验完整发布目录；清单覆盖载荷、持久输入与附加身份记录。"""
     release = Path(release)
     manifest = json.loads((release / 'manifest.json').read_text(encoding='utf-8'))
-    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') != FINGERPRINT_FORMAT:
+    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') not in (LEGACY_FINGERPRINT_FORMAT, FINGERPRINT_FORMAT):
         raise ValueError('unsupported manifest or fingerprint format')
-    if manifest.get('fingerprint_order') != list(SHARED_FILES) or set(manifest.get('payload', {})) != set(SHARED_FILES):
+    if manifest.get('fingerprint_order') != (list(SHARED_FILES) if manifest['fingerprint_format'] == LEGACY_FINGERPRINT_FORMAT else sorted(ENGINEERING_FILES)) or set(manifest.get('payload', {})) != set(SHARED_FILES):
         raise ValueError('manifest must name exactly the ten controlled payload files')
     expected = dict(manifest['payload'])
     expected.update({'inputs/' + name: digest for name, digest in manifest['inputs'].items()})
@@ -421,7 +477,7 @@ def verify_release(release):
     actual = set(_inventory(release))
     if actual != set(expected) | {'manifest.json'}:
         raise ValueError('unlisted or missing release files')
-    if shared_digest(release) != manifest['fingerprint']:
+    if shared_digest(release, manifest['fingerprint_format']) != manifest['fingerprint']:
         raise ValueError('fingerprint mismatch')
     bundle = load(release / SHARED_FILES[1])  # 明确路径，不使用测试替代输入
     errors = bundle_errors(bundle, release / 'references/shared/vocabulary.json')
@@ -435,14 +491,14 @@ def verify_installed(root=SKILL_ROOT):
     """Validate only this installed release; no registry, peer skill, VCS or home-directory lookup."""
     root = Path(root)
     manifest = json.loads((root / 'shared-release.json').read_text(encoding='utf-8'))
-    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') != FINGERPRINT_FORMAT:
+    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') not in (LEGACY_FINGERPRINT_FORMAT, FINGERPRINT_FORMAT):
         raise ValueError('unsupported installed manifest or fingerprint format')
-    if manifest.get('fingerprint_order') != list(SHARED_FILES) or set(manifest.get('payload', {})) != set(SHARED_FILES):
+    if manifest.get('fingerprint_order') != (list(SHARED_FILES) if manifest['fingerprint_format'] == LEGACY_FINGERPRINT_FORMAT else sorted(ENGINEERING_FILES)) or set(manifest.get('payload', {})) != set(SHARED_FILES):
         raise ValueError('installed manifest must name exactly the ten controlled files')
     for name, expected in manifest['payload'].items():
         if _sha(_safe_file(root, name)) != expected:
             raise ValueError('installed sha256 mismatch: %s' % name)
-    if shared_digest(root) != manifest['fingerprint']:
+    if shared_digest(root, manifest['fingerprint_format']) != manifest['fingerprint']:
         raise ValueError('installed fingerprint mismatch')
     bundle = load(root / SHARED_FILES[1])
     errors = bundle_errors(bundle, root / 'references/shared/vocabulary.json')
@@ -496,8 +552,8 @@ def publish(registry_dir, shared_source, tools_source, vocabulary_path, library_
             raise ValueError('inputs changed during publication')
         manifest = {'manifest_version': 1, 'library_version': library_version,
                     'fingerprint_format': FINGERPRINT_FORMAT,
-                    'fingerprint_algorithm': 'SHA-256 of lowercase file SHA-256 digests joined by LF, no trailing LF; fingerprint_order is authoritative.',
-                    'fingerprint_order': list(SHARED_FILES), 'fingerprint': shared_digest(candidate),
+                    'fingerprint_algorithm': 'SHA-256 of UTF-8 canonical JSON mapping relative paths to lowercase file SHA-256 digests; sorted keys, compact separators, no trailing LF. fingerprint_order declares the controlled scope only.',
+                    'fingerprint_order': sorted(ENGINEERING_FILES), 'fingerprint': shared_digest(candidate),
                     'payload': shared_files(candidate), 'inputs': _inventory(inputs), 'auxiliary': {}}
         (candidate / 'manifest.json').write_text(dump(manifest), encoding='utf-8')
         verify_release(candidate)
@@ -545,7 +601,7 @@ def install_release(release, target, scratch_root='/tmp/codex-work/shared-releas
                     finally:
                         temporary.unlink(missing_ok=True)
                 changed.append(name)
-            if shared_files(target) != manifest['payload'] or shared_digest(target) != manifest['fingerprint']:
+            if shared_files(target) != manifest['payload'] or shared_digest(target, manifest['fingerprint_format']) != manifest['fingerprint']:
                 raise ValueError('installed payload differs from the verified release')
         except BaseException:
             for name in reversed(changed):

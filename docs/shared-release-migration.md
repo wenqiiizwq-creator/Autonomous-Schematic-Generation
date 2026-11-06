@@ -71,3 +71,13 @@ SR 新表格渲染器登记为维护工具；共用装载器因①器件分类�
 
 M3 门禁：不设配对变量／对方读取不可用／对方为 1.9.0 三场景：ASG 各 1314 passed，SR 各 3047 passed、5 warnings，全部无跳过；SR 官方 mutation --changed aee8b4b --tier unit 126/126 KILLED（未变异副本先通过）；新增 M1644–M1648 只跑本地包功能测试、排除实际安装件一致断言后亦 5/5 KILLED；规范发布检查及生成测试 4 passed；两安装件与同一 1.9.3 包十文件相等；check_ledger.py、git diff --check、术语及阅读路径 PASS。
 对方不存在用空配对目录与实际对方安装目录读取失败注入模拟，未改真实 HOME 或对方目录；异版快照实装正式 1.9.0。全部场景跑完整相同套件，未排除测试。ASG Approved/Outline 与 SR 架构决定同步。
+
+## M4（2026-11-06）
+
+只实施批准的关系梳理草案 M4 及第 7 节 M4 文字。共用包 1.9.4 的 `shared-paths-sha256-v2` 对受控相对路径到文件 SHA-256 的映射按键排序，用 UTF-8 紧凑 JSON 求 SHA-256，无末尾 LF。八个工程文件是准则 JSON、词表、降额 JSON/Markdown、最弱档 JSON、应力规范、两个共用脚本。降额 Markdown 含规范性规则，仍绑定。shared-layer.md 与 guideline-criteria.md 的纯说明不进工程指纹，十个载荷、输入快照仍全部逐文件校验。1.9.0 覆盖层维护历史原文迁至规范维护目录。
+
+兼容前例：1.9.3 计划格式 7 的 guidelines 为 `{library_version: "1.9.3", shared_sha256: "9320210c…"}`，缺少 fingerprint_format 只解释为 `shared-files-sha256-lines-v1`，仍按原十文件摘要顺序算法校验。后例：1.9.4 计划格式 8 / 新 ASG 审计的 guidelines 为 `{library_version: "1.9.4", shared_sha256: "<v2工程指纹>", fingerprint_format: "shared-paths-sha256-v2"}`。旧记录不改写、不补字段，新包下重生成计划/审计并按差异复验；重新生成的计划使旧 results.plan_digest 失配，旧 PASS 不自动迁移。SR 结果格式仍为 15，无结果自动迁移步骤；计划结构 8 的迁移为重新执行②，按差异重做③④，不由 migrate_results.py 改写。
+
+GUIDELINE_CRITERIA 未明确测试模式时拒绝；使用测试替代时绑定实际 JSON 字节 SHA-256 与 guideline_input，工程指纹替换准则文件那一项的哈希，不能标成安装包身份。内存合成输入绑定其规范 JSON。SR 校验与计划合并检查版本、指纹、格式和替代输入身份；ASG 出报告拒绝身份过期的审计；报告采用记录身份，历史缺格式明确标 v1。完整验收在规范 维护/编制说明/ASG-SR-M4-实施验收-2026-11-06.md。
+
+M4 最终门禁：不设配对变量：ASG 全量 1333 passed（447.37 s，无跳过），SR 全量 3069 passed（115.16 s，5 条既有 warnings，无跳过）；SR 官方 mutation --changed aee8b4b --tier unit 252/252 KILLED，未变异副本先通过；新增 M1649–M1658 限定指纹/计划功能测试独立 10/10 KILLED（不跑实际安装件一致断言）；规范工具测试 4 passed；正式包 29 文件独立重建全等，两安装件 10/10 与正式包相同；旧发布 1.9.0–1.9.3 全部校验且字节保持；两边 check_ledger.py、git diff --check、术语/架构/阅读路径 PASS。

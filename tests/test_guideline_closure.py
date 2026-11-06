@@ -177,7 +177,8 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['guideline_scope']['device_kinds'] = ['fuse']
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G05-001', 'reason': '输入由上级设备熔断'}]
         result = self.run_audit()
-        self.assertEqual(result['guidelines']['shared_sha256'], guideline_criteria.shared_digest())   # the audit binds the whole shared layer
+        self.assertEqual(result['guidelines']['fingerprint_format'], 'shared-paths-sha256-v2')
+        self.assertEqual(result['guidelines']['shared_sha256'], guideline_criteria.shared_versions(bundle=LIBRARY)['shared_sha256'])   # binds the actual test input
         with mock.patch.object(guideline_criteria, 'load', lambda *args: LIBRARY):
             text = '\n'.join(render_design_report.render_guidelines(result['guidelines']))
         self.assertIn('| G04-001 | 示例规则 G04-001 | GB/T 17799.2 2023 表4 第9页 | calc:C1 | 原理图 |', text)
@@ -188,7 +189,7 @@ class GuidelineClosureTests(unittest.TestCase):
     def test_the_shared_directory_holds_exactly_the_shared_files(self):
         listed = {Path(n).name for n in SHARED if n.startswith('references/shared/')}
         self.assertEqual(sorted(p.name for p in guideline_criteria.SHARED_DIR.iterdir() if p.name != '__pycache__'), sorted(listed))
-        self.assertRegex(guideline_criteria.shared_label(), r'^共用层 [0-9a-f]{12}，设计准则库 \S+，降额 v\d+$')
+        self.assertRegex(guideline_criteria.shared_label(), r'^共用层 [0-9a-f]{12} \[shared-paths-sha256-v2\]，设计准则库 \S+，降额 v\d+$')
 
     def batch_library(self):
         return library(card('G01-001'), card('G04-001', applies_when={'circuit_types': ['RS485']}),
