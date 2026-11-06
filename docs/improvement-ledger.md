@@ -8,6 +8,21 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+
+## 撤销 Matrix 电源与保护 R3 后解除资料依赖（2026-11-06）
+
+用户决定完全撤销该版本并重新开始。保留该事件触发的技能修复、知识和既有台账；只解除运行资料对撤销工程的依赖。
+
+- `ideal-diode-hotswap.md` 的 TPS4800-Q1 改引库内原始手册；去掉特定工程的 47/68 µH 估算依据与入口主保护设计记录，分段模型和分离式耦合分析明确为工程推论，并引用各控制器手册。
+- `high-side-quad.md` 改引独立保留的 TPS281C30 Rev C，去掉工程候选比较；删去“Rev B 与 Rev C 页码相同”的说法，启动短路峰值页码核为 p9。
+- `chassis-y-cap.md` 去掉系统接地设计文档及撤销工程的接壳计算依据；源侧搭接和共模分流改为待本项目输入确认的推论，元件类别与整机抗扰的区别只引 VY1 手册。
+- `efuse-bfet-short-latch.md` 去掉通道预检和输出负浪涌筛查记录，低压误判短路保留为由 TPS2663 故障与锁定模式推导的反例。
+- 运行代码、既有合成测试、纲要及共用设计准则库不改；HardwareWiki 原始资料迁移及评测集的独立提交另行执行。
+
+- Event: user:2026-11-06
+- Changed: references/typical-circuits/ideal-diode-hotswap.md, references/typical-circuits/high-side-quad.md, references/typical-circuits/chassis-y-cap.md, references/typical-circuits/efuse-bfet-short-latch.md, docs/improvement-ledger.md
+- Gates: 1273 passed in 436.16s（ASG_SR_SHARED_ROOT=/Users/skyfend/.agents/skills/schematic-review；Poppler 已在 PATH）；check_ledger.py PASS；git diff --check 通过；四份文档的 30 处手册引用可定位到库内文件；两技能共用层同字节且未改；既有台账条目逐字保留
+
 ## 任务 1.3 方案准则核对入口与 basis 性质核对（2026-11-06）
 
 方案阶段重跑发现：PT100 记录读过格式说明仍使用自用字段，现有核对只在报告阶段运行；部分工程方法被标成 `standard`，核对未报问题。各项先写测试确认失败，再做最小修改。

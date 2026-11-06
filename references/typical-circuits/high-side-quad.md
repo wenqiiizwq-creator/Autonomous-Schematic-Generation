@@ -27,13 +27,12 @@
   - 同系列 -1 后缀限流上限 2.6 A，叠加其余负载会触发上游整板过流；只用低限流版本（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/ST - IPS4140HQ.pdf#p8）
   - 输出 TVS 钳位高于母线，正向浪涌经体二极管灌回母线、由母线 TVS 吸收，能量路径要核（review:calibration/industrial-io-rs485-can/F09）
   - SR 器件类别把“solid-state relay”当继电器，按负载开关改判（review:calibration/industrial-io-rs485-can/F18）
-  - 同一系列按订货变体分有无感性负载内部钳位、两档限流范围；选型和应力核对要落到确切后缀（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30.pdf#p3）
-  - 无钳位变体的 VS−OUT 只能到 −0.7 V，OUT 对地另有负向额定；只核 OUT 负压会漏掉正浪涌回灌时的负向差分（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30.pdf#p6）
-  - 限流时 SNS 被拉到故障高电平并置 FAULT，SNS 在限流期间不反映负载电流（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30.pdf#p27）
-  - 运行中硬短路的快跳门槛 IOVCR 只在波形图中示意，电气特性表没有保证值；峰值电流标资料依赖，不借用相邻型号的表值（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30.pdf#p28）
-  - 开启后一段延时内限流门槛升到启动值、FAULT 被屏蔽，启动峰值上限按变体不同（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30.pdf#p30、#p8）
+  - 同一系列按订货变体分有无感性负载内部钳位、两档限流范围；选型和应力核对要落到确切后缀（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30 - SLVSGD3C.pdf#p3）
+  - 无钳位变体的 VS−OUT 只能到 −0.7 V，OUT 对地另有负向额定；只核 OUT 负压会漏掉正浪涌回灌时的负向差分（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30 - SLVSGD3C.pdf#p6）
+  - 限流时 SNS 被拉到故障高电平并置 FAULT，SNS 在限流期间不反映负载电流（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30 - SLVSGD3C.pdf#p27）
+  - 运行中硬短路的快跳门槛 IOVCR 只在波形图中示意，电气特性表没有保证值；峰值电流标资料依赖，不借用相邻型号的表值（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30 - SLVSGD3C.pdf#p28）
+  - 开启后一段延时内限流门槛升到启动值、FAULT 被屏蔽，启动峰值上限按变体不同（datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30 - SLVSGD3C.pdf#p30、#p9）
 - **来源**：
   - raw/Datasheet/08_电源管理/负载开关与高低侧驱动/ST - IPS4140HQ.pdf（p1 概述、p3 引脚、p8 限流）
-  - raw/Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30.pdf（Rev B；p3 变体表，p6 绝对最大值，p8 启动限流，p27 SNS 故障编码，p28 短路快跳，p30 启动高限流）；Matrix R3 比较的是同一手册 Rev C，页码相同
-  - Matrix 综合控制板电源与保护 R3 通道架构候选比较（~/Project/Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/architecture-sources/八路24V通道架构候选比较.md）
+  - datasheet:Datasheet/08_电源管理/负载开关与高低侧驱动/TI - TPS281C30 - SLVSGD3C.pdf#p3（Rev C 变体表）；#p6（绝对最大值）；#p9（启动短路峰值）；#p27（SNS 故障编码）；#p28（短路快跳）；#p30（启动高限流）
 
