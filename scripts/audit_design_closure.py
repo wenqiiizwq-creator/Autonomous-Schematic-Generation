@@ -964,7 +964,7 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         if gid not in found['applicable'] and gid not in found['unknown_cited']:
             error('guideline_scope_circuit', '%s：典型电路 %s 的实现方案落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
     found['circuit_criteria'] = {gid: refs for gid, refs in sorted(circuit['criteria'].items())}
-    found['shared_sha256'] = guideline_criteria.shared_digest()   # the whole shared layer the audit ran against
+    found.update(guideline_criteria.shared_versions(bundle=library))
     if found.get('by_coverage'):
         found['project_input_tbr'] = [g for g in found['by_coverage']['project_input'] if answered.get(g) == 'TBR']
     return found

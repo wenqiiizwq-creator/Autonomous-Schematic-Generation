@@ -1,9 +1,8 @@
-# 共用层（ASG 与 SR 同字节）
+# 共用层（固定发布包）
 
-> 读者：SR 维护者（与 ASG 维护者共用；本页说明共用层本身，审查员和设计者只需知道这些文件两技能相同）。
+> 读者：SR 维护者（与 ASG 维护者共用；本页说明共用层本身，审查员和设计者按项目固定采用的版本与指纹）。
 
-ASG 设计和 SR 审查用同一套判据、同一张降额表、同一种判法。这些文件在 `autonomous-schematic-generation` 和
-`schematic-review` 两个技能里逐字节相同，放在各自的 `references/shared/`，加上 `scripts/guideline_criteria.py` 和 `scripts/stress_check.py`。
+共用工程判据由硬件设计规范发布；ASG 和 SR 各自使用本技能中已安装并固定版本的发布包。采用同一发布包时全部载荷逐字节相同；独立分支可以采用不同版本，项目基线须可核。载荷放在各自的 `references/shared/`，加上 `scripts/guideline_criteria.py` 和 `scripts/stress_check.py`。
 本页是共用层唯一的说明：哪些文件、各管什么、谁读、哪条测试守、怎么改。其他文件只链接到这里，不再各自解释“与对方共用”。
 
 ## 一、四件事
@@ -12,7 +11,7 @@ ASG 设计和 SR 审查用同一套判据、同一张降额表、同一种判法
 |---|---|---|---|
 | 判据 | `guideline-criteria.json`、`guideline-criteria.md` | 这种情况下该做什么（`asg_action`）、该查什么（`sr_check`），出处是哪条标准 | 设计准则（534 条，按基线、电路类型、器件类别选用）+ **全部工程取值**（标准不给、经用户确认的数） |
 | 取值 | `derating-rules.json`、`derating-rules.md`；`commodity-floors.json` | 某类器件的某个应力在 I/II/III 级降到多少；常规件按封装能买到的最弱档是多少 | 查表（降额 233 条，数值来自四份降额标准；最弱档：片式电阻 8 个封装、MLCC 可订购档 5 行、触点 7 行，数值来自厂家目录，带核对日期） |
-| 词表 | `vocabulary.json` | 基线、电路类型、器件类别叫什么 | 名字 + 标题；设计准则库汇编时抄入，SR 的 catalog/device_kinds 和 ASG 的 part_classes 都对着它核对 |
+| 词表 | `vocabulary.json` | 基线、电路类型、器件类别叫什么 | 名字 + 标题；设计准则库汇编时抄入，SR 的 catalog/device_kinds 和 ASG 的 part_classes 都从它读取名字与标题 |
 | 判法 | `stress-spec.md` | 一条应力余量怎么判：超额定不成立、超降额是应力风险、降额内合格 | 文字判法 |
 | 代码 | `scripts/guideline_criteria.py`；`scripts/stress_check.py` | 校验、汇编、选规则、统计覆盖、共用层指纹；应力核对的算数：某级降额限值、一条应力对额定与降额值的判法（`verdict`）、没点名规则时按器件类别与量纲挑规则（`fit_rules`） | 只用标准库，不导入任一技能的模块；两边的 `derating.py` / `audit_design_closure.py` 只读记录、只管措辞 |
 
@@ -27,44 +26,42 @@ ASG 设计和 SR 审查用同一套判据、同一张降额表、同一种判法
 | `guideline-criteria.json` | `audit_design_closure.py`（选规则、统计覆盖、读 `unset_level`）、`render_design_report.py`、`schematic_layout/component_requirements.py`（`unset_level`） | `catalog.py`（`BASIS` 校验）、`plan_review.py`（选规则）、`validate_review.py`（门禁核对）、`render_report.py`、`bound_formulas.py`（`soa_segment_share`、`typical_band`、`forced_beta_k`）、`checkers/passive_stress.py`（`unset_level`） | ASG `tests/test_guideline_closure.py`；SR `scripts/tests/test_guideline_criteria.py`、`test_guideline_plan.py` |
 | `derating-rules.json` | `audit_design_closure.py`、`schematic_layout/component_requirements.py` | `derating.py`、`checkers/passive_stress.py` | ASG `tests/test_derating_rules.py`、`test_derating_audit.py`；SR `scripts/tests/test_derating_rules.py`、`test_stress_spec.py` |
 | `commodity-floors.json` | `audit_design_closure.py`（功率最弱档）、`schematic_layout/component_requirements.py`（耐压最弱档） | `checkers/passive_stress.py`（`RESISTOR_FLOORS`、`MLCC_ORDERABLE`） | ASG `test_derating_audit.py`、`test_component_requirements.py`；SR `test_commodity_floors.py`（含 `commodity-floors.md` 三张表与文件逐项相等） |
-| `vocabulary.json` | `guideline_criteria.py`（汇编）、`part_classes.py` 对着它核对 | `guideline_criteria.py`、`catalog.py`/`device_kinds.py` 对着它核对 | ASG `test_part_classes.py`；SR `test_guideline_criteria.py` |
-| `stress-spec.md`、`*.md` | 设计者读 | 审查员读 | 两边的对齐测试逐字节比对 |
+| `vocabulary.json` | `guideline_criteria.py`（汇编）、`part_classes.py` 读取名字与标题 | `guideline_criteria.py`、`catalog.py`/`device_kinds.py` 读取名字与标题 | ASG `test_part_classes.py`；SR `test_guideline_criteria.py` |
+| `stress-spec.md`、`*.md` | 设计者读 | 审查员读 | 各自的本地安装包完整性测试；配对字节核查由规范发布检查承担 |
 | `scripts/guideline_criteria.py` | 以上 ASG 脚本导入 | 以上 SR 脚本导入 | 同上 |
-| `scripts/stress_check.py` | `audit_design_closure.py`（降额限值核对、没点名规则的应力） | `derating.py`（余量判法、`implied_ratio`） | ASG `test_derating_audit.py`；SR `test_derating_rules.py`、`test_stress_spec.py`；对齐测试逐字节比对 |
+| `scripts/stress_check.py` | `audit_design_closure.py`（降额限值核对、没点名规则的应力） | `derating.py`（余量判法、`implied_ratio`） | ASG `test_derating_audit.py`；SR `test_derating_rules.py`、`test_stress_spec.py`；本地包校验与规范发布检查 |
 
-对齐只有一条规则：`references/shared/` 下的每一份文件和 `scripts/guideline_criteria.py`、`scripts/stress_check.py`，两技能字节相同；目录里只能有
-`guideline_criteria.SHARED_FILES` 列出的文件。ASG 的 `test_guideline_closure.py` 和 SR 的 `test_guideline_criteria.py`
-在两边都装了时各做一次整目录比对。
+本地回归只检查本技能的 `shared-release.json`、十个受控文件、版本与指纹，不访问对方源码、工作区或 HEAD。
+`python3 scripts/guideline_criteria.py verify-installed` 校验本地安装包；功能测试继续用明确输入与预期核对分类、应力和覆盖。
+配对字节一致检查由规范的 `工具/check_release_consumers.py <候选包> --target <ASG快照> --target <SR快照>` 承担，目标必须显式给出。
+它先核候选包完整清单，再核各目标本地包与该候选的版本、指纹及全部载荷哈希；损坏或不同包都拒绝。
 
 ## 三、指纹与版本
 
 `python3 scripts/guideline_criteria.py shared` 打印每份文件的 sha256 和一行标签：**共用层 <指纹前 12 位>，设计准则库 <版本>，降额 v<版本>**。
-指纹是 `SHARED_FILES` 里各文件 sha256 列表的 sha256，由已装文件现算，没有另一份要同步的清单。
+新发布使用 `shared-paths-sha256-v2`：对相对路径到文件 SHA-256 的映射按键排序，以 UTF-8 紧凑 JSON（无末尾 LF）求 SHA-256，不依赖隐含列表顺序。
+工程范围为准则 JSON、词表、降额 JSON 及含规范性规则的降额 Markdown、最弱档、应力规范、两个共用脚本。
+本页与 `guideline-criteria.md` 为说明，不进工程指纹；所有十个载荷及发布输入仍逐文件核完整性。
+维护历史保存在规范 `维护/编制说明/共用层-1.9.0-覆盖层历史.md`，不属于运行工程身份。
 
-- SR 出计划时把指纹写进 `review-plan.json` 的 `guidelines.shared_sha256`，门禁核对它与已装共用层一致，不一致要求重生成计划；报告的“共用设计准则覆盖”一节首行印这行标签。
-- ASG 设计完成核对把指纹写进审计的 `guidelines.shared_sha256`，报告“共用规范”一行印这行标签。
-- 设计准则库自己的 `library_version`、`content_sha256` 和降额表的 `version` 照旧，各管各的内容；共用层指纹把它们绑成一个。
+计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
+
+- SR 计划 `guidelines` 与 ASG 审计 `guidelines` 写 `library_version`、`shared_sha256`、`fingerprint_format`，报告按记录显示身份。
+- 旧包和旧记录的 `shared-files-sha256-lines-v1` 仍按原十文件摘要顺序算法校验；缺少格式字段的历史记录仅解释为 v1，不能当作 v2。
+- 新包下须重新生成旧计划/审计并复验受影响项，不批量补字段或重算旧指纹，不迁移旧 PASS；原计划、结果和审计保留。
+- 准则 `content_sha256` 只表示准则与工程取值，不替代共用层身份；版本或工程指纹变化均触发规定的重验。
 
 ## 四、怎么改
 
-1. 在一边改（设计准则库从规范工作目录重建：`python3 scripts/guideline_criteria.py build --from <规范工作目录> --library-version <新版本> --out references/shared/guideline-criteria.json`；
-   降额表、应力规范、本页直接改）。
-2. 把 `references/shared/` 整个目录和 `scripts/guideline_criteria.py`、`scripts/stress_check.py` 复制到另一边。
-3. 两边 `python3 scripts/guideline_criteria.py shared` 打出同一指纹。
-4. 两边跑全量测试（SR `python3 -m pytest scripts/tests -q`，ASG `python3 -m pytest tests -q`）。
-5. 共用层属于两个技能的工程规则身份：指纹变化后，受影响的设计和审查按各自的复验规则重新打开。
+1. 唯一维护源是硬件设计规范的 `准则登记/`、`共用层/` 和 `工具/`，**技能内不得编辑共用载荷**。
+2. 从规范入口调用 `工具/guideline_criteria.py release`，显式指定九份直接子登记所在目录、共用源、工具源和词表；正式包在 `发布/<设计准则库版本>/`，含输入快照、逐文件哈希、指纹及格式说明。同版不同字节拒绝覆盖。
+3. 调用同一工具的 `install <正式包> --target <选定技能worktree>`。先复制到 `/tmp/codex-work/` 并核全部清单，再整批替换十个受控文件和根目录 `shared-release.json`；失败回滚。两技能均从同一正式包安装，不互相复制。
+4. 逐文件核对安装结果，分别跑 ASG/SR 全量测试与台账检查。运行和本地测试不读取对方源码；配对字节检查在规范发布验收中显式执行。完整性与工程指纹分别核对，历史格式继续兼容校验。
+5. 指纹变化后，受影响的设计和审查按各自的复验规则重新打开。发布版使用设计准则库版本；降额 v1 仍是载荷内数据版次。完整命令见规范 `README.md`。
+
+生产默认装载固定安装包；`GUIDELINE_CRITERIA` 替代输入仅在显式 `GUIDELINE_CRITERIA_TESTING=1` 的测试模式允许。生产误设替代输入会报错，不继续配上安装包指纹。替代输入同时绑定实际 JSON 字节的 SHA-256 和 `guideline_input`；即使显式启用测试模式，也不能标成安装包身份。内存合成输入按规范 JSON 序列化绑定。检查其他文件使用显式路径，发布与安装不读取测试替代输入。
 
 ## 五、同名不共用
 
 `calculation-preflight.md`、`workflow-handoff.md`、`requirement-clarifications.md` 两边都有，但内容各自独立：
 ASG 的写设计方怎么做，SR 的写审查方怎么做（交接页是同一约定的两面）。它们不在 `references/shared/`，不比对字节。
-
-## 1.9.0 的登记覆盖层（2026-11-05，已写回）
-
-1.9.0 曾用覆盖层在只读登记上临时汇编；合入 main 时 49 条修改已写回登记，
-从登记直接构建的设计准则库与 1.9.0 逐字节一致，覆盖层文件和临时汇编脚本随之删除，此后照常从登记构建。
-运行包含 G01–G09 共 534 条。G06-025（外壳与板材阻燃）、G08-012（大件加固）、G08-046（焊点疲劳）、
-G09-003（生产单路验证）、G09-006（探针意外短接）按用户决定从登记删除，原理图判不了。
-覆盖方式来自维护分类；五条 handoff 的 closing_stage 按原文接收对象作格式一致性修正，正文不改。
-G05-031 按已批准草案 B 逐字替换动作并升条目版本。
-条目存在与映射存在只说明进入适用清单，不能证明实际设计或审查已执行。

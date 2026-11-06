@@ -1060,6 +1060,8 @@ def render(root, notes=None, title=None):
         problems += ['器件性能要求：' + e for e in performance['errors']]
     closure = data['design-closure.json'] or {}
     audit = data['design-closure-audit.json'] or {}
+    if isinstance(audit.get('guidelines'), dict):
+        problems += ['共用层身份：' + e for e in guideline_criteria.identity_errors(audit['guidelines'])]
     summary = data['summary.json'] or {}
     visual = data['visual-review.json'] or {}
     responses, change = None, None
@@ -1244,7 +1246,7 @@ def render(root, notes=None, title=None):
         batch = '其中需求基线回答 %d 条（TBR %d 条）、进交接清单 %d 条；' % (
             len(classes['project_input']), len(guidelines.get('project_input_tbr') or ()), len(classes['handoff'])) if classes else ''
         out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；%s交下游 %d 条。见“共用设计准则覆盖”。' % (
-            guideline_criteria.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
+            guideline_criteria.shared_label(identity=guidelines), len(guidelines['applicable']), len(guidelines['covered']),
             len(guidelines['not_applicable']), len(guidelines['uncovered']), batch, len(guidelines['downstream'])))
     inputs_found = audit.get('operating_inputs') if isinstance(audit.get('operating_inputs'), dict) else None
     if inputs_found:
