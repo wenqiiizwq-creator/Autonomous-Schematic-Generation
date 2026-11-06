@@ -70,6 +70,14 @@ PAGE_PATTERN = re.compile(r'(?<![A-Za-z0-9])\d{2}_[A-Za-z][A-Za-z0-9_]*|System_b
 # Words that describe the review process, not a design basis.
 REQUIRED = ('electrical-intent.json', 'design-closure.json', 'design-closure-audit.json',
             'summary.json', 'visual-review.json', 'page-plan.json', 'selection.json', 'lessons.json')
+# Task 1.3: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json).
+# Circuit types of the five key-block families: power conversion, protection, isolation, signal chain, external interface.
+KEY_CIRCUIT_TYPES = ('POWER_CONVERTER', 'HOLD_UP', 'POWER_PROTECTION', 'SIGNAL_PROTECTION', 'ISOLATION', 'ANALOG',
+                     'DC_48V', 'DC_24V', 'AC_MAINS', 'INDUSTRIAL_DI', 'POE_PD', 'VEHICLE_28V', 'SHIP_AC')
+# Only a requirement, a standard's text or a datasheet absolute rating excludes a candidate outright; an engineering
+# inference is recorded as one and never as a hard exclusion (user 2026-11-05).
+EXCLUSION_BASES = OrderedDict([('requirement', '需求'), ('standard', '标准原文'), ('datasheet_abs_max', '手册绝对额定'),
+                               ('inference', '工程推论，不作硬排除')])
 CAUSES = ('rule_missing', 'rule_not_enforced', 'knowledge_missing', 'knowledge_wrong', 'judgment')
 # A comment left unfixed this version still says why the skill missed it (R6: nine deferrals marked none).
 ATTRIBUTION_DEFERRED = re.compile(r'再归因|未归因|暂不归因|未做根因|没做根因|之后归因')
@@ -943,6 +951,86 @@ def render_guidelines(guidelines):
     return out
 
 
+def check_scheme_criteria(data, closure, bundle=None):
+    """record/scheme-criteria.json (SKILL.md task 1.3): required when guideline_scope names a key-block circuit type.
+    Each key circuit type of the scope is in some block; each listed rule exists, is active and is triggered by that
+    block's types and kinds (with the G07 port rules when the block has external ports); a block with no rule says
+    what it searched. Returns the problems."""
+    scope = closure.get('guideline_scope') if isinstance(closure.get('guideline_scope'), dict) else {}
+    key = [t for t in scope.get('circuit_types') or [] if t in KEY_CIRCUIT_TYPES]
+    if data is None:
+        return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见 SKILL.md 任务 1.3）'
+                % '、'.join(key)] if key else []
+    if not isinstance(data, dict) or data.get('version') != 1 or not isinstance(data.get('blocks'), list) or not data['blocks']:
+        return ['scheme-criteria.json 要写 version 1 和非空的 blocks 列表（见 delivery-report.md）']
+    bundle = bundle or guideline_criteria.load()
+    cards = {r['id']: r for r in bundle['criteria']}
+    baseline = scope.get('baseline')
+    problems, named = [], set()
+    for i, block in enumerate(data['blocks'], 1):
+        where = 'scheme-criteria.json 第 %d 块' % i
+        if not isinstance(block, dict) or not text(block.get('block')):
+            problems.append('%s 要写 block（功能块名）' % where)
+            continue
+        where = 'scheme-criteria.json“%s”' % block['block']
+        types, kinds = block.get('circuit_types'), block.get('device_kinds', [])
+        if not isinstance(types, list) or not types or not isinstance(kinds, list):
+            problems.append('%s 要写 circuit_types（非空列表）和 device_kinds（列表）' % where)
+            continue
+        outside = [v for v in types + kinds if v not in (scope.get('circuit_types') or []) + (scope.get('device_kinds') or [])]
+        if outside:
+            problems.append('%s 的 %s 不在 guideline_scope 里' % (where, '、'.join(map(str, outside))))
+        named |= set(types)
+        allowed = {r['id'] for r in guideline_criteria.select(bundle, baseline, types, kinds, typed_only=True,
+                                                               ports=block.get('ports') is True)}
+        criteria = block.get('criteria')
+        if not isinstance(criteria, list):
+            problems.append('%s 要写 criteria 列表（没有能淘汰候选的规则时写空列表）' % where)
+            continue
+        if not criteria and not text(block.get('searched')):
+            problems.append('%s 没有能淘汰候选的规则，要在 searched 写明查过的规则范围' % where)
+        for item in criteria:
+            gid = item.get('id') if isinstance(item, dict) else None
+            if gid not in cards or cards[gid]['status'] != 'active':
+                problems.append('%s 引用的 %s 不是设计准则库里的有效规则' % (where, gid))
+                continue
+            if gid not in allowed:
+                problems.append('%s 引用的 %s 不由该块的电路类型、器件类别或端口触发' % (where, gid))
+            if not (text(item.get('excludes')) and text(item.get('how'))):
+                problems.append('%s 的 %s 要写 excludes（排除的候选）和 how（选定方案怎样满足）' % (where, gid))
+            if item.get('basis') not in EXCLUSION_BASES:
+                problems.append('%s 的 %s 要写 basis（%s 之一）：只有需求、标准原文或手册绝对额定能硬排除，工程推论写 inference'
+                                % (where, gid, '/'.join(EXCLUSION_BASES)))
+            defer = item.get('defer', [])
+            if not (isinstance(defer, list) and all(text(d) for d in defer)):
+                problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))
+    missing = [t for t in key if t not in named]
+    if missing:
+        problems.append('scheme-criteria.json 没有功能块覆盖关键电路类型 %s' % '、'.join(missing))
+    return problems
+
+
+def render_scheme_criteria(data):
+    """方案阶段对照的规则：每个关键功能块会淘汰候选的规则，或查过的范围。"""
+    blocks = [b for b in (data or {}).get('blocks') or [] if isinstance(b, dict)]
+    if not blocks:
+        return []
+    out = ['## 方案阶段对照的规则', '',
+           '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 1.3）。这里的结论不代替任务 2.2 的核算，'
+           '这些规则在设计闭环时仍按“共用设计准则覆盖”核对；依据为工程推论的不作硬排除。', '',
+           '| 功能块 | 设计准则 | 排除的候选 | 依据 | 选定方案怎样满足 | 留给 2.2 核算 |', '|---|---|---|---|---|---|']
+    for b in blocks:
+        items = [c for c in b.get('criteria') or [] if isinstance(c, dict)]
+        if not items:
+            out.append('| %s | 无 | 无（查过：%s） | | | |' % (cell(b.get('block')), cell(b.get('searched') or '')))
+        for c in items:
+            out.append('| %s | %s | %s | %s | %s | %s |' % (
+                cell(b.get('block')), c.get('id'), cell(c.get('excludes')), EXCLUSION_BASES.get(c.get('basis'), '未写'),
+                cell(c.get('how')), cell('、'.join(c.get('defer') or [])) or '无'))
+    out.append('')
+    return out
+
+
 def render(root, notes=None, title=None):
     root = Path(root)
     record = root / 'record'
@@ -1009,6 +1097,10 @@ def render(root, notes=None, title=None):
     if data['page-plan.json'] is not None:
         problems += check_page_plan(data['page-plan.json'], intent, visual, lessons, root=root)
     problems += check_visual_items(root, visual, summary)
+    scheme, problem = None, None
+    if (record / 'scheme-criteria.json').exists():
+        scheme, problem = load(record / 'scheme-criteria.json')
+    problems += [problem] if problem else check_scheme_criteria(scheme, closure)
     selection = data['selection.json'] or {}
     if data['selection.json'] is not None:
         problems += check_selection(selection, intent, root)
@@ -1465,6 +1557,7 @@ def render(root, notes=None, title=None):
                 m['uncertainty'] * 100, cell(m.get('improvement') or '')))
         out.append('')
     out += render_operating_inputs(inputs_found)
+    out += render_scheme_criteria(scheme)
     out += render_guidelines(guidelines)
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:

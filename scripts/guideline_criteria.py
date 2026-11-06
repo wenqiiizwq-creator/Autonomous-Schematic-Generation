@@ -257,9 +257,11 @@ def shared_label(root=SKILL_ROOT):
     return '共用层 %s，设计准则库 %s，降额 v%s' % (v['shared_sha256'][:12], v['library_version'], v['derating_version'])
 
 
-def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
+def select(bundle, baseline=None, circuit_types=(), device_kinds=(), typed_only=False, ports=False):
     """Active rules whose conditions hold: the baseline matches (an empty list is every baseline) and the rule is
-    board-wide or names one of the circuit types or device kinds present."""
+    board-wide or names one of the circuit types or device kinds present. typed_only drops the board-wide rules and
+    keeps those a circuit type or device kind triggers (ASG task 1.3, one functional block); ports adds back the
+    board-wide G07 rules, the port matrix of a block with external ports."""
     baseline = baseline or bundle['default_baseline']
     circuits, kinds = set(circuit_types), set(device_kinds)
     out = []
@@ -267,7 +269,9 @@ def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
         when = rule['applies_when']
         if rule['status'] != 'active' or (when.get('baselines') and baseline not in when['baselines']):
             continue
-        if when.get('board') or circuits & set(when.get('circuit_types', ())) or kinds & set(when.get('device_kinds', ())):
+        typed = circuits & set(when.get('circuit_types', ())) or kinds & set(when.get('device_kinds', ()))
+        board = when.get('board') and (not typed_only or (ports and rule['spec'] == 'G07'))
+        if typed or board:
             out.append(rule)
     return out
 
@@ -370,6 +374,8 @@ def main(argv=None):
     pick.add_argument('--baseline')
     pick.add_argument('--circuit-type', action='append', default=[])
     pick.add_argument('--device-kind', action='append', default=[])
+    pick.add_argument('--typed-only', action='store_true', help='only rules a circuit type or device kind triggers')
+    pick.add_argument('--ports', action='store_true', help='with --typed-only, add the board-wide G07 port rules')
     read = sub.add_parser('value')
     read.add_argument('name')
     read.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
@@ -397,7 +403,7 @@ def main(argv=None):
             return 1
         print(json.dumps(bundle['engineering_values'][args.name], ensure_ascii=False))
     elif args.command == 'select':
-        for rule in select(bundle, args.baseline, args.circuit_type, args.device_kind):
+        for rule in select(bundle, args.baseline, args.circuit_type, args.device_kind, args.typed_only, args.ports):
             kind = coverage_class(rule)
             print('%s  %s  [%s]%s' % (rule['id'], rule['title'], rule['closing_stage'], '' if kind == 'item' else '  coverage=' + kind))
     else:
