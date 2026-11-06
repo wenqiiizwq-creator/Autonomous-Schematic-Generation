@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## scheme-criteria.json 格式写到任务 1.3 读得到的地方（2026-11-05）
+
+按 `2ce9f67` 重跑 10 题步骤 ①：10 题都生成了记录，但只有 2 题照规定字段写，多数没写 `basis`，因为格式只在 `delivery-report.md`，步骤 ① 不读。`typical-circuits.md`（任务 1.3 链接）加字段说明和例子，测试核例子能通过 `check_scheme_criteria`。纲要不变。重跑结果见评测集 `运行结果/ASG/2026-11-05-km-analysis/scheme-criteria/README.md`。
+
+- Event: test:评测集/运行结果/ASG/2026-11-05-km-analysis/scheme-criteria/README.md
+- Causes: rule_not_enforced 1
+- Changed: references/typical-circuits.md, tests/test_scheme_criteria.py, docs/improvement-ledger.md
+- Gates: 1238 passed in 467.66s（配对 ASG_SR_SHARED_ROOT=SR integration）；check_ledger.py PASS；git diff --check 通过
+
 ## 任务 1.3 关键功能块对照会淘汰候选的规则（2026-11-05）
 
 规则库升到 1.9.0 后难题判据合计不变（9/19 对 9/19），`rt-hard-field-negative` 需要的 G07-022、G07-023 在运行日志里没出现：适用规则只在闭环时核对，选方案时不读。按草案 `原理图设计规范/维护/ASG方案阶段对照规则-草案-2026-11-05.md` 第 3 节逐字改任务 1.3 两处；`guideline_criteria.py select` 加 `--typed-only`（去掉全板通用规则）和 `--ports`（加回 G07 全板端口规则）；新记录 `record/scheme-criteria.json`，`render_design_report.py` 加 `check_scheme_criteria`、`render_scheme_criteria`，guideline_scope 含关键电路类型时必有，引用的规则须对该块适用，`basis` 区分需求、标准原文、手册绝对额定与工程推论，推论不作硬排除（用户 2026-11-05 原则）。闭环覆盖口径不变。SR 同字节共用脚本，对账清单只读块名和规则编号。
