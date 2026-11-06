@@ -9,6 +9,17 @@ entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Appr
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
+
+## M0：固定共用层 1.9.0 发布输入（2026-11-06）
+
+按关系梳理草案方案 A 归档现行十文件与 19 个持久构建输入，固定完整指纹、逐文件哈希及评测集实际工作区身份；不改载荷。验收与回退锚点见 docs/shared-release-migration.md 和规范 发布/1.9.0/manifest.json。
+
+- Event: user:2026-11-06（按关系梳理草案推荐方案完成更改，本批 M0）
+- Causes: rule_not_enforced 1
+- Changed: docs/shared-release-migration.md, docs/improvement-ledger.md
+- Gates: ASG 全量 1273 passed；SR 全量 3004 passed（5 warnings）；SR mutation --changed aee8b4b --tier unit 0 mutations（仅文档）；两边 check_ledger.py PASS；git diff --check PASS；归档输入重建 JSON 与安装件同字节，十文件与两边同字节，完整指纹 f62f9e757234。
+
+
 ## 撤销 Matrix 电源与保护 R3 后解除资料依赖（2026-11-06）
 
 用户决定完全撤销该版本并重新开始。保留该事件触发的技能修复、知识和既有台账；只解除运行资料对撤销工程的依赖。
