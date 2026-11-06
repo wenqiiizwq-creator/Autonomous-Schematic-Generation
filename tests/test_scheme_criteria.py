@@ -86,3 +86,11 @@ def test_report_marks_inference_as_not_a_hard_exclusion():
     lines = '\n'.join(report.render_scheme_criteria(record(criterion('G07-022', 'inference'))))
     assert '方案阶段对照的规则' in lines and '工程推论，不作硬排除' in lines
     assert report.render_scheme_criteria(None) == []
+
+
+def test_the_example_in_typical_circuits_passes_the_check():
+    import json
+    import re
+    doc = (Path(__file__).resolve().parents[1] / 'references' / 'typical-circuits.md').read_text(encoding='utf-8')
+    example = json.loads(re.search(r'```json\n(.*?)```', doc, re.S).group(1))
+    assert check(example) == []
