@@ -8,6 +8,16 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## SKILL.md 任务 2.2 写明工况输入要有来源（2026-11-06）
+
+审计（`operating_inputs.py`、`audit_design_closure.py`）和 `design-closure.md`“工况输入的来源”早已要求板外工况参数写 `input_role` 并有来源、启动计算声明启动期负载，但纲要任务 2.2 没写，设计方只在审计报错时才知道。按用户确认的草案逐字加一条。
+
+- Event: user:2026-11-06（确认 SKILL.md 草案“照草案写入”；起因 Matrix R2 CALC-CH-START 把 1 A 启动负载写死，见 design-closure.md 同节）
+- Causes: rule_not_enforced 1
+- Changed: SKILL.md, docs/improvement-ledger.md
+- Approved: user:2026-11-06（AskUserQuestion 答复“照草案写入（建议）”）
+- Outline: ab575dfd17617a49
+
 ## Matrix R3 剩余技能事件：四个规则缺陷、资料规则残留、八条典型电路知识（2026-11-06）
 
 R3 `record/lessons.json` 里尚未处理的 13 条事件逐条先核实再改（S07、S25、S29、S35 已在 main 修好，S15 随设计准则库 1.9.0 解决，S12、S19、S24 是判断类，不改技能）。代码类先写复现事件的失败测试再修。

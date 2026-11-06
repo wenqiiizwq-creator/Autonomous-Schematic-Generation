@@ -216,6 +216,9 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   位号和手册定位（`datasheet:<库内路径>#p<页>` 加表名/符号）。依据另有 `requirement`（来自需求，`source` 写 `req:<需求编号>`）
   和 `constant`（物理常数），不再归入 `model`。手册没给的器件参数标 `unspecified`，不能写成保证值，
   也不能支撑 `supported`。格式见 [设计待办记录](references/design-closure.md)，`audit_design_closure.py` 核对。
+- **工况输入有来源**：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆这些板外工况，参数写 `input_role`，来源只能是需求、负载器件手册或由它们推导；
+  需求没给、取值又会改变选型的，按[需求澄清](references/requirement-clarifications.md)问用户，不自定。启动计算必须声明启动期负载。
+  判法见[设计待办记录](references/design-closure.md)“工况输入的来源”，`audit_design_closure.py` 核对。
 - **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作；落实它的计算在 `guidelines` 里写准则编号，
   关闭阶段在原理图之后的规则用一件技术转交待办引用；确实不适用的写进 `guideline_scope.not_applicable` 并写理由。
 
