@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
+import operating_inputs  # noqa: E402
 from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
@@ -45,9 +46,13 @@ GATES = OrderedDict([
     ('reference_contract', '外围电路按手册核对'),
     ('design_change', '改动与预期一致'),
     ('component_requirements', '器件性能要求、选型状态及图面/BOM一致性'),
+    ('design_closure', '设计记录闭合审计'),
 ])
 GATE_RESULTS = OrderedDict([('PASS', '通过（PASS）'), ('FAIL', '没通过（FAIL）'),
-                            ('INSUFFICIENT', '资料不足（INSUFFICIENT）'), ('CONDITIONAL', '有条件通过')])
+                            ('INSUFFICIENT', '资料不足（INSUFFICIENT）'), ('CONDITIONAL', '有条件通过'),
+                            ('INCOMPLETE', '未完成（INCOMPLETE）')])
+# Shown in the conclusion count only when some gate has them.
+OPTIONAL_RESULTS = ('CONDITIONAL', 'INCOMPLETE')
 VISUAL = {'REVIEWED': '已完成', 'REVIEW_PENDING': '未完成', 'REWORK_REQUIRED': '发现需返工的问题'}
 STAGES = {'requirement': '用户暂缓的需求', 'design': '设计未完成', 'external': '外部资料缺口', 'validation': '样机或试验验证', 'pcb': 'PCB 实现'}
 REQUIREMENTS = OrderedDict([('design_supported', '有设计依据'), ('conditional', '有条件成立'), ('open', '还没有设计')])
@@ -69,6 +74,14 @@ PAGE_PATTERN = re.compile(r'(?<![A-Za-z0-9])\d{2}_[A-Za-z][A-Za-z0-9_]*|System_b
 # Words that describe the review process, not a design basis.
 REQUIRED = ('electrical-intent.json', 'design-closure.json', 'design-closure-audit.json',
             'summary.json', 'visual-review.json', 'page-plan.json', 'selection.json', 'lessons.json')
+# Task 1.3: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json).
+# Circuit types of the five key-block families: power conversion, protection, isolation, signal chain, external interface.
+KEY_CIRCUIT_TYPES = ('POWER_CONVERTER', 'HOLD_UP', 'POWER_PROTECTION', 'SIGNAL_PROTECTION', 'ISOLATION', 'ANALOG',
+                     'DC_48V', 'DC_24V', 'AC_MAINS', 'INDUSTRIAL_DI', 'POE_PD', 'VEHICLE_28V', 'SHIP_AC')
+# Only a requirement, a standard's text or a datasheet absolute rating excludes a candidate outright; an engineering
+# inference is recorded as one and never as a hard exclusion (user 2026-11-05).
+EXCLUSION_BASES = OrderedDict([('requirement', '需求'), ('standard', '标准原文'), ('datasheet_abs_max', '手册绝对额定'),
+                               ('inference', '工程推论，不作硬排除')])
 CAUSES = ('rule_missing', 'rule_not_enforced', 'knowledge_missing', 'knowledge_wrong', 'judgment')
 # A comment left unfixed this version still says why the skill missed it (R6: nine deferrals marked none).
 ATTRIBUTION_DEFERRED = re.compile(r'再归因|未归因|暂不归因|未做根因|没做根因|之后归因')
@@ -216,17 +229,141 @@ def circuit_implementations(circuits_dir=CIRCUITS_DIR):
     return {pid: set(info['implementations']) for pid, info in typical_circuits.load(circuits_dir).items()}
 
 
-def check_block_circuits(name, blocks, patterns, implementations, lessons):
+def check_knowledge_event(event, where):
+    errors = []
+    if event.get('knowledge_kind') not in ('approach', 'criterion', 'pitfall'):
+        errors.append(where + ' knowledge_kind 必须是 approach/criterion/pitfall')
+    if event.get('impact') not in ('observed', 'uncertain'):
+        errors.append(where + ' impact 必须是 observed/uncertain')
+    if not text(event.get('problem')):
+        errors.append(where + ' 要写 problem：缺少的知识及其如何造成具体问题')
+    if event.get('impact') == 'observed':
+        evidence = event.get('evidence')
+        if not text(event.get('consequence')) or not isinstance(evidence, list) or not evidence:
+            errors.append(where + ' observed 要写 consequence 和非空 evidence')
+    if event.get('impact') == 'uncertain':
+        for field in ('uncertainty', 'pending'):
+            if not text(event.get(field)):
+                errors.append(where + ' uncertain 要写 ' + field)
+    if 'evidence' in event and (not isinstance(event['evidence'], list) or any(
+            not text(v) or not SOURCE_PATTERN.fullmatch(v) for v in event['evidence'])):
+        errors.append(where + ' evidence 必须是现有来源格式的列表')
+    return errors
+
+
+def check_record_locator(value, base):
+    """Resolve a delivery file and entry; never treat a planned library target as evidence."""
+    if not text(value):
+        return False
+    file, sep, entry = value.partition('#')
+    path = (Path(base) / file).resolve()
+    if not sep or not entry.strip() or not path.is_relative_to(Path(base).resolve()) or not path.is_file():
+        return False
+    try:
+        content = path.read_text(encoding='utf-8')
+        if path.suffix == '.json':
+            data = json.loads(content)
+            if entry.startswith('/'):
+                for key in entry[1:].split('/'):
+                    key = key.replace('~1', '/').replace('~0', '~')
+                    data = data[int(key)] if isinstance(data, list) else data[key]
+                return True
+            def has_id(node):
+                if isinstance(node, dict):
+                    return node.get('id') == entry or entry in node or any(has_id(v) for v in node.values())
+                return isinstance(node, list) and any(has_id(v) for v in node)
+            return has_id(data)
+        return entry in content or any(
+            entry == re.sub(r'[^\w\- ]', '', h.strip().lower()).replace(' ', '-')
+            for h in re.findall(r'^#+ (.+)$', content, re.M))
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
+        return False
+
+
+def check_library_gaps(lessons, plan=None, root=None, circuits_dir=CIRCUITS_DIR):
+    """Schema 2 structure and cross-record bindings; return only valid open (page, block) pairs."""
+    if not isinstance(lessons, dict) or lessons.get('schema_version') != 2:
+        return [], set()
+    gaps = lessons.get('library_gaps')
+    if not isinstance(gaps, list):
+        return ['lessons.json schema 2 要写 library_gaps 列表（没有缺口写空列表）'], set()
+    errors, valid, ids, pairs = [], set(), Counter(), Counter()
+    for gap in gaps:
+        if isinstance(gap, dict):
+            if text(gap.get('id')):
+                ids[gap['id']] += 1
+            if text(gap.get('page')) and text(gap.get('block')):
+                pairs[(gap['page'], gap['block'])] += 1
+    pages = {p.get('file'): p for p in plan.get('pages', []) if isinstance(p, dict) and text(p.get('file'))} if isinstance(plan, dict) else {}
+    for i, gap in enumerate(gaps, 1):
+        where = 'library_gaps 第 %d 项' % i
+        bad = []
+        if not isinstance(gap, dict):
+            errors.append(where + ' 必须是对象')
+            continue
+        for field in ('id', 'page', 'block', 'reason', 'source', 'design_basis', 'target', 'status'):
+            if not text(gap.get(field)):
+                bad.append(where + ' 要写 ' + field)
+        if 'cause' in gap:
+            bad.append(where + ' 是资料覆盖待办，不能带 cause')
+        if text(gap.get('id')) and ids[gap['id']] > 1:
+            bad.append(where + ' id 重复')
+        pair = (gap.get('page'), gap.get('block'))
+        if all(text(v) for v in pair) and pairs[pair] > 1:
+            bad.append(where + ' page/block 重复')
+        if not text(gap.get('source')) or not SOURCE_PATTERN.fullmatch(gap['source']):
+            bad.append(where + ' source 格式不对')
+        if gap.get('status') not in ('open', 'closed'):
+            bad.append(where + ' status 必须是 open/closed')
+        target = gap.get('target')
+        if not text(target) or not re.fullmatch(r'references/typical-circuits/[^/\\#]+\.md', target) or '..' in target:
+            bad.append(where + ' target 必须是 references/typical-circuits/<功能>.md')
+        if root is not None and not check_record_locator(gap.get('design_basis'), root):
+            bad.append(where + ' design_basis 文件/条目不存在或超出本版目录')
+        if plan is not None:
+            page = pages.get(gap.get('page')) if text(gap.get('page')) else None
+            blocks = page.get('blocks') if page else None
+            if not isinstance(blocks, dict) or not text(gap.get('block')) or gap['block'] not in blocks:
+                bad.append(where + ' 没有对应 page/block')
+        if gap.get('status') == 'closed':
+            if not text(gap.get('resolution')):
+                bad.append(where + ' closed 要写 resolution')
+            elif not check_record_locator(gap['resolution'], Path(circuits_dir).parent.parent):
+                bad.append(where + ' resolution 文件/条目不存在')
+            if text(target):
+                pid = Path(target).stem
+                implementations = circuit_implementations(circuits_dir)
+                if pid not in implementations:
+                    bad.append(where + ' closed 的典型电路不存在')
+                if plan is not None and page:
+                    circuits = page.get('circuits')
+                    ref = circuits.get(gap['block']) if isinstance(circuits, dict) and text(gap.get('block')) else None
+                    if not text(ref) or ref.partition('#')[0] != pid or ref.partition('#')[2] not in implementations.get(pid, set()):
+                        bad.append(where + ' closed 页计划没有标注目标文件的有效实现方案')
+                if text(gap.get('resolution')) and gap['resolution'].partition('#')[0] != target:
+                    bad.append(where + ' resolution 必须指向 target 的补写位置')
+        if not bad and gap.get('status') == 'open':
+            valid.add(pair)
+        errors += bad
+    return errors, valid
+
+
+def check_block_circuits(name, blocks, patterns, implementations, lessons, root=None):
     """Each functional block names an existing pattern approach, or lessons.json registers the gap."""
     errors = []
-    registered = any(isinstance(e, dict) and e.get('cause') == 'knowledge_missing' and 'typical-circuits' in str(e.get('change') or '')
-                     for e in (lessons or {}).get('events') or [])
+    lessons = lessons if isinstance(lessons, dict) else {}
+    version = lessons.get('schema_version', 1)
+    registered = version == 1 and any(
+        isinstance(e, dict) and e.get('cause') == 'knowledge_missing'
+        and 'typical-circuits' in str(e.get('change') or '')
+        for e in lessons.get('events') or [])
+    _, valid_gaps = check_library_gaps(lessons, root=root)
     patterns = patterns if isinstance(patterns, dict) else {}
     for block in blocks:
         ref = patterns.get(block)
         if not text(ref):
-            if not registered:
-                errors.append('%s：功能块“%s”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/' % (name, block))
+            if not registered and (name, block) not in valid_gaps:
+                errors.append('%s：功能块“%s”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/' % (name, block) if version == 1 else '%s：功能块“%s”没有典型电路或有效的 library_gaps 逐块覆盖待办' % (name, block))
             continue
         pid, _, approach = ref.partition('#')
         if pid not in implementations:
@@ -236,11 +373,11 @@ def check_block_circuits(name, blocks, patterns, implementations, lessons):
     return errors
 
 
-def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DIR):
+def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DIR, root=None):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
-    errors = []
+    errors, _ = check_library_gaps(lessons, plan=plan, root=root, circuits_dir=circuits_dir)
     implementations = circuit_implementations(circuits_dir)
     known = {c.get('ref') for c in intent.get('components') or [] if isinstance(c, dict)}
     on_page = {}
@@ -270,7 +407,7 @@ def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DI
                 placed[ref] = block
         cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task 3.3)
         if not cover and 'system_block' not in name.lower():
-            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, lessons)
+            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, lessons, root=root)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))
         if missing:
             errors.append('%s：这些器件不属于任何功能块：%s' % (name, '、'.join(missing[:6])))
@@ -487,10 +624,16 @@ def check_selection(data, intent, root):
 
 def check_lessons(data):
     """What this version taught the skill: each event has a source, a cause class and a concrete change."""
+    version = data.get('schema_version', 1) if isinstance(data, dict) else None
+    if type(version) is not int or version not in (1, 2):
+        return ['lessons.json schema_version 只支持 1（历史）或 2'], {}
+    gap_problems, _ = check_library_gaps(data)
     events = data.get('events') if isinstance(data, dict) else None
+    if version == 2 and isinstance(events, list) and not events and data.get('library_gaps') and not gap_problems:
+        return [], {}
     if not isinstance(events, list) or not events:
-        return ['lessons.json 没有 events：每次设计至少登记一条学到的东西，没有就登记 cause=none 并写明核对了什么'], {}
-    problems, by_source = [], {}
+        return gap_problems + ['lessons.json 没有 events：每次设计至少登记一条学到的东西，没有就登记 cause=none 并写明核对了什么'], {}
+    problems, by_source = gap_problems, {}
     for i, e in enumerate(events, 1):
         if not isinstance(e, dict):
             problems.append('lessons.json 第 %d 条不是对象' % i)
@@ -504,6 +647,8 @@ def check_lessons(data):
         if cause not in CAUSES and cause != 'none':
             problems.append('lessons.json 第 %d 条的 cause 必须是 %s 或 none' % (i, '/'.join(CAUSES)))
             continue
+        if version == 2 and cause == 'knowledge_missing':
+            problems += check_knowledge_event(e, 'lessons.json 第 %d 条' % i)
         if cause == 'none':
             if not text(e.get('why_none')):
                 problems.append('lessons.json 第 %d 条 cause=none 要在 why_none 里写明核对了什么' % i)
@@ -546,10 +691,22 @@ def check_citations(selection, lessons, root):
                     page = int(page.group())
                     note(check_citation(sheet, page, [entry.get('value')], [library, root]),
                          '候选 %s 的“%s”' % (c.get('mpn', '?'), param), '%s#p%d' % (sheet, page))
-    for i, e in enumerate((lessons or {}).get('events') or [], 1):
+    lesson_events = (lessons or {}).get('events')
+    for i, e in enumerate(lesson_events if isinstance(lesson_events, list) else [], 1):
         result = check_source(e.get('source'), (), [root]) if isinstance(e, dict) else None
         if result:
             note(result, 'lessons.json 第 %d 条' % i, e['source'])
+        if isinstance(e, dict) and (lessons or {}).get('schema_version') == 2:
+            for source in e.get('evidence') if isinstance(e.get('evidence'), list) else []:
+                result = check_source(source, (), [root])
+                if result:
+                    note(result, 'lessons.json 第 %d 条 evidence' % i, source)
+    if isinstance(lessons, dict) and lessons.get('schema_version') == 2:
+        for gap in lessons.get('library_gaps') if isinstance(lessons.get('library_gaps'), list) else []:
+            if isinstance(gap, dict):
+                result = check_source(gap.get('source'), (), [root])
+                if result:
+                    note(result, 'library_gaps %s' % gap.get('id'), gap.get('source'))
     return problems, review, unchecked
 
 
@@ -694,6 +851,75 @@ def worst(levels):
 STAGE_WORDS = {'schematic': '原理图', 'pcb': 'PCB', 'simulation': '仿真', 'prototype': '样机', 'production': '生产'}
 
 
+def render_operating_inputs(found):
+    """The declared condition inputs and the review list of design-closure.md 工况输入; an error is listed with the others."""
+    if not found:
+        return []
+    out = ['## 工况输入来源', '', '计算用到的外部工况（负载、源阻抗、环境温度……）从哪来。第一张表审计核过来源；后面是核对清单，脚本判不了，不挡交付，要人看。', '']
+    declared = found.get('declared') or []
+    if declared:
+        out += ['| 计算 | 输入 | 类别 | 值 | 依据 | 来源 |', '|---|---|---|---|---|---|']
+        for d in declared:
+            out.append('| %s | %s | %s | %s %s | %s | %s |' % (d['calculation'], cell(d.get('parameter') or ''), operating_inputs.ROLES[d['role']][0],
+                                                              num(d.get('value')), d.get('unit') or '', d.get('basis'), cell(str(d.get('source') or ''))))
+        out.append('')
+    listed = found.get('checklist') or {}
+    weak = listed.get('weak_sources') or []
+    if weak:
+        out += ['**看名字像工况、由 ASG 自定的参数**（没写 `input_role`）：'
+                + '；'.join('%s 的 %s（%s %s，%s）' % (w['calculation'], w['parameter'], num(w.get('value')), w.get('unit') or '', w['basis']) for w in weak)
+                + '。外部给定的要有来源，本板自己的不用管。', '']
+    several = listed.get('multiple_candidates') or []
+    if several:
+        out += ['**需求里还写了同一量的其他值**（有多个候选时取不利值，理由写进参数；审计不判取得对不对）：'
+                + '；'.join('%s 的 %s 取 %s %s，%s 还写了 %s（理由：%s）' % (
+                    c['calculation'], c['parameter'], num(c.get('value')), c.get('unit') or '', c['requirement'],
+                    '、'.join(num(v) for v in c['others']), c.get('reason') or '**没写**') for c in several) + '。', '']
+    parts = listed.get('switch_parts_without_startup_calculation') or []
+    if parts:
+        out += ['**没有启动计算的 eFuse、热插拔或负载开关**：%s。没有启动限流问题的不用管。' % '、'.join(parts), '']
+    missing = {}
+    for row in listed.get('calculations') or []:
+        for role in row['missing']:
+            missing.setdefault(role, []).append(row['calculation'])
+    roles = listed.get('roles') or []
+    if roles:
+        out += ['| 工况 | 适用准则列它的条数 | 需求里提到 | 引用这些准则、参数里没写它的计算 |', '|---|---|---|---|']
+        for r in roles:
+            calcs = missing.get(r['role']) or []
+            out.append('| %s | %d | %s | %s |' % (r['title'], r['rules'], '、'.join(r.get('requirements') or []) or '**没有**',
+                                                  ('、'.join(calcs[:5]) + ('等 %d 条' % len(calcs) if len(calcs) > 5 else '')) or '—'))
+        out.append('')
+    return out
+
+
+def render_batch_guidelines(guidelines, cards):
+    """The rules covered in bulk (user 2026-11-04), one table per class: which baseline item answers each project_input
+    rule, and the downstream handoff list."""
+    classes = guidelines.get('by_coverage') or {}
+    out = []
+    if classes.get('project_input'):
+        out += ['## 需求基线回答的设计准则', '',
+                '这些设计准则由一份需求基线或需求澄清记录一次回答；TBR 是还没有答复的项。', '',
+                '| 设计准则 | 内容 | 回答项 |', '|---|---|---|']
+        for gid in classes['project_input']:
+            answer = '不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else \
+                '、'.join(w.partition(':')[2] for w in guidelines['covered'].get(gid) or []) or '未回答'
+            out.append('| %s | %s | %s |' % (gid, cell(cards.get(gid, {}).get('title', '')), cell(answer)))
+        out.append('')
+    down = [gid for gid in classes.get('handoff') or [] if gid not in guidelines['not_applicable']]
+    if down:
+        out += ['## 下游交接清单', '',
+                '这些设计准则进下游交接清单，由所列待办或交接表带给下游；原理图阶段只列出，不宣布已满足。', '',
+                '| 设计准则 | 关闭阶段 | 交接处 | 下游要做的（设计准则 asg_action） |', '|---|---|---|---|']
+        for gid in down:
+            c = cards.get(gid, {'closing_stage': '', 'asg_action': ''})
+            where = '、'.join(w for w in guidelines['covered'].get(gid) or [] if w.startswith(('work:', 'evidence:')))
+            out.append('| %s | %s | %s | %s |' % (gid, STAGE_WORDS.get(c['closing_stage'], ''), where or '无', cell(c['asg_action'])))
+        out.append('')
+    return out
+
+
 def render_guidelines(guidelines):
     """共用设计准则覆盖与下游约束（references/shared/guideline-criteria.md）：适用准则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
     if not (guidelines and guidelines.get('applicable')):
@@ -704,13 +930,18 @@ def render_guidelines(guidelines):
     out = ['## 共用设计准则覆盖', '',
            '本设计按设计准则库 %s 适用的共用设计准则；“落实处”是引用它的计算（calc）、待办（work）或器件性能要求（component）。' % guidelines['library_version'], '',
            '| 设计准则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
+    classes = guidelines.get('by_coverage') or {}
+    batch = set(classes.get('project_input') or ()) | set(classes.get('handoff') or ())
     for gid in guidelines['applicable']:
+        if gid in batch:
+            continue
         c = cards.get(gid, {'title': '', 'source': [], 'closing_stage': ''})
         source = '；'.join('%s %s %s 第%s页' % (s['document'], s['edition'], s['clause'], s['page']) for s in c['source'])
         out.append('| %s | %s | %s | %s | %s |' % (gid, cell(c['title']), cell(source), cell(where(gid)),
                                                     STAGE_WORDS.get(c['closing_stage'], '')))
     out.append('')
-    down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable']]
+    out += render_batch_guidelines(guidelines, cards)
+    down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable'] and gid not in batch]
     if down:
         out += ['## 下游约束（共用规范）', '',
                 '这些设计准则在原理图之后的环节关闭，由所列待办交给下游；原理图阶段不宣布它们已满足。', '',
@@ -721,6 +952,86 @@ def render_guidelines(guidelines):
             out.append('| %s | %s | %s | %s |' % (gid, STAGE_WORDS.get(c['closing_stage'], ''), '、'.join(work) or '无',
                                                   cell(c['asg_action'])))
         out.append('')
+    return out
+
+
+def check_scheme_criteria(data, closure, bundle=None):
+    """record/scheme-criteria.json (SKILL.md task 1.3): required when guideline_scope names a key-block circuit type.
+    Each key circuit type of the scope is in some block; each listed rule exists, is active and is triggered by that
+    block's types and kinds (with the G07 port rules when the block has external ports); a block with no rule says
+    what it searched. Returns the problems."""
+    scope = closure.get('guideline_scope') if isinstance(closure.get('guideline_scope'), dict) else {}
+    key = [t for t in scope.get('circuit_types') or [] if t in KEY_CIRCUIT_TYPES]
+    if data is None:
+        return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见 SKILL.md 任务 1.3）'
+                % '、'.join(key)] if key else []
+    if not isinstance(data, dict) or data.get('version') != 1 or not isinstance(data.get('blocks'), list) or not data['blocks']:
+        return ['scheme-criteria.json 要写 version 1 和非空的 blocks 列表（见 delivery-report.md）']
+    bundle = bundle or guideline_criteria.load()
+    cards = {r['id']: r for r in bundle['criteria']}
+    baseline = scope.get('baseline')
+    problems, named = [], set()
+    for i, block in enumerate(data['blocks'], 1):
+        where = 'scheme-criteria.json 第 %d 块' % i
+        if not isinstance(block, dict) or not text(block.get('block')):
+            problems.append('%s 要写 block（功能块名）' % where)
+            continue
+        where = 'scheme-criteria.json“%s”' % block['block']
+        types, kinds = block.get('circuit_types'), block.get('device_kinds', [])
+        if not isinstance(types, list) or not types or not isinstance(kinds, list):
+            problems.append('%s 要写 circuit_types（非空列表）和 device_kinds（列表）' % where)
+            continue
+        outside = [v for v in types + kinds if v not in (scope.get('circuit_types') or []) + (scope.get('device_kinds') or [])]
+        if outside:
+            problems.append('%s 的 %s 不在 guideline_scope 里' % (where, '、'.join(map(str, outside))))
+        named |= set(types)
+        allowed = {r['id'] for r in guideline_criteria.select(bundle, baseline, types, kinds, typed_only=True,
+                                                               ports=block.get('ports') is True)}
+        criteria = block.get('criteria')
+        if not isinstance(criteria, list):
+            problems.append('%s 要写 criteria 列表（没有能淘汰候选的规则时写空列表）' % where)
+            continue
+        if not criteria and not text(block.get('searched')):
+            problems.append('%s 没有能淘汰候选的规则，要在 searched 写明查过的规则范围' % where)
+        for item in criteria:
+            gid = item.get('id') if isinstance(item, dict) else None
+            if gid not in cards or cards[gid]['status'] != 'active':
+                problems.append('%s 引用的 %s 不是设计准则库里的有效规则' % (where, gid))
+                continue
+            if gid not in allowed:
+                problems.append('%s 引用的 %s 不由该块的电路类型、器件类别或端口触发' % (where, gid))
+            if not (text(item.get('excludes')) and text(item.get('how'))):
+                problems.append('%s 的 %s 要写 excludes（排除的候选）和 how（选定方案怎样满足）' % (where, gid))
+            if item.get('basis') not in EXCLUSION_BASES:
+                problems.append('%s 的 %s 要写 basis（%s 之一）：只有需求、标准原文或手册绝对额定能硬排除，工程推论写 inference'
+                                % (where, gid, '/'.join(EXCLUSION_BASES)))
+            defer = item.get('defer', [])
+            if not (isinstance(defer, list) and all(text(d) for d in defer)):
+                problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))
+    missing = [t for t in key if t not in named]
+    if missing:
+        problems.append('scheme-criteria.json 没有功能块覆盖关键电路类型 %s' % '、'.join(missing))
+    return problems
+
+
+def render_scheme_criteria(data):
+    """方案阶段对照的规则：每个关键功能块会淘汰候选的规则，或查过的范围。"""
+    blocks = [b for b in (data or {}).get('blocks') or [] if isinstance(b, dict)]
+    if not blocks:
+        return []
+    out = ['## 方案阶段对照的规则', '',
+           '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 1.3）。这里的结论不代替任务 2.2 的核算，'
+           '这些规则在设计闭环时仍按“共用设计准则覆盖”核对；依据为工程推论的不作硬排除。', '',
+           '| 功能块 | 设计准则 | 排除的候选 | 依据 | 选定方案怎样满足 | 留给 2.2 核算 |', '|---|---|---|---|---|---|']
+    for b in blocks:
+        items = [c for c in b.get('criteria') or [] if isinstance(c, dict)]
+        if not items:
+            out.append('| %s | 无 | 无（查过：%s） | | | |' % (cell(b.get('block')), cell(b.get('searched') or '')))
+        for c in items:
+            out.append('| %s | %s | %s | %s | %s | %s |' % (
+                cell(b.get('block')), c.get('id'), cell(c.get('excludes')), EXCLUSION_BASES.get(c.get('basis'), '未写'),
+                cell(c.get('how')), cell('、'.join(c.get('defer') or [])) or '无'))
+    out.append('')
     return out
 
 
@@ -788,8 +1099,12 @@ def render(root, notes=None, title=None):
         problems += lesson_problems
         lessons = data['lessons.json']
     if data['page-plan.json'] is not None:
-        problems += check_page_plan(data['page-plan.json'], intent, visual, lessons)
+        problems += check_page_plan(data['page-plan.json'], intent, visual, lessons, root=root)
     problems += check_visual_items(root, visual, summary)
+    scheme, problem = None, None
+    if (record / 'scheme-criteria.json').exists():
+        scheme, problem = load(record / 'scheme-criteria.json')
+    problems += [problem] if problem else check_scheme_criteria(scheme, closure)
     selection = data['selection.json'] or {}
     if data['selection.json'] is not None:
         problems += check_selection(selection, intent, root)
@@ -831,6 +1146,9 @@ def render(root, notes=None, title=None):
     gates = summary.get('gates') or {}
     shown = [(key, label, (gates.get(key) or {}).get('status')) for key, label in GATES.items() if key in gates]
     gate_counts = Counter(status for _, _, status in shown)
+    # Matrix R3 S35: every counted gate has a listed state, so the states add up to the gate count.
+    assert sum(gate_counts[k] for k in GATE_RESULTS) == len(shown), 'gate states not in GATE_RESULTS: %s' % sorted(
+        '%s=%s' % (k, st) for k, _, st in shown if st not in GATE_RESULTS)
     # Drawing gates are ASG's own work: a failed one is redrawn, never delivered.
     # Listing it as a problem also makes pack_design.py refuse the delivery.
     for key, label, status in shown:
@@ -852,7 +1170,7 @@ def render(root, notes=None, title=None):
     out.append('- **规模**：器件 %d 个，图纸 %d 页。' % (parts, sheets))
     out.append('- **图纸自动检查**：共 %d 项。%s。' % (len(shown), '，'.join(
         '%s %d 项' % (label, gate_counts.get(key, 0)) for key, label in GATE_RESULTS.items()
-        if key != 'CONDITIONAL' or gate_counts.get(key))))
+        if key not in OPTIONAL_RESULTS or gate_counts.get(key))))
     out.append('- **图面审阅**：%s。' % VISUAL.get(visual.get('status'), '没有记录'))
     if performance['status'] == 'NOT_CHECKED':
         out.append('- **器件性能流程**：旧记录未检查（NOT_CHECKED）。')
@@ -914,9 +1232,16 @@ def render(root, notes=None, title=None):
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
     guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
     if guidelines and guidelines.get('applicable'):
-        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；交下游 %d 条。见“共用设计准则覆盖”。' % (
+        classes = guidelines.get('by_coverage') or {}
+        batch = '其中需求基线回答 %d 条（TBR %d 条）、进交接清单 %d 条；' % (
+            len(classes['project_input']), len(guidelines.get('project_input_tbr') or ()), len(classes['handoff'])) if classes else ''
+        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；%s交下游 %d 条。见“共用设计准则覆盖”。' % (
             guideline_criteria.shared_label(), len(guidelines['applicable']), len(guidelines['covered']),
-            len(guidelines['not_applicable']), len(guidelines['uncovered']), len(guidelines['downstream'])))
+            len(guidelines['not_applicable']), len(guidelines['uncovered']), batch, len(guidelines['downstream'])))
+    inputs_found = audit.get('operating_inputs') if isinstance(audit.get('operating_inputs'), dict) else None
+    if inputs_found:
+        out.append('- **工况输入**：声明了来源的 %d 项；启动计算 %d 条。见“工况输入来源”。' % (
+            len(inputs_found.get('declared') or []), len(inputs_found.get('startup_calculations') or {})))
     margins = audit.get('estimate_margins') if isinstance(audit.get('estimate_margins'), list) else []
     if margins:
         out.append('- **估计余量**：%d 处检查的余量小于所依赖工程估计的不确定度，合格但有风险，见“余量不足以覆盖估计误差”。' % len(margins))
@@ -1054,12 +1379,38 @@ def render(root, notes=None, title=None):
         if unread:
             out += ['意见来源 %s 的原文读不到，来源未核对：上面的意见内容按登记照录。' % '、'.join(unread), '']
 
-    events_list = [e for e in (lessons.get('events') or []) if isinstance(e, dict)]
+    lesson_events = lessons.get('events')
+    events_list = [e for e in lesson_events if isinstance(e, dict)] if isinstance(lesson_events, list) else []
     if events_list:
+        if lessons.get('schema_version', 1) == 1:
+            out += ['历史归因，尚未按 schema 2 新口径复核；不计入有证据后果统计。', '']
         out += ['## 改进记录', '', '| 来源 | 归因 | 改了什么 |', '|---|---|---|']
         for e in events_list:
             out.append('| %s | %s | %s |' % (cell(e.get('source', '')), CAUSE_WORDS.get(e.get('cause'), cell(e.get('cause', ''))),
                                             cell(e.get('change') or e.get('why_none') or '')))
+        out.append('')
+
+    if lessons.get('schema_version') == 2:
+        unique_events = list({json.dumps(e, sort_keys=True, ensure_ascii=False): e for e in events_list}.values())
+        observed = [e for e in unique_events if e.get('cause') == 'knowledge_missing'
+                    and e.get('impact') == 'observed' and not check_knowledge_event(e, '')]
+        uncertain = [e for e in unique_events if e.get('cause') == 'knowledge_missing' and e.get('impact') == 'uncertain']
+        out += ['缺知识归因（按事件计数，来源不另计）：有证据后果 %d；待核归因 %d。来源可定位不证明因果成立。' % (len(observed), len(uncertain)), '']
+        for label, group in (('有证据后果', observed), ('待核归因', uncertain)):
+            for e in group:
+                out += ['- %s：%s；问题：%s；后果/不确定原因：%s；证据：%s；待核：%s' % (
+                    label, cell(e.get('source', '')), cell(e.get('problem', '')),
+                    cell(e.get('consequence') if label == '有证据后果' else e.get('uncertainty', '')),
+                    cell('、'.join(str(v) for v in e.get('evidence', []) if text(v))) if isinstance(e.get('evidence', []), list) else '', cell(e.get('pending', ''))), '']
+        gaps = lessons.get('library_gaps') if isinstance(lessons.get('library_gaps'), list) else []
+        out += ['## 资料覆盖待办', '', '共 %d 项，独立于问题事件。' % len(gaps), '',
+                '| 编号 | 图页/功能块 | 状态 | 检索与不适用理由 | 来源 | 本版依据 | 拟补文件/补写位置 |',
+                '|---|---|---|---|---|---|---|']
+        for g in gaps:
+            if isinstance(g, dict):
+                fields = [cell(g.get(k, '')) for k in ('id', 'page', 'block', 'status', 'reason', 'source', 'design_basis')]
+                fields.append(cell(g.get('target', '')) + ' / ' + cell(g.get('resolution', '')))
+                out.append('| %s | %s / %s | %s | %s | %s | %s | %s |' % tuple(fields))
         out.append('')
 
     if open_work:
@@ -1212,6 +1563,8 @@ def render(root, notes=None, title=None):
                 '（额定）' if m.get('against') == 'rating' else '', m.get('unit') or '', m['margin'] * 100,
                 m['uncertainty'] * 100, cell(m.get('improvement') or '')))
         out.append('')
+    out += render_operating_inputs(inputs_found)
+    out += render_scheme_criteria(scheme)
     out += render_guidelines(guidelines)
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:

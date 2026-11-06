@@ -64,9 +64,10 @@ def in_contract(net, text):
     return any(line.lstrip().startswith('|') and word.search(line) for line in text.splitlines())
 
 
-def audit_contracts(intent, resolve, error):
+def audit_contracts(intent, resolve, error, verified=None):
     """Each declared boundary net has a row in its contract document, and the document exists.
-    ``resolve(path)`` returns the file or None; ``error(code, item)`` records a finding."""
+    ``resolve(path)`` returns the file or None; ``error(code, item)`` records a finding; a ``verified`` set receives
+    the nets whose contract row was found (Matrix R3 S25: only these may have one pin on the board)."""
     try:
         declared = declarations(intent)
     except ValueError as exc:
@@ -85,4 +86,6 @@ def audit_contracts(intent, resolve, error):
             error('boundary_contract_missing', '%s：接口合同 %s 不存在或读不出' % (net, d['contract']))
         elif not in_contract(net, text):
             error('boundary_net_not_in_contract', '%s：接口合同 %s 的表格里没有这个网络的行' % (net, d['contract']))
+        elif verified is not None:
+            verified.add(net)
     return sorted(declared)

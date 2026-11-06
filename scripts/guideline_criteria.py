@@ -38,11 +38,12 @@ RULE_ID = re.compile(r'^G0[1-9]-\d{3}$')
 STATUSES = ('draft', 'active', 'retired')
 NATURES = ('shall', 'should', 'method', 'project')
 STAGES = ('schematic', 'pcb', 'simulation', 'prototype', 'production')
+COVERAGES = ('item', 'project_input', 'handoff')   # how an applicable rule is covered; a rule without the field is item
 TRIGGERS = ('baselines', 'circuit_types', 'device_kinds')
 APPLIES_KEYS = set(TRIGGERS) | {'board', 'text'}
 RELATION_KEYS = ('related', 'primary', 'reuses', 'conflicts')
 RULE_KEYS = {'id', 'title', 'spec', 'version', 'status', 'nature', 'applies_when', 'not_applicable', 'tailoring',
-             'inputs', 'asg_action', 'sr_check', 'source', 'relations', 'closing_stage'}
+             'inputs', 'asg_action', 'sr_check', 'source', 'relations', 'closing_stage', 'coverage'}
 SOURCE_KEYS = ('document', 'edition', 'clause', 'page')
 VALUE_NAME = re.compile(r'^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$')
 VALUE_KEYS = {'spec', 'value', 'unit', 'applies', 'basis', 'confirmed'}
@@ -108,6 +109,12 @@ def commodity_floors(path=None):
     return json.loads(Path(path or COMMODITY_PATH).read_text(encoding='utf-8'))
 
 
+def coverage_class(rule):
+    """How a rule is covered: item (each rule its own citation), project_input (one requirement baseline answers it)
+    or handoff (one downstream handoff list carries it)."""
+    return rule.get('coverage', 'item')
+
+
 def rule_errors(rule, vocabulary, default_baseline):
     if not isinstance(rule, dict):
         return ['rule is not an object']
@@ -130,6 +137,10 @@ def rule_errors(rule, vocabulary, default_baseline):
     for key, allowed in (('status', STATUSES), ('nature', NATURES), ('closing_stage', STAGES)):
         if rule.get(key) not in allowed:
             errors.append('%s: %s must be one of %s' % (label, key, '/'.join(allowed)))
+    if coverage_class(rule) not in COVERAGES:
+        errors.append('%s: coverage must be one of %s' % (label, '/'.join(COVERAGES)))
+    elif coverage_class(rule) == 'handoff' and rule.get('closing_stage') == 'schematic':
+        errors.append('%s: a handoff rule closes after the schematic; closing_stage is schematic' % label)
     if not (isinstance(rule.get('inputs', []), list) and all(_text(x) for x in rule.get('inputs', []))):
         errors.append('%s: inputs must be a list of text' % label)
     when = rule.get('applies_when')
@@ -246,9 +257,11 @@ def shared_label(root=SKILL_ROOT):
     return '共用层 %s，设计准则库 %s，降额 v%s' % (v['shared_sha256'][:12], v['library_version'], v['derating_version'])
 
 
-def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
+def select(bundle, baseline=None, circuit_types=(), device_kinds=(), typed_only=False, ports=False):
     """Active rules whose conditions hold: the baseline matches (an empty list is every baseline) and the rule is
-    board-wide or names one of the circuit types or device kinds present."""
+    board-wide or names one of the circuit types or device kinds present. typed_only drops the board-wide rules and
+    keeps those a circuit type or device kind triggers (ASG task 1.3, one functional block); ports adds back the
+    board-wide G07 rules, the port matrix of a block with external ports."""
     baseline = baseline or bundle['default_baseline']
     circuits, kinds = set(circuit_types), set(device_kinds)
     out = []
@@ -256,7 +269,9 @@ def select(bundle, baseline=None, circuit_types=(), device_kinds=()):
         when = rule['applies_when']
         if rule['status'] != 'active' or (when.get('baselines') and baseline not in when['baselines']):
             continue
-        if when.get('board') or circuits & set(when.get('circuit_types', ())) or kinds & set(when.get('device_kinds', ())):
+        typed = circuits & set(when.get('circuit_types', ())) or kinds & set(when.get('device_kinds', ()))
+        board = when.get('board') and (not typed_only or (ports and rule['spec'] == 'G07'))
+        if typed or board:
             out.append(rule)
     return out
 
@@ -290,23 +305,31 @@ def scope_errors(scope, bundle):
     return errors
 
 
-def coverage(bundle, applicable, cited, not_applicable=None):
-    """cited: {rule id: [where it is cited]}; not_applicable: {rule id: reason}. An applicable rule is covered when
-    cited or held not applicable with a reason; the rest are uncovered. Rules closing after the schematic are listed
-    as downstream whether covered or not."""
-    not_applicable = not_applicable or {}
+def coverage(bundle, applicable, cited, not_applicable=None, answered=None):
+    """cited: {rule id: [where it is cited]}; not_applicable: {rule id: reason}; answered: {rule id: the baseline item
+    that answers it}. An applicable rule is covered when cited or held not applicable with a reason; a project_input
+    rule is covered by its answer, not by a citation. The rest are uncovered. Rules closing after the schematic are
+    listed as downstream whether covered or not. by_coverage lists the three classes when a rule is not item, and is
+    absent otherwise."""
+    not_applicable, answered = not_applicable or {}, answered or {}
     known = {r['id'] for r in bundle['criteria']}
     ids = [r['id'] for r in applicable]
-    return {
+    classes = {r['id']: coverage_class(r) for r in applicable}
+    where = {i: (['baseline:' + answered[i]] if i in answered else []) if classes[i] == 'project_input' else cited.get(i)
+             for i in ids}
+    found = {
         'library_version': bundle['library_version'],
         'content_sha256': bundle['content_sha256'],
         'applicable': ids,
-        'covered': {i: sorted(cited[i]) for i in ids if cited.get(i)},
-        'not_applicable': {i: not_applicable[i] for i in ids if i in not_applicable and not cited.get(i)},
-        'uncovered': [i for i in ids if not cited.get(i) and i not in not_applicable],
+        'covered': {i: sorted(where[i]) for i in ids if where[i]},
+        'not_applicable': {i: not_applicable[i] for i in ids if i in not_applicable and not where[i]},
+        'uncovered': [i for i in ids if not where[i] and i not in not_applicable],
         'downstream': [r['id'] for r in applicable if r['closing_stage'] != 'schematic'],
         'unknown_cited': sorted(i for i in cited if i not in known),
     }
+    if set(classes.values()) - {'item'}:
+        found['by_coverage'] = {c: [i for i in ids if classes[i] == c] for c in COVERAGES}
+    return found
 
 
 def build(registry_dir, library_version):
@@ -351,6 +374,8 @@ def main(argv=None):
     pick.add_argument('--baseline')
     pick.add_argument('--circuit-type', action='append', default=[])
     pick.add_argument('--device-kind', action='append', default=[])
+    pick.add_argument('--typed-only', action='store_true', help='only rules a circuit type or device kind triggers')
+    pick.add_argument('--ports', action='store_true', help='with --typed-only, add the board-wide G07 port rules')
     read = sub.add_parser('value')
     read.add_argument('name')
     read.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
@@ -378,8 +403,9 @@ def main(argv=None):
             return 1
         print(json.dumps(bundle['engineering_values'][args.name], ensure_ascii=False))
     elif args.command == 'select':
-        for rule in select(bundle, args.baseline, args.circuit_type, args.device_kind):
-            print('%s  %s  [%s]' % (rule['id'], rule['title'], rule['closing_stage']))
+        for rule in select(bundle, args.baseline, args.circuit_type, args.device_kind, args.typed_only, args.ports):
+            kind = coverage_class(rule)
+            print('%s  %s  [%s]%s' % (rule['id'], rule['title'], rule['closing_stage'], '' if kind == 'item' else '  coverage=' + kind))
     else:
         print('%s: %d criteria, library %s' % (args.command, len(bundle['criteria']), bundle['library_version']))
     return 0

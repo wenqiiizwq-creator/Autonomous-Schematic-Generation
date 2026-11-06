@@ -595,18 +595,25 @@ def domains(intent, ctx=None):
 
 def safety_positions(intent, ctx=None):
     """{ref: 'isolation' | 'mains'}: parts bridging a hazardous-voltage domain and another, and safety parts on
-    high_voltage_nets. Empty when high_voltage_nets is not declared."""
+    high_voltage_nets. Empty when high_voltage_nets is not declared. The other domain must reach some other part on
+    the board: a pin whose net has no second on-board endpoint, or a net between pins of the same part (an off-board
+    signal on one connector), is not another ground (Matrix R3 S29: PPS pins on 24 V common-ground D connectors)."""
     ctx = ctx or context(intent)
     if ctx['hv'] is None:
         return {}
     dom = domains(intent, ctx)
     hazardous = {dom[n] for n in ctx['hv'] if n in dom}
+    parts_in = {}
+    for ref, nets in ctx['pins'].items():
+        for n in nets:
+            if n in dom:
+                parts_in.setdefault(dom[n], set()).add(ref)
     out = {}
     for comp in intent.get('components') or []:
         if not isinstance(comp, dict):
             continue
         nets = ctx['pins'].get(comp.get('ref'), set())
-        groups = {dom[n] for n in nets if n in dom}
+        groups = {dom[n] for n in nets if n in dom and parts_in[dom[n]] - {comp.get('ref')}}
         kind = kind_of(comp)[0]
         if groups & hazardous and groups - hazardous:
             out[comp['ref']] = 'isolation'

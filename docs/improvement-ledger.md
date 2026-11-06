@@ -8,6 +8,122 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 1.9.0 覆盖层写回登记，覆盖层工具删除（2026-11-05）
+
+合入 main 前把 `docs/registry-overlay-2026-11-05.json` 的 49 条修改（43 条 coverage、5 条 closing_stage+coverage、G05-031 动作与版本）在维护锁下写回准则登记（G05–G09 五份文件；写前九份源哈希与覆盖层一致，原文件备份在会话临时目录）。从登记直接 `build --library-version 1.9.0` 得到的规则库与 `references/shared/guideline-criteria.json` 逐字节一致。覆盖层文件、`scripts/build_registry_overlay.py` 和它的测试随之删除；`shared-layer.md` 那一节改为“已写回”，共用层指纹 430c93a02bbf → f62f9e757234（只改这段文字）。
+
+- Event: user:2026-11-05（“修缺陷并升版”：合入 main 时写回覆盖层）
+- Causes: rule_not_enforced 1
+- Changed: references/shared/shared-layer.md, scripts/build_registry_overlay.py, tests/test_registry_overlay.py, docs/registry-overlay-2026-11-05.json, docs/improvement-ledger.md
+- Gates: 1249 passed（配对 ASG_SR_SHARED_ROOT=SR integration）；check_ledger.py PASS；从登记重建与 1.9.0 逐字节一致；两边共用层同指纹 f62f9e757234
+
+## Matrix R3 四个技能缺陷：离板单端网、候选物理身份、共地连接器误判隔离、报告门计数（2026-11-05）
+
+R3 交付失败的门禁里有两项来自技能本身（R3 `record/lessons.json` S07、S25、S29、S35，复现证据在 R3 `record/evidence/skill-events/`）。每项先用最小合成输入写失败测试再修。
+
+- S25：`audit_pin_dispositions` 对单端网络无条件报 `single_endpoint_net`。`boundary.audit_contracts` 新增可选 `verified` 集合，只收合同文件存在且表格有该网络行的离板网络；闭合审计把它传给 `audit_binding`/`audit_pin_dispositions`，只放过这些网络。未声明的单端网、合同不成立的声明（照旧另报 `boundary_contract_missing`/`boundary_net_not_in_contract`）和真正开脚照旧报错。
+- S07：`project` 对按型号采购（`procurement.mode: mpn`）的候选不再删 `mpn`/`datasheet`，照写 `selection` 的料号和手册作为物理设计身份；采购状态由 `SelectionStatus: candidate` 和 BOM 新列 `Orderable`（“不可按此采购：候选待核，性能未核准”）表达；`audit` 对这类候选按候选料号核 MPN。按规格采购的候选、已核准件行为不变；身份审计未放松。
+- S29：`safety_positions` 判跨隔离时，另一侧的 DC 域必须在板上接到本器件以外的器件；只连本器件一个脚或只在本器件脚间的网络（离板 PPS 针、同一连接器的普通离板信号）不算另一地域。真实隔离件（光耦、变压器、Y 电容）照旧判出。
+- S35：报告 `GATES` 加 `design_closure`，`GATE_RESULTS` 加 `INCOMPLETE`（与 CONDITIONAL 一样有才显示），并断言各状态数之和等于门数。原有一条测试的期望值本身含此缺陷（summary 有 design_closure 却计 3 项），随之改为 4 项。
+
+R3 副本只读重跑（集成基线 2ed02aa 对比本分支）：闭合审计 `single_endpoint_net` 6→0；按新投影重投 R3 交付网表后身份问题 57→0；共地 D 连接器跨隔离 6→0；报告顶部 11 项 0 失败 → 12 项 1 失败 1 未完成。
+
+- Event: test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/skill-events; user:2026-11-05 (主会话转达：修 S07、S25、S29、S35 四个已确认缺陷)
+- Causes: rule_missing 4
+- Changed: scripts/audit_design_closure.py, scripts/schematic_layout/boundary.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/render_design_report.py, references/component-requirements.md, references/part-roles.md, tests/test_board_defect_guards.py, tests/test_component_requirements.py, tests/test_part_classes.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Gates: python3 -m pytest tests -q（配对 ASG_SR_SHARED_ROOT=SR integration）1 failed, 1239 passed in 380.44s；唯一失败 test_schematic_review_holds_the_same_shared_layer 是 SR integration 工作区未提交的 scripts/guideline_criteria.py 与本分支基线 2ed02aa 不同字节，基线导出同样失败，与本次无关；新增/改动测试所在四个文件全绿；scripts/check_ledger.py PASS；git diff --check 通过
+
+## scheme-criteria.json 格式写到任务 1.3 读得到的地方（2026-11-05）
+
+按 `2ce9f67` 重跑 10 题步骤 ①：10 题都生成了记录，但只有 2 题照规定字段写，多数没写 `basis`，因为格式只在 `delivery-report.md`，步骤 ① 不读。`typical-circuits.md`（任务 1.3 链接）加字段说明和例子，测试核例子能通过 `check_scheme_criteria`。纲要不变。重跑结果见评测集 `运行结果/ASG/2026-11-05-km-analysis/scheme-criteria/README.md`。
+
+- Event: test:评测集/运行结果/ASG/2026-11-05-km-analysis/scheme-criteria/README.md
+- Causes: rule_not_enforced 1
+- Changed: references/typical-circuits.md, tests/test_scheme_criteria.py, docs/improvement-ledger.md
+- Gates: 1238 passed in 467.66s（配对 ASG_SR_SHARED_ROOT=SR integration）；check_ledger.py PASS；git diff --check 通过
+
+## 任务 1.3 关键功能块对照会淘汰候选的规则（2026-11-05）
+
+规则库升到 1.9.0 后难题判据合计不变（9/19 对 9/19），`rt-hard-field-negative` 需要的 G07-022、G07-023 在运行日志里没出现：适用规则只在闭环时核对，选方案时不读。按草案 `原理图设计规范/维护/ASG方案阶段对照规则-草案-2026-11-05.md` 第 3 节逐字改任务 1.3 两处；`guideline_criteria.py select` 加 `--typed-only`（去掉全板通用规则）和 `--ports`（加回 G07 全板端口规则）；新记录 `record/scheme-criteria.json`，`render_design_report.py` 加 `check_scheme_criteria`、`render_scheme_criteria`，guideline_scope 含关键电路类型时必有，引用的规则须对该块适用，`basis` 区分需求、标准原文、手册绝对额定与工程推论，推论不作硬排除（用户 2026-11-05 原则）。闭环覆盖口径不变。SR 同字节共用脚本，对账清单只读块名和规则编号。
+
+- Approved: user:2026-11-05（主会话转达原话：“分支对话的草案，请帮我批准，然后驱动分支对话修改草案”）
+- Outline: e0d456d895a3df38
+- Event: user:2026-11-05
+- Causes: rule_not_enforced 1
+- Changed: SKILL.md, scripts/guideline_criteria.py, scripts/render_design_report.py, references/delivery-report.md, tests/test_scheme_criteria.py, docs/improvement-ledger.md
+- Gates: 1237 passed in 413.60s（配对 ASG_SR_SHARED_ROOT=SR integration）；check_ledger.py PASS；git diff --check 通过；共用层两边同指纹 430c93a02bbf
+
+## G01–G09 运行包 1.9.0 与登记只读覆盖层（2026-11-05）
+
+按 integration brief 升级；当前登记 534 条已不含指定排除的五个编号，故运行包为 534 而非 brief 预期 529，不再任意删规则。ASG 覆盖层锁定九份源哈希；G05-031 动作逐字采用批准草案、版本 1.1→1.2；五条 handoff 的关闭阶段按原文交接对象最小修正，正文不动。合入 main 时才把覆盖层写回登记，本次不写登记、不提交。共享层两边同字节。
+
+只恢复 SKILL 的两处 G01–G09 表述，其余纲要不动。旧 DC_24V 选择测试增加 G07 四条，仍核 G01 不混入 −48 V 专用输入。覆盖层测试核可复现、源只读、源漂移拒绝及真实运行包逐字段匹配。
+
+- Approved: user:2026-11-05
+- Outline: 482b047d825d22fc
+- Event: user:2026-11-05
+- Causes: rule_not_enforced 2, rule_missing 2
+- Changed: SKILL.md, references/shared/guideline-criteria.json, references/shared/shared-layer.md, tests/test_guideline_closure.py, docs/registry-overlay-2026-11-05.json, scripts/build_registry_overlay.py, tests/test_registry_overlay.py, docs/improvement-ledger.md
+- Gates: 1227 passed in 396.37s (0:06:36)；check_ledger.py PASS；git diff --check 通过；配对 ASG_SR_SHARED_ROOT=SR integration；完整日志见指定 integration/实施说明.md。
+
+
+## 设计准则覆盖方式 coverage：基线和交接批量覆盖，item 不放松 (2026-11-04)
+
+加入 G07、G08 后 R2 适用准则从 185 升到 277，新增的很多只是项目基线输入或下游交接，逐条引用只会逼出批量凑数。准则加可选字段 `coverage`，缺省 `item`，行为不变。`project_input` 由 `guideline_project_input` 的 `baseline` 和 `answers` 一次回答（需求、需求澄清、`<基线>#<节>` 或 `TBR`），别处引用不能代替；`handoff` 由一件待办或一条证据覆盖多条，不要逐条 `guideline_evidence`。`item` 写进批量证据或 `answers` 记 `guideline_batch_mixed_item`；`guideline_evidence_repeated` 仍拦 `item`。`handoff` 的 `closing_stage` 不能是 `schematic`。报告把这两类各合成一张表。
+
+校准板与 Matrix R2 的记录新旧代码审计输出逐字节相同（去掉 `shared_sha256` 后比）。库内容未改，分类和升版由主会话做。
+
+- Event: user:2026-11-04 (主会话转达：规则库升版前让非逐条的准则批量处理，ASG、SR 只对原理图负责)
+- Causes: audit_gap 1
+- Changed: scripts/guideline_criteria.py, scripts/audit_design_closure.py, scripts/render_design_report.py, references/design-closure.md, references/shared/guideline-criteria.md, tests/test_guideline_closure.py, docs/improvement-ledger.md
+- Gates: python3 -m pytest tests -q 1185 passed（配对 ASG_SR_SHARED_ROOT=sr-criteria-coverage）；scripts/check_ledger.py
+
+## 工况输入的需求数值连单位一起核；多个候选值取不利值 (2026-11-04)
+
+上一条的核对只比数字且接受 SI 换算，1500 µF 引只写 1.5 A 的需求能靠 1.5 通过；启动计算里没写 `input_role`、依据是 `requirement` 的负载电容则根本不核。现在数和单位一起比，同一量纲才换算前缀，范围下端取上端的单位，没有单位的参数只比数；负载电容按名字核时也包括 `requirement`。
+
+同一条需求同时写 1.5 A 和 1 A、声明 1 A 仍能通过，这次不修：`design-closure.md` 写明多个候选值取不利值、理由写进参数，核对清单 `multiple_candidates` 和报告列出来由人看。
+
+- Event: user:2026-11-04 (主会话转达：修掉数值核对不看单位的放行漏洞)
+- Causes: audit_gap 1
+- Changed: scripts/operating_inputs.py, scripts/render_design_report.py, references/design-closure.md, tests/test_operating_inputs.py, docs/improvement-ledger.md
+- Gates: python3 -m pytest tests -q; scripts/check_ledger.py
+
+## 设计审计核工况输入的来源：启动期负载硬检查，其余工况分层 (2026-11-04)
+
+Matrix R2 的 CALC-CH-START 核“启动浪涌 ≤ I(OL) 下限”，浪涌＝负载电容充电电流＋写死在算式里的 1 A，参数名写“负载电容上限 + 1 A”，基准是 `derived`；这 1 A 没有来源，用户没被问过，换成需求的单路 1.5 A 约 2.14 A，超过下限 1.80 A，结论反了。G03-017 的 `inputs` 早已列出启动期负载，但 `inputs` 是自由文本，审计不读。
+
+新增 `scripts/operating_inputs.py`，`audit_design_closure.py` 对 `parameter_version` 2、3 的记录都跑：
+- 硬检查：参数写 `input_role` 就核来源（需求且文字写出这个数、手册页、有来源的推导；本板负载写 `load_refs`，用户暂缓走 `clarification`）；引用 G03-017 或对 eFuse、热插拔、负载开关做启动检查的计算必须声明 `startup_load`，浪涌值要是一个写了 `formula` 的参数，审计复算、不许写死的数、必须用到声明的负载；任何计算的名字和推导里“+ 1 A”这种没声明的数报错。
+- 核对清单（不挡交付，报告“工况输入来源”）：按关键词把引用准则的 `inputs` 归成 8 类工况（354 条里 105 条有），不逐条维护。
+- 回归：Matrix R2 副本从 INCOMPLETE 变 FAIL，新增 7 条错，1 A 以三种方式报出；工业校准板副本原有 4 条错，新增 2 条（同一条 CALC-INRUSH，浪涌检查值 1.29 A 里的逻辑电流没声明），都是真问题。
+
+没改 `references/shared/`、SKILL.md。没有来源的判断只查有没有，查不出取错了（需求同时写 1.5 A 和 1 A 时声明 1 A 也过）。
+
+- Event: user:2026-11-04 (用户确认要做，并推广到其他准则列出的输入)
+- Causes: audit_gap 1
+- Changed: scripts/operating_inputs.py, scripts/audit_design_closure.py, scripts/render_design_report.py, scripts/README.md, references/design-closure.md, references/requirement-clarifications.md, tests/test_operating_inputs.py, docs/improvement-ledger.md
+- Gates: pytest tests/test_operating_inputs.py 26; python3 -m pytest tests -q
+
+## 资料覆盖待办与知识问题分离，准确描述运行覆盖（2026-11-05）
+
+按已确认草案 A、C 实施；B 等待 R3 后规则库升级。先用 schema 2 反例复现一条 knowledge_missing 全局放行两块，再加入 library_gaps 的逐页逐块绑定、文件/条目定位、closed 与页计划交叉检查；真实知识事件区分 observed 与 uncertain，覆盖待办不进事件索引。旧版与缺版本保留历史语义并标注未复核，不改冻结输入。新交付强制版本与受控历史身份尚无明确入口，保留兼容并如实列明限制，未扩展迁移工具。共用层不变。
+
+- Event: user:2026-11-05
+- Approved: user:2026-11-05
+- Outline: 55065d7228ecfda1
+- Causes: rule_not_enforced 1（全局豁免未绑定功能块）；judgment 2（覆盖待办混作问题归因、运行覆盖描述超出证据；用户确认修订）
+- Changed: SKILL.md, references/typical-circuits.md, scripts/render_design_report.py, references/review-comments.md, references/delivery-report.md, docs/improvement-plan.md, docs/operating-cadence.md, tests/test_lessons_v2.py, docs/improvement-ledger.md
+- Gates: 缺陷复现 1 failed in 0.06s；首次全量 1 failed, 1178 passed（5.2 段落位置触发任务结尾结构检查，移动原文后修复）；最终定向 121 passed in 8.33s；结构与台账 11 passed in 0.05s；最终全量 1185 passed in 361.95s (0:06:01)；check_ledger.py PASS；git diff --check 通过；冻结 helper ready=0，十轮回放 NOT_RUN，未改冻结输入。
+
+## 电路评测集搬到规范目录，新增按电路跑的入口 (2026-11-05)
+
+`evals/calibration_boards/` 搬到 `原理图设计规范/评测集/案例/校准板/`，与 SR 共用。新增 `evals/circuit_cases/run.py`：只把一个电路的需求摘录交给 ASG，案例答案不进工作目录。历史回放基准（overstrict、mutation、delivery）依赖本地冻结来源，不动。
+
+- Event: user:2026-11-05 (能否将这些电路做成给SR和ASG两项技能进行评测和改进的，专门的评测集合？放在电路设计规范里。改现在的SR、ASG的架构)
+- Changed: evals/eval_set.py, evals/circuit_cases/run.py, evals/calibration_boards/, evals/README-calibration.md, references/typical-circuits/chassis-y-cap.md, tests/test_circuit_cases.py, docs/improvement-ledger.md
+- Gates: pytest 1148 passed；评测集不在时 test_circuit_cases 3 skipped
+
 ## IC 角色线索对齐 SR p24：protectioncontroller、surgestopper 归负载开关 (2026-11-04)
 
 SR 修 Matrix R2 首审误报 1.11（LTC4367 被当线性稳压器问压差）时给 load_switch 角色加了两条手册标题线索；ASG `part_classes.IC_ROLE_CUES` 同步，保持两边分类线索对等（`tests/test_part_classes.py` 的包含关系测试）。

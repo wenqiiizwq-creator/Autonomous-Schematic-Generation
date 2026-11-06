@@ -344,6 +344,45 @@ class SafetyTests(unittest.TestCase):
         self.assertIn('没写 high_voltage_nets', pc.audit_safety(intent, {}, touched=set())[1][0])
 
 
+def common_ground_intent(hv):
+    """Matrix R3 S29: a 24 V board with one ground; a buck's bootstrap and a D connector carrying 24 V, GND and a PPS
+    pin whose buffer is on another board (the PPS net has no second endpoint here)."""
+    nets = {'VIN': ['J1.1', 'U1.1', 'C1.1', 'J2.1'], 'GND': ['J1.2', 'U1.2', 'C1.2', 'J2.2', 'R1.2'],
+            'BST': ['U1.3', 'C2.1'], 'SW': ['U1.4', 'C2.2', 'L1.1'], 'VOUT': ['L1.2', 'R1.1'],
+            'PPS_OUT_1': ['J2.3']}
+    comps = [part('J1', 'Connector:Conn_01x02'), part('U1', 'Regulator_Switching:LM5164'), part('C1', 'Device:C', '1u/50V'),
+             part('C2', 'Device:C', '100n/50V'), part('L1', 'Device:L', '10u'), part('R1', 'Device:R', '10k'),
+             part('J2', 'Connector_Generic:Conn_01x03')]
+    return {'nets': nets, 'high_voltage_nets': hv, 'components': comps}
+
+
+class CommonGroundSafetyTests(unittest.TestCase):
+    """A part bridges an isolation only when the other side is a separate domain with circuitry of its own on the
+    board; an off-board pin with no second on-board endpoint is not another ground (Matrix R3 S29)."""
+    def test_a_24v_common_ground_board_has_no_isolation_position(self):
+        self.assertEqual({}, pc.safety_positions(common_ground_intent([])))
+
+    def test_a_39v_bootstrap_does_not_make_the_pps_connector_an_isolation_part(self):
+        self.assertNotIn('J2', pc.safety_positions(common_ground_intent(['BST'])))
+        problems, _ = pc.audit_safety(common_ground_intent(['BST']), {})
+        self.assertFalse([p for p in problems if '跨隔离' in p], problems)
+
+    def test_signals_between_pins_of_one_connector_are_not_another_domain(self):
+        intent = common_ground_intent(['BST'])
+        intent['nets']['PPS_OUT_1'] = ['J2.3', 'J2.4']
+        self.assertNotIn('J2', pc.safety_positions(intent))
+
+    def test_a_real_isolator_beside_the_pps_connector_is_still_found(self):
+        intent = common_ground_intent(['BST'])
+        intent['nets'].update({'LED_A': ['U2.1', 'R2.1'], 'ISO_OUT': ['U2.4', 'R3.1'], 'ISO_GND': ['U2.3', 'R3.2']})
+        intent['nets']['VIN'].append('R2.2')
+        intent['nets']['GND'].append('U2.2')
+        intent['components'] += [part('U2', 'x:SFH6186-4'), part('R2', 'Device:R', '2k'), part('R3', 'Device:R', '10k')]
+        positions = pc.safety_positions(intent)
+        self.assertEqual('isolation', positions.get('U2'))
+        self.assertNotIn('J2', positions)
+
+
 class ProposeTests(unittest.TestCase):
     def test_candidates_come_from_the_title_lines_of_page_one(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))

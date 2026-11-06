@@ -394,6 +394,76 @@ class PerformanceTests(unittest.TestCase):
             cr.project(intent, record, self.root)
 
 
+def candidate_fixture(root, ref, kind, lib_id, mpn, sheet, parameter, value, unit, binding=None):
+    """A part the design binds to by its part number (procurement mpn) whose performance is still a candidate."""
+    calc = root / 'calculation.txt'
+    calc.write_text('Synthetic calculation for candidate identity tests.\n', encoding='utf-8')
+    (root / sheet).write_text('%s synthetic datasheet\n' % mpn, encoding='utf-8')
+    source = {'path': 'calculation.txt', 'sha256': hashlib.sha256(calc.read_bytes()).hexdigest(), 'locator': 'line 1'}
+    entry = dict(ref=ref, kind=kind, purpose='synthetic candidate', definition_status='complete', display='note',
+                 required_parameters=[parameter],
+                 requirements=[dict(parameter=parameter, op='le', value=value, unit=unit,
+                                    conditions={'temperature': '85 degC'}, basis='calculation', source=source)],
+                 procurement={'mode': 'mpn', 'reason': 'physical pins and behaviour bind the exact part'},
+                 selection={'status': 'candidate', 'mpn': mpn, 'datasheet': sheet, 'route': 'manufacturer datasheet'})
+    if binding:
+        entry['binding_dependencies'] = [binding]
+    record = {'schema_version': 1, 'screening': [{'refs': [ref], 'decision': 'contract', 'reason': 'synthetic'}],
+              'components': [entry]}
+    intent = {'schema_version': 1, 'design_id': 'candidate-fixture', 'title': 'Synthetic candidate identity',
+              'components': [{'ref': ref, 'lib_id': lib_id, 'value': mpn, 'mpn': mpn, 'datasheet': sheet,
+                              'fields': {'Circuit': 'load'}}],
+              'nets': [{'name': 'A', 'pins': [ref + '.1']}, {'name': 'B', 'pins': [ref + '.2']}], 'no_connect': []}
+    return intent, record
+
+
+class CandidateIdentityTests(unittest.TestCase):
+    """Matrix R3 S07: a part bound by its part number keeps its physical identity (MPN, datasheet) while its performance
+    is a candidate; the BOM says it is not to be ordered on that basis. The identity audit is not relaxed."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+
+    def check(self, intent, record):
+        from schematic_layout.part_classes import audit_identity
+        ref, mpn, sheet = intent['components'][0]['ref'], intent['components'][0]['mpn'], intent['components'][0]['datasheet']
+        projected = cr.project(intent, record, self.root)
+        comp = projected['components'][0]
+        self.assertEqual((mpn, sheet), (comp.get('mpn'), comp.get('datasheet')))
+        problems = audit_identity(projected, [self.root])[0]
+        self.assertFalse([p for p in problems if '料号（mpn）' in p or '数据手册（datasheet' in p], problems)
+        result = cr.audit(projected, record, self.root)
+        self.assertEqual(([], 'INCOMPLETE'), (result['errors'], result['status']))
+        self.assertEqual({ref: 'candidate'}, result['selection'])
+        row = cr.bom_rows(projected)[0]
+        self.assertEqual(mpn, row['MPN'])
+        self.assertIn('不可按此采购', row['Orderable'])
+        comp['mpn'] = 'OTHER-PART'
+        self.assertEqual('FAIL', cr.audit(projected, record, self.root)['status'])
+
+    def test_a_candidate_ic_keeps_its_part_number_and_datasheet(self):
+        self.check(*candidate_fixture(self.root, 'U801', 'ic', 'Power_Management:LTC4367', 'LTC4367HMS8#WPBF',
+                                      'ADI - LTC4367.txt', 'turn_off_delay', 30, 'us'))
+
+    def test_a_curve_bound_mosfet_candidate_keeps_its_identity(self):
+        self.check(*candidate_fixture(self.root, 'Q201', 'mosfet', 'Device:Q_NMOS', 'IPT015N10N5ATMA1',
+                                      'Infineon - IPT015N10N5.txt', 'on_resistance', 2, 'mohm',
+                                      binding='linear SOA curve of this part'))
+
+    def test_a_magnetic_candidate_keeps_its_identity(self):
+        self.check(*candidate_fixture(self.root, 'L402', 'inductor', 'Device:L', 'XAL1010-682MED',
+                                      'Coilcraft - XAL1010.txt', 'DCR', 0.0089, 'ohm',
+                                      binding='saturation curve of this part'))
+
+    def test_a_qualified_part_is_unchanged(self):
+        intent, record = fixture(self.root, True)
+        projected = cr.project(intent, record, self.root)
+        self.assertEqual('SYNTHETIC-TEST-1', projected['components'][0]['mpn'])
+        self.assertEqual('PASS', cr.audit(projected, record, self.root)['status'])
+        self.assertEqual('', cr.bom_rows(projected)[0]['Orderable'])
+
+
 class DesignSheetTests(unittest.TestCase):
     """A custom magnetic closes its selection on its own design sheet; the sample acceptance is listed apart
     (user 2026-10-28: 按 A 实施)."""

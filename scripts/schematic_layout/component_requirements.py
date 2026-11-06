@@ -23,6 +23,8 @@ DEFINITIONS = {'complete': '性能定义完整', 'pending': '性能待计算'}
 SELECTIONS = {'not_selected': '型号未定', 'candidate': '候选待核', 'qualified': '型号已核准',
               'by_spec': '受控规格采购已核实', 'by_design_sheet': '设计单定制已核实',
               'by_bom_spec': 'BOM规格已写全'}
+# The BOM's Orderable column for a candidate: its MPN is the physical identity, not an approved order (Matrix R3 S07).
+NOT_ORDERABLE = '不可按此采购：候选待核，性能未核准'
 # Selections whose properties are checked one by one and that close the selection.
 CLOSED = ('qualified', 'by_spec', 'by_design_sheet')
 PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额定功率',
@@ -550,6 +552,12 @@ def requirement_hints(record, intent):
     return hints
 
 
+def bound_candidate(entry):
+    """A candidate the design binds by its part number (procurement mpn): its MPN and datasheet are the physical
+    design identity, while its performance is not yet approved for ordering."""
+    return entry['selection']['status'] == 'candidate' and entry['procurement']['mode'] == 'mpn'
+
+
 def project(intent, record, root, inputs=None):
     """Explicit preparation API. No checking path calls this function to repair outputs."""
     errors, _ = record_errors(record, intent, root, inputs)
@@ -577,6 +585,12 @@ def project(intent, record, root, inputs=None):
             comp['mpn'] = selection['sheet_id']    # the sheet number is the order identity (part-roles.md)
             from .part_classes import design_sheet
             comp['datasheet'] = design_sheet(comp)
+        elif bound_candidate(entry):
+            # Matrix R3 S07: the design binds this exact part (pins, datasheet), so its physical identity stays; the
+            # procurement state is SelectionStatus candidate and the BOM's Orderable column, not an empty MPN.
+            comp['mpn'] = selection['mpn']
+            if selection.get('datasheet'):
+                comp['datasheet'] = selection['datasheet']
         else:
             comp.pop('mpn', None)  # candidate identity remains in the contract, never the orderable MPN
             comp.pop('datasheet', None)
@@ -593,6 +607,7 @@ def bom_rows(intent):
         if conflict or cat_error:
             raise ValueError(f"{c['ref']}: {conflict or cat_error}")
         rows.append(dict(Reference=c['ref'], Value=c['value'], MPN=c.get('mpn', ''),
+                         Orderable=NOT_ORDERABLE if c.get('fields', {}).get('SelectionStatus') == 'candidate' else '',
                          Datasheet=c.get('datasheet', ''), Footprint=c.get('footprint', ''),
                          Kind=kind or '', Category=cat or '',
                          **{k: c.get('fields', {}).get(k, '') for k in FIELDS}))
@@ -639,7 +654,7 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
                 errors.append(f'{ref}: stale IR field {k}')
         selected = entry['selection']
         expected_mpn = {'qualified': selected.get('mpn', ''), 'by_design_sheet': selected.get('sheet_id', '')}.get(
-            selected['status'], '')
+            selected['status'], selected['mpn'] if bound_candidate(entry) else '')
         if (comp.get('mpn') or '') != expected_mpn:
             errors.append(f'{ref}: candidate is not a qualified BOM MPN, or selected MPN mismatch')
         # Legacy ambiguous tolerance columns must be resolved, not copied with a default.

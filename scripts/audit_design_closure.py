@@ -13,6 +13,7 @@ from pathlib import Path
 from design_frontier import frontier
 import typical_circuits
 import guideline_criteria
+import operating_inputs
 import stress_check
 from schematic_layout import boundary as boundary_nets, part_classes
 from schematic_layout.citations import check_source
@@ -644,6 +645,21 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                                   'other_margin': 'uncertainty'}}
 
 
+def audit_operating_inputs(record, calculations, requirements, clarifications, work, intent, error):
+    """references/design-closure.md 工况输入: the hard layer and the review list (operating_inputs.py)."""
+    found = operating_inputs.audit_roles(calculations, requirements, clarifications, work, intent, error, shown)
+    operating_inputs.audit_hidden_literals(calculations, error)
+    library = guideline_criteria.load()
+    scope = record.get('guideline_scope') if isinstance(record.get('guideline_scope'), dict) else {}
+    applicable = []
+    if all(isinstance(scope.get(k), list) for k in ('circuit_types', 'device_kinds')):
+        applicable = [r['id'] if isinstance(r, dict) else r for r in guideline_criteria.select(
+            library, scope.get('baseline') or library['default_baseline'], scope['circuit_types'], scope['device_kinds'])]
+    found['checklist'] = operating_inputs.checklist(calculations, requirements, library, applicable,
+                                                    set(found['hot_parts']), found['startup_calculations'])
+    return found
+
+
 def audit_citations(record, calculations, work, extra, error):
     """Each datasheet citation names a file in the library and a page it has; cited values are looked up."""
     cited = [('operating_points:%s' % r.get('id'), r.get('source'), ())
@@ -857,12 +873,42 @@ def audit_guideline_evidence(key, row, ids, error):
                 key, len(gids), where, '、'.join(gids)))
 
 
-def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None):
+def audit_project_input(record, classes, requirements, clarifications, evidence, error):
+    """guideline_project_input (user 2026-11-04): one requirement baseline answers the project_input rules. The record
+    names the baseline (evidence or clarification ids) and, rule by rule, the item that answers it (a requirement, a
+    clarification or <baseline>#<locator>) or TBR. Returns {rule id: answer}; an item rule never gets an answer here."""
+    section = record.get('guideline_project_input')
+    if section is None:
+        return {}
+    if not (isinstance(section, dict) and not set(section) - {'baseline', 'answers'} and isinstance(section.get('baseline'), list)
+            and section['baseline'] and isinstance(section.get('answers'), dict)):
+        error('guideline_project_input', 'guideline_project_input 写 baseline（证据或需求澄清编号的列表）和 answers（{准则编号: 回答项或 TBR}）')
+        return {}
+    baseline = section['baseline']
+    absent = [b for b in baseline if b not in (evidence or {}) and b not in clarifications]
+    if absent:
+        error('guideline_project_input', '需求基线 %s 不在 evidence 或 clarifications 里' % '、'.join(map(str, absent)))
+        return {}
+    answered = {}
+    for gid, answer in section['answers'].items():
+        if classes.get(gid, 'project_input') != 'project_input':
+            error('guideline_batch_mixed_item', '%s：覆盖方式是 %s，不能由需求基线批量回答' % (gid, classes[gid]))
+        elif (answer == 'TBR' or answer in requirements or answer in clarifications
+              or (isinstance(answer, str) and answer.partition('#')[0] in baseline and text(answer.partition('#')[2]))):
+            answered[gid] = answer
+        else:
+            error('guideline_project_input', '%s：回答项 %s 不是需求、需求澄清、<基线>#<节/表/行> 或 TBR' % (gid, answer))
+    return answered
+
+
+def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None,
+                     requirements=None, clarifications=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
     (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item, component requirement
     or evidence entry (user 2026-11-03: 照此写入 — a documentation rule hangs on the interface table, operating matrix or FMEA
     entry that implements it, not on one closed work item), or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
-    downstream."""
+    downstream. Rules whose library card says so are covered in bulk (user 2026-11-04): project_input by the baseline's
+    answers, handoff by one work item or evidence entry. An item rule is never carried along with them."""
     library = library or guideline_criteria.load()
     scope = record.get('guideline_scope')
     problems = guideline_criteria.scope_errors(scope, library)
@@ -870,7 +916,9 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         error('guideline_scope', problem)
     if problems:
         return None
-    cited, by_work = {}, set()
+    classes = {r['id']: guideline_criteria.coverage_class(r) for r in library['criteria']}
+    answered = audit_project_input(record, classes, requirements or {}, clarifications or {}, evidence, error)
+    cited, by_work, by_evidence = {gid: ['baseline:' + answer] for gid, answer in answered.items()}, set(), set()
     components = component_guidelines(artifact_root, error) if artifact_root else {}
     for kind, table in (('calc', calculations), ('work', work), ('component', components), ('evidence', evidence or {})):
         for key, row in table.items():
@@ -882,19 +930,29 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
                 cited.setdefault(gid, []).append(kind + ':' + key)
                 if kind == 'work':
                     by_work.add(gid)
-            if kind == 'work' and row.get('status') == 'closed' and ids:
-                audit_guideline_evidence(key, row, ids, error)
+                elif kind == 'evidence':
+                    by_evidence.add(gid)
+            items = [i for i in ids if classes.get(i, 'item') == 'item']
+            if kind in ('work', 'evidence') and items and len(items) < len(ids):
+                error('guideline_batch_mixed_item', '%s：%s 是逐条覆盖的准则，不能和批量覆盖的 %s 写在同一条里；分开写' % (
+                    key, '、'.join(items), '、'.join(i for i in ids if i not in items)))
+            if kind == 'work' and row.get('status') == 'closed' and items:
+                audit_guideline_evidence(key, row, items, error)
     applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
     found = guideline_criteria.coverage(library, applicable, cited,
-                                     {i['id']: i['reason'] for i in scope.get('not_applicable', [])})
+                                     {i['id']: i['reason'] for i in scope.get('not_applicable', [])}, answered)
     for gid in found['unknown_cited']:
         error('guideline_unknown', gid)
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
         error('guideline_cited_not_applicable', '%s：设计准则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
     for gid in found['uncovered']:
-        need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
+        if classes.get(gid) == 'project_input':
+            need('guideline_uncovered', '%s：写进 guideline_project_input.answers（由哪项需求回答或 TBR），或在 guideline_scope.not_applicable 写理由' % gid)
+        else:
+            need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
     for gid in found['downstream']:
-        if gid in found['covered'] and gid not in by_work:
+        if gid in found['covered'] and gid not in by_work and not (classes.get(gid) == 'handoff' and gid in by_evidence) \
+                and classes.get(gid) != 'project_input':
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
     # The typical-circuit implementations the page plan names (typical_circuits.py) declare circuit types and the rules they put into
     # practice: the scope must list those types, and a claimed rule the scope leaves inapplicable means the scope is short.
@@ -907,6 +965,8 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
             error('guideline_scope_circuit', '%s：典型电路 %s 的实现方案落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
     found['circuit_criteria'] = {gid: refs for gid, refs in sorted(circuit['criteria'].items())}
     found['shared_sha256'] = guideline_criteria.shared_digest()   # the whole shared layer the audit ran against
+    if found.get('by_coverage'):
+        found['project_input_tbr'] = [g for g in found['by_coverage']['project_input'] if answered.get(g) == 'TBR']
     return found
 
 
@@ -1087,15 +1147,16 @@ def pin_name(name):
     return re.sub(r'[^0-9a-z]', '', re.sub(r'~\{([^}]*)\}', r'\1', str(name)).lower())
 
 
-def audit_pin_dispositions(record, intent, error):
+def audit_pin_dispositions(record, intent, error, boundary=()):
     """Each pin left unconnected on a part other than a connector has a disposition read from its datasheet, and the
     netlist does what it says (NET-A07/DEV-D05: unused CMOS inputs and RSVD pins open against the datasheet); a net with
-    one endpoint is an open pin in disguise (NET-A01: a Type-C CC on a one-node net)."""
+    one endpoint is an open pin in disguise (NET-A01: a Type-C CC on a one-node net), unless it is a boundary net whose
+    contract row was found (Matrix R3 S25: the other end is off the board)."""
     nets = net_table(intent)
     comps = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
     where = {p: n for n, pins in nets.items() for p in pins}
     for name, pins in sorted(nets.items()):
-        if len(set(pins)) == 1:
+        if len(set(pins)) == 1 and name not in boundary:
             error('single_endpoint_net', '%s：网络只接 %s 一个脚；接到它该接的网络，或放进 no_connect 并写处置' % (name, pins[0]))
     rows = record.get('pin_dispositions') or []
     if not isinstance(rows, list):
@@ -1205,13 +1266,13 @@ def audit_net_voltages(record, intent, requirements, calculations, error):
     return maxima
 
 
-def audit_binding(record, intent, artifact_root, requirements, calculations, error, need):
+def audit_binding(record, intent, artifact_root, requirements, calculations, error, need, boundary=()):
     """binding_version 1 (user 2026-11-02): the generation-side guard for the defect classes of the 86 boards."""
     root = Path(artifact_root)
     bases = [root, root / 'record']
     audit_identity_binding(intent, bases, error)
     audit_pin_maps(intent, root, bases, error, need)
-    audit_pin_dispositions(record, intent, error)
+    audit_pin_dispositions(record, intent, error, boundary)
     maxima = audit_net_voltages(record, intent, requirements, calculations, error)
     return {'net_voltages': maxima, 'pin_dispositions': len(record.get('pin_dispositions') or [])}
 
@@ -1434,6 +1495,11 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'derating_version must be 1, with parameter_version 2 or 3')
         else:
             derating = audit_derating(record, intent, calculations, requirements, clarifications, error, work=work)
+    # Inputs that describe the board's surroundings have a source, whatever the record version since parameter_version 2
+    # (Matrix R2, user 2026-11-04: a 1 A startup load written into a script and a parameter's name reversed a check).
+    inputs_found = None
+    if version in (2, 3):
+        inputs_found = audit_operating_inputs(record, calculations, requirements, clarifications, work, intent, error)
     margins = None
     if 'uncertainty_version' in record:
         if record['uncertainty_version'] != 1 or version not in (2, 3):
@@ -1445,19 +1511,21 @@ def audit(record, intent_path, artifact_root, inputs=None):
         if record['guideline_version'] != 1:
             error('schema', 'guideline_version must be 1')
         else:
-            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence)
+            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
+                                          requirements=requirements, clarifications=clarifications)
     elif guideline_criteria.load()['criteria']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
     audit_placeholders(intent, error, strict='binding_version' in record)
     # Nets declared to leave the design to another board each have a row in their interface contract (Matrix R2).
-    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error)
+    verified = set()
+    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error, verified)
     binding = None
     if 'binding_version' in record:
         if record['binding_version'] != 1:
             error('schema', 'binding_version must be 1')
         else:
-            binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need)
+            binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need, verified)
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')
@@ -1492,6 +1560,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'calculation_basis': derived,
             'gaps': 'CHECKED' if gaps else 'NOT_CHECKED', 'citations': citations,
             'derating': derating if derating is not None else 'NOT_CHECKED',
+            'operating_inputs': inputs_found if inputs_found is not None else 'NOT_CHECKED',
             'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
             'binding': binding if binding is not None else 'NOT_CHECKED',

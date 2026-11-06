@@ -30,9 +30,18 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 - 每种实现方案必须有来源；没有来源的实现方案不写。"已知坑"每条引用审查待办或手册页，这是规则 5（知识有来源）的落实。
 - 任务 3.1 写分页方案时，`page-plan.json` 每个功能块标注所用典型电路与实现方案：
   `"circuits": {"<块名>": "<典型电路文件名>#<实现方案名>"}`；分页方案第一页是架构页，免标。
-  没有合适典型电路的功能块，在 `lessons.json` 登记 `knowledge_missing`、`change` 指向将要新增的 `references/typical-circuits/<功能>.md`，
-  设计完成后补写典型电路文件。`render_design_report.py` 核对：典型电路文件和实现方案标题存在，或 lessons.json 里有这条登记。
-- 每块新板子至少新增或修订一个典型电路；审查意见归因为 `knowledge_missing` 且涉及电路实现方案时，改的就是这里的"已知坑"或"必算项"。
+  没有适用典型电路文件的功能块，在 `lessons.json.library_gaps` 登记资料覆盖待办，说明检索与不适用理由、本版设计依据及拟补文件；分页后精确绑定图页和功能块。检查器逐块核对已有文件及实现方案，或该块的有效覆盖待办。覆盖待办不证明缺知识造成了问题，也不代替设计计算和数据手册依据；真实知识缺陷另在 `events` 中按证据归因。
+- 任务 1.3 关键功能块对照的规则写进 `record/scheme-criteria.json`，格式固定，报告按它核对（字段说明见 [交付与设计报告](delivery-report.md)）：
+  每块写 `block`、`circuit_types`、`device_kinds`、`ports`（有对外端口为 true）和 `criteria`；`criteria` 只列会淘汰某个候选的规则，每项写 `id`、`excludes`（排除的候选）、
+  `basis`（`requirement`、`standard`、`datasheet_abs_max` 能硬排除，只来自工程推论的写 `inference`，不作硬排除）、`how`（选定方案怎样满足）、`defer`（留给 2.2 的数值名）；
+  `criteria` 为空时 `searched` 写明查过的范围。例：
+
+  ```json
+  {"version": 1, "blocks": [{"block": "24 V 现场输出保护", "circuit_types": ["POWER_PROTECTION", "DC_24V"], "device_kinds": ["tvs"],
+    "ports": true, "searched": "select --typed-only --ports", "criteria": [{"id": "G07-023", "excludes": "只在输入侧做保护",
+    "basis": "standard", "how": "输出口按开、关两种状态各设负向钳位路径", "defer": ["负向残压", "钳位器件脉冲能量"]}]}]}
+  ```
+- 每版核对资料覆盖待办；有可复用的新实现方案、判据或已知坑时按来源补写或修订典型电路。确无新增内容时记录核对结果，不按篇数虚增。审查证实的知识缺陷涉及电路实现方案时，补入相应的“已知坑”或“必算项”，并关联事件来源。
 - 典型电路里不写具体型号的参数值；型号的比较在 `selection.json`。
 - 典型电路→准则映射（2026-11-02，与 SR `catalog.BASIS` 对称）：`scripts/typical_circuits.py` 读每个典型电路的电路类型和每种实现方案的落实规则；
   `tests/test_typical_circuits.py` 守编号存在、active、不被基线排除、与声明的电路类型相容。分页方案标注了某实现方案，设计完成核对就要求

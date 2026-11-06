@@ -16,7 +16,7 @@
 
 ## 每步的检查点
 
-- **第 1 步**：`lessons.json` 至少一条事件；没学到东西的写 `cause: none` 并引用核对过的页码。泛泛的总结会被报告拒绝。
+- **第 1 步**：`lessons.json` 新交付采用 schema 2；有有效 library_gaps 时允许 events 为空，两者均空时写 `cause: none` 并引用核对过的页码。泛泛的总结会被报告拒绝。
   读过的手册都在知识库里（`pack_design.py` 核对），参考设计放 `raw/Designexample/<拓扑>/<板名>/`。
 - **第 3 步**：归因先于修改。同一条意见若上一版已出现过，`cause` 不能再是 `judgment`：上次的改动没拦住，说明归因错了，重新归因。
 - **第 4 步**：能用脚本判定的不写成文字；每条新文字规则都要问一次能不能变成自动检查。合成测试只复现事件本身，
@@ -33,3 +33,5 @@ python3 scripts/pack_design.py <交付目录> --input requirements=<需求目录
 python3 -m unittest discover -s tests
 python3 scripts/check_ledger.py
 ```
+
+资料覆盖待办逐块登记，不按篇数补库；有可复用内容才修订典型电路。事件按有证据后果、待核归因、历史未复核分别展示，覆盖待办不计事件数；字段、统计与旧版兼容边界见 [交付与设计报告](../references/delivery-report.md#lessons-schema-2新交付)。旧版入口仍兼容，尚未强制新建身份识别或自动迁移。

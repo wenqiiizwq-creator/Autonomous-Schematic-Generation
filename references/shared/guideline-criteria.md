@@ -47,6 +47,7 @@ ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独�
 | `source` | 至少一条 `{document, edition, clause, page}`；**公开预览不能作出处**，文件名含“公开预览”“非全文”的被拒 |
 | `relations` | `related` / `primary` / `reuses` / `conflicts`，各为准则编号列表，须在库内 |
 | `closing_stage` | `schematic` / `pcb` / `simulation` / `prototype` / `production`；不是 `schematic` 的规则在两边都作下游约束列出 |
+| `coverage` | 可选，覆盖方式。缺省即 `item`：逐条引用、逐条证据。`project_input`：一份需求基线或需求澄清记录一次回答，只核基线写明。`handoff`：列进下游交接清单，一条待办或交接表可覆盖多条，只核清单列出；`closing_stage` 不能是 `schematic` |
 
 ## 四、适用条件与选规则
 
@@ -61,7 +62,7 @@ ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独�
 ## 五、覆盖
 
 `coverage()` 对适用准则分四类：被引用的（`covered`，列出引用处）、注明不适用及理由的（`not_applicable`）、
-都没有的（`uncovered`），以及关闭阶段在原理图之后的（`downstream`，与前几类并列）。引用了库里没有的编号记 `unknown_cited`。
+都没有的（`uncovered`），以及关闭阶段在原理图之后的（`downstream`，与前几类并列）。引用了库里没有的编号记 `unknown_cited`。有 `coverage` 不是 `item` 的准则时另有 `by_coverage` 分列三类，`project_input` 只由基线回答算覆盖。
 
 - **ASG**：在需求追溯时于 `design-closure.json` 写 `guideline_version: 1` 和 `guideline_scope`
   （`library_version`、`baseline`、`circuit_types`、`device_kinds`、`not_applicable: [{id, reason}]`），
