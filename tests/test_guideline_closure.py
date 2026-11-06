@@ -16,8 +16,7 @@ import render_design_report
 from audit_design_closure import audit, sha256
 
 ASG = Path(__file__).resolve().parents[1]
-SR = Path(os.environ.get('ASG_SR_SHARED_ROOT') or Path.home() / '.agents' / 'skills' / 'schematic-review')   # a paired branch checkout
-SHARED = guideline_criteria.SHARED_FILES   # the whole shared layer, references/shared/ plus the script (2026-11-02: 目录制)
+SHARED = guideline_criteria.SHARED_FILES
 
 
 def setUpModule():
@@ -323,11 +322,10 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertEqual(len(field_errors(card('G07-001', coverage='batch'))), 1)
         self.assertEqual(len(field_errors(card('G07-001', coverage='handoff'))), 1)   # closing_stage is schematic
 
-    @unittest.skipUnless((SR / SHARED[1]).is_file(), 'schematic-review without the rule library')
-    def test_schematic_review_holds_the_same_shared_layer(self):
-        for name in SHARED:
-            self.assertEqual((SR / name).read_bytes(), (ASG / name).read_bytes(), name)
-        self.assertEqual(guideline_criteria.shared_digest(SR), guideline_criteria.shared_digest())
+    def test_local_installed_release_matches_its_manifest(self):
+        manifest = guideline_criteria.verify_installed(ASG)
+        self.assertEqual(manifest['payload'], guideline_criteria.shared_files(ASG))
+        self.assertEqual(manifest['fingerprint'], guideline_criteria.shared_digest(ASG))
 
 
 if __name__ == '__main__':

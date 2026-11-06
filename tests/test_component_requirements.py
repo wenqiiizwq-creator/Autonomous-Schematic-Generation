@@ -23,7 +23,6 @@ from schematic_layout.pages import page_intents
 from schematic_layout.recipes import Sheet, LEFT, RIGHT
 from schematic_layout.sexpr import all_nodes, dump, first, form, Atom
 
-SR_PASSIVE = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'scripts' / 'checkers' / 'passive_stress.py'
 
 
 def fixture(root, qualified=False, actual_tolerance=1):

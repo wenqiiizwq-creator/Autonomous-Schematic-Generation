@@ -430,6 +430,27 @@ def verify_release(release):
     return manifest
 
 
+
+def verify_installed(root=SKILL_ROOT):
+    """Validate only this installed release; no registry, peer skill, VCS or home-directory lookup."""
+    root = Path(root)
+    manifest = json.loads((root / 'shared-release.json').read_text(encoding='utf-8'))
+    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') != FINGERPRINT_FORMAT:
+        raise ValueError('unsupported installed manifest or fingerprint format')
+    if manifest.get('fingerprint_order') != list(SHARED_FILES) or set(manifest.get('payload', {})) != set(SHARED_FILES):
+        raise ValueError('installed manifest must name exactly the ten controlled files')
+    for name, expected in manifest['payload'].items():
+        if _sha(_safe_file(root, name)) != expected:
+            raise ValueError('installed sha256 mismatch: %s' % name)
+    if shared_digest(root) != manifest['fingerprint']:
+        raise ValueError('installed fingerprint mismatch')
+    bundle = load(root / SHARED_FILES[1])
+    errors = bundle_errors(bundle, root / 'references/shared/vocabulary.json')
+    if errors or bundle['library_version'] != manifest['library_version']:
+        raise ValueError('invalid installed bundle: %s' % errors)
+    return manifest
+
+
 def publish(registry_dir, shared_source, tools_source, vocabulary_path, library_version, releases_dir,
             scratch_root='/tmp/codex-work/shared-release'):
     """从显式源构建确定性包；正式版本只增不改，快照是复现输入。"""
@@ -560,6 +581,7 @@ def main(argv=None):
     read.add_argument('name')
     read.add_argument('bundle', nargs='?', default=str(BUNDLE_PATH))
     sub.add_parser('shared')
+    sub.add_parser('verify-installed')
     release = sub.add_parser('release')
     release.add_argument('--from', dest='source', required=True)
     release.add_argument('--shared-source', required=True)
@@ -575,11 +597,13 @@ def main(argv=None):
     install.add_argument('--target', required=True)
     install.add_argument('--scratch-root', default='/tmp/codex-work/shared-release')
     args = parser.parse_args(argv)
-    if args.command in ('release', 'verify-release', 'install'):
+    if args.command in ('release', 'verify-release', 'install', 'verify-installed'):
         try:
             if args.command == 'release':
                 result = publish(args.source, args.shared_source, args.tools_source, args.vocabulary,
                                  args.library_version, args.releases, args.scratch_root)
+            elif args.command == 'verify-installed':
+                result = verify_installed()['fingerprint']
             elif args.command == 'verify-release':
                 result = verify_release(args.release)['fingerprint']
             else:

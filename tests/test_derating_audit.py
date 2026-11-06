@@ -15,7 +15,6 @@ import guideline_criteria
 import audit_design_closure as adc
 from audit_design_closure import audit, sha256
 
-SR_PASSIVE = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'scripts' / 'checkers' / 'passive_stress.py'
 
 
 def setUpModule():

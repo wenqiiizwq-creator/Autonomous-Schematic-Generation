@@ -10,7 +10,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from schematic_layout import part_classes as pc
 
 BXW = 'Datasheet/20_电容器/铝电解电容/Rubycon - BXW.pdf'
-SR = Path.home() / '.agents' / 'skills' / 'schematic-review' / 'scripts'
 PAGE = ('SMBJ series 600 W surface mount transient voltage suppressor. Unidirectional TVS, peak pulse power 600 W. '
         'Replaces Zener diode clamps. ') * 2
 
@@ -92,17 +91,24 @@ class ClassTests(unittest.TestCase):
         for item in shared:
             self.assertEqual(pc.KINDS[item['name']].title, item['title'], item['name'])
 
-    @unittest.skipUnless((SR / 'device_kinds.py').is_file(), 'schematic-review not installed')
-    def test_kind_cues_cover_schematic_reviews(self):
-        # the classifier cues are each skill's own; ASG's must at least contain SR's for every kind (parity, not vocabulary)
-        sys.path.insert(0, str(SR))
-        try:
-            import device_kinds
-        finally:
-            sys.path.remove(str(SR))
-        for name, kind in device_kinds.KINDS.items():
-            if name in pc.KINDS:
-                self.assertLessEqual(set(kind.cues), set(pc.KINDS[name].cues), name)
+    def test_kind_cues_have_explicit_local_expectations(self):
+        # Classification evidence has independent, named examples; no other skill defines the answer.
+        expected = {
+            'relay': ('relay',), 'varistor': ('varistor', 'siov'),
+            'ntc': ('ntcthermistor', 'thermistor', 'inrushcurrentlimiter'),
+            'opto': ('optocoupler', 'photocoupler', 'optoisolator', 'opticallycoupled', 'opticalisolator', 'opticalcoupler'),
+            'tvs': ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress', 'surgeprotectiondevice'),
+            'zener': ('zener',), 'bjt': ('npn', 'pnp', 'bipolar'),
+            'mosfet': ('mosfet', 'nchannel', 'pchannel', 'superjunction'), 'diode': ('rectifier', 'diode', 'schottky'),
+            'common_mode_choke': ('commonmodechoke', 'commonmodefilter', 'commonmodeinductor', 'commonmodecoil'),
+            'coupled_inductor': ('coupledinductor',), 'ferrite': ('ferrite', 'bead'),
+            'transformer': ('transformer',), 'fuse': ('fuse', 'pptc'),
+            'connector': ('connector', 'receptacle', 'terminalblock'), 'bridge_rectifier': ('bridgerectifier',),
+            'inductor': (), 'crystal': (), 'battery': (), 'testpoint': (), 'resistor': (), 'capacitor': (),
+            'jumper': (), 'switch': (), 'ic': ()}
+        self.assertEqual(set(expected), set(pc.KINDS) - {'mechanical'})
+        for name, cues in expected.items():
+            self.assertLessEqual(set(cues), set(pc.KINDS[name].cues), name)
 
 
 class IdentityTests(unittest.TestCase):
@@ -403,40 +409,37 @@ class ProposeTests(unittest.TestCase):
                          rows[0]['candidates'][0])
 
 
-@unittest.skipUnless((SR / 'datasheet_kinds.py').is_file(), 'schematic-review not installed')
-class SchematicReviewParityTests(unittest.TestCase):
-    def test_declarations_get_the_same_status_in_both_skills(self):
-        sys.path.insert(0, str(SR))
-        try:
-            import datasheet_kinds
-        finally:
-            sys.path.remove(str(SR))
-        cases = [('tvs', 'Unidirectional TVS'), ('tvs', 'Bidirectional TVS 400 W'), ('tvs', 'Replaces Zener diode clamps'),
-                 ('diode', 'Unidirectional TVS'), ('tvs', 'Unidirectional TVS, peak pulse power 600 W. Replaces Zener diode')]
+class DeclarationEvidenceTests(unittest.TestCase):
+    def test_declaration_statuses_follow_the_quoted_evidence(self):
+        cases = [('tvs', 'Unidirectional TVS', 'VERIFIED'),
+                 ('tvs', 'Bidirectional TVS 400 W', 'QUOTE_NOT_FOUND'),
+                 ('tvs', 'Replaces Zener diode clamps', 'QUOTE_LACKS_TYPE'),
+                 ('diode', 'Unidirectional TVS', 'QUOTE_LACKS_TYPE'),
+                 ('tvs', 'Unidirectional TVS, peak pulse power 600 W. Replaces Zener diode', 'QUOTE_CONFLICT')]
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / 'SMBJ24A.pdf').write_bytes(b'%PDF smbj')
             with mock.patch.object(pc, 'check', return_value={'status': 'PASS', 'reason': '', 'unshown': []}), \
                     mock.patch.object(pc, 'page_text', return_value=PAGE):
-                for kind, quote in cases:
-                    ours = pc.verify_declaration(declared('D706', 'PD100:D_TVS_Uni', kind, quote), kind, [Path(tmp)], True)[0]
-                    theirs = datasheet_kinds.verify({'kind': kind, 'page': 1, 'quote': quote}, 'SMBJ24A.pdf',
-                                                    read_page=lambda path, page: PAGE)['status']
-                    self.assertEqual(theirs, ours, (kind, quote))
+                for kind, quote, expected in cases:
+                    actual = pc.verify_declaration(declared('D706', 'PD100:D_TVS_Uni', kind, quote), kind, [Path(tmp)], True)[0]
+                    self.assertEqual(expected, actual, (kind, quote))
 
-    def test_quotes_name_the_same_kinds_in_both_skills(self):
-        sys.path.insert(0, str(SR))
-        try:
-            import catalog
-            import datasheet_kinds
-        finally:
-            sys.path.remove(str(SR))
-        sr_roles = {cue for role in catalog.DEVICE_ROLES.values() for cue in role.cues}
-        self.assertLessEqual(sr_roles, set(pc.IC_ROLE_CUES))
-        for quote in ('Littelfuse Inc.', 'Surface mount fuses', 'PPTC resettable device', 'Industrial eFuse',
-                      'Metal oxide varistor, ThermoFuse types', 'Low-side relay driver', 'Power relay, 16 A',
-                      'SMD Common Mode Filter', 'Coupled Inductor', 'Common mode choke', 'MOSFET gate driver', 'BidirectionalTVSDiode',
-                      'N-Channel MOSFET', 'Optocoupler, phototransistor output', 'Unidirectional TVS'):
-            self.assertEqual(datasheet_kinds.cues(quote) & set(pc.KINDS), pc.cues(quote), quote)
+    def test_quotes_name_explicit_kinds_and_exclude_ic_loads(self):
+        cases = {'Littelfuse Inc.': set(), 'Surface mount fuses': {'fuse'},
+                 'PPTC resettable device': {'fuse'}, 'Industrial eFuse': set(),
+                 'Metal oxide varistor, ThermoFuse types': {'varistor'},
+                 'Low-side relay driver': set(), 'Power relay, 16 A': {'relay'},
+                 'SMD Common Mode Filter': {'common_mode_choke'}, 'Coupled Inductor': {'coupled_inductor'},
+                 'Common mode choke': {'common_mode_choke'}, 'MOSFET gate driver': set(),
+                 'BidirectionalTVSDiode': {'tvs'}, 'N-Channel MOSFET': {'mosfet'},
+                 'Optocoupler, phototransistor output': {'opto'}, 'Unidirectional TVS': {'tvs'}}
+        for quote, expected in cases.items():
+            self.assertEqual(expected, pc.cues(quote), quote)
+        # All locally maintained role cues must suppress the named load's type, not just a sample role name.
+        for role in pc.IC_ROLE_CUES:
+            for load in pc.ROLE_LOADS:
+                cue = pc.KINDS[load].cues[0]
+                self.assertNotIn(load, pc.cues(role + ' ' + cue), (role, load))
 
 
 if __name__ == '__main__':

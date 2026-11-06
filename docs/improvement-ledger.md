@@ -12,6 +12,19 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+
+## M3：本地发布包独立校验与批准的依赖边界文字（2026-11-06）
+
+按已批准草案第 4.4、6、7 节移除 D07/D08/D09 的对方源码、工作区/HEAD 读取及无用 SR_PASSIVE。各自核本地已安装包的十文件清单、版本、指纹与准则有效性；配对字节检查移入规范显式发布验收。原分类、应力、覆盖、BASIS 可达性与独立性测试保留，分类对照改为明确预期（全 25 类线索、原 15 引用例、全部本地 IC 角色排除负载），不再由另一技能给答案。指定 SKILL.md 段落逐字采用批准文字；项目基线可核代替另一安装目录必须同版，五步与判断责任不变。共用校验入口与说明变化按规范发布 1.9.3，保持现行指纹格式；M4/M5 不提前做。
+
+- Event: user:2026-11-06（“按照这个草案的推荐方案，逐个完成这个草案的更改，都按照你推荐的方式来”；本批明确批准第 7 节 M1/M3 文字）
+- Causes: rule_not_enforced 3, rule_missing 1
+- Changed: SKILL.md, docs/improvement-ledger.md, docs/shared-release-migration.md, references/shared/guideline-criteria.json, references/shared/guideline-criteria.md, references/shared/shared-layer.md, scripts/guideline_criteria.py, shared-release.json, tests/test_component_requirements.py, tests/test_derating_audit.py, tests/test_derating_rules.py, tests/test_guideline_closure.py, tests/test_installed_release.py, tests/test_part_classes.py
+- Approved: user:2026-11-06（批准关系梳理草案推荐方案，按草案第 7 节文字）
+- Outline: d4f7e8be8d8d95d6
+- Gates: 不设配对变量／对方读取不可用／对方为 1.9.0 三场景：ASG 各 1314 passed，SR 各 3047 passed、5 warnings，全部无跳过；SR 官方 mutation --changed aee8b4b --tier unit 126/126 KILLED（未变异副本先通过）；新增 M1644–M1648 只跑本地包功能测试、排除实际安装件一致断言后亦 5/5 KILLED；规范发布检查及生成测试 4 passed；两安装件与同一 1.9.3 包十文件相等；check_ledger.py、git diff --check、术语及阅读路径 PASS。
+
+
 ## M2：消除工程取值、词表与人读表的重复维护（2026-11-06）
 
 按已批准草案第 4、6 节执行。SR 默认封装读取既有 assumed_resistor_package；双方分类定义只从本地词表读取名字/标题，分类线索、顺序及所有行为字段与 M1 逐项相等。规范准则条目和工程取值表从登记渲染，SR 三张最弱档数值表从 JSON 渲染，解释段保留。共用装载器增加元数据读取接口，故按发布流程安装 1.9.2；全部工程 JSON 除版本外相等，指纹格式不变。规范首轮生成纠正既有正文漂移（G05-031 动作、五条关闭阶段），未改任何登记；再次生成无差异。SKILL.md 留 M3。详见 docs/shared-release-migration.md。

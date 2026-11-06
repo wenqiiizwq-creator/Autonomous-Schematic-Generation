@@ -64,3 +64,10 @@ SKILL.md 本批未改；其中旧版时态说明按用户要求留待 M3 统一�
 
 M2 门禁：ASG 全量 1294 passed（补齐已安装 Poppler 的 PATH 后，无跳过）；SR 全量 3028 passed、5 warnings；SR mutation --changed aee8b4b --tier unit 121/121 KILLED；新增 M1639–M1643 仅消费者/表格功能测试亦 5/5 KILLED；规范生成测试 1 passed、九份正文 --check PASS，SR 最弱档表重生成同字节；工程 JSON 除版本外全等；全部分类字段与顺序逐项相等；check_ledger.py、git diff --check PASS。
 SR 新表格渲染器登记为维护工具；共用装载器因①器件分类读取词表归入①基础库，未改审查入口或步骤。M651 仅适配工厂写法，保留同一裸 RV 误判缺陷。临时日志在 /tmp/codex-work/rel/m2/；首轮 PATH 缺 Poppler 的 5 failed/23 skipped 不作通过证据。
+
+## M3（2026-11-06）
+
+本地测试不再查另一技能源码、工作区或 HEAD。安装包清单在本技能根 shared-release.json，本地 verify-installed 逐文件与版本、指纹校验；配对字节核查在规范 工具/check_release_consumers.py 显式指定候选包及两个目标。分类改为固定预期，保留全部原分类线索边界、15 引用例与全 IC 角色负载排除。SKILL.md 仅改指定段，ASG 记录批准及 Outline，SR 追加历次架构决定。采用不同包的独立分支各自测试；项目设计/审查仍记录准则版本与指纹，有意升版说明差异和复验。共用机制变化使用新包 1.9.3，十文件指纹格式不变，未做 M4。完整验收见规范 维护/编制说明/ASG-SR-M2-M3-实施验收-2026-11-06.md。
+
+M3 门禁：不设配对变量／对方读取不可用／对方为 1.9.0 三场景：ASG 各 1314 passed，SR 各 3047 passed、5 warnings，全部无跳过；SR 官方 mutation --changed aee8b4b --tier unit 126/126 KILLED（未变异副本先通过）；新增 M1644–M1648 只跑本地包功能测试、排除实际安装件一致断言后亦 5/5 KILLED；规范发布检查及生成测试 4 passed；两安装件与同一 1.9.3 包十文件相等；check_ledger.py、git diff --check、术语及阅读路径 PASS。
+对方不存在用空配对目录与实际对方安装目录读取失败注入模拟，未改真实 HOME 或对方目录；异版快照实装正式 1.9.0。全部场景跑完整相同套件，未排除测试。ASG Approved/Outline 与 SR 架构决定同步。

@@ -1,5 +1,5 @@
 """The derating spec (I/II/III levels from T/CPSS 1013, GJB/Z 35 and T/CPSS 1006) is one file shared with
-schematic-review (references/shared, compared byte for byte by test_guideline_closure): every rule names a known kind,
+schematic-review (references/shared, validated locally by test_installed_release): every rule names a known kind,
 a measure, a condition and a cited page, and the levels run from most to least derating (user 2026-10-27)."""
 import hashlib
 import json

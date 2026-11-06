@@ -2,11 +2,11 @@
 
 > 读者：SR 维护者（与 ASG 维护者、写设计准则的人共用；共用层文件，见 [shared-layer.md](shared-layer.md)）。
 
-本文件、`guideline-criteria.json` 和 `scripts/guideline_criteria.py` 属于 ASG 与 SR 的共用层，两个技能里是同一份字节；
+本文件、`guideline-criteria.json` 和 `scripts/guideline_criteria.py` 属于 ASG 与 SR 的共用层，同一发布包安装后载荷逐字节一致；
 怎么改、哪条测试守见 [shared-layer.md](shared-layer.md)。
 
 九份《硬件设计与审查共用规范》（G01 设计输入与工况 … G09 制造与可测试性）把标准条款写成设计准则。
-ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独立复核；两边用同一版设计准则库，但 SR 不继承 ASG 的结论。
+ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独立复核；各自固定项目采用的版本与指纹，要求同一判据基线时核同一发布包；SR 独立取证和复算。
 
 ## 一、文件
 
@@ -25,7 +25,7 @@ ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独�
 |---|---|
 | `library_version` | 设计准则库版本，每次汇编由维护者给定 |
 | `default_baseline` | 默认产品基线：`industrial_telecom`（工业/通信电路板卡） |
-| `vocabulary` | 触发词表：`baselines`、`circuit_types`、`device_kinds` 的名字，汇编时从 `vocabulary.json` 抄入（词表的唯一出处，名字和标题都在那里；SR 的 `catalog.CIRCUIT_TYPES`、`device_kinds.KINDS` 和 ASG 的 `part_classes.KINDS` 都对着它核对）。校验器拒收与 `vocabulary.json` 不一致的汇编 |
+| `vocabulary` | 触发词表：`baselines`、`circuit_types`、`device_kinds` 的名字，汇编时从 `vocabulary.json` 抄入（词表的唯一出处，名字和标题都在那里；SR 的 `catalog.CIRCUIT_TYPES`、`device_kinds.KINDS` 和 ASG 的 `part_classes.KINDS` 都从它读取名字与标题）。校验器拒收与 `vocabulary.json` 不一致的汇编 |
 | `specs` | 各规范的版本，如 `{"G03": "0.1"}` |
 | `content_sha256` | 规则（有工程取值时连同工程取值）的规范 JSON 哈希；报告用它绑定确切内容 |
 | `rules` | 设计准则，按编号排序 |
@@ -77,9 +77,9 @@ ASG 按设计准则的 `asg_action` 设计并留证据，SR 按 `sr_check` 独�
 
 ## 六、更新设计准则库
 
-1. 在硬件设计规范的 `准则登记/` 修改登记，并同步对应正文；词表、降额表、最弱档、应力规范及共用代码只在规范源目录维护。
+1. 在硬件设计规范的 `准则登记/` 修改登记，并用 `工具/render_documents.py` 渲染正文准则条目与工程取值表，解释段人工维护；词表、降额表、最弱档、应力规范及共用代码只在规范源目录维护。
 2. 唯一构建、发布和安装入口是规范 `工具/guideline_criteria.py`，操作见 [shared-layer.md](shared-layer.md) 第四节及规范 `README.md`。词表显式指定，只读取九份直接子登记；正式包保存完整输入快照，同版不同字节拒绝覆盖。
-3. 两个选定技能 worktree 均从同一发布包核清单后安装并各跑全量测试；技能内不得编辑共用载荷，不从一个技能向另一个复制。
+3. 发布验收将同一候选安装到两个显式消费快照，由规范发布检查核对全部字节；各技能全量测试只校验自己的已装包，不读取对方工作区或 HEAD；技能内不得编辑共用载荷，不从一个技能向另一个复制。
 4. 版本或指纹变化后，受影响的设计和审查按各自的复验规则重新打开；本次不改变既有指纹算法。
 
 ## 七、工程取值
