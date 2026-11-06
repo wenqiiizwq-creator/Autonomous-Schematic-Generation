@@ -14,6 +14,8 @@ netlist gives that part.
 import hashlib
 import os
 import re
+
+import guideline_criteria
 from collections import OrderedDict, namedtuple
 from pathlib import Path
 
@@ -30,47 +32,54 @@ Kind = namedtuple('Kind', 'title prefixes words cues')
 # datasheet quote must say, lowercase with spaces removed; they include schematic-review's cues for the kind.
 # A part-number family (B) never starts inside a longer part number: PS2[5-9]xx is not the PS2663 in TPS26630.
 B = r'(?<![A-Z0-9])'
+_KIND_TITLES = guideline_criteria.vocabulary_titles('device_kinds')
+_LOCAL_KIND_TITLES = {'mechanical': '机械件'}
+
+def _kind(name, *args, **kwargs):
+    title = _LOCAL_KIND_TITLES[name] if name in _LOCAL_KIND_TITLES else _KIND_TITLES[name]
+    return name, Kind(title, *args, **kwargs)
+
 KINDS = OrderedDict([
-    ('relay', Kind('继电器', ('K',), (r'RELAY|继电器',), ('relay',))),
-    ('varistor', Kind('压敏电阻', (), (r'VARISTOR|\bMOV\b|压敏',), ('varistor', 'siov', 'mov'))),
-    ('ntc', Kind('热敏电阻', ('TH', 'RT', 'NTC'), (r'NTC|THERMISTOR',),
-                 ('ntcthermistor', 'thermistor', 'inrushcurrentlimiter'))),
-    ('opto', Kind('光耦', (), (r'OPTO|' + B + r'(?:PC81[07]|LTV-?\d|TLP\d|6N13[57]|HCPL|ACPL|FOD\d|CNY17|VO6\d|SFH6\d{2,3}|EL8\d\d|'
+    _kind('relay', ('K',), (r'RELAY|继电器',), ('relay',)),
+    _kind('varistor', (), (r'VARISTOR|\bMOV\b|压敏',), ('varistor', 'siov', 'mov')),
+    _kind('ntc', ('TH', 'RT', 'NTC'), (r'NTC|THERMISTOR',),
+                 ('ntcthermistor', 'thermistor', 'inrushcurrentlimiter')),
+    _kind('opto', (), (r'OPTO|' + B + r'(?:PC81[07]|LTV-?\d|TLP\d|6N13[57]|HCPL|ACPL|FOD\d|CNY17|VO6\d|SFH6\d{2,3}|EL8\d\d|'
                              r'PS2[5-9]\d\d|TCMT\d|KPC\d|H11[A-Z]\d)|光耦',),
-                  ('optocoupler', 'photocoupler', 'optoisolator', 'opticallycoupled', 'opticalisolator', 'opticalcoupler'))),
-    ('tvs', Kind('TVS', ('TVS',), (r'TVS|POWER_PROTECTION:|' + B + r'(?:SMAJ|SMBJ|SMCJ|SMF\d|P6KE|1\.5KE|ESD\d|PESD|SM712)',),
+                  ('optocoupler', 'photocoupler', 'optoisolator', 'opticallycoupled', 'opticalisolator', 'opticalcoupler')),
+    _kind('tvs', ('TVS',), (r'TVS|POWER_PROTECTION:|' + B + r'(?:SMAJ|SMBJ|SMCJ|SMF\d|P6KE|1\.5KE|ESD\d|PESD|SM712)',),
                  # surgeprotectiondevice: TI TVS3300 page 1 calls itself only a "Surge Protection Device" (calibration board #18)
-                 ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress', 'surgeprotectiondevice'))),
-    ('zener', Kind('稳压管', ('ZD',), (r'ZENER|' + B + r'(?:BZX|BZT5\d|MMSZ|1N47\d)|稳压二极管',), ('zener',))),
-    ('bjt', Kind('双极晶体管', (), (r'TRANSISTOR_BJT:|Q_NPN|Q_PNP|\bNPN\b|\bPNP\b|' + B + r'(?:BC[PXW]?\d{2,3}|2N\d{4}|MMBT|PBSS|S8050|S8550)|三极管',),
-                 ('npn', 'pnp', 'bipolar'))),
-    ('mosfet', Kind('MOSFET', ('Q',), (r'TRANSISTOR_FET:|TRANSISTOR_IGBT:|Q_NMOS|Q_PMOS|MOSFET|\bFET\b|NMOS|PMOS|IGBT|'
+                 ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress', 'surgeprotectiondevice')),
+    _kind('zener', ('ZD',), (r'ZENER|' + B + r'(?:BZX|BZT5\d|MMSZ|1N47\d)|稳压二极管',), ('zener',)),
+    _kind('bjt', (), (r'TRANSISTOR_BJT:|Q_NPN|Q_PNP|\bNPN\b|\bPNP\b|' + B + r'(?:BC[PXW]?\d{2,3}|2N\d{4}|MMBT|PBSS|S8050|S8550)|三极管',),
+                 ('npn', 'pnp', 'bipolar')),
+    _kind('mosfet', ('Q',), (r'TRANSISTOR_FET:|TRANSISTOR_IGBT:|Q_NMOS|Q_PMOS|MOSFET|\bFET\b|NMOS|PMOS|IGBT|'
                                        + B + r'(?:IRF|IRLML|AO\d{4}|SI\d{4}|BSS\d|2N7002)',),
-                   ('mosfet', 'nchannel', 'pchannel', 'superjunction', 'igbt'))),
-    ('bridge_rectifier', Kind('整流桥', ('BR',), (r'BRIDGE|' + B + r'(?:GBU\d|KBP\d|DB10\d)',), ('bridgerectifier', 'bridge'))),
-    ('diode', Kind('二极管', ('D', 'LED', 'CR'), (r':D(?:_|\s|$)|:LED|SCHOTTKY|DIODE|' + B + r'(?:SS\d{2}|BAT\d|1N4\d{3}|1N58\d)|二极管',),
-                   ('rectifier', 'diode', 'schottky', 'led'))),
+                   ('mosfet', 'nchannel', 'pchannel', 'superjunction', 'igbt')),
+    _kind('bridge_rectifier', ('BR',), (r'BRIDGE|' + B + r'(?:GBU\d|KBP\d|DB10\d)',), ('bridgerectifier', 'bridge')),
+    _kind('diode', ('D', 'LED', 'CR'), (r':D(?:_|\s|$)|:LED|SCHOTTKY|DIODE|' + B + r'(?:SS\d{2}|BAT\d|1N4\d{3}|1N58\d)|二极管',),
+                   ('rectifier', 'diode', 'schottky', 'led')),
     # Multi-winding magnetics by what they do, above the CHOKE and ferrite words (schematic-review 2026-10-27 A1b).
-    ('common_mode_choke', Kind('共模扼流圈', (), (r'COMMON[-_ ]?MODE|共模',),
-                               ('commonmodechoke', 'commonmodefilter', 'commonmodeinductor', 'commonmodecoil'))),
-    ('coupled_inductor', Kind('耦合电感', (), (r'COUPLED[-_ ]?INDUCTOR|耦合电感',), ('coupledinductor',))),
-    ('ferrite', Kind('磁珠', ('FB',), (r'FERRITE|BEAD|' + B + r'(?:BLM\d|MPZ\d)|磁珠',), ('ferrite', 'bead'))),
-    ('inductor', Kind('电感', ('L', 'FL'), (r':L(?:_|\s|$)|:CMC|INDUCTOR|CHOKE|电感',), ('inductor', 'choke'))),
-    ('crystal', Kind('晶体', ('Y', 'X'), (r'CRYSTAL|XTAL|\bOSC(?:ILLATOR)?\b|晶振|晶体',), ('crystal', 'oscillator', 'resonator'))),
-    ('transformer', Kind('变压器', ('T', 'TR'), (r'TRANSFORMER|变压器',), ('transformer',))),
-    ('fuse', Kind('保险丝', ('F',), (r'FUSE|PTC|保险',), ('fuse', 'pptc', 'ptc', 'resettable', 'polyswitch'))),
-    ('battery', Kind('电池', ('BT', 'BAT'), (r'(?:^|[\s:_])BATTERY|电池',), ('battery',))),
-    ('testpoint', Kind('测试点', ('TP',), (r'TEST_?POINT|TEST-?PAD',), ('testpoint',))),
-    ('connector', Kind('连接器', ('J', 'P', 'CN'), (r'CONNECTOR[A-Z_]*:|CONN_\d|USB_C_|RECEPTACLE|BARREL_?JACK|PINHEADER|'
+    _kind('common_mode_choke', (), (r'COMMON[-_ ]?MODE|共模',),
+                               ('commonmodechoke', 'commonmodefilter', 'commonmodeinductor', 'commonmodecoil')),
+    _kind('coupled_inductor', (), (r'COUPLED[-_ ]?INDUCTOR|耦合电感',), ('coupledinductor',)),
+    _kind('ferrite', ('FB',), (r'FERRITE|BEAD|' + B + r'(?:BLM\d|MPZ\d)|磁珠',), ('ferrite', 'bead')),
+    _kind('inductor', ('L', 'FL'), (r':L(?:_|\s|$)|:CMC|INDUCTOR|CHOKE|电感',), ('inductor', 'choke')),
+    _kind('crystal', ('Y', 'X'), (r'CRYSTAL|XTAL|\bOSC(?:ILLATOR)?\b|晶振|晶体',), ('crystal', 'oscillator', 'resonator')),
+    _kind('transformer', ('T', 'TR'), (r'TRANSFORMER|变压器',), ('transformer',)),
+    _kind('fuse', ('F',), (r'FUSE|PTC|保险',), ('fuse', 'pptc', 'ptc', 'resettable', 'polyswitch')),
+    _kind('battery', ('BT', 'BAT'), (r'(?:^|[\s:_])BATTERY|电池',), ('battery',)),
+    _kind('testpoint', ('TP',), (r'TEST_?POINT|TEST-?PAD',), ('testpoint',)),
+    _kind('connector', ('J', 'P', 'CN'), (r'CONNECTOR[A-Z_]*:|CONN_\d|USB_C_|RECEPTACLE|BARREL_?JACK|PINHEADER|'
                                                r'TERMINAL_?BLOCK|SCREW_TERMINAL',),
-                       ('connector', 'receptacle', 'terminalblock', 'terminal', 'header', 'jack', 'plug', 'socket'))),
-    ('switch', Kind('开关', ('SW', 'S'), (r':SW_|SWITCH:|KEYSW|:MX-',), ('switch',))),
-    ('jumper', Kind('跳线', ('JP',), (r'JUMPER',), ('jumper',))),
-    ('mechanical', Kind('机械件', ('H', 'MH', 'MB', 'FID', 'LOGO', 'HS'), (r'MOUNTINGHOLE|FIDUCIAL|HEATSINK|MECHANICAL:',), ())),
-    ('capacitor', Kind('电容', ('C', 'CX', 'CY'), (r':C(?:_|\s|$)|:CP(?:_|\d*(?:\s|$))|CAPACITOR',),
-                       ('capacitor', 'x1', 'x2', 'y1', 'y2'))),
-    ('resistor', Kind('电阻', ('R', 'RN'), (r':R(?:_|\s|$)|RESISTOR|POTENTIOMETER',), ('resistor',))),
-    ('ic', Kind('集成电路', ('U', 'M', 'IC', 'A', 'MODULE', 'REF'), (), ())),
+                       ('connector', 'receptacle', 'terminalblock', 'terminal', 'header', 'jack', 'plug', 'socket')),
+    _kind('switch', ('SW', 'S'), (r':SW_|SWITCH:|KEYSW|:MX-',), ('switch',)),
+    _kind('jumper', ('JP',), (r'JUMPER',), ('jumper',)),
+    _kind('mechanical', ('H', 'MH', 'MB', 'FID', 'LOGO', 'HS'), (r'MOUNTINGHOLE|FIDUCIAL|HEATSINK|MECHANICAL:',), ()),
+    _kind('capacitor', ('C', 'CX', 'CY'), (r':C(?:_|\s|$)|:CP(?:_|\d*(?:\s|$))|CAPACITOR',),
+                       ('capacitor', 'x1', 'x2', 'y1', 'y2')),
+    _kind('resistor', ('R', 'RN'), (r':R(?:_|\s|$)|RESISTOR|POTENTIOMETER',), ('resistor',)),
+    _kind('ic', ('U', 'M', 'IC', 'A', 'MODULE', 'REF'), (), ()),
 ])
 KEY_KINDS = ('ic', 'mosfet', 'bjt', 'opto', 'transformer', 'zener', 'tvs', 'bridge_rectifier')
 IC_PREFIXES = KINDS['ic'].prefixes

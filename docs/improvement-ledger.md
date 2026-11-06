@@ -11,6 +11,17 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+
+## M2：消除工程取值、词表与人读表的重复维护（2026-11-06）
+
+按已批准草案第 4、6 节执行。SR 默认封装读取既有 assumed_resistor_package；双方分类定义只从本地词表读取名字/标题，分类线索、顺序及所有行为字段与 M1 逐项相等。规范准则条目和工程取值表从登记渲染，SR 三张最弱档数值表从 JSON 渲染，解释段保留。共用装载器增加元数据读取接口，故按发布流程安装 1.9.2；全部工程 JSON 除版本外相等，指纹格式不变。规范首轮生成纠正既有正文漂移（G05-031 动作、五条关闭阶段），未改任何登记；再次生成无差异。SKILL.md 留 M3。详见 docs/shared-release-migration.md。
+
+- Event: user:2026-11-06（按关系梳理草案推荐方案完成更改，本批 M2）
+- Causes: rule_not_enforced 3
+- Changed: docs/improvement-ledger.md, docs/shared-release-migration.md, references/shared/guideline-criteria.json, scripts/guideline_criteria.py, scripts/schematic_layout/part_classes.py, shared-release.json, tests/test_shared_consumers.py
+- Gates: ASG 全量 1294 passed（补齐已安装 Poppler 的 PATH 后，无跳过）；SR 全量 3028 passed、5 warnings；SR mutation --changed aee8b4b --tier unit 121/121 KILLED；新增 M1639–M1643 仅消费者/表格功能测试亦 5/5 KILLED；规范生成测试 1 passed、九份正文 --check PASS，SR 最弱档表重生成同字节；工程 JSON 除版本外全等；全部分类字段与顺序逐项相等；check_ledger.py、git diff --check PASS。
+
+
 ## M1：共用源收回规范并确定性发布 1.9.1（2026-11-06）
 
 按已批准关系梳理草案方案 A 第 4、6 节：规范维护共用源及两个脚本，显式九份直接子登记与词表构建；确定性清单、持久输入快照、同版不覆盖、核清单后整批安装与失败回滚。生产默认固定安装包，替代输入显式声明测试模式；现有合成测试按原用途声明模式。两边从同一包安装，工程数据不变；SKILL.md、主流程和指纹算法不改，M2–M6 不提前做。SR 架构决定同步记录用户原话。验收、四个有意字节变化及回退见 docs/shared-release-migration.md。

@@ -112,6 +112,12 @@ def vocabulary(path=None):
             'vocabulary': {key: [item['name'] for item in raw[key]] for key in TRIGGERS}}
 
 
+def vocabulary_titles(group, path=None):
+    """Local installed names/titles only; classifier order, cues and behavior stay with each consumer."""
+    raw = json.loads(Path(path or VOCABULARY_PATH).read_text(encoding='utf-8'))
+    return {item['name']: item['title'] for item in raw[group]}
+
+
 def commodity_floors(path=None):
     """commodity-floors.json: chip-resistor floors by package, orderable MLCC rows and contact floors, with their basis."""
     return json.loads(Path(path or COMMODITY_PATH).read_text(encoding='utf-8'))
