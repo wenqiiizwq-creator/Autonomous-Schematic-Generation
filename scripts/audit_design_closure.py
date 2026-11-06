@@ -1147,15 +1147,16 @@ def pin_name(name):
     return re.sub(r'[^0-9a-z]', '', re.sub(r'~\{([^}]*)\}', r'\1', str(name)).lower())
 
 
-def audit_pin_dispositions(record, intent, error):
+def audit_pin_dispositions(record, intent, error, boundary=()):
     """Each pin left unconnected on a part other than a connector has a disposition read from its datasheet, and the
     netlist does what it says (NET-A07/DEV-D05: unused CMOS inputs and RSVD pins open against the datasheet); a net with
-    one endpoint is an open pin in disguise (NET-A01: a Type-C CC on a one-node net)."""
+    one endpoint is an open pin in disguise (NET-A01: a Type-C CC on a one-node net), unless it is a boundary net whose
+    contract row was found (Matrix R3 S25: the other end is off the board)."""
     nets = net_table(intent)
     comps = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
     where = {p: n for n, pins in nets.items() for p in pins}
     for name, pins in sorted(nets.items()):
-        if len(set(pins)) == 1:
+        if len(set(pins)) == 1 and name not in boundary:
             error('single_endpoint_net', '%s：网络只接 %s 一个脚；接到它该接的网络，或放进 no_connect 并写处置' % (name, pins[0]))
     rows = record.get('pin_dispositions') or []
     if not isinstance(rows, list):
@@ -1265,13 +1266,13 @@ def audit_net_voltages(record, intent, requirements, calculations, error):
     return maxima
 
 
-def audit_binding(record, intent, artifact_root, requirements, calculations, error, need):
+def audit_binding(record, intent, artifact_root, requirements, calculations, error, need, boundary=()):
     """binding_version 1 (user 2026-11-02): the generation-side guard for the defect classes of the 86 boards."""
     root = Path(artifact_root)
     bases = [root, root / 'record']
     audit_identity_binding(intent, bases, error)
     audit_pin_maps(intent, root, bases, error, need)
-    audit_pin_dispositions(record, intent, error)
+    audit_pin_dispositions(record, intent, error, boundary)
     maxima = audit_net_voltages(record, intent, requirements, calculations, error)
     return {'net_voltages': maxima, 'pin_dispositions': len(record.get('pin_dispositions') or [])}
 
@@ -1517,13 +1518,14 @@ def audit(record, intent_path, artifact_root, inputs=None):
     # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
     audit_placeholders(intent, error, strict='binding_version' in record)
     # Nets declared to leave the design to another board each have a row in their interface contract (Matrix R2).
-    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error)
+    verified = set()
+    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error, verified)
     binding = None
     if 'binding_version' in record:
         if record['binding_version'] != 1:
             error('schema', 'binding_version must be 1')
         else:
-            binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need)
+            binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need, verified)
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')

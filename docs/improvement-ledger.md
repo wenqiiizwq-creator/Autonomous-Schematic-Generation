@@ -8,6 +8,23 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## Matrix R3 四个技能缺陷：离板单端网、候选物理身份、共地连接器误判隔离、报告门计数（2026-11-05）
+
+R3 交付失败的门禁里有两项来自技能本身（R3 `record/lessons.json` S07、S25、S29、S35，复现证据在 R3 `record/evidence/skill-events/`）。每项先用最小合成输入写失败测试再修。
+
+- S25：`audit_pin_dispositions` 对单端网络无条件报 `single_endpoint_net`。`boundary.audit_contracts` 新增可选 `verified` 集合，只收合同文件存在且表格有该网络行的离板网络；闭合审计把它传给 `audit_binding`/`audit_pin_dispositions`，只放过这些网络。未声明的单端网、合同不成立的声明（照旧另报 `boundary_contract_missing`/`boundary_net_not_in_contract`）和真正开脚照旧报错。
+- S07：`project` 对按型号采购（`procurement.mode: mpn`）的候选不再删 `mpn`/`datasheet`，照写 `selection` 的料号和手册作为物理设计身份；采购状态由 `SelectionStatus: candidate` 和 BOM 新列 `Orderable`（“不可按此采购：候选待核，性能未核准”）表达；`audit` 对这类候选按候选料号核 MPN。按规格采购的候选、已核准件行为不变；身份审计未放松。
+- S29：`safety_positions` 判跨隔离时，另一侧的 DC 域必须在板上接到本器件以外的器件；只连本器件一个脚或只在本器件脚间的网络（离板 PPS 针、同一连接器的普通离板信号）不算另一地域。真实隔离件（光耦、变压器、Y 电容）照旧判出。
+- S35：报告 `GATES` 加 `design_closure`，`GATE_RESULTS` 加 `INCOMPLETE`（与 CONDITIONAL 一样有才显示），并断言各状态数之和等于门数。原有一条测试的期望值本身含此缺陷（summary 有 design_closure 却计 3 项），随之改为 4 项。
+
+R3 副本只读重跑（集成基线 2ed02aa 对比本分支）：闭合审计 `single_endpoint_net` 6→0；按新投影重投 R3 交付网表后身份问题 57→0；共地 D 连接器跨隔离 6→0；报告顶部 11 项 0 失败 → 12 项 1 失败 1 未完成。
+
+- Event: test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/skill-events; user:2026-11-05 (主会话转达：修 S07、S25、S29、S35 四个已确认缺陷)
+- Causes: rule_missing 4
+- Changed: scripts/audit_design_closure.py, scripts/schematic_layout/boundary.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/render_design_report.py, references/component-requirements.md, references/part-roles.md, tests/test_board_defect_guards.py, tests/test_component_requirements.py, tests/test_part_classes.py, tests/test_design_report.py, docs/improvement-ledger.md
+- Gates: python3 -m pytest tests -q（配对 ASG_SR_SHARED_ROOT=SR integration）1 failed, 1239 passed in 380.44s；唯一失败 test_schematic_review_holds_the_same_shared_layer 是 SR integration 工作区未提交的 scripts/guideline_criteria.py 与本分支基线 2ed02aa 不同字节，基线导出同样失败，与本次无关；新增/改动测试所在四个文件全绿；scripts/check_ledger.py PASS；git diff --check 通过
+
+
 ## G01–G09 运行包 1.9.0 与登记只读覆盖层（2026-11-05）
 
 按 integration brief 升级；当前登记 534 条已不含指定排除的五个编号，故运行包为 534 而非 brief 预期 529，不再任意删规则。ASG 覆盖层锁定九份源哈希；G05-031 动作逐字采用批准草案、版本 1.1→1.2；五条 handoff 的关闭阶段按原文交接对象最小修正，正文不动。合入 main 时才把覆盖层写回登记，本次不写登记、不提交。共享层两边同字节。

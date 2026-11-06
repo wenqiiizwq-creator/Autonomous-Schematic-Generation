@@ -127,7 +127,10 @@ python3 -B "$asg_skill_dir/scripts/audit_component_requirements.py" record/compo
 
 Python API 位于 `scripts/schematic_layout/component_requirements.py`。准备动作显式执行；审核不会自动改写过期输出。
 `project` 增加版本标记、每个位号的合同快照和 `RequirementSpec/ProcurementMode/SelectionStatus/SelectedSpec/RequirementsSHA256/Performance` 字段。
-未核准候选只留在合同中，不投影到正式 `MPN`/`Datasheet`；已核准 MPN 才写入，具体手册可通过 `selection.datasheet` 同步。
+物理设计身份和采购核准状态分开（Matrix R3 S07）：按型号采购（`procurement.mode: mpn`）的候选，`selection.mpn` 和 `selection.datasheet`
+就是电路绑定的物理身份（引脚、手册），`project` 照写进 `MPN`/`Datasheet`，身份审计照常要求；它的采购状态由 `SelectionStatus: candidate`
+和 BOM 的 `Orderable` 列（“不可按此采购：候选待核，性能未核准”）说明，不能按此下单。按规格采购的候选只留在合同中，不投影到 `MPN`/`Datasheet`。
+已核准 MPN 写入，具体手册可通过 `selection.datasheet` 同步，`Orderable` 为空。
 `by_spec` 的受控保证保留在记录中，正式MPN保持空，图面明确标为“受控规格采购已核实”。
 `Performance` 是可见属性，其余是供 XML 比对的结构字段。候选原厂手册即使只用于了解性能，也保留来源而不强制绑定该料号。
 `Value` 对合同器件保留标称值，容差/功率等要求写在可见性能标注中；旧无合同器件仍执行原有值/规格规则。
@@ -141,7 +144,7 @@ PDF 核对逐条短标签进行，不要求整段注释连续出现；没找到�
 不要再增加含义不明的 `Tolerance` 列；明确区分 `RequirementSpec` 的上限和 `SelectedSpec` 的已核准实际值。
 
 `verify_schematic.py --artifact-root <交付目录>` 自动读取源记录，BOM默认为根图同目录 `BOM.csv`，也可显式 `--bom`。
-检查结果为 `component-requirements-check.json`。隐藏字段、丢失/错误同页注释、过期规格、候选冒充 MPN 判 `FAIL`。
+检查结果为 `component-requirements-check.json`。隐藏字段、丢失/错误同页注释、过期规格、MPN 与所选（候选或已核准）料号不符判 `FAIL`。
 没有可读取 PDF 文字或无法绑定页码时为 `INSUFFICIENT`，必须继续实际图面复核，不能凭一个“已显示”布尔值判通过。
 完整定义但候选未核实为 `INCOMPLETE` 并明确列未关闭项；这允许审阅/条件设计交付，不代表定型、生产或放行。
 任一输入计算/要求变化，重新准备 IR/BOM、重画、重新导出/核对、重新图面审阅和打包；不复用先前的通过记录。

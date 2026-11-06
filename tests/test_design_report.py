@@ -116,11 +116,25 @@ class DesignReportTests(unittest.TestCase):
         lines = [l for l in text.splitlines() if l.strip()]
         self.assertEqual(lines[1], '## 结论')
         self.assertEqual(lines[2], '- **规模**：器件 2 个，图纸 2 页。')
-        self.assertEqual(lines[3], '- **图纸自动检查**：共 3 项。通过（PASS） 2 项，没通过（FAIL） 0 项，资料不足（INSUFFICIENT） 1 项。')
+        self.assertEqual(lines[3], '- **图纸自动检查**：共 4 项。通过（PASS） 2 项，没通过（FAIL） 0 项，资料不足（INSUFFICIENT） 1 项，'
+                                   '未完成（INCOMPLETE） 1 项。')
         self.assertIn('- **需求**：共 1 条。有设计依据 0 条，有条件成立 1 条，还没有设计 0 条。', text)
         self.assertIn('- **设计完成状态**：未完成。未完成项：', text)
-        self.assertIn('1 项图纸自动检查资料不足或未执行：图面几何（重叠、穿线）', text)
+        self.assertIn('2 项图纸自动检查资料不足或未执行：图面几何（重叠、穿线）、设计记录闭合审计', text)
         self.assertIn('2 件未关闭项（设计未完成 1 件，外部资料缺口 1 件）', text)
+
+    def test_twelve_gates_with_mixed_states_are_all_counted(self):
+        """Matrix R3 S35: the summary had 12 gates (design_closure FAIL, component_requirements INCOMPLETE); the report
+        said 11 with 0 failed."""
+        states = dict.fromkeys(('erc', 'intent_netlist', 'hierarchy', 'system_block', 'symbol_integrity', 'readability',
+                                'geometry', 'external_supply', 'reference_contract'), 'PASS')
+        states.update(component_requirements='INCOMPLETE', discrete_semantics='INSUFFICIENT', design_closure='FAIL')
+        self.d.write('summary.json', {'status': 'FAIL', 'sheets': ['a', 'b'],
+                                      'gates': {k: {'status': v} for k, v in states.items()}})
+        text, _ = self.d.report()
+        self.assertIn('- **图纸自动检查**：共 12 项。通过（PASS） 9 项，没通过（FAIL） 1 项，资料不足（INSUFFICIENT） 1 项，'
+                      '未完成（INCOMPLETE） 1 项。', text)
+        self.assertIn('| 设计记录闭合审计 | 没通过（FAIL） |', text)
 
     def test_design_sheet_acceptance_is_listed_apart(self):
         # A custom magnetic closed on its design sheet (user 2026-10-28: 按 A 实施): its sample acceptance is shown, not pending.

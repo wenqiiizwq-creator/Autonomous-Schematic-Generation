@@ -46,9 +46,13 @@ GATES = OrderedDict([
     ('reference_contract', '外围电路按手册核对'),
     ('design_change', '改动与预期一致'),
     ('component_requirements', '器件性能要求、选型状态及图面/BOM一致性'),
+    ('design_closure', '设计记录闭合审计'),
 ])
 GATE_RESULTS = OrderedDict([('PASS', '通过（PASS）'), ('FAIL', '没通过（FAIL）'),
-                            ('INSUFFICIENT', '资料不足（INSUFFICIENT）'), ('CONDITIONAL', '有条件通过')])
+                            ('INSUFFICIENT', '资料不足（INSUFFICIENT）'), ('CONDITIONAL', '有条件通过'),
+                            ('INCOMPLETE', '未完成（INCOMPLETE）')])
+# Shown in the conclusion count only when some gate has them.
+OPTIONAL_RESULTS = ('CONDITIONAL', 'INCOMPLETE')
 VISUAL = {'REVIEWED': '已完成', 'REVIEW_PENDING': '未完成', 'REWORK_REQUIRED': '发现需返工的问题'}
 STAGES = {'requirement': '用户暂缓的需求', 'design': '设计未完成', 'external': '外部资料缺口', 'validation': '样机或试验验证', 'pcb': 'PCB 实现'}
 REQUIREMENTS = OrderedDict([('design_supported', '有设计依据'), ('conditional', '有条件成立'), ('open', '还没有设计')])
@@ -1050,6 +1054,9 @@ def render(root, notes=None, title=None):
     gates = summary.get('gates') or {}
     shown = [(key, label, (gates.get(key) or {}).get('status')) for key, label in GATES.items() if key in gates]
     gate_counts = Counter(status for _, _, status in shown)
+    # Matrix R3 S35: every counted gate has a listed state, so the states add up to the gate count.
+    assert sum(gate_counts[k] for k in GATE_RESULTS) == len(shown), 'gate states not in GATE_RESULTS: %s' % sorted(
+        '%s=%s' % (k, st) for k, _, st in shown if st not in GATE_RESULTS)
     # Drawing gates are ASG's own work: a failed one is redrawn, never delivered.
     # Listing it as a problem also makes pack_design.py refuse the delivery.
     for key, label, status in shown:
@@ -1071,7 +1078,7 @@ def render(root, notes=None, title=None):
     out.append('- **规模**：器件 %d 个，图纸 %d 页。' % (parts, sheets))
     out.append('- **图纸自动检查**：共 %d 项。%s。' % (len(shown), '，'.join(
         '%s %d 项' % (label, gate_counts.get(key, 0)) for key, label in GATE_RESULTS.items()
-        if key != 'CONDITIONAL' or gate_counts.get(key))))
+        if key not in OPTIONAL_RESULTS or gate_counts.get(key))))
     out.append('- **图面审阅**：%s。' % VISUAL.get(visual.get('status'), '没有记录'))
     if performance['status'] == 'NOT_CHECKED':
         out.append('- **器件性能流程**：旧记录未检查（NOT_CHECKED）。')

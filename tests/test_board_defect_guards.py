@@ -61,6 +61,7 @@ class BindingTests(unittest.TestCase):
         (self.root / 'Littelfuse - SMBJ.txt').write_text('SMBJ series\n')
         self.nets = {'VIN': ['U1.1', 'C1.1', 'D1.1'], 'GND': ['U1.2', 'C1.2', 'D1.2'], 'VOUT': ['U1.5', 'U1.3']}
         self.no_connect = ['U1.4']
+        self.boundary = []
         self.record = {
             'schema_version': 1, 'coverage': 'complete', 'binding_version': 1,
             'evidence': [{'id': 'E1', 'path': 'design.txt', 'sha256': sha256(self.root / 'design.txt'), 'locator': 'l1'}],
@@ -87,7 +88,8 @@ class BindingTests(unittest.TestCase):
     def run_audit(self):
         intent = self.root / 'intent.json'
         intent.write_text(json.dumps({'components': self.components, 'nets': self.nets, 'no_connect': self.no_connect,
-                                      'net_roles': {'VIN': 'power', 'VOUT': 'power', 'GND': 'return'}}))
+                                      'net_roles': {'VIN': 'power', 'VOUT': 'power', 'GND': 'return'},
+                                      'boundary_nets': self.boundary}))
         (self.root / 'record' / 'reference-input.json').write_text(json.dumps(self.contract))
         record = dict(self.record, intent_sha256=sha256(intent))
         return audit(record, intent, self.root)
@@ -233,6 +235,44 @@ class BindingTests(unittest.TestCase):
         self.components.append({'ref': 'J1', 'lib_id': 'Connector:USB_C_Receptacle_USB2.0', 'value': 'USB_C'})
         self.nets['CC1'] = ['J1.A5']
         self.assertIn('single_endpoint_net', self.codes())
+
+    # --- a net that leaves the board (Matrix R3 S25: PPS_OUT_1..6 on one connector pin, buffer on another board) ---
+    def pps_net(self, contract_row='| PPS_OUT_1 | 输出 |'):
+        self.components.append({'ref': 'J1', 'lib_id': 'Connector_Generic:Conn_01x03', 'value': 'PPS'})
+        self.nets['PPS_OUT_1'] = ['J1.3']
+        doc = self.root / '设计资料' / 'MCU与固件接口.md'
+        doc.parent.mkdir(exist_ok=True)
+        doc.write_text('| 网络 | 方向 |\n|---|---|\n%s\n' % contract_row, encoding='utf-8')
+        self.boundary = [{'net': 'PPS_OUT_1', 'to': 'PPS缓冲分图', 'contract': '设计资料/MCU与固件接口.md'}]
+
+    def test_a_declared_boundary_net_with_its_contract_row_may_have_one_pin(self):
+        self.pps_net()
+        result = self.run_audit()
+        self.assertEqual([], result['errors'])
+        self.assertEqual(['PPS_OUT_1'], result['boundary_nets'])
+
+    def test_an_undeclared_one_endpoint_net_still_fails(self):
+        self.pps_net()
+        self.boundary = []
+        self.assertIn('single_endpoint_net', self.codes())
+
+    def test_a_boundary_net_whose_contract_has_no_row_is_not_waived(self):
+        self.pps_net(contract_row='| PPS_OUT_10 | 输出 |')
+        codes = self.codes()
+        self.assertIn('boundary_net_not_in_contract', codes)
+        self.assertIn('single_endpoint_net', codes)
+        self.boundary[0]['contract'] = '设计资料/不存在.md'
+        codes = self.codes()
+        self.assertIn('boundary_contract_missing', codes)
+        self.assertIn('single_endpoint_net', codes)
+
+    def test_a_real_open_pin_beside_a_boundary_net_still_fails(self):
+        self.pps_net()
+        self.nets['VOUT'] = ['U1.5']
+        self.nets['SENSE'] = ['U1.3']
+        errors = self.run_audit()['errors']
+        self.assertEqual(['U1.3', 'U1.5'], sorted(e['item'].split('只接 ')[1].split(' ')[0] for e in errors
+                                                  if e['code'] == 'single_endpoint_net'))
 
     # --- rail voltages (DEV-C01 neotron 25 V on 30 V; PRO-E02 jetson SMBJ33A on 36 V, hv-flyback PESD5V0 on 6 V) ---
     def test_each_rail_writes_its_highest_voltage(self):
