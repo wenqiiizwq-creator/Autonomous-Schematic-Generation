@@ -46,7 +46,7 @@
   - 普通肖特基在通道限流量级电流下的正向压降保证上限已超过 0.3 V，只靠输出对地肖特基证明不了 OUT 不越负向额定（datasheet:Datasheet/23_分立半导体/肖特基势垒二极管 (SBD)/ST - STPS2L60.pdf#p2）
   - 启动即短路时 FLT 要等热调节超时（秒级）后才断言并保持，“低压且 FLT 有效”的组合判据在这段时间内不成立（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p25；超时范围见 #p9）
   - 快速跳闸后器件只关断几微秒，随后缓慢重新导通进入限流，输出低压持续时间还受 dVdT 和热调节影响，不能用负载电容除以限流值界定（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p24）
-  - 只加长低压屏蔽、以“低压 + 开启命令”判短路：普通过流在断路器延时后锁断，输出随之掉电，会被锁成短路（test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/research-excerpts/channel-protection.json）
+  - 只加长低压屏蔽、以“低压 + 开启命令”判短路：普通过流在断路器延时后锁断，输出随之掉电，会被锁成短路（推论：锁定模式下过载关断也使 PG 变低，低压不能唯一识别短路；datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p25；datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p28）
 - **来源**：
   - raw/Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf（p4 引脚说明，p5 绝对最大与 IMON 推荐，p7 B_GATE/DRV 与 IMON 增益，p9 PGOOD 去抖与断路器延时，p21 图 8-7 阻断管接法，p28 表 8-1 模式，p37 瞬态保护）
   - raw/Datasheet/09_功率半导体/MOSFET/Infineon - ISC032N12LM6.pdf（p1 VDS，p3 VGS，p4 RDS(on)）
@@ -56,5 +56,4 @@
   - raw/Datasheet/18_逻辑与电平转换/标准逻辑门/TI - SN74HCS02.pdf（p4 输出电流与施密特门限）
   - raw/Datasheet/28_保护器件/TVS_ESD保护器件/Littelfuse - 30KPA.pdf（p2 VR、IPP、VC）
   - raw/Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf 补充（p9 热调节超时，p24 快速跳闸后恢复，p25 启动即短路，p5 IN_SYS 与 IN/OUT 分列的负向额定）
-  - Matrix 综合控制板电源与保护 R3 通道判据预检与输出负浪涌筛查（~/Project/Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/research-excerpts/channel-protection.json、output-negative-screen.md；预检与筛查，不是已完成设计）
   - ~/Project/Matrix网络交换板/方案设计/综合控制板方案设计.md（§11 通道器件方向，§25 过流重试，§26 短路触发器，§43 D 端清锁资格）

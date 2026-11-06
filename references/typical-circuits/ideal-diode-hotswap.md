@@ -26,11 +26,11 @@
   - 母线 TVS 击穿下限可能落在 OV 动作窗口内：保证 28.8 V 时 OV 已释放，滞回比使动作点不能低于约 34 V，持续 34～36 V 输入时 TVS 先于 OV 导通（review:calibration/industrial-io-rs485-can/F06）
   - 过流门限只按总电流选会被支路短路误断整板，要算“一路短路限流上限+其余满载”（datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/TI - LM74910H-Q1.pdf#p19）
   - RTN 散热焊盘必须悬空，不接 GND 平面（datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/TI - LM74910H-Q1.pdf#p4）
-  - 外置 MOS 快断控制器的短路动作时间是在“检测电压越过门槛再加规定过驱量”下测的；按刚到门槛算会漏掉过驱所需的电流增量（datasheet:Matrix网络交换板/方案设计/电源与保护_R3/设计资料/datasheets/TI - TPS4800-Q1.pdf#p11）
-  - 已导通时的短路与带短路上电的动作时间最大值分列两行且不同，按状态取值，不能混用（datasheet:Matrix网络交换板/方案设计/电源与保护_R3/设计资料/datasheets/TI - TPS4800-Q1.pdf#p7、#p8）
+  - 外置 MOS 快断控制器的短路动作时间是在“检测电压越过门槛再加规定过驱量”下测的；按刚到门槛算会漏掉过驱所需的电流增量（datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/TI - TPS4800-Q1.pdf#p11）
+  - 已导通时的短路与带短路上电的动作时间最大值分列两行且不同，按状态取值，不能混用（datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/TI - TPS4800-Q1.pdf#p7、#p8）
 - **来源**：
   - raw/Datasheet/08_电源管理/理想二极管_ORing与电源路径/TI - LM74910H-Q1.pdf（p4 引脚说明、p7 门限、p19 ILIM 式）
-  - Matrix 综合控制板电源与保护 R3 工程资料目录 设计资料/datasheets/TI - TPS4800-Q1.pdf（未入库；p7 tSC、p8 带短路上电 tSC_PUS、p11 图 6-1 测试波形）；R3 研究记录 record/evidence/research-excerpts/channel-reselection-v2.json（47/68 µH 角点的分段峰值估算，结论为条件成立）
+  - datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/TI - TPS4800-Q1.pdf#p7（tSC）；#p8（带短路上电 tSC_PUS）；#p11（图 6-1 测试波形；分段峰值模型为据此建立的工程推论）
   - raw/Datasheet/09_功率半导体/MOSFET/ST - STL110N10F7.pdf（p2 VDS、RDS(on)）
   - raw/Datasheet/28_保护器件/TVS_ESD保护器件/TI - TVS3300.pdf（p1 IPP、p5 VRWM）
 
@@ -54,8 +54,7 @@
   - 输入短路时关断延时内反向电流已建立，关断瞬间 IN、SOURCE 出现负尖峰、OUT 出现正尖峰，下游热插拔 VIN 要按这个正尖峰核（datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/ADI - LTC4359.pdf#p9）
   - IN、SOURCE、GATE、关断脚的反向耐压有限，更负的反接要按手册加二极管或电阻网络（datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/ADI - LTC4359.pdf#p6、#p9）
   - 热插拔控制器 VIN 最低只有 −0.3 V，VIN 的最高额定只在禁用或短时浪涌时成立（使能时栅极比 VIN 高约 12 V）（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - LM5069.pdf#p4）
-  - 分离式结构的耦合（前置辅助取电、反灌关断、逐段压降与浪涌配合）不能套用合并控制器的计算，要单独核（test:Matrix网络交换板/方案设计/电源与保护_R3/record/lessons.json）
+  - 分离式结构的耦合（前置辅助取电、反灌关断、逐段压降与浪涌配合）不能套用合并控制器的计算，要单独核（推论：两颗控制器各自的约束及两者之间的辅助分支改变了电流与压降路径；datasheet:Datasheet/08_电源管理/理想二极管_ORing与电源路径/ADI - LTC4359.pdf#p8；datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - LM5069.pdf#p4）
 - **来源**：
   - raw/Datasheet/08_电源管理/理想二极管_ORing与电源路径/ADI - LTC4359.pdf（p2 绝对最大值，p6 反向输入与关断脚，p8 关断时体二极管通路，p9 输入短路与反向输入保护）
   - raw/Datasheet/08_电源管理/热插拔_eFuse/TI - LM5069.pdf（p4 绝对最大值与注 3）
-  - Matrix 综合控制板电源与保护 R3 入口与主保护（~/Project/Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/research-excerpts/main-protection.json；architecture-sources/ANSWER08_逐脚外围与状态设计.md；设计未称完成）
