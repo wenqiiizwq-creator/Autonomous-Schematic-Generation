@@ -8,6 +8,15 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 1.9.0 覆盖层写回登记，覆盖层工具删除（2026-11-05）
+
+合入 main 前把 `docs/registry-overlay-2026-11-05.json` 的 49 条修改（43 条 coverage、5 条 closing_stage+coverage、G05-031 动作与版本）在维护锁下写回准则登记（G05–G09 五份文件；写前九份源哈希与覆盖层一致，原文件备份在会话临时目录）。从登记直接 `build --library-version 1.9.0` 得到的规则库与 `references/shared/guideline-criteria.json` 逐字节一致。覆盖层文件、`scripts/build_registry_overlay.py` 和它的测试随之删除；`shared-layer.md` 那一节改为“已写回”，共用层指纹 430c93a02bbf → f62f9e757234（只改这段文字）。
+
+- Event: user:2026-11-05（“修缺陷并升版”：合入 main 时写回覆盖层）
+- Causes: rule_not_enforced 1
+- Changed: references/shared/shared-layer.md, scripts/build_registry_overlay.py, tests/test_registry_overlay.py, docs/registry-overlay-2026-11-05.json, docs/improvement-ledger.md
+- Gates: 1249 passed（配对 ASG_SR_SHARED_ROOT=SR integration）；check_ledger.py PASS；从登记重建与 1.9.0 逐字节一致；两边共用层同指纹 f62f9e757234
+
 ## Matrix R3 四个技能缺陷：离板单端网、候选物理身份、共地连接器误判隔离、报告门计数（2026-11-05）
 
 R3 交付失败的门禁里有两项来自技能本身（R3 `record/lessons.json` S07、S25、S29、S35，复现证据在 R3 `record/evidence/skill-events/`）。每项先用最小合成输入写失败测试再修。
