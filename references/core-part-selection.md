@@ -26,8 +26,8 @@
 3. 同拓扑参考设计的核心器件：`find_parts.py --designs <拓扑/功率/接口>`，打开板手册的 BOM，把它用的控制器、开关、磁件抄成候选，记下板名。
 4. 库内同类手册：按 part-roles.md 定二级类，`find_parts.py --category "<二级类>"` 列出全部，
    用决定性参数先筛掉明显不合的，剩下的打开手册首页核。
-5. 库里没有合适的类或候选不足两个时才外部检索（Digikey/JLCPCB MCP 工具或网页），下载的手册按 SKILL.md 任务 2.1 的资料规则存入库里，
-   然后它就成了第 4 条的候选。记录里写明这一步做过。
+5. 库里没有合适的类或候选不足两个时才外部检索（Digikey/JLCPCB MCP 工具或网页），下载的手册按 SKILL.md 任务 2.1 的资料规则存入工程资料目录（设计期间不写入知识库），
+   然后它和第 4 条的候选同等比较，`datasheet` 写交付目录内的路径。记录里写明这一步做过。
 
 ## 3. 怎么比较
 
@@ -115,6 +115,8 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
   `values` 的每个 `page` 必须在该手册页数之内，否则算记录问题；数值在那一页的文字里找不到时列入报告“引用待人工核对”，不拦。
 - `selected` 的每个位号都在设计网表里，且该器件的 `value` 或 `mpn` 含选定型号。
 - 设计网表里每个 U/Q/T 开头的器件都属于某个角色；一个角色可以覆盖多个位号（例如两只并联 MOS）。
+- 上两条是位号绑定，设计网表写出（任务 2.4）后才查；任务 1.4 还没有设计网表，`check_selection` 只查候选、资料和用户决定
+  （Matrix R3：1.4 时设计网表不存在，绑定检查使做完的标志无法达到）。
 - `selected` 候选写 `external_dependencies`（字符串列表，没有写空列表）。不为空时角色还要有：
   - `options`：2–3 个方案，每个 `{name, parts, external_dependencies, cost, pros, cons, recommended}`，
     `parts` 是涉及的型号列表，恰好一个 `recommended: true`，各方案的 `cons` 不能一字不差；

@@ -79,7 +79,8 @@
   最坏工况功耗达到[降额规范“工程取值”](shared/derating-rules.md#工程取值)`thermal_calc_trigger` 所列的功率或封装额定比例时，用手册 θJA（或 θJC+假设的板级热阻，写明假设）
   和整机内部最高环境温度估算结温/温升，作为一条带 `checks` 的计算；超出额定就换封装或换方案，
   不能写“待核”交给PCB。PCB 阶段只负责实现并实测这个热边界。
-- 新下载的数据手册按 SKILL.md 的资料规则同时存入 HardwareWiki。
+- 新下载的数据手册按 SKILL.md 任务 2.1 的资料规则存入工程资料目录（打包输入 `datasheets`），设计期间不写入 HardwareWiki；
+  还不在知识库的由 `pack_design.py` 列进 `datasheets_to_file`，何时入库由用户定。
 
 ## 5. 写整板设计网表
 
@@ -110,7 +111,9 @@
 - 哪些器件必须写确切 `mpn` 和 `datasheet` 由 [part-roles.md](part-roles.md) 第 1 节的分级决定（与 schematic-review 对齐）：
   关键器件和特殊器件必须写，并用 `fields.Kind`、`fields.KindSource`、`fields.KindQuote` 按本器件手册声明器件类型；
   定制磁件用 `fields.DesignSheet` 指向磁件设计单代替 `datasheet` 和类型声明；常规件写 `value` 和规格字段，写出算得的最低额定
-  （每个电容写耐压，每个电感写额定电流）。工作电压高于 30 V 或接市电的网络列在顶层 `high_voltage_nets`，
+  （每个电容写耐压，MLCC 另写介质如 X7R/X5R/C0G，每个电感写额定电流；G09-021，`part_classes.audit_identity` 核）。
+  不装的位号写 `dnp: true`，值只写值和规格，不写 NC、DNP；它留在 BOM 里，`write_bom` 的 `Assembly` 列写“不装（DNP）”（G09-018，
+  值里写装配状态由闭合审计报 `dnp_in_value`）。工作电压高于 30 V 或接市电的网络列在顶层 `high_voltage_nets`，
   据此判定高压连接器、继电器、电源路径上的 NTC 和安全防护位置；跨隔离与市电侧的器件写 `fields.Approval`（认证）。
   电阻和电容按知识库二级类写 `fields.Category`；检流电阻写阻值、容差和功率，功率电阻写容差和功率；
   功耗要考虑的电阻（判据见 [design-closure.md](design-closure.md) 的“电阻写额定功率”）旧格式 `value` 写成 `阻值/公差/额定功率`（如 `620/1%/0.125W`）；

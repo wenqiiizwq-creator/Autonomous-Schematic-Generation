@@ -34,6 +34,9 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 - 任务 1.3 关键功能块对照的规则写进 `record/scheme-criteria.json`，格式固定，报告按它核对（字段说明见 [交付与设计报告](delivery-report.md)）：
   每块写 `block`、`circuit_types`、`device_kinds`、`ports`（有对外端口为 true）和 `criteria`；`criteria` 只列会淘汰某个候选的规则，每项写 `id`、`excludes`（排除的候选）、
   `basis`（`requirement`、`standard`、`datasheet_abs_max` 能硬排除，只来自工程推论的写 `inference`，不作硬排除）、`how`（选定方案怎样满足）、`defer`（留给 2.2 的数值名）；
+  `standard` 只用于 `nature` 为 `shall`/`should` 的规则（见设计准则库 `references/shared/guideline-criteria.json`）；`method` 是工程方法，`project` 是项目输入，按实际依据写 `requirement` 或 `inference`。
+  `datasheet_abs_max` 只指器件手册 Absolute Maximum Ratings 表里的值，推荐工作条件不算。
+  没有排除候选的规则不写进 `criteria`，放 `searched`。
   `criteria` 为空时 `searched` 写明查过的范围。例：
 
   ```json

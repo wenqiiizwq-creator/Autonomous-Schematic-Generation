@@ -8,6 +8,61 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## 任务 1.3 方案准则核对入口与 basis 性质核对（2026-11-06）
+
+方案阶段重跑发现：PT100 记录读过格式说明仍使用自用字段，现有核对只在报告阶段运行；部分工程方法被标成 `standard`，核对未报问题。各项先写测试确认失败，再做最小修改。
+
+- 新增 `check_scheme_criteria.py <设计目录>`，读取 `record/design-closure.json` 和方案准则记录，调用报告里的原有核对函数，打印问题并用非零退出码表示失败；PT100 原记录逐字节复制为测试夹具，格式正例通过，记录缺失或读不出来时报告问题。
+- 按已确认文字，仅在 SKILL.md 任务 1.3 的“做完的标志”后加一句运行核对的要求。
+- `basis: standard` 只接受规则卡 `nature: shall/should`，其余提示按实际依据改成 `requirement` 或 `inference`；格式说明补充工程方法/项目输入、绝对额定与推荐工作条件的区别，以及没有排除候选的规则放 `searched`。原格式正例继续通过。
+
+- Event: test:评测集/运行结果/ASG/2026-11-05-km-analysis/scheme-criteria/rerun-main-a820e80；user:2026-11-06
+- Causes: rule_missing 2, rule_not_enforced 1
+- Changed: scripts/check_scheme_criteria.py, scripts/render_design_report.py, SKILL.md, references/typical-circuits.md, tests/test_scheme_criteria.py, tests/test_skill_steps.py, tests/fixtures/scheme-criteria/rt-afe-pt100.json, docs/improvement-ledger.md
+- Approved: user:2026-11-06（AskUserQuestion 答复“照草案写入（建议）”）
+- Outline: a8c8e1ea87150f50
+- Gates: 1273 passed in 356.52s（ASG_SR_SHARED_ROOT=/Users/skyfend/.agents/skills/schematic-review；首轮 PATH 缺 Poppler 中止，补齐 PATH 后全量重跑通过）；新增 15 项测试，其中 13 项先失败后通过、2 项为 shall/should 正向对照；check_ledger.py PASS；git diff --check 通过；SKILL.md 仅加指定一句；references/shared/、R3 设计目录与准则登记未改
+
+## G09 定稿的 ASG 接入项：BOM 装配状态列、MLCC 介质、swd-debug 落实规则（2026-11-06）
+
+G09 定稿（2026-11-05）列的三项技能侧接入。代码类先写失败测试再修。
+
+- G09-018：`bom_rows` 原来没有装配状态，不装位号只靠原生 DNP 属性。加 `Assembly` 列（“装”/“不装（DNP）”，与 `Orderable` 同为常量），不装的位号照常留在 BOM。闭合审计 `audit_placeholders` 新增 `dnp_in_value`：值里写 NC、N.C.、DNP、DNI、DNF、不装、未装（独立词，区分大小写，不误报 100 nF、NC7SZ125）记错。生成脚本已按 `dnp` 写原生属性且 `in_bom yes`，不改。
+- G09-021：原有核对只要求常规电容写耐压、电感写额定电流，MLCC 介质没核。`part_classes.audit_identity` 对 MLCC 类常规电容加介质检查（C0G/NP0/U2J 与 X5R、X7R 等 EIA 代码，写在值或 `fields.Specification`）；电解等其他电容不要求。`requirements-to-intent.md` 写明介质与 `dnp` 写法。
+- `swd-debug.md`：“落实规则：无”改为 G09-010、012、013、015，必算项补齐对应内容（针表对照工具要求、调试口地域与保护地、调试脚其他负载与复用、NRST 复位下连接与读保护后的恢复）；上下拉（G09-011，手册未写内部上下拉，不凭推断）与手接静电（G09-026）没写进做法，不列。
+
+- Event: user:2026-11-05（G09 定稿：ASG 的 BOM 导出加装配状态列、MLCC 介质由脚本核、swd-debug.md 落实规则更新；见 原理图设计规范/维护/分项待办/G09_制造与可测试性规范/待完成任务.md）；user:2026-11-06（主会话转达：G09 接入项按同样规则做）
+- Causes: rule_missing 2, knowledge_missing 1
+- Changed: scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/audit_design_closure.py, references/requirements-to-intent.md, references/typical-circuits/swd-debug.md, tests/test_component_requirements.py, tests/test_calibration_board_issues.py, tests/test_typical_circuits.py, docs/improvement-ledger.md
+- Gates: 1258 passed in 365.62s（ASG_SR_SHARED_ROOT=SR）；新增 4 条测试先失败后通过；check_ledger.py PASS；git diff --check 通过；SKILL.md 纲要与 references/shared/ 未改
+
+## SKILL.md 任务 2.2 写明工况输入要有来源（2026-11-06）
+
+审计（`operating_inputs.py`、`audit_design_closure.py`）和 `design-closure.md`“工况输入的来源”早已要求板外工况参数写 `input_role` 并有来源、启动计算声明启动期负载，但纲要任务 2.2 没写，设计方只在审计报错时才知道。按用户确认的草案逐字加一条。
+
+- Event: user:2026-11-06（确认 SKILL.md 草案“照草案写入”；起因 Matrix R2 CALC-CH-START 把 1 A 启动负载写死，见 design-closure.md 同节）
+- Causes: rule_not_enforced 1
+- Changed: SKILL.md, docs/improvement-ledger.md
+- Approved: user:2026-11-06（AskUserQuestion 答复“照草案写入（建议）”）
+- Outline: ab575dfd17617a49
+
+## Matrix R3 剩余技能事件：四个规则缺陷、资料规则残留、八条典型电路知识（2026-11-06）
+
+R3 `record/lessons.json` 里尚未处理的 13 条事件逐条先核实再改（S07、S25、S29、S35 已在 main 修好，S15 随设计准则库 1.9.0 解决，S12、S19、S24 是判断类，不改技能）。代码类先写复现事件的失败测试再修。
+
+- S06：`check_selection` 在设计网表写出（任务 2.4）之前不查位号绑定和“核心器件没有选型记录”，任务 1.4 只查候选、资料和用户决定；网表存在后照旧全查。`core-part-selection.md` 写明两段检查。
+- S26：性能记录同一参数允许一条 `ge` 加一条 `le`（区间），唯一性改按（参数，比较符）；下限大于上限记错；核准件同一项 `properties` 要同时满足两条。`sheet_errors`/`record_errors` 由按参数建字典改为逐条要求。`component-requirements.md` 写区间写法。
+- S27：`Sheet.pitch_for` 把可见的 `Performance` 字段（与 `generate.py` 同一可见条件）计入并排间距。
+- S30：`banned_terms` 跳过术语表的表头行和 `|---|` 分隔行，`---` 与“不用的词”不再是禁词。
+- S01：`requirements-to-intent.md` §4、`core-part-selection.md` §2、`docs/operating-cadence.md` 第 1 步改为按 SKILL.md 任务 2.1 资料规则存工程资料目录、设计期间不写知识库；测试禁止这几处旧说法再出现。
+- 典型电路（只写有来源的内容，推论标“推论”）：`efuse-bfet-short-latch` 加启动即短路判据与状态表、输出端口浪涌矩阵及 5 条已知坑，并改正“手册不给 OUT 负向额定”的旧说法（S02、S08）；`efuse-aux-branch` 加输入反接与输出负压分开核（S08）；`ideal-diode-hotswap` 加短路峰值分段算法与 2 条动作时间坑（S10），新增“单管理想二极管 + 独立热插拔 + 两者之间取辅助电源”实现方案（S03）；`chassis-y-cap` 新增“源侧直流搭接 + 本板 R 并 Y 电容”实现方案（S04）；`fault-memory-comparator` 加低电平保证条件与接口备选、外推不构成保证（S05）；`high-side-quad` 加按变体核、两脚有符号差分额定、SNS 逐状态编码和启动高限流（S09、S20，写在智能高边开关的典型电路而不是 ideal-diode-hotswap，因为这些是高边开关自身的行为）。
+- 核实中的出入：S10 所引 TPS4800-Q1 “p12 计时波形”实为 p11 图 6-1；TPS281C30 的 R3 副本是 Rev C，库内是 Rev B，所引页码两版相同，典型电路引库内版；TPS4800-Q1 未入库，引 R3 工程资料目录路径。
+
+- Event: test:Matrix网络交换板/方案设计/电源与保护_R3/record/lessons.json（S01–S06、S08–S10、S20、S26、S27、S30）；test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/research-excerpts/selection-stage-check.json；test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/skill-events/range-parameter-rejection.json；test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/skill-events/terminology-markdown-separator.json；test:Matrix网络交换板/方案设计/电源与保护_R3/record/recipe-reports.json；user:2026-11-06（主会话转达：R3 先不做，ASG/SR/准则相关先做完）
+- Causes: rule_missing 4, knowledge_wrong 1, knowledge_missing 8
+- Changed: scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/recipes.py, references/component-requirements.md, references/core-part-selection.md, references/requirements-to-intent.md, references/typical-circuits/efuse-bfet-short-latch.md, references/typical-circuits/efuse-aux-branch.md, references/typical-circuits/ideal-diode-hotswap.md, references/typical-circuits/chassis-y-cap.md, references/typical-circuits/fault-memory-comparator.md, references/typical-circuits/high-side-quad.md, docs/operating-cadence.md, tests/test_design_report.py, tests/test_component_requirements.py, tests/test_terminology.py, tests/test_skill_steps.py, docs/improvement-ledger.md
+- Gates: 1254 passed in 342.94s（ASG_SR_SHARED_ROOT=SR）；新增 6 条测试先失败后通过；check_ledger.py PASS；git diff --check 通过；SKILL.md 纲要与 references/shared/ 未改
+
 ## 1.9.0 覆盖层写回登记，覆盖层工具删除（2026-11-05）
 
 合入 main 前把 `docs/registry-overlay-2026-11-05.json` 的 49 条修改（43 条 coverage、5 条 closing_stage+coverage、G05-031 动作与版本）在维护锁下写回准则登记（G05–G09 五份文件；写前九份源哈希与覆盖层一致，原文件备份在会话临时目录）。从登记直接 `build --library-version 1.9.0` 得到的规则库与 `references/shared/guideline-criteria.json` 逐字节一致。覆盖层文件、`scripts/build_registry_overlay.py` 和它的测试随之删除；`shared-layer.md` 那一节改为“已写回”，共用层指纹 430c93a02bbf → f62f9e757234（只改这段文字）。

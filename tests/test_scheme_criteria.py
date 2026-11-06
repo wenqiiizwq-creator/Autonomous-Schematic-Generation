@@ -1,7 +1,13 @@
 """Task 1.3: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json)."""
+import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria  # noqa: E402
 import render_design_report as report  # noqa: E402
@@ -89,8 +95,88 @@ def test_report_marks_inference_as_not_a_hard_exclusion():
 
 
 def test_the_example_in_typical_circuits_passes_the_check():
-    import json
-    import re
-    doc = (Path(__file__).resolve().parents[1] / 'references' / 'typical-circuits.md').read_text(encoding='utf-8')
-    example = json.loads(re.search(r'```json\n(.*?)```', doc, re.S).group(1))
-    assert check(example) == []
+    assert check(document_example()) == []
+
+
+def document_example():
+    doc = (ROOT / 'references' / 'typical-circuits.md').read_text(encoding='utf-8')
+    return json.loads(re.search(r'```json\n(.*?)```', doc, re.S).group(1))
+
+
+def run_cli(root):
+    return subprocess.run([sys.executable, str(ROOT / 'scripts' / 'check_scheme_criteria.py'), str(root)],
+                          capture_output=True, text=True)
+
+
+def write_records(root, scheme):
+    records = root / 'record'
+    records.mkdir()
+    (records / 'scheme-criteria.json').write_text(json.dumps(scheme), encoding='utf-8')
+    (records / 'design-closure.json').write_text(json.dumps(closure()), encoding='utf-8')
+    return records
+
+
+def test_cli_rejects_the_pt100_rerun_record(tmp_path):
+    # Verbatim evalset record: schema_version/rules/candidate_effect instead of the documented fields.
+    fixture = ROOT / 'tests' / 'fixtures' / 'scheme-criteria' / 'rt-afe-pt100.json'
+    write_records(tmp_path, json.loads(fixture.read_text(encoding='utf-8')))
+    result = run_cli(tmp_path)
+    assert result.returncode != 0
+    assert 'version 1' in result.stdout and 'FAIL' in result.stdout
+
+
+def test_cli_accepts_the_documented_example(tmp_path):
+    write_records(tmp_path, document_example())
+    result = run_cli(tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'PASS' in result.stdout
+
+
+@pytest.mark.parametrize('filename,content', [
+    ('scheme-criteria.json', None), ('scheme-criteria.json', '{'),
+    ('design-closure.json', None), ('design-closure.json', '{'), ('design-closure.json', 'null'),
+])
+def test_cli_reports_unreadable_or_missing_records(tmp_path, filename, content):
+    records = write_records(tmp_path, document_example())
+    if content is None:
+        (records / filename).unlink()
+    else:
+        (records / filename).write_text(content, encoding='utf-8')
+    result = run_cli(tmp_path)
+    assert result.returncode != 0
+    assert filename in result.stdout and 'FAIL' in result.stdout
+    assert 'Traceback' not in result.stderr
+
+
+@pytest.mark.parametrize('nature', ['method', 'project', None])
+def test_standard_basis_requires_shall_or_should(nature):
+    # Method/project cards cannot acquire standard authority through the record's basis field.
+    from copy import deepcopy
+    bundle = deepcopy(BUNDLE)
+    card = next(r for r in bundle['criteria'] if r['id'] == 'G07-023')
+    card['nature'] = nature
+    problems = report.check_scheme_criteria(record(criterion()), closure(), bundle)
+    assert len(problems) == 1
+    assert all(word in problems[0] for word in ('G07-023', 'standard', 'nature', 'requirement', 'inference'))
+    for basis in ('requirement', 'inference'):
+        assert report.check_scheme_criteria(record(criterion(basis=basis)), closure(), bundle) == []
+
+
+@pytest.mark.parametrize('gid', ['G07-022', 'G07-023'])
+def test_standard_basis_accepts_shall_and_should(gid):
+    assert check(record(criterion(gid))) == []
+
+
+def test_cli_rejects_a_method_rule_marked_as_standard(tmp_path):
+    assert next(r for r in BUNDLE['criteria'] if r['id'] == 'G07-030')['nature'] == 'method'
+    write_records(tmp_path, record(criterion('G07-030')))
+    result = run_cli(tmp_path)
+    assert result.returncode != 0
+    assert all(word in result.stdout for word in ('G07-030', 'standard', 'requirement', 'inference', 'FAIL'))
+
+
+def test_scheme_format_explains_basis_limits_and_nonexcluding_rules():
+    doc = (ROOT / 'references' / 'typical-circuits.md').read_text(encoding='utf-8')
+    assert '`standard` 只用于 `nature` 为 `shall`/`should` 的规则' in doc
+    assert '`datasheet_abs_max` 只指器件手册 Absolute Maximum Ratings 表里的值，推荐工作条件不算' in doc
+    assert '没有排除候选的规则不写进 `criteria`，放 `searched`' in doc

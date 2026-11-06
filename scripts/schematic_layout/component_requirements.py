@@ -25,6 +25,8 @@ SELECTIONS = {'not_selected': '型号未定', 'candidate': '候选待核', 'qual
               'by_bom_spec': 'BOM规格已写全'}
 # The BOM's Orderable column for a candidate: its MPN is the physical identity, not an approved order (Matrix R3 S07).
 NOT_ORDERABLE = '不可按此采购：候选待核，性能未核准'
+# The BOM's Assembly column (G09-018): an unfitted part stays in the BOM, its state is the native DNP flag, not its value.
+FITTED, NOT_FITTED = '装', '不装（DNP）'
 # Selections whose properties are checked one by one and that close the selection.
 CLOSED = ('qualified', 'by_spec', 'by_design_sheet')
 PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额定功率',
@@ -241,6 +243,18 @@ def bound_errors(entry, requirements):
             r.get('parameter') in voltage and r.get('op') == 'ge' for r in reqs):
         errors.append('%s needs a %s >= requirement from the worst-case voltage of its node'
                       % (entry.get('kind'), '/'.join(voltage)))
+    for low in reqs:
+        for high in reqs:
+            if not (low.get('op') == 'ge' and high.get('op') == 'le' and low.get('parameter') == high.get('parameter')
+                    and finite(low.get('value')) and finite(high.get('value'))):
+                continue
+            same = low.get('unit') == high.get('unit')
+            if not same and not (low.get('unit') in SCALES and high.get('unit') in SCALES):
+                continue
+            scale = (lambda u: 1) if same else SCALES.get
+            if low['value'] * scale(low['unit']) > high['value'] * scale(high['unit']) * (1 + 1e-9):
+                errors.append(f"{low['parameter']}: empty range, >= {low['value']:g} {low['unit']} "
+                              f"exceeds <= {high['value']:g} {high['unit']}")
     for nominal in reqs:
         if nominal.get('op') != 'eq' or nominal.get('parameter') not in NOMINAL_BOUNDS or nominal.get('unit') not in SCALES \
                 or not finite(nominal.get('value')):
@@ -303,16 +317,18 @@ def entry_errors(entry, comp=None):
         errors.append('complete definition needs finite requirements')
     if entry.get('definition_status') == 'pending' and not entry.get('gaps'):
         errors.append('pending definition needs explicit calculation gaps')
-    seen = set()
+    # A window is one ge and one le on the same parameter (Matrix R3 S26: effective capacitance MIN and MAX).
+    seen, keys = set(), set()
     for req in requirements:
         if not isinstance(req, dict):
             errors.append('requirement must be an object')
             continue
         param = req.get('parameter')
-        if not text(param) or param in seen:
-            errors.append('requirement parameters must be nonempty and unique')
+        if not text(param) or (param, req.get('op')) in keys:
+            errors.append('requirement parameters must be nonempty and unique per op (a range is one ge and one le)')
         if text(param):
             seen.add(param)
+            keys.add((param, req.get('op')))
         if req.get('op') not in OPS or not finite(req.get('value')) or not text(req.get('unit')):
             errors.append(f'{param}: finite value, unit and eq/le/ge operator required')
         if not isinstance(req.get('conditions'), dict) or not req['conditions'] or any(not text(v) for v in req['conditions'].values()):
@@ -418,14 +434,15 @@ def sheet_errors(ref, comp, selection, reqs, root, inputs=None):
     errors = []
     properties = selection.get('properties', [])
     actual = {p.get('parameter'): p for p in properties if isinstance(p, dict)}
-    if len(actual) != len(properties) or set(actual) != set(reqs):
+    if len(actual) != len(properties) or set(actual) != {r['parameter'] for r in reqs}:
         errors.append(f'{ref}: design sheet must answer each required property exactly once')
     sheet = Path(root, design_sheet(comp)).resolve()
     body = document_text(sheet) if sheet.is_file() else None
     section = sheet_section(body, (ref, selection['sheet_id'])) if body is not None else None
     if section is None:
         errors.append(f'{ref}: design sheet {design_sheet(comp)} has no section headed with {ref} or {selection["sheet_id"]}')
-    for param, req in reqs.items():
+    for req in reqs:
+        param = req['parameter']
         prop = actual.get(param, {})
         if prop.get('basis') != 'design_sheet' or not finite(prop.get('value')) or not text(prop.get('acceptance')):
             errors.append(f'{ref}/{param}: design sheet property needs basis design_sheet, a finite value and its acceptance test')
@@ -465,8 +482,8 @@ def record_errors(record, intent, root, inputs=None):
             continue
         if entry['definition_status'] != 'complete':
             pending.append(f'{ref}：性能计算未完成')
-        reqs = {r['parameter']: r for r in entry.get('requirements', [])}
-        for req in reqs.values():
+        reqs = entry.get('requirements', [])
+        for req in reqs:
             errors += [f"{ref}/{req['parameter']}: {e}" for e in source_errors(req.get('source'), root, inputs=inputs)]
             if req['basis'] == 'model':
                 pending.append(f"{ref}/{req['parameter']}：依赖工程估计")
@@ -481,9 +498,10 @@ def record_errors(record, intent, root, inputs=None):
         else:
             properties = selection.get('properties', [])
             actual = {p.get('parameter'): p for p in properties if isinstance(p, dict)}
-            if len(actual) != len(properties) or set(actual) != set(reqs):
+            if len(actual) != len(properties) or set(actual) != {r['parameter'] for r in reqs}:
                 errors.append(f'{ref}: qualified part must cover each required property exactly once')
-            for param, req in reqs.items():
+            for req in reqs:
+                param = req['parameter']
                 prop = actual.get(param, {})
                 if prop.get('basis') != 'guaranteed' or not finite(prop.get('value')):
                     errors.append(f'{ref}/{param}: typical/model/missing property cannot qualify a part')
@@ -608,6 +626,7 @@ def bom_rows(intent):
             raise ValueError(f"{c['ref']}: {conflict or cat_error}")
         rows.append(dict(Reference=c['ref'], Value=c['value'], MPN=c.get('mpn', ''),
                          Orderable=NOT_ORDERABLE if c.get('fields', {}).get('SelectionStatus') == 'candidate' else '',
+                         Assembly=NOT_FITTED if c.get('dnp') else FITTED,
                          Datasheet=c.get('datasheet', ''), Footprint=c.get('footprint', ''),
                          Kind=kind or '', Category=cat or '',
                          **{k: c.get('fields', {}).get(k, '') for k in FIELDS}))

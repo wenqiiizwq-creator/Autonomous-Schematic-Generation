@@ -17,7 +17,8 @@
 ## 每步的检查点
 
 - **第 1 步**：`lessons.json` 新交付采用 schema 2；有有效 library_gaps 时允许 events 为空，两者均空时写 `cause: none` 并引用核对过的页码。泛泛的总结会被报告拒绝。
-  读过的手册都在知识库里（`pack_design.py` 核对），参考设计放 `raw/Designexample/<拓扑>/<板名>/`。
+  读过的手册存在工程资料目录（打包输入 `datasheets`），设计期间不写入知识库；还不在知识库的由 `pack_design.py` 列进
+  `record/manifest.json` 的 `datasheets_to_file`，何时入库由用户定，参考设计入库时放 `raw/Designexample/<拓扑>/<板名>/`。
 - **第 3 步**：归因先于修改。同一条意见若上一版已出现过，`cause` 不能再是 `judgment`：上次的改动没拦住，说明归因错了，重新归因。
 - **第 4 步**：能用脚本判定的不写成文字；每条新文字规则都要问一次能不能变成自动检查。合成测试只复现事件本身，
   不放第三方或真实交付的原理图。改动会触及 SKILL.md 的「ASG 纲要」或绘图纲要 O1–O8 时，只登记提案，先把草案交给人确认再改；

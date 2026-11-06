@@ -21,6 +21,7 @@
   - 局部 TVS：工作电压不低于支路最高工作电压，钳位低于下游 Buck VIN 绝对最大值
   - 持续短路：限流持续时间、重试间隔与实际布局热阻算平均结温；输入电压、ILIM 设定、输出电容在手册给定的短路条件内
   - 恢复：MODE 接法与料号后缀符合“自动恢复”；过压为截止型，持续过压期间输出中断、回到窗内恢复
+  - 负向应力分开核：IN_SYS 的负向额定只覆盖输入反接，IN、OUT 按自身最低额定核；OUT 只接板内下游时写明不从输出侧注入，OUT 经连接器外露时按 efuse-bfet-short-latch 的输出端口浪涌矩阵核
 - **落实规则**：G03-018、G03-021、G03-022、G05-019、G05-021、G05-022、G05-030、G05-031、G05-036、G05-037、G05-043、G05-044、G05-059、G05-061、G05-092
 - **已知坑**：
   - 只核 OV 动作门限不够：早期分压的 OV 释放门限下端低于输入窗上限，过压后在额定窗内可能不再开启；改分压使释放门限下端高于输入窗上限（user:2026-11-03（综合控制板方案设计 §59 辅助恢复窗口修正，R2 CALC-AUX 复核））
@@ -28,6 +29,7 @@
   - I(OL) 只在少数几个 R(ILIM) 取值点有保证上下限，中间取值按反比插值属模型值，不是保证值（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p7）
   - MODE 开路为锁存、接地为自动重试；锁存只能由 SHDN 或 UVLO 低到高、或 IN_SYS 断电复位，接错就与恢复要求相反（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p28）
   - UVLO 脚不得悬空；前级没有反接阻断时 UVLO 到 IN_SYS 要串手册规定的最小电阻（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p20）
+  - IN_SYS 可承受的负压只针对输入反接，IN、OUT 最低只有 −0.3 V，不能拿输入反接额定代替输出侧负压核对（datasheet:Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf#p5）
 - **来源**：
   - raw/Datasheet/08_电源管理/热插拔_eFuse/TI - TPS2663.pdf（p6 UVLO/OVP 门限与热阻、p7 I(OL)、p8 PGTH、p9 tCB、tCL_PLIM 与 t(TSD_retry)、p19 PGOOD 使能下游、p20 UVLO 接法、p28 MODE 表）
   - raw/Datasheet/28_保护器件/TVS_ESD保护器件/TI - TVS3300.pdf（p1 8/20 钳位、p5 VRWM、p6 VBR）

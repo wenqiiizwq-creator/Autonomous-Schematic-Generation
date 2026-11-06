@@ -179,12 +179,14 @@ def check_language(texts):
 
 
 def banned_terms(path=TERMINOLOGY):
-    """Words the terminology table says not to use: its first table's last column."""
+    """Words the terminology table says not to use: its first table's last column, without the header and the
+    |---| delimiter row (Matrix R3 S30: '---' was read as a banned word and caught every Markdown table in notes)."""
     words = []
     table = path.read_text(encoding='utf-8').split('## 术语', 1)[-1].split('\n## ', 1)[0]
-    for line in table.splitlines()[2:]:
+    rows = [line for line in table.splitlines() if line.strip().startswith('|')]
+    for line in rows[1:]:
         cells = [c.strip() for c in line.strip().strip('|').split('|')]
-        if len(cells) == 3:
+        if len(cells) == 3 and not re.fullmatch(r':?-+:?', cells[2]):
             words += [w for w in re.split(r'[、,，]', cells[2]) if w.strip()]
     return words
 
@@ -555,12 +557,14 @@ def check_options(name, role, selected):
 
 
 def check_selection(data, intent, root):
-    """Every core part was chosen from compared candidates whose datasheets are in the library."""
+    """Every core part was chosen from compared candidates whose datasheets are in the library. The refs and part
+    numbers are bound to the design netlist only once it exists: task 1.4 runs before task 2.4 writes it (Matrix R3 S06)."""
     roles = data.get('roles') if isinstance(data, dict) else None
     if not isinstance(roles, list) or not roles:
         return ['selection.json 没有 roles：每个核心器件角色都要有候选比较（见 core-part-selection.md）']
     problems = []
     comps = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
+    netlist = 'components' in intent
     library = Path(os.path.expanduser(data.get('library_root') if text(data.get('library_root')) else ''))
     covered, undeclared = set(), []
     for i, role in enumerate(roles, 1):
@@ -602,7 +606,7 @@ def check_selection(data, intent, root):
             sheet = c.get('datasheet') if text(c.get('datasheet')) else ''
             if not sheet or not ((library / sheet).is_file() or (root / sheet).is_file()):
                 problems.append('候选 %s 的资料 %s 不在知识库 %s 或交付目录内' % (mpn, sheet or '（没写）', library))
-        for ref in refs:
+        for ref in refs if netlist else []:
             covered.add(ref)
             if ref not in comps:
                 problems.append('选型角色“%s”的位号 %s 不在设计网表里' % (name, ref))
@@ -1005,6 +1009,10 @@ def check_scheme_criteria(data, closure, bundle=None):
             if item.get('basis') not in EXCLUSION_BASES:
                 problems.append('%s 的 %s 要写 basis（%s 之一）：只有需求、标准原文或手册绝对额定能硬排除，工程推论写 inference'
                                 % (where, gid, '/'.join(EXCLUSION_BASES)))
+            elif item.get('basis') == 'standard' and cards[gid].get('nature') not in ('shall', 'should'):
+                problems.append('%s 的 %s 写 basis: standard，但规则卡 nature 为 %s；standard 只用于 shall/should，'
+                                'method 是工程方法，project 是项目输入，请按实际依据改成 requirement 或 inference'
+                                % (where, gid, cards[gid].get('nature')))
             defer = item.get('defer', [])
             if not (isinstance(defer, list) and all(text(d) for d in defer)):
                 problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))

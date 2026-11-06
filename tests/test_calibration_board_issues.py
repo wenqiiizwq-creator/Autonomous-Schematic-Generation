@@ -208,6 +208,29 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(1, len(found))
         self.assertIn('Y1', found[0])
 
+    def test_an_unfitted_part_is_marked_by_dnp_not_by_its_value(self):
+        # G09-018: DNP and the BOM assembly column carry the state; NC/DNP written into the value does not.
+        from audit_design_closure import audit_placeholders
+        found = []
+        audit_placeholders({'components': [{'ref': 'R1', 'lib_id': 'Device:R', 'value': '10k DNP'},
+                                           {'ref': 'R2', 'lib_id': 'Device:R', 'value': 'NC'},
+                                           {'ref': 'R3', 'lib_id': 'Device:R', 'value': '0R', 'dnp': True},
+                                           {'ref': 'U1', 'lib_id': 'iio:NC7SZ125', 'value': 'NC7SZ125'}]},
+                           lambda code, item: found.append((code, item)))
+        self.assertEqual(['R1', 'R2'], [item.split('：')[0] for code, item in found if code == 'dnp_in_value'])
+
+    def test_a_common_mlcc_writes_its_dielectric(self):
+        # G09-021 (g09_commodity_fields mlcc: 容值、耐压、介质): the dielectric is checked by script.
+        intent = self.intent(components=[{'ref': 'C1', 'lib_id': 'Device:C', 'value': '100nF 50V'}], nets={},
+                             net_roles={})
+        self.assertIn('介质', ' '.join(pc.audit_identity(intent, [])[0]))
+        intent['components'][0]['value'] = '100nF 50V X7R'
+        self.assertEqual([], pc.audit_identity(intent, [])[0])
+        intent['components'][0].update(value='10pF', fields={'Specification': '50V C0G 0402'})
+        self.assertEqual([], pc.audit_identity(intent, [])[0])
+        intent['components'][0].update(lib_id='Device:C_Polarized', value='100uF 35V', fields={})
+        self.assertEqual([], pc.audit_identity(intent, [])[0])
+
     def test_a_kind_outside_the_vocabulary_fails_at_the_closure_audit(self):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp)
