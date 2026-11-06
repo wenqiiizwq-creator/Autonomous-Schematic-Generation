@@ -24,6 +24,16 @@ R3 副本只读重跑（集成基线 2ed02aa 对比本分支）：闭合审计 `
 - Changed: scripts/audit_design_closure.py, scripts/schematic_layout/boundary.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/render_design_report.py, references/component-requirements.md, references/part-roles.md, tests/test_board_defect_guards.py, tests/test_component_requirements.py, tests/test_part_classes.py, tests/test_design_report.py, docs/improvement-ledger.md
 - Gates: python3 -m pytest tests -q（配对 ASG_SR_SHARED_ROOT=SR integration）1 failed, 1239 passed in 380.44s；唯一失败 test_schematic_review_holds_the_same_shared_layer 是 SR integration 工作区未提交的 scripts/guideline_criteria.py 与本分支基线 2ed02aa 不同字节，基线导出同样失败，与本次无关；新增/改动测试所在四个文件全绿；scripts/check_ledger.py PASS；git diff --check 通过
 
+## 任务 1.3 关键功能块对照会淘汰候选的规则（2026-11-05）
+
+规则库升到 1.9.0 后难题判据合计不变（9/19 对 9/19），`rt-hard-field-negative` 需要的 G07-022、G07-023 在运行日志里没出现：适用规则只在闭环时核对，选方案时不读。按草案 `原理图设计规范/维护/ASG方案阶段对照规则-草案-2026-11-05.md` 第 3 节逐字改任务 1.3 两处；`guideline_criteria.py select` 加 `--typed-only`（去掉全板通用规则）和 `--ports`（加回 G07 全板端口规则）；新记录 `record/scheme-criteria.json`，`render_design_report.py` 加 `check_scheme_criteria`、`render_scheme_criteria`，guideline_scope 含关键电路类型时必有，引用的规则须对该块适用，`basis` 区分需求、标准原文、手册绝对额定与工程推论，推论不作硬排除（用户 2026-11-05 原则）。闭环覆盖口径不变。SR 同字节共用脚本，对账清单只读块名和规则编号。
+
+- Approved: user:2026-11-05（主会话转达原话：“分支对话的草案，请帮我批准，然后驱动分支对话修改草案”）
+- Outline: e0d456d895a3df38
+- Event: user:2026-11-05
+- Causes: rule_not_enforced 1
+- Changed: SKILL.md, scripts/guideline_criteria.py, scripts/render_design_report.py, references/delivery-report.md, tests/test_scheme_criteria.py, docs/improvement-ledger.md
+- Gates: 1237 passed in 413.60s（配对 ASG_SR_SHARED_ROOT=SR integration）；check_ledger.py PASS；git diff --check 通过；共用层两边同指纹 430c93a02bbf
 
 ## G01–G09 运行包 1.9.0 与登记只读覆盖层（2026-11-05）
 
