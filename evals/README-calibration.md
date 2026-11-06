@@ -1,6 +1,6 @@
 # ASG calibration benchmarks
 
-Circuit cases live in the evaluation set shared with schematic-review (`原理图设计规范/评测集/`, located by `evals/eval_set.py`, override with `CIRCUIT_EVAL_SET`). `python3 evals/circuit_cases/run.py prepare --case <id> --out <new dir>` gives ASG one circuit's requirements only; results go to `运行结果/ASG/` in that set. The benchmarks below are separate and stay here.
+Circuit cases live in the evaluation set shared with schematic-review (`原理图设计规范/评测集/`, located by `evals/eval_set.py`, override with `CIRCUIT_EVAL_SET`). `python3 evals/circuit_cases/run.py prepare --case <id> --out <new dir> --guideline-release <selected release>` gives ASG one circuit's requirements only; results go to `运行结果/ASG/` in that set. The benchmarks below are separate and stay here.
 
 Three independent runners, with all third-party sources and outputs outside Git:
 
@@ -106,3 +106,6 @@ cache and operator bytes. Their immutable run bindings must record different
 actual verifier source snapshots. Do not resume a Before directory with After
 code or relabel an old matrix. Keep these extension measurements separate from
 the default 14×17 matrix (238 cells), old 170 rows and the corrected-before freeze.
+
+
+External circuit runs require an explicit release package; IDs/status come from it, never the adjacent current registry. The package must match the installed skill payload. prepare writes run-context.json with the release version/fingerprint/format, E HEAD and actual dirty workspace digest, case/source hashes and skill HEAD/source digest. It discloses no answers; route cases stop at the documented step-① scope. score requires that recorded context and rejects changed or unbound inputs. Missing E prints status=skip/scope=external_evaluation separately from the local code gate. Current instructions: the evaluation set's 发布绑定.md. Native/code regression fixtures remain local.

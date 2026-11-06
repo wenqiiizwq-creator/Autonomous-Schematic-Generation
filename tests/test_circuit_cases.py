@@ -15,6 +15,24 @@ run = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(run)
 
 
+def local_release():
+    import shutil
+    import tempfile
+    temporary = tempfile.TemporaryDirectory(prefix='eval-release-')
+    release = Path(temporary.name)
+    manifest = json.loads((ROOT / 'shared-release.json').read_text(encoding='utf-8'))
+    manifest.update(inputs={}, auxiliary={})
+    for name in manifest['payload']:
+        target = release / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / name, target)
+    (release / 'manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
+    return temporary, release
+
+
+_RELEASE_TEMP, RELEASE = local_release()
+
+
 @unittest.skipUnless(eval_set.available(), '电路评测集不在本机')
 class Prepare(unittest.TestCase):
     def setUp(self):
@@ -24,11 +42,11 @@ class Prepare(unittest.TestCase):
 
     def prepare(self, case='iio-can'):
         import argparse
-        return run.cmd_prepare(argparse.Namespace(case=case, out=self.out))
+        return run.cmd_prepare(argparse.Namespace(case=case, out=self.out, guideline_release=RELEASE))
 
     def test_gives_requirements_only(self):
         self.prepare()
-        self.assertEqual(sorted(p.name for p in self.out.iterdir()), ['任务.md', '需求.md'])
+        self.assertEqual(sorted(p.name for p in self.out.iterdir()), ['run-context.json', '任务.md', '需求.md'])
         task = (self.out / '任务.md').read_text(encoding='utf-8')
         self.assertIn('不要读取', task)
         evalset = run.tool()

@@ -13,6 +13,17 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+
+## M5：显式绑定外部评测发布输入（2026-11-06）
+
+E 校验、评测运行与打分显式选择准则发布包，ID/状态只读该包；核安装件一致，记录版/指纹/格式、E 提交与实际工作区、案例原件哈希、技能提交与字节身份。ASG prepare 不给答案且先写来源记录；SR 保存原始运行、成绩与汇总，清除测试替代准则并核实际计划。缺 E 单独报告外部评测 skip；旧成绩不自动晋升。只改评测与维护入口，不改五步、判断责任、准则或工程数值。
+
+- Event: user:2026-11-06（按关系梳理草案推荐方案完成更改，本批 M5）
+- Causes: rule_not_enforced 2, rule_missing 1
+- Changed: docs/improvement-ledger.md, evals/eval_set.py, evals/circuit_cases/run.py, evals/README-calibration.md, tests/test_circuit_cases.py, tests/test_evaluation_binding.py
+- Gates: ASG 全量 1336 passed（469.61 s，无跳过），SR 全量 3076 passed（155.45 s，无跳过、5 条既有 warnings）；不设配对变量；SR 官方 --changed aee8b4b --tier unit 258/258 KILLED（临时插件仅排序，未变异副本先通过）；新增 SR 6/6、ASG 2/2、E 4/4 独立功能变异 KILLED；E 工作区工具 28 passed、本批提交影像 25 passed；搬移 E 显式包校验 34 案例/96 测试点/100 板/0 错误；ASG 方案案例 1/1 hit，SR 自动层 1 hit/4 not_run；两边 check_ledger.py、diff --check、skill-creator quick_validate PASS；共用十载荷及规范18输入与1.9.4同字节。
+
+
 ## M4：分离工程身份与维护文字（2026-11-06）
 
 工程指纹 v2 绑定八个受控工程文件的相对路径与哈希，纯说明和维护历史不进工程身份；十文件完整性不减。保留旧 v1 算法与身份校验，历史缺格式只解释 v1，新包下重生成计划/审计并复验，不静默重算或转移旧 PASS。替代输入绑定真实字节，修复 P15。新 ASG 审计和 SR 格式 8 计划明确 fingerprint_format，SR 历次架构决定同步；报告按记录显示身份。未改准则含义、工程数值或五步流程，未做 M5/M6。
