@@ -982,6 +982,8 @@ PLACEHOLDER_VALUES = {'~', '-', '—', '?', '??', 'TBD', 'tbd', 'TBA', 'x', 'xx'
 # A lower-case x standing for a digit or letter of a part number (BZT52Bxx, BQ769x2), or a ? or * in it.
 WILDCARD = re.compile(r'(?<=[A-Z0-9])x+(?=[A-Z0-9]|$)|[?*]')
 # Kinds whose value is a rating or a frequency, not a part number; a value equal to the symbol name is a placeholder.
+# G09-018: whether a part is fitted is its DNP flag and the BOM Assembly column; NC/DNP in the value is a state, not a value.
+FIT_STATE_IN_VALUE = re.compile(r'(?<![A-Za-z0-9])(?:NC|N\.C\.|DNP|DNI|DNF|不装|未装)(?![A-Za-z0-9])')
 VALUE_KINDS = ('resistor', 'capacitor', 'inductor', 'ferrite', 'crystal', 'diode', 'zener', 'tvs', 'fuse', 'bjt', 'mosfet')
 NOT_PART_NUMBER = ('resistor', 'capacitor', 'inductor', 'ferrite', 'crystal', 'connector', 'testpoint', 'mechanical',
                    'jumper', 'switch', 'battery')
@@ -1024,6 +1026,9 @@ def audit_placeholders(intent, error, strict=False):
             error('placeholder_value', '%s：值 %s 是库默认名或占位，写设计值（阻值/容值/稳压值/型号）' % (ref, value))
         elif strict and not value and kind not in ('mechanical', 'testpoint', 'connector'):
             error('placeholder_value', '%s：没有写值' % ref)
+        if FIT_STATE_IN_VALUE.search(value):
+            error('dnp_in_value', '%s：值 %s 里写了装配状态；值只写值和规格，不装用 dnp 标明（BOM 的 Assembly 列随之写“%s”），'
+                  '位号留在 BOM 里（G09-018）' % (ref, value, '不装（DNP）'))
         for field, text_ in (('mpn', mpn), ('value', value if kind not in VALUE_KINDS[:5] else '')):
             if text_ and WILDCARD.search(text_):
                 error('placeholder_value', '%s：%s %s 含通配符（x、?、*），写手册订货信息里的完整订货码' % (ref, field, text_))

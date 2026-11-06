@@ -369,6 +369,17 @@ class PerformanceTests(unittest.TestCase):
         del plain['component_requirements_version']
         self.assertLess(Sheet(plain).pitch_for(['R1']), need)
 
+    def test_bom_has_an_assembly_column_and_keeps_unfitted_parts(self):
+        # G09-018: an unfitted part stays in the BOM, marked in its own column; the value keeps value and spec only.
+        projected = self.project()
+        rows = cr.bom_rows(projected)
+        self.assertEqual('装', rows[0]['Assembly'])
+        projected['components'][0]['dnp'] = True
+        rows = cr.bom_rows(projected)
+        self.assertEqual(['R1'], [r['Reference'] for r in rows])
+        self.assertEqual(cr.NOT_FITTED, rows[0]['Assembly'])
+        self.assertEqual('100R', rows[0]['Value'])
+
     def test_pending_calculation_is_visible_not_complete(self):
         entry = self.record['components'][0]
         entry.update(definition_status='pending', gaps=['calculate actual capacitor discharge energy'], requirements=[])

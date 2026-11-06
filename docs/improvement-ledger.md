@@ -8,6 +8,19 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## G09 定稿的 ASG 接入项：BOM 装配状态列、MLCC 介质、swd-debug 落实规则（2026-11-06）
+
+G09 定稿（2026-11-05）列的三项技能侧接入。代码类先写失败测试再修。
+
+- G09-018：`bom_rows` 原来没有装配状态，不装位号只靠原生 DNP 属性。加 `Assembly` 列（“装”/“不装（DNP）”，与 `Orderable` 同为常量），不装的位号照常留在 BOM。闭合审计 `audit_placeholders` 新增 `dnp_in_value`：值里写 NC、N.C.、DNP、DNI、DNF、不装、未装（独立词，区分大小写，不误报 100 nF、NC7SZ125）记错。生成脚本已按 `dnp` 写原生属性且 `in_bom yes`，不改。
+- G09-021：原有核对只要求常规电容写耐压、电感写额定电流，MLCC 介质没核。`part_classes.audit_identity` 对 MLCC 类常规电容加介质检查（C0G/NP0/U2J 与 X5R、X7R 等 EIA 代码，写在值或 `fields.Specification`）；电解等其他电容不要求。`requirements-to-intent.md` 写明介质与 `dnp` 写法。
+- `swd-debug.md`：“落实规则：无”改为 G09-010、012、013、015，必算项补齐对应内容（针表对照工具要求、调试口地域与保护地、调试脚其他负载与复用、NRST 复位下连接与读保护后的恢复）；上下拉（G09-011，手册未写内部上下拉，不凭推断）与手接静电（G09-026）没写进做法，不列。
+
+- Event: user:2026-11-05（G09 定稿：ASG 的 BOM 导出加装配状态列、MLCC 介质由脚本核、swd-debug.md 落实规则更新；见 原理图设计规范/维护/分项待办/G09_制造与可测试性规范/待完成任务.md）；user:2026-11-06（主会话转达：G09 接入项按同样规则做）
+- Causes: rule_missing 2, knowledge_missing 1
+- Changed: scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/part_classes.py, scripts/audit_design_closure.py, references/requirements-to-intent.md, references/typical-circuits/swd-debug.md, tests/test_component_requirements.py, tests/test_calibration_board_issues.py, tests/test_typical_circuits.py, docs/improvement-ledger.md
+- Gates: 1258 passed in 365.62s（ASG_SR_SHARED_ROOT=SR）；新增 4 条测试先失败后通过；check_ledger.py PASS；git diff --check 通过；SKILL.md 纲要与 references/shared/ 未改
+
 ## SKILL.md 任务 2.2 写明工况输入要有来源（2026-11-06）
 
 审计（`operating_inputs.py`、`audit_design_closure.py`）和 `design-closure.md`“工况输入的来源”早已要求板外工况参数写 `input_role` 并有来源、启动计算声明启动期负载，但纲要任务 2.2 没写，设计方只在审计报错时才知道。按用户确认的草案逐字加一条。

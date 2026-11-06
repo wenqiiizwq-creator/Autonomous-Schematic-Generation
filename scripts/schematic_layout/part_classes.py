@@ -83,6 +83,8 @@ CURRENT = re.compile(r'\d\s*m?A(?![A-Za-z])|\d\s*m?A(?:rms|pk|dc)', re.I)
 FREQ = re.compile(r'\d\s*[kM]?Hz', re.I)
 LOAD_PF = re.compile(r'\d\s*pF', re.I)
 PPM = re.compile(r'\d\s*ppm', re.I)
+# MLCC dielectric codes (EIA class I and II), G09-021: a common MLCC is ordered by capacitance, voltage and dielectric.
+DIELECTRIC = re.compile(r'(?<![A-Za-z0-9])(?:C0G|COG|NP0|NPO|U2J|[XYZ][4-8][PRSTUV])(?![A-Za-z0-9])', re.I)
 
 
 # Subcategories are the library's second level (raw/Datasheet/<category>/<subcategory>); only resistors and
@@ -494,6 +496,8 @@ def audit_identity(intent, bases, touched=None):
             rating = spec_text(comp)
             if kind == 'capacitor' and not VOLTAGE.search(rating):
                 lack.append('耐压（写在值或 fields.Specification 里）')
+            if kind == 'capacitor' and category(comp, kind)[0] == MLCC and not DIELECTRIC.search(rating):
+                lack.append('介质（X7R、X5R、C0G 等，写在值或 fields.Specification 里）')
             if kind in ('inductor', 'common_mode_choke', 'coupled_inductor') and not CURRENT.search(rating):
                 lack.append('额定电流（写在值或 fields.Specification 里）')
             # Calibration board 2026-11-02: a crystal bought to its specification writes it (#7); a common connector carrying a

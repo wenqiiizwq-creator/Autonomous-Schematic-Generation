@@ -25,6 +25,8 @@ SELECTIONS = {'not_selected': '型号未定', 'candidate': '候选待核', 'qual
               'by_bom_spec': 'BOM规格已写全'}
 # The BOM's Orderable column for a candidate: its MPN is the physical identity, not an approved order (Matrix R3 S07).
 NOT_ORDERABLE = '不可按此采购：候选待核，性能未核准'
+# The BOM's Assembly column (G09-018): an unfitted part stays in the BOM, its state is the native DNP flag, not its value.
+FITTED, NOT_FITTED = '装', '不装（DNP）'
 # Selections whose properties are checked one by one and that close the selection.
 CLOSED = ('qualified', 'by_spec', 'by_design_sheet')
 PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额定功率',
@@ -624,6 +626,7 @@ def bom_rows(intent):
             raise ValueError(f"{c['ref']}: {conflict or cat_error}")
         rows.append(dict(Reference=c['ref'], Value=c['value'], MPN=c.get('mpn', ''),
                          Orderable=NOT_ORDERABLE if c.get('fields', {}).get('SelectionStatus') == 'candidate' else '',
+                         Assembly=NOT_FITTED if c.get('dnp') else FITTED,
                          Datasheet=c.get('datasheet', ''), Footprint=c.get('footprint', ''),
                          Kind=kind or '', Category=cat or '',
                          **{k: c.get('fields', {}).get(k, '') for k in FIELDS}))

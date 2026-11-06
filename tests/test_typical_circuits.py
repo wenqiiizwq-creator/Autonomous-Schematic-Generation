@@ -64,6 +64,12 @@ class PatternFileTests(unittest.TestCase):
                 elif inside and line.startswith('  - '):
                     self.assertRegex(line, cite, '%s：已知坑没有来源：%s' % (md.name, line))
 
+    def test_the_swd_port_claims_the_g09_debug_rules_it_puts_into_practice(self):
+        # G09 定稿接入项（2026-11-05）：swd-debug 的“落实规则：无”换成它真实做到的 G09 规则；上下拉（G09-011）、
+        # 手接静电（G09-026）没有写进做法，不列。
+        rules = CIRCUITS['swd-debug']['implementations']['10 针 Cortex Debug 排针，VTref 接 3.3 V']['criteria']
+        self.assertEqual(['G09-010', 'G09-012', 'G09-013', 'G09-015'], rules)
+
     def test_the_parser_agrees_with_find_parts_on_the_implementations(self):
         index = find_parts.circuit_index()
         self.assertEqual({pid: list(info['implementations']) for pid, info in CIRCUITS.items()},
