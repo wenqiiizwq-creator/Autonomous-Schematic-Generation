@@ -9,7 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from audit_design_closure import audit, sha256
-from render_design_report import num, render, render_sha256, REPORT
+from render_design_report import check_selection, num, render, render_sha256, REPORT
 from pack_design import pack
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_citations import pdf
@@ -597,6 +597,18 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('选型角色“稳压器”的位号 U9 不在设计网表里', problems)
         self.assertIn('位号 U1 的 value/mpn “OTHER” 都不含选定型号 XYZ100', problems)
         self.assertIn('核心器件没有选型记录：Q1', problems)
+
+    def test_selection_checked_at_task_1_4_before_the_design_netlist_exists(self):
+        # Matrix R3 S06: the design netlist is written in task 2.4, so the 1.4 check cannot require its refs;
+        # once the netlist exists the binding is checked in full.
+        sel = json.loads(json.dumps(self.d.selection))
+        sel['roles'][0]['refs'] = ['U9']
+        self.assertEqual([], check_selection(json.loads(json.dumps(sel)), {}, self.d.root))
+        sel['roles'][0]['candidates'][0]['reason'] = ''
+        self.assertIn('候选 XYZ100 没有写选中或淘汰的理由', check_selection(json.loads(json.dumps(sel)), {}, self.d.root))
+        sel['roles'][0]['candidates'][0]['reason'] = 'x'
+        intent = {'components': [{'ref': 'U1', 'value': 'XYZ100'}]}
+        self.assertIn('选型角色“稳压器”的位号 U9 不在设计网表里', check_selection(sel, intent, self.d.root))
 
     def test_lessons_are_required_and_checked(self):
         (self.d.record / 'lessons.json').unlink()

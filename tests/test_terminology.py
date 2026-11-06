@@ -51,6 +51,15 @@ class TerminologyTests(unittest.TestCase):
         self.assertIn('门禁', words)
         self.assertNotIn('设计要求表', words)
 
+    def test_a_markdown_table_in_notes_is_not_a_banned_word(self):
+        # Matrix R3 S30: the table's header and |---| delimiter row were read as banned words.
+        words = render_design_report.banned_terms()
+        self.assertNotIn('---', words)
+        self.assertNotIn('不用的词', words)
+        table = '| 项 | R2 | R3 |\n|---|---|---|\n| 入口 | A | B |'
+        self.assertEqual([], render_design_report.check_terms([('notes.json differences', table)]))
+        self.assertTrue(render_design_report.check_terms([('notes.json summary', '门禁全部通过')]))
+
 
 if __name__ == '__main__':
     unittest.main()

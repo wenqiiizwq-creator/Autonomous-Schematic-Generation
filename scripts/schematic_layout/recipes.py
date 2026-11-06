@@ -492,12 +492,16 @@ class Sheet:
         return self._rail(pid, rail)
 
     def pitch_for(self, refs):
-        """Grid steps between banked parts: body, beside-field text and clearance."""
+        """Grid steps between banked parts: body, beside-field text and clearance. The beside-field text is every
+        visible field, the Performance requirement included (Matrix R3 S27; visibility as in generate.py)."""
         width = 0
         for ref in refs:
             body_w = max(b.x_max - b.x_min for b in (self._shape(ref, r)[1] for r in (0, 90)))
             c = self.components[ref]
-            text = max(TextField(t, 0, 0, 0, 1.27).box().width for t in (ref, c["value"]))
+            shown = [ref, c["value"]]
+            if self.intent.get("component_requirements_version") == 1 and c.get("performance_contract"):
+                shown.append(str(c.get("fields", {}).get("Performance", "")))
+            text = max(TextField(t, 0, 0, 0, 1.27).box().width for t in shown)
             width = max(width, body_w + text + 1.27)
         return max(4, math.ceil((width + 2 * G) / G))
 

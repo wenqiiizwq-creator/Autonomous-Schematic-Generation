@@ -79,7 +79,8 @@
   最坏工况功耗达到[降额规范“工程取值”](shared/derating-rules.md#工程取值)`thermal_calc_trigger` 所列的功率或封装额定比例时，用手册 θJA（或 θJC+假设的板级热阻，写明假设）
   和整机内部最高环境温度估算结温/温升，作为一条带 `checks` 的计算；超出额定就换封装或换方案，
   不能写“待核”交给PCB。PCB 阶段只负责实现并实测这个热边界。
-- 新下载的数据手册按 SKILL.md 的资料规则同时存入 HardwareWiki。
+- 新下载的数据手册按 SKILL.md 任务 2.1 的资料规则存入工程资料目录（打包输入 `datasheets`），设计期间不写入 HardwareWiki；
+  还不在知识库的由 `pack_design.py` 列进 `datasheets_to_file`，何时入库由用户定。
 
 ## 5. 写整板设计网表
 

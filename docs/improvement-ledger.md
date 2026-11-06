@@ -8,6 +8,23 @@ in the library and have the cited page); `Changed:` the files touched.
 entry that changes the ASG 纲要 or the 绘图纲要 O1–O8 also carries `Approved:
 user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
+## Matrix R3 剩余技能事件：四个规则缺陷、资料规则残留、八条典型电路知识（2026-11-06）
+
+R3 `record/lessons.json` 里尚未处理的 13 条事件逐条先核实再改（S07、S25、S29、S35 已在 main 修好，S15 随设计准则库 1.9.0 解决，S12、S19、S24 是判断类，不改技能）。代码类先写复现事件的失败测试再修。
+
+- S06：`check_selection` 在设计网表写出（任务 2.4）之前不查位号绑定和“核心器件没有选型记录”，任务 1.4 只查候选、资料和用户决定；网表存在后照旧全查。`core-part-selection.md` 写明两段检查。
+- S26：性能记录同一参数允许一条 `ge` 加一条 `le`（区间），唯一性改按（参数，比较符）；下限大于上限记错；核准件同一项 `properties` 要同时满足两条。`sheet_errors`/`record_errors` 由按参数建字典改为逐条要求。`component-requirements.md` 写区间写法。
+- S27：`Sheet.pitch_for` 把可见的 `Performance` 字段（与 `generate.py` 同一可见条件）计入并排间距。
+- S30：`banned_terms` 跳过术语表的表头行和 `|---|` 分隔行，`---` 与“不用的词”不再是禁词。
+- S01：`requirements-to-intent.md` §4、`core-part-selection.md` §2、`docs/operating-cadence.md` 第 1 步改为按 SKILL.md 任务 2.1 资料规则存工程资料目录、设计期间不写知识库；测试禁止这几处旧说法再出现。
+- 典型电路（只写有来源的内容，推论标“推论”）：`efuse-bfet-short-latch` 加启动即短路判据与状态表、输出端口浪涌矩阵及 5 条已知坑，并改正“手册不给 OUT 负向额定”的旧说法（S02、S08）；`efuse-aux-branch` 加输入反接与输出负压分开核（S08）；`ideal-diode-hotswap` 加短路峰值分段算法与 2 条动作时间坑（S10），新增“单管理想二极管 + 独立热插拔 + 两者之间取辅助电源”实现方案（S03）；`chassis-y-cap` 新增“源侧直流搭接 + 本板 R 并 Y 电容”实现方案（S04）；`fault-memory-comparator` 加低电平保证条件与接口备选、外推不构成保证（S05）；`high-side-quad` 加按变体核、两脚有符号差分额定、SNS 逐状态编码和启动高限流（S09、S20，写在智能高边开关的典型电路而不是 ideal-diode-hotswap，因为这些是高边开关自身的行为）。
+- 核实中的出入：S10 所引 TPS4800-Q1 “p12 计时波形”实为 p11 图 6-1；TPS281C30 的 R3 副本是 Rev C，库内是 Rev B，所引页码两版相同，典型电路引库内版；TPS4800-Q1 未入库，引 R3 工程资料目录路径。
+
+- Event: test:Matrix网络交换板/方案设计/电源与保护_R3/record/lessons.json（S01–S06、S08–S10、S20、S26、S27、S30）；test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/research-excerpts/selection-stage-check.json；test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/skill-events/range-parameter-rejection.json；test:Matrix网络交换板/方案设计/电源与保护_R3/record/evidence/skill-events/terminology-markdown-separator.json；test:Matrix网络交换板/方案设计/电源与保护_R3/record/recipe-reports.json；user:2026-11-06（主会话转达：R3 先不做，ASG/SR/准则相关先做完）
+- Causes: rule_missing 4, knowledge_wrong 1, knowledge_missing 8
+- Changed: scripts/render_design_report.py, scripts/schematic_layout/component_requirements.py, scripts/schematic_layout/recipes.py, references/component-requirements.md, references/core-part-selection.md, references/requirements-to-intent.md, references/typical-circuits/efuse-bfet-short-latch.md, references/typical-circuits/efuse-aux-branch.md, references/typical-circuits/ideal-diode-hotswap.md, references/typical-circuits/chassis-y-cap.md, references/typical-circuits/fault-memory-comparator.md, references/typical-circuits/high-side-quad.md, docs/operating-cadence.md, tests/test_design_report.py, tests/test_component_requirements.py, tests/test_terminology.py, tests/test_skill_steps.py, docs/improvement-ledger.md
+- Gates: 1254 passed in 342.94s（ASG_SR_SHARED_ROOT=SR）；新增 6 条测试先失败后通过；check_ledger.py PASS；git diff --check 通过；SKILL.md 纲要与 references/shared/ 未改
+
 ## 1.9.0 覆盖层写回登记，覆盖层工具删除（2026-11-05）
 
 合入 main 前把 `docs/registry-overlay-2026-11-05.json` 的 49 条修改（43 条 coverage、5 条 closing_stage+coverage、G05-031 动作与版本）在维护锁下写回准则登记（G05–G09 五份文件；写前九份源哈希与覆盖层一致，原文件备份在会话临时目录）。从登记直接 `build --library-version 1.9.0` 得到的规则库与 `references/shared/guideline-criteria.json` 逐字节一致。覆盖层文件、`scripts/build_registry_overlay.py` 和它的测试随之删除；`shared-layer.md` 那一节改为“已写回”，共用层指纹 430c93a02bbf → f62f9e757234（只改这段文字）。

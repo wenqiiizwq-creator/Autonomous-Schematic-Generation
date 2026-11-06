@@ -7,6 +7,7 @@ import copy
 import csv
 import hashlib
 import json
+import math
 from pathlib import Path
 import shutil
 import subprocess
@@ -292,6 +293,25 @@ class PerformanceTests(unittest.TestCase):
             entry['procurement']['mode'] = procurement
             self.assertTrue(cr.entry_errors(entry), (selection, procurement, definition))
 
+    def test_a_range_writes_one_ge_and_one_le_on_the_same_parameter(self):
+        # Matrix R3 S26: an effective-capacitance window (MIN for hold-up, MAX for charging) was rejected as a duplicate.
+        intent, record = fixture(self.root, True)
+        entry = record['components'][0]
+        upper = dict(copy.deepcopy(entry['requirements'][1]), op='le', value=3)
+        entry['requirements'].append(upper)
+        errors, _ = cr.record_errors(record, intent, self.root)
+        self.assertEqual([], errors)
+        self.assertEqual('PASS', cr.audit(cr.project(intent, record, self.root), record, self.root)['status'])
+        upper['value'] = 1.5
+        errors, _ = cr.record_errors(record, intent, self.root)
+        self.assertTrue(any('pulse_energy' in e and 'does not meet' in e for e in errors), errors)
+        upper['value'] = 0.5
+        errors, _ = cr.record_errors(record, intent, self.root)
+        self.assertTrue(any('pulse_energy' in e and 'empty range' in e for e in errors), errors)
+        entry['requirements'].append(dict(copy.deepcopy(upper), value=2.5))
+        errors, _ = cr.record_errors(record, intent, self.root)
+        self.assertTrue(any('unique' in e for e in errors), errors)
+
     def test_a_bound_has_two_or_three_significant_digits(self):
         req = self.record['components'][0]['requirements'][1]
         req['value'] = 1.0631254
@@ -333,6 +353,21 @@ class PerformanceTests(unittest.TestCase):
         floors = guideline_criteria.commodity_floors()['chip_resistor']['packages']
         self.assertEqual({p: v['voltage_v'] for p, v in floors.items()}, cr.RESISTOR_VOLTAGE_FLOORS)
         self.assertEqual(cr.ASSUMED_PACKAGE, guideline_criteria.engineering_value('assumed_resistor_package'))
+
+    def test_bank_pitch_counts_the_visible_performance_field(self):
+        # Matrix R3 S27: pitch_for budgeted only Reference and Value; the visible Performance text then collided.
+        from schematic_layout.geometry import TextField
+        from schematic_layout.recipes import G
+        projected = self.project()
+        shown = projected['components'][0]['fields']['Performance']
+        self.assertGreater(len(shown), len('100R'))
+        sheet = Sheet(projected)
+        body = max(b.x_max - b.x_min for b in (sheet._shape('R1', r)[1] for r in (0, 90)))
+        need = math.ceil((body + TextField(shown, 0, 0, 0, 1.27).box().width + 1.27 + 2 * G) / G)
+        self.assertGreaterEqual(sheet.pitch_for(['R1']), need)
+        plain = copy.deepcopy(projected)
+        del plain['component_requirements_version']
+        self.assertLess(Sheet(plain).pitch_for(['R1']), need)
 
     def test_pending_calculation_is_visible_not_complete(self):
         entry = self.record['components'][0]
