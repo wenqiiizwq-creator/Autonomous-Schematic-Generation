@@ -57,7 +57,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 | 步骤 | 任务 | 这一步的目的 | 产出 |
 |---|---|---|---|
-| ① 需求与方案 | 1.1 需求追溯 · 1.2 系统架构 · 1.3 功能块实现方案 · 1.4 核心器件选型与方案确认 | 把需求落到功能块和核心器件；需求缺口当场问用户，答复写回需求清单，会改变方案的取舍由用户定下 | 需求追溯、需求澄清、系统架构、`selection.json` |
+| ① 需求与方案 | 1.1 需求追溯 · 1.2 系统架构 · 1.3 功能块实现方案 · 1.4 核心器件选型与方案确认 | 把需求落到功能块和核心器件；需求缺口当场问用户，答复写回需求清单，会改变方案的取舍由用户定下 | 需求追溯、需求澄清、系统架构、`scheme-criteria.json`、`selection.json` |
 | ② 详细设计 | 2.1 数据手册核对与外围电路 · 2.2 设计计算与性能要求 · 2.3 器件选型与性能符合性 · 2.4 设计网表 | 按核心器件手册确定外围约束，从工况计算器件性能要求，核对采购来源或候选器件的符合性，再写出设计网表 | `reference-input.json`、计算记录、`component-requirements.json`、`electrical-intent.json` |
 | ③ 原理图绘制 | 3.1 分页方案 · 3.2 图页脚本 · 3.3 组装工程 | 按绘图纲要 O1–O8 把设计网表画成可读的 KiCad 工程 | `page-plan.json`、图页脚本、KiCad 工程 |
 | ④ 设计检查 | 4.1 自动检查 · 4.2 图面审阅 | 用 KiCad 导出核对电气与图面，再按 PDF 逐页审阅 | `summary.json`、`visual-review.json` |
@@ -105,15 +105,10 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单和
 功能追溯表。每项映射具体功能路径、器件/固件责任和验收；不能批量挂整板位号代替追溯。
-需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**（[需求澄清](references/requirement-clarifications.md)）：
-录完需求后一次汇总提问，不逐颗器件打断用户；每问附一条可验收的建议条文；答复后马上写回需求清单，再按定下的需求往下设计。
-只问证据和工程判断解决不了的产品取舍；缺厂家资料、设计没做完、属于后续环节的事项不问。
-任务 1.2–2.4 中途发现新的需求缺口，同样停在当前任务问，答复写回需求清单后从受影响的任务重做（会改变架构的回到 1.2）。
-用户暂缓的，按建议条文作为写明的假设设计，相关需求和计算为有条件成立，记成 `requirement` 待办。
-降额等级（I/II/III 级，见[降额规范](references/shared/derating-rules.md)）是一条需求：需求没写时，与其他需求澄清一并问用户，
-附按产品失效后果和工作方式给出的建议等级；答复写回需求清单。用户暂缓的，按建议等级作为写明的假设设计。
-共用工程判据由硬件设计规范发布，ASG 使用本技能中已安装并固定版本的发布包；准则版本与共用层指纹由发布包读取。运行和本地测试不读取 SR 源码。
-计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
+需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**：录完需求后一次汇总提问，每问附一条可验收的建议条文，
+答复后马上写回需求清单再往下设计；问什么、不问什么、中途发现缺口和用户暂缓怎么处理见[需求澄清](references/requirement-clarifications.md)。
+降额等级（I/II/III 级）是一条需求：需求没写时一并问用户，附建议等级（[降额规范](references/shared/derating-rules.md)“降额等级从哪来”）；
+用户暂缓的按建议等级作为写明的假设设计。等级定下之前，点名降额规则的比较只按 `unset_level` 预判（[器件应力规范](references/shared/stress-spec.md)）。
 共用设计准则（G01–G09，见[共用设计准则库](references/shared/guideline-criteria.md)）按产品基线和本设计的功能电路类型、器件类别适用：
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、正 24 V 工业直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
@@ -146,13 +141,12 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 - **先选型再核数据手册**：每个核心器件角色（控制器、协议 IC、功率开关、磁件、隔离/反馈器件、MCU）按
   [core-part-selection.md](references/core-part-selection.md) 找候选、比较并记录到 `record/selection.json`：
-  至少两个候选、写明决定性条件和每个候选选中/淘汰的理由。原厂资料在本机知识库
+  至少两个候选、写明决定性条件和每个候选选中/淘汰的理由（唯一可选时写 `single_candidate_reason`，见 core-part-selection.md）。原厂资料在本机知识库
   `~/Documents/知识库/HardwareWiki/raw/`（数据手册、参考设计、应用笔记），用 `scripts/find_parts.py` 检索；
   每类器件干什么、选它看什么参数见 [part-roles.md](references/part-roles.md)，从"按功能找类"定二级类再找候选。
   库里没有合适候选才外部检索，下载的手册按任务 2.1 的资料规则存入工程资料目录。
-- **外部条件不确定时给出方案**：推荐候选依赖未公开的资料或行为（会产生外部资料待办）时，列出 2–3 个选型方案，
-  比较各自的外部依赖、代价和优缺点，给出 ASG 的建议，交用户决定。用户定下来之前不进入步骤 ②。
-  格式见 [core-part-selection.md](references/core-part-selection.md)。
+- **外部条件不确定时给出方案**：推荐候选依赖未公开的资料或行为（会产生外部资料待办）时，按 [core-part-selection.md](references/core-part-selection.md)
+  列出 2–3 个选型方案并给出 ASG 的建议，交用户决定；用户定下来之前不进入步骤 ②。
 - **选型确认（固定暂停点）**：核心器件选型做完后，把选型清单（角色、选定候选、主要依据、与方案文档已确认决定的异同、新增的关键料号）
   汇总成一次确认交给用户；用户确认（`decision` 写 `user:<日期>`）前不进入步骤 ②。方案文档已写明"用户已确认"且选型与之一致的器件
   一并列出即可，不另问；手册或计算证明某个已确认选择不成立的，列为"建议改动"连同证据一起问，不自行换方案。
@@ -211,11 +205,10 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   见 [设计待办记录](references/design-closure.md)。
 - 器件热可行性（功耗→结温）属于设计，在本任务算；散热实现才交 PCB。见 requirements-to-intent.md 第 4 节。
   损耗预算列出主要遗漏项及有依据的边界，不能用子总和证明达标。
-- **器件应力按降额等级核对**（按[器件应力规范](references/shared/stress-spec.md)）：关键器件与特殊器件在工作包络角点和瞬态下的
-  电压、电流、功率与温度应力，与额定比较的检查点名 `derating-rules.json` 里适用的规则，按本项目等级那一列取降额值；
-  额定取最坏温度下的保证值。只给一个系数的项对稳态与瞬态的最坏组合生效，手册单列的冲击、脉冲额定按表中比例比较。
-  常规件的规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。只审写出来的应力，不要求每颗器件、每条规则都有一条比较。
-  超过额定为 `failed`；在额定内但超过降额值为合格但有风险（应力），写 `improvement`（换额定更高的件或降低应力），
+- **器件应力按降额等级核对**：关键器件与特殊器件在工作包络角点和瞬态下的电压、电流、功率与温度应力，与额定比较的检查点名
+  `derating-rules.json` 里适用的规则；取值见[降额规范](references/shared/derating-rules.md)，判定见[器件应力规范](references/shared/stress-spec.md)，
+  记录写法见 [design-closure.md](references/design-closure.md) 的 `derating_version`。只审写出来的应力，不要求每颗器件、每条规则都有一条比较。
+  常规件的规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。超过额定为 `failed`；应力超幅按共用判法挂待办，其余应力风险写 `improvement`、
   列入报告的应力风险，不挡交付，不挂待办。
 - **参数逐项有来源**：每条计算在 `design-closure.json` 的 `parameters` 里列出用到的每个参数：值、单位、依据（`basis`）、
   位号和手册定位（`datasheet:<库内路径>#p<页>` 加表名/符号）。依据另有 `requirement`（来自需求，`source` 写 `req:<需求编号>`）
@@ -228,11 +221,8 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   关闭阶段在原理图之后的规则用一件技术转交待办引用；确实不适用的写进 `guideline_scope.not_applicable` 并写理由。
 
 **把计算落实为可采购的器件性能要求**：将实际需要核算的器件记入 `record/component-requirements.json`，由它统一生成设计网表属性、BOM规格和图面标注。字段及执行接口见 [器件性能要求](references/component-requirements.md)；新设计采用 `component_requirements_version: 1`，按用途分组筛选位号，不给每颗普通件增加全参数计算。
-- 每项要求写明位号、用途、参数、比较方向、数值/范围、单位、适用条件、计算/需求来源及依据性质。额定值与降额后的可用值分开；设计要求与所选器件保证值分开。
-- 放电电阻计算实际电流波形、起止电压和时间、峰值功率、单次电阻耗能、重复平均功耗及初始温度，给出能量/波形、重复间隔、累计次数及允许漂移要求；不能直接把电容总储能当作外部电阻实际耗能。采用保守上界或裕量分配时写明依据。
-- 电容按用途核耐压、实际偏压/温度下的有效容量、纹波/ESR或脉冲要求；电感按用途核实际温度/偏置下的电感量、饱和/有效电流和损耗。只记录本设计依赖的性能，不要求每颗器件核所有可能参数。
-- 合格标准料可引用受控规格及其适用工况，不强迫所有普通电阻逐颗比较供应商。不能用无来源的默认1%/0.125W补齐设计要求。
-- 数据不足时，由ASG提出有依据的工程假设和暂定性能要求，保留有条件结论与实际缺口；本可计算却尚未计算的，仍是设计未完成，不能用“待采购确认”代替。
+- 每项要求的字段、各类器件按用途核哪些性能（放电电阻的能量与波形、电容的有效容量、电感的饱和电流等）、受控标准料的引用和数据不足时的暂定要求，
+  见 [器件性能要求](references/component-requirements.md)。本可计算却尚未计算的，仍是设计未完成，不能用“待采购确认”代替。
 
 做完的标志：`audit_design_closure.py` 无错误；没有 `failed` 的计算；每条计算的结论、`rests_on` 与 `coverage` 与参数依据推出的一致。与额定比较的应力都点名适用降额规则；超降额未超额定按原规范列风险。每个已识别的性能核算项都有数值、条件和出处，或有明确的有条件要求与假设；仍缺可独立完成的计算时不得标记本任务完成。
 
@@ -253,8 +243,8 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 #### 2.4 设计网表
 
-将任务2.2的唯一性能记录按位号关联到设计网表：生成基本值、性能规格、采购定义方式及选型状态，不在绘图/BOM脚本另写一套默认值。具体器件的标称参数与设计允许范围使用不同字段，不能把“要求容差≤5%”与“所选器件实际为±1%”误判为冲突。
-准备脚本调用 `component_requirements.project` 和 `write_bom`，或运行 `audit_component_requirements.py --project-intent ... --write-bom ...`；记录不完整或候选未核准的，保留真实状态，不补默认料号。
+将任务2.2的性能记录按位号关联到设计网表，生成基本值、性能规格、采购定义方式及选型状态（接口见 [器件性能要求](references/component-requirements.md)）；
+不在绘图/BOM脚本另写一套默认值，记录不完整或候选未核准的保留真实状态，不补默认料号。
 
 写一份整板设计网表 `electrical-intent.json`：器件、网络 `{name: [ref.pin]}`、`no_connect`，以及每个器件的页面
 `fields.Circuit`。格式和规则见 [requirements-to-intent.md](references/requirements-to-intent.md) 第 5 节。
@@ -308,19 +298,14 @@ for n, (key, page) in enumerate(page_intents(board, rails=RAILS).items(), 1):
 - 先看 `s.plan` 给出的器件角色和网络标签角色。只给锚点写坐标，其余器件用与角色相符的画法从引脚推出。
   有意偏离绘图纲要时用 `s.justify(对象, 理由)` 记录。把分页方案的功能块传给 `Sheet(..., blocks={块名: [位号]})`：
   同一块内的器件之间不许用局部连接标签代替导线（HR-01），审计会列出只连一块的标签。
-- 间距只为通过检查而加大，通过后缩回：gap、stub、pitch、lead 和电源符号/标签引线超过 12 格（约 15 mm）
-  会进结构审计，要么缩小，要么 `justify(对象, 理由)` 写明为什么需要这段间距；
-  一页超过 3 处间距豁免本身就是审计不通过，改为折行或重新锚定。不得用加大间距把一页摊满。
-- 先列真实 planned 局部网络名及其字号。在相应 series 段或 own-pin stub 放置前，显式用
-  `max(原gap, s.name_run_steps(原net, font=原字号))` 预留直段，之后仍调用原 `s.name`。
-  多段链逐段按真实网络预算；不得全局加gap、缩字、改名或用标签绕过连线。预算不证明无遮挡或 KiCad 字体覆盖。
+- 间距只为通过检查而加大，通过后缩回：上限与豁免按 O7（超过 12 格进结构审计，一页超过 3 处间距豁免即审计不通过，改为折行或重新锚定）；
+  带小网络名的串联段或本引脚短线，放置前用 `s.name_run_steps` 预留直段，用法见 [drawing-recipes.md](references/drawing-recipes.md)。
 - `build()` 遇到硬缺陷会直接报错。`report["structure"]` 必须为 PASS，`report["readability"]["gate"]` 必须为 PASS。
   失败时按 O8 改结构（方向、间隙、顺序 → 锚点 → 拆行）后重建，不得手调坐标打补丁。
   `report["readability"]` 还给出 `cell_coverage`（有东西的 25.4 mm 格占比）、`part_groups`（只靠标签/电源符号相连的器件组）
   和 `fits_paper`：覆盖率低、组数多于分页方案的功能块、内容能放进更小的纸张，都说明这页要并块、缩间距或换纸。
-- 从 `component-requirements.json` 生成元件旁的基本规格和同页性能注释，不手工回抄。正式完成的图纸使用确定数值及适用条件；仍缺计算的审阅草稿明确标注“待计算”，不能凭此声明完成。
-  长要求在页计划预留位置，用 `Sheet.performance_notes(at)` 生成；元件旁显示同页索引，普通隐藏属性不算图面表达。
-- 性能要求使用“要求/至少/至多”等措辞；已核实的器件参数另标为器件额定或保证值。完整性能要求不能仅放隐藏属性、BOM或报告中，元件旁至少有可见规格或可见的同页要求引用。
+- 元件旁的基本规格和同页性能注释从 `component-requirements.json` 生成（长要求用 `Sheet.performance_notes(at)`），不手工回抄；
+  措辞与可见性要求见 [器件性能要求](references/component-requirements.md)。仍缺计算的审阅草稿标注“待计算”，不能凭此声明完成。
 - 图页脚本随交付版本一起保存；下一版只重生成有变化的页面。
 
 做完的标志：每页 `Sheet.build()` 不报错，`report["structure"]` 与 `report["readability"]["gate"]` 为 PASS；每页间距豁免不超过 3 处。
@@ -331,8 +316,7 @@ for n, (key, page) in enumerate(page_intents(board, rails=RAILS).items(), 1):
 （`kind="power"` 能量流、`"signal"` 控制链，线宽不同），`isolation()` 画隔离边界，`write()` 写出根图 `System_block`、
 各页（实例路径改写到根工程）、`.kicad_pro` 和 `sym-lib-table`；文字压线或系统框图审计不通过时直接报错。
 用法见 [drawing-recipes.md](references/drawing-recipes.md) 多页一节。
-第 1 页 `System_block` 按任务 1.2 的架构画：每条流向线在线旁写出它代表的电源轨或信号，两端都落在页块、箭头或另一条线上；
-隔离边界是一条写着“隔离”的直线，一次侧页块在一边、二次侧在另一边，不穿过任何页块。
+第 1 页 `System_block` 按任务 1.2 的架构画，要求见 [reference-driven-board-design.md](references/reference-driven-board-design.md) 的 System_block 一节。
 
 做完的标志：`Root.write()` 不报错，写出根图、各页、`.kicad_pro` 与 `sym-lib-table`。
 
@@ -348,16 +332,14 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 ```
 
 它一次完成：KiCad ERC / XML 网表 / PDF 导出，网表分区与器件身份逐脚对比设计网表（图上画出的网络名须等于设计网表里同一组引脚的网络名，
-只允许页路径前缀；KiCad 自动网络名不比），层次与 PDF 页数，根图的系统框图检查（`system_block`：流向线有名字、两端有着落、隔离边界不穿块、每个页块有线到达，悬空线和无名箭头算 FAIL），
+只允许页路径前缀；KiCad 自动网络名不比），层次与 PDF 页数，根图的系统框图检查（`system_block`），
 符号引脚完整性，分立器件符号含义与手册/型号后缀是否一致（`discrete_semantics`），可读性检查（零异网交叉、零三折以上两端连线、
 内容放得进更小纸张的页算 FAIL），以及每个有效页面的几何检查，汇总到 `summary.json`。
 只有全部检查项为 PASS 时结果才是 `AUTOMATED_PASS`。
 可以用 `scripts/deliver.py <交付目录>` 一次跑完出图、自动检查到打包，参数记在 `record/deliver.json`，见 [交付与设计报告](references/delivery-report.md)。
 
-- 新流程增加器件性能检查：核对用途对应的性能定义、数值/单位/条件/计算来源、选型符合性状态，以及设计网表/BOM/图面的一致性。相同规格不得分别硬编码在多个生成脚本中。
-- 以KiCad导出的属性/XML核规格绑定，以实际PDF核可见内容及同页引用。仅字段存在、字符串匹配或“已生成”标记都不能证明图面已表达。检查器覆盖不到的图面对象明确转任务4.2，不自动判通过。
-- 设计要求与候选实参分开比较：实际±1%可以满足“容差≤5%”，但料号实际±5%而“器件标称容差”写±1%属于信息冲突；MOV也不能被通用电阻模板覆写。
-- 无料号但完整采用规格采购的器件，不仅因缺MPN判失败；确需型号绑定的器件缺料号，或关键性能缺失/自相矛盾，仍不得当作完成。厂家未给保证值与本可计算却未计算分开处理。
+- 器件性能检查核对性能定义、选型符合性状态和设计网表/BOM/图面的一致性：规格绑定以 KiCad 导出的属性/XML 为准，可见内容以实际 PDF 为准，
+  判法见 [器件性能要求](references/component-requirements.md)；检查器覆盖不到的图面对象转任务 4.2，不自动判通过。
 - 新设计提供 `--design-closure`，核对需求实现、外部依赖、计算覆盖和证据是否最新；格式与边界见 [设计待办记录](references/design-closure.md)。未提供时明确为 NOT_CHECKED，不能据此声明全流程完成。
 - 新设计要求 ERC 零违规。重画工程时保留基线和最终两份原始 ERC，逐条确认没有新增违规，并披露继承的问题。
 - ERC 摘要按原始报告的 UUID/object 对应实际层次实例、引脚及 KiCad 网络，再归因到电源轨；
@@ -374,14 +356,11 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
   编码斜杠层次字段只用 [schematic-drawing-standards.md](references/schematic-drawing-standards.md) 的有限回退，不推广。
 - 工程的 ERC 规则不得设为忽略（`simulation_model_issue`、`footprint_filter` 除外），自动检查读取工程设置核对。
 - 失败时修改相应图页脚本，在新的运行目录重新生成并检查。不得为了降低计数而加 PWR_FLAG、加排除项或改引脚类型。
-- 受控的自动结构资格有两类，都在设计网表中逐网声明、用 `Sheet.power_flag()` 每网放一个 PWR_FLAG，由 `external_supply` 检查项核对：
-  只由连接器引入、板上没有电源输出脚驱动的电源或地（`external_supply`）；经一颗串联电阻、电感、磁珠或保险丝
-  从已有驱动的电源派生的电源脚供电网，例如 RC 滤波的模拟电源（`filtered_supply`，逐条列入设计报告）。声明格式与核对内容见
-  [requirements-to-intent.md](references/requirements-to-intent.md) 第 5 节“连接器角色与外部供电”。
-- 整流、变压器或分立稳压电路没有 KiCad `power_out` 时，不冒充连接器供电，也不修改器件引脚类型。
-  先复核实际能量来源、回流路径、极性、启动和故障状态，再使用 [分立供电复核](references/reviewed-circuit-supply.md)
-  的 `reviewed_circuit_supply`。该类是证据对应的人工供电语义结论；自动检查只核证据是否最新和 KiCad 拓扑，
-  不自动证明电压、电流、效率或保护成立。未完成复核时保留 ERC，不凭降低计数批准标记。
+- PWR_FLAG 只用于设计网表逐网声明的 `external_supply`（只由连接器引入、板上没有电源输出脚驱动的电源或地）和 `filtered_supply`
+  （经一颗串联电阻、电感、磁珠或保险丝从已有驱动的电源派生的供电网，逐条列入设计报告），用 `Sheet.power_flag()` 每网放一个，由 `external_supply` 检查项核对；
+  声明格式见 [requirements-to-intent.md](references/requirements-to-intent.md) 第 5 节“连接器角色与外部供电”。
+- 整流、变压器或分立稳压电路没有 KiCad `power_out` 时，不冒充连接器供电、不改引脚类型，按[分立供电复核](references/reviewed-circuit-supply.md)
+  的 `reviewed_circuit_supply` 处理；自动检查只核证据是否最新和 KiCad 拓扑，未完成复核时保留 ERC。
 - `symbol_integrity` 的 `unnamed_pins` 只作诊断（KiCad 运放、单门逻辑等符号的输入/输出脚按库惯例不写名字）。
   列出的每个器件（不限核心器件）都要在外围电路核对表里按数据手册名字逐脚对应，并在设计报告中列出这些脚；
   否则按引脚名核对时会对不上。
@@ -390,16 +369,12 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 #### 4.2 图面审阅
 
-在实际PDF上逐页检查性能标注：位号/注号能对应到元件，参数、单位、条件及“要求/器件保证/待核”含义清楚，表格可读且未压线。按位号记录性能标注的核对结果；隐藏属性完整不代替这一步。
+在实际 PDF 上逐页核对性能标注（位号/注号对应、参数与单位、“要求/器件保证/待核”含义清楚、表格未压线），按位号记录结果；隐藏属性完整不代替这一步。
 
-打开导出的 PDF，逐页按 `page-plan.json` 的读者任务追一遍：主路径、每个支持网络到对应引脚和正确的回流路径、
-重复通道、每个地域和隔离跨越。每页记录的路径条数不少于读者任务数；“看过所有页”“与上一版像素一致”都不算证据。
-`geometry.render_review_items` 里的图面待审对象逐条处置：每条处置写出在本版 PDF 上看到了什么
-（引脚号在引脚外侧、引脚名未被导线压住……）；没改动的页面也按本版 PDF 重新审阅，不沿用上一版的处置。
-`render_design_report.py` 核对每个图面待审对象都有处置，且处置不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256`
-须是本版 `schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256` 给出）。
-状态写 待返工（REWORK_REQUIRED）、待图面审阅（REVIEW_PENDING）或 已完成图面审阅（REVIEWED）。
-用户否决会重新打开图面审阅。见 [human-readable-routing.md](references/human-readable-routing.md) 第 4 节。
+打开导出的 PDF，逐页按 `page-plan.json` 的读者任务追主路径、支持网络与回流路径、重复通道、地域和隔离跨越；
+逐条处置 `geometry.render_review_items`，写出在本版 PDF 上看到了什么，没改动的页面也重新审阅，不沿用上一版的处置。
+追法、三种状态（待返工 / 待图面审阅 / 已完成图面审阅）和 `pdf_sha256` 的写法见 [human-readable-routing.md](references/human-readable-routing.md) 第 4 节
+与 [delivery-report.md](references/delivery-report.md) 的 `visual-review.json` 一行。用户否决会重新打开图面审阅。
 
 做完的标志：`visual-review.json` 为 `REVIEWED`，每页路径数不少于读者任务数，每个图面待审对象有本版的处置，`pdf_sha256` 对得上本版 PDF。
 
@@ -423,7 +398,8 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 技能或知识库改完后，在 `docs/improvement-ledger.md` 加条目（Event/Changed 两行，`scripts/check_ledger.py` 检查），
 再跑全部合成测试。
 
-资料覆盖待办写入 `library_gaps`，真实事件写入 `events`。`knowledge_missing` 区分有证据后果与待核归因；后果和来源分开登记。只有覆盖待办、没有真实事件时允许 `events` 为空；两者均空时仍用 `cause: none` 写明核对内容，不为凑事件数虚报知识缺陷。
+资料覆盖待办写入 `library_gaps`，真实事件写入 `events`；字段、`knowledge_missing` 的写法和两者均空时的处理见
+[delivery-report.md](references/delivery-report.md) 的 lessons schema 2 一节。不为凑事件数虚报知识缺陷。
 
 做完的标志：报告不拒绝 `lessons.json`；技能有改动时 `check_ledger.py` 为 PASS，全部合成测试通过。
 
@@ -493,10 +469,12 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 一个功能通常怎么实现、有几种实现方案、各自的必算项与已知坑 | [typical-circuits.md](references/typical-circuits.md) 与 `references/typical-circuits/` |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
+| 器件性能要求、BOM 与图面标注 | [component-requirements.md](references/component-requirements.md) |
+| KiCad 导出几何的范围 | [native-geometry.md](references/native-geometry.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
 | 共用设计准则（G01–G09，运行包版本以根目录 `shared-release.json` 为准）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
-| 器件应力降额：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
+| 共用规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR-01–HR-11、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |

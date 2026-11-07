@@ -10,13 +10,13 @@
 | 字段 | 含义 |
 |---|---|
 | `schema_version: 1`、`id`、`project_id` | 格式版本、任务、项目 |
-| `skill` | `ASG` |
+| `skill` | `ASG` 或 `SR`；本页只讲 `ASG` 任务 |
 | `design_version` | 当前可读版本号；每次交付另由任务 ID 区分 |
 | `phase` | 默认 `design_iteration`；明确要求设计定型时为 `schematic_freeze` |
 | `requirements` | 需求版本、目录、逐文件 SHA-256 |
 | `skills` | 技能路径和版本信息，由程序管理 |
 | `design` | 前一版设计交付目录及其哈希；首轮可为 null |
-| `previous_review` | 收到的审查意见（任何格式），首轮可为 null；按 [处理审查意见](review-comments.md) 逐条登记 |
+| `previous_review` | 前次审查意见，首轮可为 null；ASG 接受任何格式（SR 任务里是前次 SR 完整包）；按 [处理审查意见](review-comments.md) 逐条登记 |
 | `open_items` | 前一轮留下的待办 |
 | `clarification_answers` | 可选：对 ASG 上一轮提出的需求澄清的答复，每项 `{id, decision, text, by, date, source, requirement_files}`，按澄清编号对上；`requirement_files` 写是否让 ASG 直接改原始需求文件（见 [需求澄清](requirement-clarifications.md)） |
 | `output` | 本任务 result.json 的绝对路径 |
@@ -63,18 +63,26 @@
 
 ## 角色
 
+必需角色是审查方实际读取的文件，ASG 与 schematic-review 的交接约定用同一组名字：
+
+| 角色 | 指向 |
+|---|---|
+| `schematic` | `原理图/` 下唯一的根 .kicad_sch；其他图页也在 files 中 |
+| `netlist`、`render`、`bom` | `原理图/netlist.xml`、`原理图/schematic.pdf`、`原理图/BOM.csv` |
+| `requirements` | 本任务的全部需求文件（字节哈希与 task.json 一致），可多个 |
+
+可选的归档角色是 ASG 实际产出、随包收入的记录；审查方为保持独立不读取、不引用它们：
+
 | 角色 | 指向 |
 |---|---|
 | `report` | `设计报告.md` |
-| `schematic` | `原理图/` 下唯一的根 .kicad_sch；其他图页也在 files 中 |
-| `netlist`、`render`、`bom` | `原理图/netlist.xml`、`原理图/schematic.pdf`、`原理图/BOM.csv` |
 | `electrical_intent` | `record/electrical-intent.json`（设计网表） |
-| `design_closure` | `record/design-closure.json`（设计待办处理情况） |
+| `design_closure` | `record/design-closure.json`（需求追溯、计算、待办与技术转交） |
 | `native_summary` | `record/summary.json`（verify_schematic.py 原样输出） |
 | `visual_review` | `record/visual-review.json`（图面审阅） |
 | `delivery_evidence` | `record/delivery-evidence.json` |
 | `manifest` | `record/manifest.json` |
 | `review_responses` | `record/review-responses.json`；有审查意见时必填 |
 
-除 `review_responses` 外每个角色恰好一个文件。改版还应带上改动核对、动手前检查和复验记录（`record/` 内）。
+除 `requirements` 外每个角色恰好一个文件。改版还应带上改动核对、动手前检查和复验记录（`record/` 内）。
 临时文件放在技能目录以外的任意临时位置（默认 `$ASG_WORK_DIR`，未设置时用系统临时目录），不放进交付目录。

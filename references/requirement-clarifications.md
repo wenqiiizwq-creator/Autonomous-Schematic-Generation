@@ -3,7 +3,8 @@
 需求没说清、而设计要靠它定时，**当场问用户**，用户答复后**马上写回需求清单**，再按定下的需求往下设计；
 不把“需求没定”留到交付时才问（2026-10-27，用户：在 ASG 的设计中遇到需求未明的问题时，也应该及时和用户沟通）。
 问题和答复写在 `design-closure.json` 的 `clarifications`，本页是它的字段与核对约定。
-字段名和三种答复与 schematic-review 的需求澄清一致，审查方可以直接读。
+与 schematic-review 共享的字段：`id`、`requirement_ids`、`question`、`requirement_text`、`proposed_requirement`、`answer`（`decision`、`text`、`by`、`date`、`source`、`requirement_files`）；`found_in`、`merged_into` 是 ASG 独有字段。
+两边对暂缓（`DEFERRED`）的处理不同：ASG 按建议条文设计并挂 `requirement` 待办；交给审查方后，这些需求不审，列在审查报告“本次不审的范围”里。
 
 ## 问什么
 

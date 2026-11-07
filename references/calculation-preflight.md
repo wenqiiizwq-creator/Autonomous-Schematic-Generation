@@ -1,6 +1,16 @@
 # 计算条件记录 v1
 
 `scripts/design_preflight.py` 自成一体，独立运行，不依赖其他技能；修改后运行 `test_calculation_preflight.py`。
+
+schematic-review 有同名的约定和脚本，两边各自维护（审查方按独立复核的要求更严格）：
+
+| 项 | ASG | schematic-review |
+|---|---|---|
+| `ASSUMED`、`TYPICAL` 输入的 `conditions` | 可写可不写 | 必须写 |
+| `claim` 字段 | 没有，状态只由脚本推出 | 必须写，并与推出的状态一致 |
+| 表达式上限 | 不设上限（2026-10-23 起只保留服务电路正确性的检查，长表达式照常求值） | 长度 ≤2048、语法节点 ≤256 |
+| CONDITIONAL | 写明假设即可，不阻塞出图 | 不作通过证据 |
+
 在 ASG 里它用来记录设计计算的依据：CONDITIONAL 写明假设即可，不阻塞出图（见 [设计待办记录](design-closure.md)）。
 但结论必须由 acceptance 比较得出，写进 design-closure 的 `checks`；不满足门槛的只能是 FAIL/`failed`。
 `model`、`assumptions` 等说明文字用中文写。

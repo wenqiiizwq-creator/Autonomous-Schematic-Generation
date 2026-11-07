@@ -13,9 +13,7 @@
 2. `sheet = Sheet(intent, rails={...}, external=[...])`，读 `sheet.plan`：每个器件建议的角色和每个网络的标签角色。
 3. 按下面的绘图纲要写图页脚本：先放锚点，再按角色允许的画法画其他器件。只给锚点和有意的 Z 形段写坐标。
    每处有意的偏离在做出时用 `sheet.justify(part_or_net, reason)` 记录。
-   放置走线之前列出实际规划的局部网络名和字号。在相应的串联段或本引脚短线处显式预留
-   `max(existing_gap, sheet.name_run_steps(net, font))`，再用同一个原始逻辑名和字号调用 `name`。链中每个网络分别预算；
-   不要放大所有间隙，也不要改命名策略。
+   带小网络名的段先按下文 `name_run_steps` 一段预留直段。
 4. `root, report = sheet.build(name)`，然后写出 `dump(root)`。遇到任何硬缺陷 build 都会报错（见下）；改结构，不改症状。
 5. `report["structure"]` 必须为 PASS：每条发现要么已修正，要么是记录了理由的偏离。
 6. 运行 `scripts/verify_schematic.py <root.kicad_sch> --intent <设计网表> --out <新目录>`：一次完成 KiCad ERC、

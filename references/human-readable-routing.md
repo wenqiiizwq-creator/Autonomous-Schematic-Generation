@@ -150,8 +150,8 @@ signal B -- R --+---------- connector B
   （`field_placer.swapped_label_pairs`）；一个标签块靠近另一只器件、而那只器件自己的标签更近时，留给本审阅判断。
 
 记录页/功能块、位号、追过的路径、适用准则的发现和图片/来源身份。写着“看过所有页”的勾选不够，“与之前审阅过的 PDF 像素一致”也不够。
-在 `visual-review.json` 里每页写 `file`、`page-plan.json` 的每个读者任务至少一条 `paths`，以及每个 `render_review_items`（图面待审对象）
-一条处置，处置点名符号并写出看到了什么（引脚号在引脚外侧、引脚名未被导线压住）；同一句话抄到多个符号上会被 `render_design_report.py` 拒绝。
+`visual-review.json` 的字段与核对见 [delivery-report.md](delivery-report.md)；每条处置点名符号并写出看到了什么（引脚号在引脚外侧、引脚名未被导线压住），
+同一句话抄到多个符号上会被 `render_design_report.py` 拒绝。
 电气结果另外记录；ERC 和哈希是否最新都不能确立可读性。布图电气不变仍可能通不过这项审阅。
 
 使用这些**人工审阅状态**，不编造工具结果：

@@ -161,8 +161,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       常规件不逐颗核对，规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。
     - **电阻写额定功率**（用户 2026-10-27：设计时考虑功耗，除阻值和精度外还要写上功率等级，作为给以后的约束；与 schematic-review
       的无源应力预判同一判据）：电阻的最坏功耗 V²/R_min（R_min 取公差下限，未写公差按 ±5 %）超过按已写字段能买到的最弱件的降额值
-      ——封装最弱档的一半（0201 0.05 W、0402/0603 1/16 W、0805 0.1 W、1206 0.125 W、1210 0.25 W、2010 0.5 W、2512 1 W；
-      没写封装按 0402）× 本级 RES-SMD-P 取值（I 0.7、II 0.75、III 0.8；等级未定按设计准则库工程取值 `unset_level`，即 I 级）——时，功耗要考虑：
+      ——封装最弱档（[commodity-floors.json](shared/commodity-floors.json) 的片式电阻，没写封装按 0402）× 本级 RES-SMD-P 取值（[derating-rules.json](shared/derating-rules.json)；等级未定按设计准则库工程取值 `unset_level`，即 I 级）——时，功耗要考虑：
       写一条 `ref` 为该电阻、`unit` 为 `W` 或 `mW` 的功耗检查，并在设计网表的 `value` 写成 `阻值/公差/额定功率[/额定电压][/封装]`
       （如 `620/1%/0.125W`；或写在一个只含功率的字段里），额定功率取 ≥ 最坏功耗 ÷ 本级 RES-SMD-P 取值的标准档。
       写了功耗检查而没写额定功率的，审计记 `resistor_power_rating_missing`（给出最低额定）。功耗不要考虑的电阻不用写额定功率。
@@ -188,7 +187,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       待办阶段/状态不对记 `severe_stress_work_item_not_open`，等级不够记 `severe_stress_work_item_severity`。审计在该条
       `stress_risks` 里加 `required_severity`、`loosest_limit`、`margin_to_rating`，`derating.severe_thresholds` 写所用阈值；
       报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
-      共用层 stress-spec.md 说偏离“不另挂待办”，这里是 ASG 设计记录在其上加的要求，SR 的判法不变。
+      应力超幅是[器件应力规范](shared/stress-spec.md)判定表中的一档，这里是它在 ASG 设计记录里的写法。
     - 没有 `derating_version` 的记录照旧审计，报告在“记录版本”一行写明器件应力没有按降额等级核对。
   - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用设计准则（G01–G09，见[共用设计准则库](shared/guideline-criteria.md)）。
     `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
