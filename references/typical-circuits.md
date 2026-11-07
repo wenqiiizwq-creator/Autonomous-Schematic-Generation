@@ -19,37 +19,39 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 - 适用范围：这种实现方案在什么条件下优于别的实现方案
 - 核心器件类：指向 part-roles.md 的二级类
 - 必需外围：没有它电路不工作的元件
-- 必算项：任务 2.2 必须做的计算（对应 calculation-preflight 的类型）
-- 落实规则：这种实现方案落实的共用设计准则编号（`references/shared/guideline-criteria.md`，只写 active、按本模式电路类型/器件类别/全板触发、且实现方案正文确实做到了其 asg_action 的；没有写 无，可括注原因）
-- 已知坑：每条引用审查待办（review:<目录>/<编号>）或手册页码；没有来源的坑不写
+- 必算项（可选）：任务 2.2 的计算线索（对应 calculation-preflight 的类型）
+- 落实规则（可选）：这种实现方案落实的共用设计准则编号（`references/shared/guideline-criteria.md`，只写 active、按本模式电路类型/器件类别/全板触发、且实现方案正文确实做到了其 asg_action 的；没有写 无，可括注原因）
+- 已知坑（可选）：每条引用审查待办（review:<目录>/<编号>）或手册页码；没有来源的坑不写
 - 来源：参考设计板名（raw/Designexample/…）或手册路径
 ```
 
 ## 规则
 
 - 每种实现方案必须有来源；没有来源的实现方案不写。"已知坑"每条引用审查待办或手册页，这是规则 5（知识有来源）的落实。
-- 任务 3.1 写分页方案时，`page-plan.json` 每个功能块标注所用典型电路与实现方案：
+- 任务 3.1 写分页方案时，`page-plan.json` 每页用 `key_blocks: [块名]` 声明关键功能块（功率变换、保护、隔离、信号链、对外接口），关键块标注所用典型电路与实现方案：
   `"circuits": {"<块名>": "<典型电路文件名>#<实现方案名>"}`；分页方案第一页是架构页，免标。
-  没有适用典型电路文件的功能块，在 `lessons.json.library_gaps` 登记资料覆盖待办，说明检索与不适用理由、本版设计依据及拟补文件；分页后精确绑定图页和功能块。检查器逐块核对已有文件及实现方案，或该块的有效覆盖待办。覆盖待办不证明缺知识造成了问题，也不代替设计计算和数据手册依据；真实知识缺陷另在 `events` 中按证据归因。
+  没有适用典型电路文件的关键功能块，在 `lessons.json.library_gaps` 登记资料覆盖待办，说明检索与不适用理由、本版设计依据及拟补文件；分页后精确绑定图页和功能块。检查器对关键块核对已有文件及实现方案，或该块的有效覆盖待办；常规块可不标、不登记。显式标注的文件和方案名始终核对。`scheme-criteria.json` 中的块也按关键块核对，名称与页计划一致。覆盖待办不证明缺知识造成了问题，也不代替设计计算和数据手册依据；真实知识缺陷另在 `events` 中按证据归因。
 - 任务 1.3 关键功能块对照的规则写进 `record/scheme-criteria.json`，格式固定，报告按它核对（字段说明见 [交付与设计报告](delivery-report.md)）：
+  每个关键块还写 `decisive: [{condition, value}]`（条件及本板取值）和 `candidates: [{name, source, status, reason, circuit?, unverified?}]`：`source` 是沿用 datasheet/review/test/user 格式的非空来源列表，`status` 为 `selected` 或 `rejected`，`reason` 写选中或淘汰的理由；恰有一个选定方案，`unverified: true` 的候选不能选定。单候选另写 `only_viable` 说明查过哪些资料及只有一种可行的原因。`circuit` 是与页计划 `circuits` 一致的 `文件名#方案名`；省略时以 `name` 与该引用或其方案名精确比较。没有页计划时跳过一致性核对。
   每块写 `block`、`circuit_types`、`device_kinds`、`ports`（有对外端口为 true）和 `criteria`；`criteria` 只列会淘汰某个候选的规则，每项写 `id`、`excludes`（排除的候选）、
   `basis`（`requirement`、`standard`、`datasheet_abs_max` 能硬排除，只来自工程推论的写 `inference`，不作硬排除）、`how`（选定方案怎样满足）、`defer`（留给 2.2 的数值名）；
   `standard` 只用于 `nature` 为 `shall`/`should` 的规则（见设计准则库 `references/shared/guideline-criteria.json`）；`method` 是工程方法，`project` 是项目输入，按实际依据写 `requirement` 或 `inference`。
   `datasheet_abs_max` 只指器件手册 Absolute Maximum Ratings 表里的值，推荐工作条件不算。
   没有排除候选的规则不写进 `criteria`，放 `searched`。
-  `criteria` 为空时 `searched` 写明查过的范围。例：
+  `criteria` 为空时 `searched` 写明查过的范围。以下仅为格式示例，test 来源不代表工程证据：
 
   ```json
   {"version": 1, "blocks": [{"block": "24 V 现场输出保护", "circuit_types": ["POWER_PROTECTION", "DC_24V"], "device_kinds": ["tvs"],
+    "decisive": [{"condition": "现场输出口是否可能反接", "value": "可能，需在开关两态保护"}],
+    "candidates": [{"name": "输出钳位并阻断反灌", "source": ["test:格式示例"], "status": "selected", "reason": "满足本板现场输出口保护需求"},
+      {"name": "只在输入侧做保护", "source": ["test:格式示例"], "status": "rejected", "reason": "不能覆盖输出口"}],
     "ports": true, "searched": "select --typed-only --ports", "criteria": [{"id": "G07-023", "excludes": "只在输入侧做保护",
     "basis": "standard", "how": "输出口按开、关两种状态各设负向钳位路径", "defer": ["负向残压", "钳位器件脉冲能量"]}]}]}
   ```
-- 每版核对资料覆盖待办；有可复用的新实现方案、判据或已知坑时按来源补写或修订典型电路。确无新增内容时记录核对结果，不按篇数虚增。审查证实的知识缺陷涉及电路实现方案时，补入相应的“已知坑”或“必算项”，并关联事件来源。
+- 每版核对资料覆盖待办；有可复用的新实现方案、判据或已知坑时按来源补写或修订典型电路。确无新增内容时记录核对结果，不按篇数虚增。审查证实的知识缺陷涉及电路实现方案时，可以补入相应的“已知坑”或“必算项”，并关联事件来源。
 - 典型电路里不写具体型号的参数值；型号的比较在 `selection.json`。
-- 典型电路→准则映射（2026-11-02，与 SR `catalog.BASIS` 对称）：`scripts/typical_circuits.py` 读每个典型电路的电路类型和每种实现方案的落实规则；
-  `tests/test_typical_circuits.py` 守编号存在、active、不被基线排除、与声明的电路类型相容。分页方案标注了某实现方案，设计完成核对就要求
-  `guideline_scope.circuit_types` 含它声明的类型、它落实的规则按范围适用（否则 `guideline_scope_circuit`），再按普通覆盖要求被引用（`guideline_uncovered`）。
-  新增或修订实现方案时同时改落实规则行；规则只有部分被实现方案覆盖（如只算了相位裕量没算增益裕量）时不引用，补齐必算项后再加。
+- 新增方案的必算项、已知坑和落实规则不要求填全；已有内容保留，来源要求不变。编号存在与来源格式继续核对。
+- 典型电路的电路类型和落实规则只作参考，不联动 `guideline_scope`；准则适用范围只由本板的电路类型和器件类别决定，适用准则仍须按闭环要求引用覆盖。
 
 ## 现有典型电路
 

@@ -35,4 +35,4 @@ python3 -m unittest discover -s tests
 python3 scripts/check_ledger.py
 ```
 
-资料覆盖待办逐块登记，不按篇数补库；有可复用内容才修订典型电路。事件按有证据后果、待核归因、历史未复核分别展示，覆盖待办不计事件数；字段、统计与旧版兼容边界见 [交付与设计报告](../references/delivery-report.md#lessons-schema-2新交付)。旧版入口仍兼容，尚未强制新建身份识别或自动迁移。
+关键功能块的资料覆盖待办逐块登记，常规块可不标、不登记，不按篇数补库；有可复用内容才修订典型电路。事件按有证据后果、待核归因、历史未复核分别展示，覆盖待办不计事件数；字段、统计与旧版兼容边界见 [交付与设计报告](../references/delivery-report.md#lessons-schema-2新交付)。旧版入口仍兼容，尚未强制新建身份识别或自动迁移。

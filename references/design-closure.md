@@ -203,8 +203,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     `handoff` 进下游交接清单：一件待办或一条证据（交接表）可以引用多条，不要 `guideline_evidence`，不记 `guideline_evidence_repeated`，也满足 `guideline_downstream_without_work_item`。
     逐条的不跟批量的混：`item` 准则和批量准则写在同一件待办或同一条证据里、或 `item`、`handoff` 准则写进 `answers`，都记 `guideline_batch_mixed_item`。审计的 `guidelines.by_coverage` 分列三类（全是 `item` 时没有这一项），报告把 `project_input`、`handoff` 各合成一张表。
     设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
-    分页方案（`record/page-plan.json`）标注的典型电路做法声明了电路类型、列了落实规则（[典型电路库](typical-circuits.md)）：类型不在 `guideline_scope.circuit_types`，
-    或落实规则按范围不适用，记 `guideline_scope_circuit`（范围写少了）；审计在 `guidelines.circuit_criteria` 列出典型电路声称落实的规则及出处。
+    [典型电路库](typical-circuits.md) 的电路类型和可选落实规则只作方案比较参考，不扩展或约束 `guideline_scope`；本板的功能电路类型和器件类别决定准则适用范围，普通引用覆盖要求不变。
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
     （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
     记 `placeholder_value`；位号带 `?` 记 `unannotated_reference`。值写设计值，料号写手册订货信息里的完整订货码。

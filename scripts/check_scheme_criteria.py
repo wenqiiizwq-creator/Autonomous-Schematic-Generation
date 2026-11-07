@@ -20,8 +20,15 @@ def main(argv=None):
         scheme, problem = load(record / 'scheme-criteria.json')
     if problem:
         problems.append(problem)
+    plan = None
+    if (record / 'page-plan.json').exists():
+        plan, problem = load(record / 'page-plan.json')
+        if problem:
+            problems.append(problem)
+        elif not isinstance(plan, dict) or not isinstance(plan.get('pages'), list):
+            problems.append('record/page-plan.json 要写带 pages 列表的对象')
     if not problems:
-        problems += check_scheme_criteria(scheme, closure)
+        problems += check_scheme_criteria(scheme, closure, plan=plan)
     for problem in problems:
         print('PROBLEM:', problem)
     print('FAIL' if problems else 'PASS')

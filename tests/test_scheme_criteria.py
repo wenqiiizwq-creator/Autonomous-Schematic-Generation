@@ -28,6 +28,9 @@ def criterion(gid='G07-023', basis='standard'):
 def record(*criteria, ports=True, searched=''):
     return {'version': 1, 'blocks': [{'block': '24 V 入口与输出保护', 'circuit_types': ['POWER_PROTECTION', 'DC_24V'],
                                       'device_kinds': ['tvs'], 'ports': ports, 'searched': searched,
+                                      'decisive': [{'condition': '现场口是否可能反接', 'value': '可能'}],
+                                      'candidates': [{'name': '输出钳位', 'source': ['user:2026-11-07'], 'status': 'selected', 'reason': '覆盖输出口'},
+                                                     {'name': '只保护输入', 'source': ['user:2026-11-07'], 'status': 'rejected', 'reason': '不覆盖输出口'}],
                                       'criteria': list(criteria)}]}
 
 
@@ -180,3 +183,88 @@ def test_scheme_format_explains_basis_limits_and_nonexcluding_rules():
     assert '`standard` 只用于 `nature` 为 `shall`/`should` 的规则' in doc
     assert '`datasheet_abs_max` 只指器件手册 Absolute Maximum Ratings 表里的值，推荐工作条件不算' in doc
     assert '没有排除候选的规则不写进 `criteria`，放 `searched`' in doc
+
+
+def test_candidates_require_decisive_values_sources_and_reasons():
+    data = record(criterion())
+    b = data['blocks'][0]
+    b.pop('decisive')
+    b['candidates'][0]['source'] = []
+    b['candidates'][1].pop('reason')
+    problems = check(data)
+    assert any('decisive' in p for p in problems)
+    assert any('source' in p for p in problems)
+    assert any('reason' in p for p in problems)
+
+
+@pytest.mark.parametrize('candidates', [None, [], ['甲'], [{'name': '甲', 'source': ['wiki:线索']}],
+    [{'name': '甲', 'source': ['user:2026-11-07'], 'status': 'alternate', 'reason': '备选'}]])
+def test_incomplete_comparison_is_rejected(candidates):
+    data = record(criterion())
+    data['blocks'][0]['candidates'] = candidates
+    assert check(data)
+
+
+def test_only_one_viable_requires_search_explanation():
+    data = record(criterion())
+    b = data['blocks'][0]
+    b['candidates'] = b['candidates'][:1]
+    assert any('only_viable' in p for p in check(data))
+    b['only_viable'] = '查过两种控制器手册和反激参考设计，其余不能满足输入电压'
+    assert check(data) == []
+
+
+@pytest.mark.parametrize('unverified', [True, '未证实', 'false'])
+def test_unverified_candidate_cannot_be_selected(unverified):
+    data = record(criterion())
+    data['blocks'][0]['candidates'][0]['unverified'] = unverified
+    assert any('未证实' in p for p in check(data))
+
+
+def test_unverified_rejected_candidate_is_allowed_with_source():
+    data = record(criterion())
+    data['blocks'][0]['candidates'][1]['unverified'] = True
+    assert check(data) == []
+
+
+@pytest.mark.parametrize('statuses', [('selected', 'selected'), ('rejected', 'rejected')])
+def test_exactly_one_selected_candidate(statuses):
+    data = record(criterion())
+    for c, status in zip(data['blocks'][0]['candidates'], statuses):
+        c['status'] = status
+    assert any('只有一个 selected' in p for p in check(data))
+
+
+def test_cli_checks_selected_circuit_against_page_plan(tmp_path):
+    data = record(criterion())
+    b = data['blocks'][0]
+    b['candidates'][0]['circuit'] = 'dc-reverse-protection#甲'
+    records = write_records(tmp_path, data)
+    assert run_cli(tmp_path).returncode == 0  # task 1.3 precedes page planning
+    plan = {'schema_version': 1, 'pages': [{'file': 'a.kicad_sch', 'blocks': {b['block']: ['U1']},
+                                          'key_blocks': [b['block']], 'circuits': {b['block']: 'dc-reverse-protection#乙'}}]}
+    path = records / 'page-plan.json'
+    path.write_text(json.dumps(plan))
+    result = run_cli(tmp_path)
+    assert result.returncode != 0 and 'circuits 不一致' in result.stdout
+    plan['pages'][0]['circuits'][b['block']] = 'dc-reverse-protection#甲'
+    path.write_text(json.dumps(plan))
+    assert run_cli(tmp_path).returncode == 0
+    plan['pages'][0]['blocks'] = {'别的块': ['U1']}
+    path.write_text(json.dumps(plan))
+    assert '没有对应功能块' in run_cli(tmp_path).stdout
+    path.write_text('{')
+    assert run_cli(tmp_path).returncode != 0
+
+
+def test_key_page_block_requires_comparison_even_without_key_scope_type():
+    plan = {'pages': [{'key_blocks': ['对外接口']}]}
+    assert report.check_scheme_criteria(None, {}, plan=plan)
+    assert any('对外接口' in p for p in report.check_scheme_criteria(record(criterion()), closure(), plan=plan))
+
+
+def test_comparison_is_in_the_report():
+    data = record(criterion())
+    rendered = '\n'.join(report.render_scheme_criteria(data))
+    for value in ('功能块方案比较', '现场口是否可能反接', '输出钳位', '只保护输入', 'user:2026-11-07', '选定', '淘汰'):
+        assert value in rendered

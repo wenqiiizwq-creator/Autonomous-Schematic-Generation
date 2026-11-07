@@ -10,7 +10,7 @@ def test_v2_event_cannot_waive_all_blocks():
     lessons = {'schema_version': 2, 'library_gaps': [], 'events': [
         {'source': 'user:2026-11-05', 'cause': 'knowledge_missing',
          'change': 'references/typical-circuits/new.md'}]}
-    errors = report.check_block_circuits('a.kicad_sch', {'甲': ['R1'], '乙': ['R2']}, {}, {}, lessons)
+    errors = report.check_block_circuits('a.kicad_sch', {'甲': ['R1'], '乙': ['R2']}, {}, {}, lessons, key_blocks=['甲', '乙'])
     assert len(errors) == 2
 
 import copy
@@ -42,13 +42,13 @@ def test_exact_binding_and_explicit_bad_circuit(tmp_path):
     (tmp_path / 'basis.json').write_text('{"items": [{"id": "B1"}]}')
     data = lessons()
     assert report.check_lessons(data) == ([], {})
-    assert not report.check_block_circuits('a.kicad_sch', {'甲': ['R1']}, {}, {}, data, tmp_path)
-    assert report.check_block_circuits('b.kicad_sch', {'甲': ['R1']}, {}, {}, data, tmp_path)
-    assert report.check_block_circuits('a.kicad_sch', {'乙': ['R1']}, {}, {}, data, tmp_path)
+    assert not report.check_block_circuits('a.kicad_sch', {'甲': ['R1']}, {}, {}, data, tmp_path, key_blocks=['甲', '乙'])
+    assert report.check_block_circuits('b.kicad_sch', {'甲': ['R1']}, {}, {}, data, tmp_path, key_blocks=['甲', '乙'])
+    assert report.check_block_circuits('a.kicad_sch', {'乙': ['R1']}, {}, {}, data, tmp_path, key_blocks=['甲', '乙'])
     assert report.check_block_circuits('a.kicad_sch', {'甲': ['R1']}, {'甲': 'bad#x'}, {}, data, tmp_path)
     assert report.check_block_circuits('a.kicad_sch', {'甲': ['R1']}, {'甲': 'ok#bad'}, {'ok': {'x'}}, data, tmp_path)
     (tmp_path / 'basis.json').unlink()
-    assert report.check_block_circuits('a.kicad_sch', {'甲': ['R1']}, {}, {}, data, tmp_path)
+    assert report.check_block_circuits('a.kicad_sch', {'甲': ['R1']}, {}, {}, data, tmp_path, key_blocks=['甲', '乙'])
 
 
 @pytest.mark.parametrize('field,value', [('id', ''), ('page', []), ('block', None), ('reason', ''),
@@ -190,3 +190,22 @@ def test_v2_bad_event_list_is_reported(value):
         assert any('events' in p for p in d.report()[1])
     finally:
         d.cleanup()
+
+
+def test_routine_blocks_need_neither_patterns_nor_gaps_but_bad_references_fail():
+    data = lessons([])
+    blocks = {'常规': ['R1'], '关键': ['U1']}
+    assert not report.check_block_circuits('a.kicad_sch', blocks, {}, {}, data)
+    errors = report.check_block_circuits('a.kicad_sch', blocks, {}, {}, data, key_blocks=['关键'])
+    assert len(errors) == 1 and '关键' in errors[0]
+    assert report.check_block_circuits('a.kicad_sch', blocks, {'常规': 'bad#x'}, {}, data)
+
+
+def test_scheme_blocks_are_key_even_without_page_key_declaration():
+    plan = {'schema_version': 1, 'pages': [{'file': 'a.kicad_sch', 'reader_tasks': ['跟随电源'],
+            'blocks': {'关键': ['U1'], '常规': ['R1']}}]}
+    intent = {'components': [{'ref': 'U1'}, {'ref': 'R1'}]}
+    visual = {'pages': [{'file': 'a.kicad_sch', 'paths': ['电源路径']}]}
+    problems = report.check_page_plan(plan, intent, visual, lessons=lessons([]),
+                                     scheme={'blocks': [{'block': '关键'}]})
+    assert len(problems) == 1 and '关键' in problems[0]

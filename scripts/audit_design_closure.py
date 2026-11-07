@@ -11,7 +11,6 @@ import math
 import re
 from pathlib import Path
 from design_frontier import frontier
-import typical_circuits
 import guideline_criteria
 import operating_inputs
 import stress_check
@@ -833,20 +832,6 @@ def component_guidelines(artifact_root, error):
         return {}
 
 
-def page_plan_circuits(artifact_root, error):
-    """The `<模式>#<做法>` references the page plan's blocks name (record/page-plan.json), or [] without a plan."""
-    path = Path(artifact_root) / 'record' / 'page-plan.json'
-    if not path.is_file():
-        return []
-    try:
-        plan = json.loads(path.read_text(encoding='utf-8'))
-        return [ref for page in plan.get('pages') or [] if isinstance(page.get('circuits'), dict)
-                for ref in page['circuits'].values() if text(ref)]
-    except (ValueError, AttributeError, TypeError) as exc:
-        error('schema', 'record/page-plan.json: %s' % exc)
-        return []
-
-
 GUIDELINE_EVIDENCE_SHARE = 3
 
 
@@ -954,16 +939,6 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         if gid in found['covered'] and gid not in by_work and not (classes.get(gid) == 'handoff' and gid in by_evidence) \
                 and classes.get(gid) != 'project_input':
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
-    # The typical-circuit implementations the page plan names (typical_circuits.py) declare circuit types and the rules they put into
-    # practice: the scope must list those types, and a claimed rule the scope leaves inapplicable means the scope is short.
-    circuit = typical_circuits.claimed(page_plan_circuits(artifact_root, error)) if artifact_root else {'circuit_types': {}, 'criteria': {}}
-    for t, refs in sorted(circuit['circuit_types'].items()):
-        if t not in scope['circuit_types']:
-            error('guideline_scope_circuit', '%s：典型电路 %s 声明电路类型 %s，guideline_scope.circuit_types 没有它' % (t, '、'.join(refs), t))
-    for gid, refs in sorted(circuit['criteria'].items()):
-        if gid not in found['applicable'] and gid not in found['unknown_cited']:
-            error('guideline_scope_circuit', '%s：典型电路 %s 的实现方案落实它，但按 guideline_scope 它不适用；补电路类型或器件类别' % (gid, '、'.join(refs)))
-    found['circuit_criteria'] = {gid: refs for gid, refs in sorted(circuit['criteria'].items())}
     found.update(guideline_criteria.shared_versions(bundle=library))
     if found.get('by_coverage'):
         found['project_input_tbr'] = [g for g in found['by_coverage']['project_input'] if answered.get(g) == 'TBR']

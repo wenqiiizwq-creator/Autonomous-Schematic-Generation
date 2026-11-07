@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""典型电路库（references/typical-circuits/*.md）的读取：每个典型电路声明的电路类型、每种实现方案落实的共用设计准则。
-
-典型电路文件头部一行 `电路类型：<词表名>[、<词表名>…]`（没有对应类型写 `无`），每种实现方案一条 `- **落实规则**：G0x-nnn[、…]`（写 `无` 时可带括号说明）。
-这是 ASG 一侧的典型电路→准则映射，与 SR 的 `catalog.BASIS`（SR 规则→设计准则）对称；分页方案用了哪个做法，
-设计完成核对就要求它落实的规则被引用（audit_design_closure.audit_guidelines）。
-"""
+"""读取典型电路的选择资料及可选的落实规则。规则仅供参考，不决定本板准则适用范围。"""
 import re
 from pathlib import Path
 
@@ -22,7 +17,7 @@ def _names(rest):
 
 def load(circuits_dir=None):
     """{typical circuit id: {title, function, circuit_types: [..] | None, implementations: {name: {criteria: [..] | None}}}};
-    None means the line is missing (the tests and the audit tell that apart from an explicit 无)."""
+    None means the optional rule line is absent; an explicit 无 is an empty list."""
     circuits_dir = Path(CIRCUITS_DIR if circuits_dir is None else circuits_dir)   # resolved per call so tests can point elsewhere
     index = {}
     for md in sorted(circuits_dir.glob('*.md')) if circuits_dir.is_dir() else []:
@@ -43,20 +38,3 @@ def load(circuits_dir=None):
                 info['implementations'][current]['criteria'] = [] if rest.startswith(NONE) else RULE_ID.findall(rest)
         index[md.stem] = info
     return index
-
-
-def claimed(references, patterns=None):
-    """What the pattern implementations a page plan names (`<模式>#<做法>` strings) declare: {'circuit_types': {type: [ref..]},
-    'criteria': {criterion id: [ref..]}}. Unknown circuits or implementations are skipped (render_design_report reports them)."""
-    patterns = load() if patterns is None else patterns
-    out = {'circuit_types': {}, 'criteria': {}}
-    for ref in sorted(set(references)):
-        pid, _, approach = str(ref).partition('#')
-        info = patterns.get(pid)
-        if not info or approach not in info['implementations']:
-            continue
-        for t in info['circuit_types'] or []:
-            out['circuit_types'].setdefault(t, []).append(ref)
-        for gid in info['implementations'][approach]['criteria'] or []:
-            out['criteria'].setdefault(gid, []).append(ref)
-    return out

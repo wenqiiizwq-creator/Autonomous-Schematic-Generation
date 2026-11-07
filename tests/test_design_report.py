@@ -717,13 +717,15 @@ class DesignReportTests(unittest.TestCase):
         plan = json.loads((self.d.record / 'page-plan.json').read_text())
         page = plan['pages'][0]
         page['circuits'] = {}
+        page['key_blocks'] = ['稳压']
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
         self.assertIn('board.kicad_sch：功能块“稳压”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/', problems)
         self.d.write('lessons.json', {'schema_version': 1, 'events': [
             {'source': 'user:2026-10-19', 'cause': 'knowledge_missing', 'change': 'references/typical-circuits/ldo-regulator.md 新增'}]})
         _, problems = self.d.report()
-        self.assertEqual([], problems)
+        self.assertFalse(any('没有标注典型电路' in p for p in problems), problems)
+        self.assertTrue(any('scheme-criteria.json' in p for p in problems), problems)
         page['circuits'] = {'稳压': 'no-such#做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()

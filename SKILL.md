@@ -133,14 +133,13 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 #### 1.3 功能块实现方案
 
-每个功能块先在 [典型电路库](references/typical-circuits.md) 里找实现方案（`find_parts.py --circuits <功能>`）：
-实现方案给出核心器件类、必需外围、必算项和已知坑；库内没有适用文件的功能块在 `lessons.json.library_gaps` 逐块登记资料覆盖待办，设计完成后补写典型电路文件。发现缺少知识导致具体设计问题时，另在 `events` 登记 `knowledge_missing`，写明缺少的途径、判据或已知坑及后果证据；已有规则未落实的按 `rule_not_enforced` 归因。
+关键功能块先在 [典型电路库](references/typical-circuits.md) 里找候选方案（`find_parts.py --circuits <功能>`，并看文件里的相邻文件）：按文件的决定条件逐条写出本板取值，对照每种方案的适用范围和排除条件，选出方案并写明其他候选被淘汰的理由。库里候选不足或文件标`未比较`时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。库内没有适用文件的关键功能块在 `lessons.json.library_gaps` 登记。
 
 关键功能块（功率变换拓扑、保护架构、隔离方式、信号链架构、对外接口）定方案前，先用 `guideline_criteria.py select` 按该块的电路类型和器件类别列出按类型触发的规则，有对外端口的块再加上端口矩阵对应的 G07 规则；从中找出会淘汰某个候选方案的规则，逐条写明它排除了哪个候选、选定方案怎样满足、哪些数值留给任务 2.2 核算，记入 `record/scheme-criteria.json`。没有规则能淘汰候选的块写明查过的规则范围。不要求逐条列出全部适用规则，其余留到闭环时核对。
 
 实现方案同时指出器件的设计用途、工作状态和需要核算的性能。放电、吸收、检流、限流、滤波等用途触发相应核算；“脉冲/浪涌”等关键词触发性能要求核验，不自动推出某个具体料号。普通器件可复用受控标准物料规范，仍须确认本设计工况在其适用范围内。
 
-做完的标志：每个功能块有选定的典型电路与实现方案，或在 `lessons.json.library_gaps` 有对应功能块的资料覆盖待办（任务 3.1 完成后绑定图页）；每个关键功能块在 `record/scheme-criteria.json` 写明了会淘汰候选的规则及其结论，或写明查过的范围；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。资料覆盖待办不代替实际设计依据与核算。
+做完的标志：每个关键功能块在 `record/scheme-criteria.json` 写明了决定条件、候选及来源、选中和淘汰的理由，以及会淘汰候选的规则或查过的范围；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。
 写完运行 `check_scheme_criteria.py <设计目录>`，无问题再结束任务 1.3。
 
 #### 1.4 核心器件选型与方案确认
@@ -278,8 +277,8 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 按功能、隔离/电压域和可读面积分页；几个很小的功能块合成一页，不单独占一张 A3。
 为每页写一张简短的分页方案，内容包括：读者任务（跟随能量流、看懂反馈、追一个受保护接口……）、
 功能块及每块的位号、主路径、电源轨、出页网络及目的功能/页码、标签边界。先保证一条功能路径易读，再决定拆页或加大纸张。
-分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`patterns`），本页每个器件都要属于一个功能块，
-每个功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有典型电路的块要在 `lessons.json` 登记）；
+分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`key_blocks`、`circuits`），本页每个器件都要属于一个功能块，
+每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有典型电路的关键块要在 `lessons.json` 登记）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](references/human-readable-routing.md) 第 1 节。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
@@ -288,7 +287,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 - 按绘图纲要 O1–O8 决定页面流向、锚点、器件归属、画法、出线、标签、间距和修复顺序，见
   [drawing-recipes.md](references/drawing-recipes.md)。
 
-做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与典型电路齐全，每个器件属于一个功能块。
+做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与关键块的典型电路或资料覆盖待办齐全，每个器件属于一个功能块。
 
 #### 3.2 图页脚本
 
@@ -420,7 +419,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 写来源（`review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:…`、`user:<日期>`）、归因
 （`rule_missing`/`rule_not_enforced` 改 `scripts/`，`knowledge_missing`/`knowledge_wrong` 改 `references/` 或知识库，
 `judgment` 写 `why_not_rule`）和改了哪个文件的哪一行；确实没学到的写 `cause: none` 并引用核对过的页码。
-泛泛的总结不算，报告会拒绝。首版交付后用 SR 审一次本板，审查发现按本节归因；落在某个典型电路上的坑写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
+泛泛的总结不算，报告会拒绝。首版交付后用 SR 审一次本板，审查发现按本节归因；落在某个典型电路上的坑可以写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
 技能或知识库改完后，在 `docs/improvement-ledger.md` 加条目（Event/Changed 两行，`scripts/check_ledger.py` 检查），
 再跑全部合成测试。
 

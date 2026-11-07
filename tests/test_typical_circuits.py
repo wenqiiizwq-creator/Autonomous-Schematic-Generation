@@ -1,6 +1,4 @@
-"""The circuit-pattern library maps its implementations to shared guideline rules (typical_circuits.py): every pattern declares
-its vocabulary circuit types, every approach lists the active rules it puts into practice, and the closure audit holds a
-design to what the page plan's patterns claim."""
+"""典型电路选择资料及来源检查；不以库声明强制设计准则范围。"""
 import copy
 import json
 import sys
@@ -29,23 +27,15 @@ class PatternFileTests(unittest.TestCase):
             self.assertIsNotNone(info['circuit_types'], '%s 缺 电路类型： 一行（没有对应类型写 无）' % pid)
             self.assertTrue(set(info['circuit_types']) <= names, (pid, info['circuit_types']))
 
-    def test_every_approach_lists_its_rules_and_they_fit(self):
+    def test_optional_rules_if_present_name_existing_active_rules(self):
         for pid, info in CIRCUITS.items():
             self.assertTrue(info['implementations'], pid)
             for name, approach in info['implementations'].items():
-                rules = approach['criteria']
-                self.assertIsNotNone(rules, '%s#%s 缺 落实规则 一行（没有写 无）' % (pid, name))
+                rules = approach['criteria'] or []
                 self.assertEqual(len(rules), len(set(rules)), (pid, name))
                 for gid in rules:
                     self.assertIn(gid, RULES, (pid, name, gid))
-                    rule = RULES[gid]
-                    self.assertEqual(rule['status'], 'active', (pid, name, gid))
-                    baselines = rule['applies_when'].get('baselines') or []
-                    self.assertTrue(not baselines or LIBRARY['default_baseline'] in baselines, (pid, name, gid))
-                    when = rule['applies_when']
-                    self.assertTrue(when.get('board') or when.get('device_kinds')
-                                    or set(when.get('circuit_types') or []) & set(info['circuit_types']),
-                                    '%s#%s 引用 %s，但它既不是全板规则、不按器件类别触发，也不命名典型电路声明的电路类型' % (pid, name, gid))
+                    self.assertEqual(RULES[gid]['status'], 'active', (pid, name, gid))
 
     def test_every_known_pitfall_cites_a_review_item_or_datasheet_page(self):
         # typical-circuits.md 规则：已知坑每条引用审查待办或手册页（校准板收口 2026-11-02 补写的 12 个、Matrix R2 2026-11-04 补写的 9 个；早期文件另行整理）
@@ -83,11 +73,6 @@ class PatternFileTests(unittest.TestCase):
         self.assertEqual(info['circuit_types'], [])
         self.assertEqual(info['implementations']['做法一']['criteria'], [])
 
-    def test_claimed_collects_types_and_rules_of_the_named_implementations(self):
-        got = typical_circuits.claimed(['pfc-boost#CrM/多模 PFC 控制器 + 外置 MOSFET + 升压二极管', 'no-such#做法',
-                                        'zcd-sensing#不存在的做法'])
-        self.assertEqual(got['circuit_types'], {'POWER_CONVERTER': ['pfc-boost#CrM/多模 PFC 控制器 + 外置 MOSFET + 升压二极管']})
-        self.assertEqual(set(got['criteria']), set(CIRCUITS['pfc-boost']['implementations']['CrM/多模 PFC 控制器 + 外置 MOSFET + 升压二极管']['criteria']))
 
 
 def card(rid, **changes):
@@ -146,35 +131,16 @@ class PatternClosureTests(unittest.TestCase):
     def codes(self, result):
         return {e['code'] for e in result['errors']} | {p['code'] for p in result['pending']}
 
-    def test_a_design_citing_what_its_patterns_claim_passes_and_lists_them(self):
-        result = self.run_audit()
-        self.assertFalse({c for c in self.codes(result) if c.startswith('guideline')}, result)
-        self.assertEqual(result['guidelines']['circuit_criteria'],
-                         {'G03-001': ['test-pattern#做法甲'], 'G05-001': ['test-pattern#做法甲']})
-
-    def test_a_pattern_type_missing_from_the_scope_is_an_error(self):
+    def test_pattern_metadata_does_not_expand_board_scope(self):
         self.record['guideline_scope']['circuit_types'] = []
-        self.record['calculations'][0]['guidelines'] = ['G01-001', 'G05-001']
-        result = self.run_audit()
-        self.assertIn('guideline_scope_circuit', self.codes(result))
-        items = [e['item'] for e in result['errors'] if e['code'] == 'guideline_scope_circuit']
-        self.assertTrue(any(i.startswith('POWER_CONVERTER：典型电路 test-pattern#做法甲 声明电路类型') for i in items), items)
-        self.assertTrue(any(i.startswith('G03-001：典型电路 test-pattern#做法甲 的实现方案落实它') for i in items), items)
-
-    def test_a_claimed_rule_the_scope_leaves_out_is_an_error_while_an_uncited_one_is_pending(self):
         self.record['guideline_scope']['device_kinds'] = []
         self.record['calculations'][0]['guidelines'] = ['G01-001']
         result = self.run_audit()
-        codes = self.codes(result)
-        self.assertIn('guideline_scope_circuit', codes)        # G05-001 is claimed but the scope has no fuse
-        self.assertIn('guideline_uncovered', codes)            # G03-001 is applicable and not cited
-        self.assertEqual([e['item'][:7] for e in result['errors'] if e['code'] == 'guideline_scope_circuit'], ['G05-001'])
-
-    def test_without_a_page_plan_nothing_is_claimed(self):
-        (self.root / 'record' / 'page-plan.json').unlink()
-        result = self.run_audit()
         self.assertFalse({c for c in self.codes(result) if c.startswith('guideline')}, result)
-        self.assertEqual(result['guidelines']['circuit_criteria'], {})
+
+    def test_board_applicable_rules_still_require_coverage(self):
+        self.record['calculations'][0]['guidelines'] = ['G01-001']
+        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
 
 
 if __name__ == '__main__':

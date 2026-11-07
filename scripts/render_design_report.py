@@ -350,8 +350,8 @@ def check_library_gaps(lessons, plan=None, root=None, circuits_dir=CIRCUITS_DIR)
     return errors, valid
 
 
-def check_block_circuits(name, blocks, patterns, implementations, lessons, root=None):
-    """Each functional block names an existing pattern approach, or lessons.json registers the gap."""
+def check_block_circuits(name, blocks, patterns, implementations, lessons, root=None, key_blocks=()):
+    """Each key functional block names an existing pattern approach, or lessons.json registers the gap."""
     errors = []
     lessons = lessons if isinstance(lessons, dict) else {}
     version = lessons.get('schema_version', 1)
@@ -364,7 +364,7 @@ def check_block_circuits(name, blocks, patterns, implementations, lessons, root=
     for block in blocks:
         ref = patterns.get(block)
         if not text(ref):
-            if not registered and (name, block) not in valid_gaps:
+            if block in key_blocks and not registered and (name, block) not in valid_gaps:
                 errors.append('%s：功能块“%s”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/' % (name, block) if version == 1 else '%s：功能块“%s”没有典型电路或有效的 library_gaps 逐块覆盖待办' % (name, block))
             continue
         pid, _, approach = ref.partition('#')
@@ -375,7 +375,7 @@ def check_block_circuits(name, blocks, patterns, implementations, lessons, root=
     return errors
 
 
-def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DIR, root=None):
+def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DIR, root=None, scheme=None):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
@@ -399,6 +399,12 @@ def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DI
         if not isinstance(blocks, dict) or not blocks or not all(isinstance(v, list) and v for v in blocks.values()):
             errors.append('%s：要按功能块列出器件（blocks）' % name)
             continue
+        key_blocks = page.get('key_blocks', [])
+        if not isinstance(key_blocks, list) or any(not text(b) or b not in blocks for b in key_blocks):
+            errors.append('%s：key_blocks 必须列出本页 blocks 中的关键功能块名' % name)
+            key_blocks = []
+        key_blocks = set(key_blocks) | {b['block'] for b in ((scheme or {}).get('blocks') or [])
+                                        if isinstance(b, dict) and text(b.get('block')) and b['block'] in blocks}
         placed = {}
         for block, refs in blocks.items():
             for ref in refs:
@@ -409,7 +415,7 @@ def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DI
                 placed[ref] = block
         cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task 3.3)
         if not cover and 'system_block' not in name.lower():
-            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, lessons, root=root)
+            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, lessons, root=root, key_blocks=key_blocks)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))
         if missing:
             errors.append('%s：这些器件不属于任何功能块：%s' % (name, '、'.join(missing[:6])))
@@ -959,28 +965,91 @@ def render_guidelines(guidelines):
     return out
 
 
-def check_scheme_criteria(data, closure, bundle=None):
+def check_scheme_candidates(block, where, plan=None):
+    """核对选择记录；来源语义和决定条件的工程充分性仍须回原文人工核对。"""
+    problems = []
+    decisive = block.get('decisive')
+    if not isinstance(decisive, list) or not decisive or any(
+            not isinstance(d, dict) or not text(d.get('condition')) or not text(d.get('value')) for d in decisive):
+        problems.append(where + ' decisive 要列出 {condition, value}：决定条件及本板取值')
+    candidates = block.get('candidates')
+    if not isinstance(candidates, list) or not candidates:
+        return problems + [where + ' candidates 要写候选比较或只有一种可行方案及检索说明']
+    if len(candidates) == 1 and not text(block.get('only_viable')):
+        problems.append(where + ' 只有一种可行方案时要在 only_viable 写明查过哪些资料及原因')
+    chosen, names = [], set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict) or not text(candidate.get('name')):
+            problems.append(where + ' 候选要写 name')
+            continue
+        name = candidate['name']
+        if name in names:
+            problems.append(where + ' 候选名称重复：' + name)
+        names.add(name)
+        sources = candidate.get('source')
+        if not isinstance(sources, list) or not sources or any(not text(v) or not SOURCE_PATTERN.fullmatch(v) for v in sources):
+            problems.append(where + ' 候选“%s”要写 source 来源列表（沿用 datasheet/review/test/user 格式）' % name)
+        if 'unverified' in candidate and not isinstance(candidate['unverified'], bool):
+            problems.append(where + ' 候选“%s”的 unverified 必须是布尔值' % name)
+        if candidate.get('status') not in ('selected', 'rejected'):
+            problems.append(where + ' 候选“%s”status 必须是 selected/rejected' % name)
+        if not text(candidate.get('reason')):
+            problems.append(where + ' 候选“%s”要写选中或淘汰理由 reason' % name)
+        if candidate.get('status') == 'selected':
+            chosen.append(candidate)
+            if candidate.get('unverified') is not None and candidate.get('unverified') is not False:
+                problems.append(where + ' 未证实（unverified）候选不能被选定：' + name)
+    if len(chosen) != 1:
+        problems.append(where + ' 必须有且只有一个 selected 候选')
+    if plan is not None and len(chosen) == 1:
+        pages = plan.get('pages') if isinstance(plan, dict) else []
+        pages = pages if isinstance(pages, list) else []
+        matches = [p for p in pages if isinstance(p, dict) and isinstance(p.get('blocks'), dict)
+                   and block['block'] in p['blocks']]
+        selected = chosen[0]
+        expected = selected.get('circuit') or selected['name']
+        if 'circuit' in selected and (not text(selected['circuit']) or '#' not in selected['circuit']):
+            problems.append(where + ' circuit 要写 文件名#方案名')
+        if not matches:
+            problems.append(where + ' 在 page-plan.json 中没有对应功能块')
+        for page in matches:
+            ref = (page.get('circuits') or {}).get(block['block']) if isinstance(page.get('circuits'), dict) else None
+            if not text(expected) or not text(ref) or expected not in ((ref,) if 'circuit' in selected else (ref, ref.partition('#')[2])):
+                problems.append(where + ' selected 方案与 page-plan.json 的 circuits 不一致')
+    return problems
+
+
+def check_scheme_criteria(data, closure, bundle=None, plan=None):
     """record/scheme-criteria.json (SKILL.md task 1.3): required when guideline_scope names a key-block circuit type.
     Each key circuit type of the scope is in some block; each listed rule exists, is active and is triggered by that
     block's types and kinds (with the G07 port rules when the block has external ports); a block with no rule says
     what it searched. Returns the problems."""
+    closure = closure if isinstance(closure, dict) else {}
     scope = closure.get('guideline_scope') if isinstance(closure.get('guideline_scope'), dict) else {}
     key = [t for t in scope.get('circuit_types') or [] if t in KEY_CIRCUIT_TYPES]
+    pages = plan.get('pages') if isinstance(plan, dict) else []
+    pages = pages if isinstance(pages, list) else []
+    page_keys = {b for p in pages if isinstance(p, dict) and isinstance(p.get('key_blocks'), list)
+                 for b in p['key_blocks'] if isinstance(b, str)}
     if data is None:
         return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见 SKILL.md 任务 1.3）'
-                % '、'.join(key)] if key else []
+                % '、'.join(key or sorted(page_keys))] if key or page_keys else []
     if not isinstance(data, dict) or data.get('version') != 1 or not isinstance(data.get('blocks'), list) or not data['blocks']:
         return ['scheme-criteria.json 要写 version 1 和非空的 blocks 列表（见 delivery-report.md）']
     bundle = bundle or guideline_criteria.load()
     cards = {r['id']: r for r in bundle['criteria']}
     baseline = scope.get('baseline')
     problems, named = [], set()
+    block_names = set()
     for i, block in enumerate(data['blocks'], 1):
         where = 'scheme-criteria.json 第 %d 块' % i
         if not isinstance(block, dict) or not text(block.get('block')):
             problems.append('%s 要写 block（功能块名）' % where)
             continue
         where = 'scheme-criteria.json“%s”' % block['block']
+        if block['block'] in block_names:
+            problems.append(where + ' 功能块名重复')
+        block_names.add(block['block'])
         types, kinds = block.get('circuit_types'), block.get('device_kinds', [])
         if not isinstance(types, list) or not types or not isinstance(kinds, list):
             problems.append('%s 要写 circuit_types（非空列表）和 device_kinds（列表）' % where)
@@ -989,6 +1058,7 @@ def check_scheme_criteria(data, closure, bundle=None):
         if outside:
             problems.append('%s 的 %s 不在 guideline_scope 里' % (where, '、'.join(map(str, outside))))
         named |= set(types)
+        problems += check_scheme_candidates(block, where, plan)
         allowed = {r['id'] for r in guideline_criteria.select(bundle, baseline, types, kinds, typed_only=True,
                                                                ports=block.get('ports') is True)}
         criteria = block.get('criteria')
@@ -1016,6 +1086,9 @@ def check_scheme_criteria(data, closure, bundle=None):
             defer = item.get('defer', [])
             if not (isinstance(defer, list) and all(text(d) for d in defer)):
                 problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))
+    recorded_blocks = {b.get('block') for b in data['blocks'] if isinstance(b, dict) and text(b.get('block'))}
+    if page_keys - recorded_blocks:
+        problems.append('scheme-criteria.json 没有比较关键功能块：' + '、'.join(sorted(page_keys - recorded_blocks)))
     missing = [t for t in key if t not in named]
     if missing:
         problems.append('scheme-criteria.json 没有功能块覆盖关键电路类型 %s' % '、'.join(missing))
@@ -1024,10 +1097,25 @@ def check_scheme_criteria(data, closure, bundle=None):
 
 def render_scheme_criteria(data):
     """方案阶段对照的规则：每个关键功能块会淘汰候选的规则，或查过的范围。"""
-    blocks = [b for b in (data or {}).get('blocks') or [] if isinstance(b, dict)]
+    blocks = [b for b in (data.get('blocks') or []) if isinstance(b, dict)] if isinstance(data, dict) and isinstance(data.get('blocks'), list) else []
     if not blocks:
         return []
-    out = ['## 方案阶段对照的规则', '',
+    out = ['## 功能块方案比较', '', '| 功能块 | 决定条件及本板取值 | 候选 | 处置及理由 | 来源 |', '|---|---|---|---|---|']
+    for b in blocks:
+        decisive = '；'.join('%s：%s' % (d.get('condition', ''), d.get('value', ''))
+                             for d in (b.get('decisive') if isinstance(b.get('decisive'), list) else []) if isinstance(d, dict))
+        for c in b.get('candidates', []) if isinstance(b.get('candidates'), list) else []:
+            if not isinstance(c, dict):
+                continue
+            status = '选定' if c.get('status') == 'selected' else '淘汰'
+            if c.get('unverified'):
+                status += '（未证实）'
+            out.append('| %s | %s | %s | %s：%s | %s |' % (
+                cell(b.get('block')), cell(decisive), cell(c.get('name')), status,
+                cell(c.get('reason', '')), cell('；'.join(map(str, c.get('source', []))) if isinstance(c.get('source'), list) else '')))
+        if text(b.get('only_viable')):
+            out += ['', '%s：只有一种可行方案，%s' % (cell(b.get('block')), cell(b['only_viable'])), '']
+    out += ['', '## 方案阶段对照的规则', '',
            '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 1.3）。这里的结论不代替任务 2.2 的核算，'
            '这些规则在设计闭环时仍按“共用设计准则覆盖”核对；依据为工程推论的不作硬排除。', '',
            '| 功能块 | 设计准则 | 排除的候选 | 依据 | 选定方案怎样满足 | 留给 2.2 核算 |', '|---|---|---|---|---|---|']
@@ -1108,13 +1196,13 @@ def render(root, notes=None, title=None):
         lesson_problems, events = check_lessons(data['lessons.json'])
         problems += lesson_problems
         lessons = data['lessons.json']
-    if data['page-plan.json'] is not None:
-        problems += check_page_plan(data['page-plan.json'], intent, visual, lessons, root=root)
     problems += check_visual_items(root, visual, summary)
     scheme, problem = None, None
     if (record / 'scheme-criteria.json').exists():
         scheme, problem = load(record / 'scheme-criteria.json')
-    problems += [problem] if problem else check_scheme_criteria(scheme, closure)
+    problems += [problem] if problem else check_scheme_criteria(scheme, closure, plan=data['page-plan.json'])
+    if data['page-plan.json'] is not None:
+        problems += check_page_plan(data['page-plan.json'], intent, visual, lessons, root=root, scheme=scheme if isinstance(scheme, dict) else None)
     selection = data['selection.json'] or {}
     if data['selection.json'] is not None:
         problems += check_selection(selection, intent, root)
