@@ -50,7 +50,7 @@ git clone https://github.com/wenqiiizwq-creator/Autonomous-Schematic-Generation.
 `SKILL.md` 为入口，frontmatter 中的 `name` 为 `autonomous-schematic-generation`。
 已有旧版 `kicad` 安装时，迁移到新目录，避免保留两份可被扫描的安装。
 
-依赖：KiCad CLI 和符号库（实测 KiCad 10.0.x，其他版本需用 KiCad 导出复跑全部合成测试）；Python 3.10+ 标准库；
+依赖：KiCad CLI 和符号库（实测 KiCad 10.0.7；本技能文档中的 KiCad 版本以此处为准，换版本需用 KiCad 导出复跑全部合成测试）；Python 3.10+ 标准库；
 PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（未安装时明确返回检查不足）。
 
 ## 设计约定

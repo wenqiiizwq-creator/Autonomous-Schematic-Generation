@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 清理矛盾 第 1 批：事实修正（2026-11-07）
+
+按 ASG/SR/规范源三方排查修正与代码或现行规则不符的文字：交付目录允许 record/sr-review/（与 pack_design 一致）、外围电路核对表文件名统一为 reference-input.json、热可行性归入 2.2、台账两行、circuits 用“典型电路#实现方案”、选型在 1.4、MST/A* 只属低层后端、KiCad 版本归口 README、part-roles 改引用共用层 commodity-floors.json、删除对 SR 已不存在文件的引用、典型电路索引补 reviewed-bias-and-latch；任务 5.2 的“首版后用 SR 审”移到 operating-cadence（P6 边界）。
+
+- Event: user:2026-11-07（逐条裁决 D1–D8，按推荐执行）
+- Approved: user:2026-11-07
+- Outline: de7a9e605793b9b2
+- Changed: SKILL.md, README.md, docs/operating-cadence.md, docs/improvement-ledger.md, scripts/README.md, references/circuit-ir.md, references/component-requirements.md, references/core-part-selection.md, references/delivery-report.md, references/design-closure.md, references/existing-project-redraw.md, references/human-readable-routing.md, references/native-geometry.md, references/part-roles.md, references/project-verification.md, references/requirements-to-intent.md, references/review-comments.md, references/schematic-drawing-standards.md, references/schematic-generation.md, references/symbol-and-peripheral-contracts.md, references/typical-circuits.md
+
 ## 1.3 文字去掉库里没有的字段（2026-11-07）
 
 9620a80 合入的 1.3 文字提到“相邻文件”“按文件的决定条件”“排除条件”“未比较”，这些是试点格式的字段，main 的库文件没有。改为：决定条件由 ASG 写出并给本板取值，对照每种候选的适用范围；库里候选不足时先检索知识库再比较。其余句子与做完的标志不变。

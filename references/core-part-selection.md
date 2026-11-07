@@ -2,7 +2,7 @@
 
 本文规定 ASG 怎样为每个**核心器件角色**找候选、比较并记录结论。核心器件指决定架构或固件/配置依赖的器件：
 控制器与协议 IC（PFC、反激、SR、PD、MCU）、功率开关、磁件、隔离与反馈器件；两脚通用件（电阻、电容、普通二极管）按计算直接定值，
-不走本流程。选型在任务 1.2 定架构之后、任务 2.1 核数据手册之前做：先定型号，再按 [symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md) 核对它的手册。
+不走本流程。选型在任务 1.4 做（任务 1.2 定架构、1.3 定实现方案之后，任务 2.1 核数据手册之前）：先定型号，再按 [symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md) 核对它的手册。
 
 ## 1. 器件库在哪里
 

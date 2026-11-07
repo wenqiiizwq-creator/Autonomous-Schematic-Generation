@@ -63,7 +63,7 @@
 
 ### 审查方对选型与归因的复核
 
-SR 按其 `references/selection-review.md` 独立复核 `selection.json` 和上一轮的归因，结果以待办编号回到报告里：
+审查方对 `selection.json` 和上一轮归因提出的意见，以待办编号回到报告里：
 
 - 角色 `DISAGREE` 并给出候选之外的型号：按 `DESIGN` 登记，把该型号加进候选、按决定性条件判定后再定；改了选定型号的记 `REDESIGN`。
 - `DISAGREE` 指出淘汰理由有误：改 `selection.json` 里该候选的 `values`/`reason`，`cause` 多为 `knowledge_wrong`。

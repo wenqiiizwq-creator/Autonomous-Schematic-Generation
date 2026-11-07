@@ -419,7 +419,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 写来源（`review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:…`、`user:<日期>`）、归因
 （`rule_missing`/`rule_not_enforced` 改 `scripts/`，`knowledge_missing`/`knowledge_wrong` 改 `references/` 或知识库，
 `judgment` 写 `why_not_rule`）和改了哪个文件的哪一行；确实没学到的写 `cause: none` 并引用核对过的页码。
-泛泛的总结不算，报告会拒绝。首版交付后用 SR 审一次本板，审查发现按本节归因；落在某个典型电路上的坑可以写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
+泛泛的总结不算，报告会拒绝。收到独立审查意见后按本节归因；落在某个典型电路上的坑可以写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
 技能或知识库改完后，在 `docs/improvement-ledger.md` 加条目（Event/Changed 两行，`scripts/check_ledger.py` 检查），
 再跑全部合成测试。
 
@@ -452,7 +452,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 
 也可以用 `deliver.py <交付目录>` 按固定顺序一次跑完生成报告、写交付证据、新鲜度检查和打包，见任务 4.1。
 报告如实写出各项自检的 PASS/FAIL/INSUFFICIENT 及数量（含零）。历史版本快照、日志、仿真中间文件、
-审查方的结果都不放进交付目录。
+审查方的其他文件都不放进交付目录；本版独立审查的报告只放 `record/sr-review/`。
 
 做完的标志：`deliver.py` 各步为 DONE、PASS、CONDITIONAL、INCOMPLETE 或 FRESH 且跑到打包，打包 PASS；
 打包列出的 `datasheets_to_file`（本项目用到、知识库还没有的手册）在汇报里提示用户复制进知识库。

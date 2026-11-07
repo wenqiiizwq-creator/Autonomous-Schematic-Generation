@@ -9,7 +9,7 @@
 | `设计报告.md` | `render_design_report.py` 生成 | 手写的 README、说明、HTML |
 | `原理图/` | `.kicad_pro`、根图与各页 `.kicad_sch`、项目符号库/封装库及库表、`schematic.pdf`、`netlist.xml`、`BOM.csv` | 草稿图、旧版图 |
 | `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`PCB与结构要求.md`、`磁件设计单.md` | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
-| `record/` | 见下表 | 日志、历史快照、审查方的结果文件 |
+| `record/` | 见下表 | 日志、历史快照、审查方的其他文件（本版独立审查报告放 `sr-review/`） |
 
 `record/` 内容：
 
@@ -21,7 +21,7 @@
 | `summary.json` | `verify_schematic.py` 的自动检查结果，原样复制 |
 | `component-requirements.json` | 新性能流程的唯一源记录：用途筛选、计算得到的性能要求、采购方式、候选核实状态；格式与准备/出图接口见 [器件性能要求](component-requirements.md) |
 | `component-requirements-check.json` | 从本次原生图纸、PDF、XML与BOM复核的结果；不与源记录重名，不用历史PASS代替本次核对 |
-| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "模式#做法"}}]}`；本页每个器件属于一个功能块，关键块标注 `references/typical-circuits/` 里的做法或登记资料覆盖待办，常规块可不标；显式标注均检查（第一页架构页免标） |
+| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注 `references/typical-circuits/` 里的典型电路与实现方案，或登记资料覆盖待办，常规块可不标；显式标注均检查（第一页架构页免标） |
 | `selection.json` | 核心器件选型：每个角色的位号、决定性条件、≥2 个候选（选中/淘汰理由、相对知识库的手册路径）；每个 U/Q/T 器件都要属于一个角色；选定候选写外部依赖，依赖未公开资料时附 2–3 个方案、建议和用户的决定，格式见 [核心器件选型](core-part-selection.md) |
 | `scheme-criteria.json` | 任务 1.3 关键功能块候选比较及对照的规则：`{"version": 1, "blocks": [{"block", "circuit_types", "device_kinds", "ports", "decisive": [{"condition", "value"}], "candidates": [{"name", "source": [...], "status", "reason", "circuit?", "unverified?"}], "only_viable?", "searched", "criteria": [{"id", "excludes", "basis", "how", "defer"}]}]}`。`guideline_scope` 含功率变换、保护、隔离、模拟或对外接口电路类型时必有，每个这类类型至少有一块；`ports: true` 的块可引用端口矩阵的 G07 全板规则，其余只能引用 `select --typed-only` 选出的规则；`criteria` 只写会淘汰某个候选的规则，为空时 `searched` 写明查过的范围；`basis` 是 `requirement`、`standard`、`datasheet_abs_max` 或 `inference`，只有前三种能硬排除，工程推论写 `inference`，不作硬排除；`defer` 列留给任务 2.2 核算的数值。关键块决定条件和本板取值写入 decisive；候选 source 非空且沿用来源格式，status 为 selected/rejected，reason 写选中/淘汰理由，必须恰有一个 selected，unverified 为 true 时不能选定；只有一个候选时 only_viable 写明查过哪些资料及只有一种可行的原因。circuit 写页计划引用（省略时以 name 比较）；存在 page-plan 时选定方案须与同名块 circuits 一致，无 page-plan 时跳过此项。页计划 key_blocks 声明的关键块也必须比较。这里的结论不代替 2.2 核算，闭环时这些规则仍按原方式引用覆盖 |
 | `lessons.json` | 本版资料覆盖待办与事件：`{"schema_version": 2, "library_gaps": [], "events": [{"source", "cause", "change" 或 "why_none", "why_not_rule"}]}`；来源只能是 `review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:<记录>`、`user:<日期>`；`datasheet:` 来源核对文件和页码；schema 2 字段、事件非空例外及历史兼容见下节；归因与改动位置的要求见 [处理审查意见](review-comments.md) |

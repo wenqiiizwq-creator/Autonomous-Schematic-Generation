@@ -8,10 +8,10 @@
 | 步 | 谁 | 做什么 | 产物 | 自动检查 |
 |---|---|---|---|---|
 | 1 | ASG | 按 SKILL.md 设计并交付 | 交付目录（含 `record/selection.json`、`record/lessons.json`） | `pack_design.py` PASS |
-| 2 | SR | 独立审查，不看 ASG 的结论先看需求和手册 | 审查报告与待办编号 | SR 自己的自动检查 |
+| 2 | SR | 独立审查（首版交付后用 SR 审一次本板），不看 ASG 的结论先看需求和手册 | 审查报告与待办编号 | SR 自己的自动检查 |
 | 3 | ASG | 逐条登记并归因：`review-responses.json` 每条 `cause`，`lessons.json` 对应事件 | 更新后的记录 | `render_design_report.py` 无归因问题 |
 | 4 | 维护者 | 按归因改技能或知识库：`rule_*` 改 `scripts/`，`knowledge_*` 改 `references/` 或知识库，`judgment` 写明为什么拦不住；每处改动附复现该事件的合成测试 | 代码或知识文件改动与测试 | 全部测试通过 |
-| 5 | 维护者 | 台账条目（Event/Causes/Changed 三行）并提交 | git 提交 | `scripts/check_ledger.py` PASS |
+| 5 | 维护者 | 台账条目（Event/Changed 两行，Causes 可选）并提交 | git 提交 | `scripts/check_ledger.py` PASS |
 | 6 | 测试/生产 | 实物或测试结果回来后，以 `test:<记录>` 为事件再走 3–5 | 同上 | 同上 |
 
 ## 每步的检查点

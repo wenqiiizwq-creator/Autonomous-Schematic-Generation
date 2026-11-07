@@ -14,12 +14,12 @@
 按型号采购的候选（性能待核）也保留确切 `mpn` 和 `datasheet`：这是物理身份；能否按此采购看 `SelectionStatus` 和 BOM 的 `Orderable` 列。
 SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审核时须明确输入和能力边界。
 只有设计依赖“只有某个料号的手册才保证的参数”的器件要写确切料号，常规件按值加规格，
-规格写出设计算得的最低额定（对应 SR `references/commodity-floors.md` 写进 BOM 约束的那些项）。
+规格写出设计算得的最低额定（档位见共用层 [commodity-floors.json](shared/commodity-floors.json)）。
 分两步：先定**器件类型**，再由类型和所在位置定**级别**。`scripts/schematic_layout/part_classes.py` 按本节判定，`render_design_report.py` 核对。
 
 **器件类型**
 
-类型词表与 SR `scripts/device_kinds.py` 一致（ASG 另有 `mechanical`：安装孔、Fiducial、Logo 等）：
+类型词表与 SR 侧 `scripts/device_kinds.py` 一致（ASG 另有 `mechanical`：安装孔、Fiducial、Logo 等）：
 `ic`（集成电路与模块）、`mosfet`（含 IGBT）、`bjt`、`opto`、`transformer`、`zener`、`tvs`、`bridge_rectifier`、`diode`（含 LED）、
 `varistor`、`fuse`（含自恢复保险丝）、`ntc`、`resistor`、`capacitor`、`common_mode_choke`（共模扼流圈）、`coupled_inductor`（耦合电感）、
 `inductor`、`ferrite`、`crystal`、`connector`、`relay`、`battery`、`switch`、`jumper`、`testpoint`、`mechanical`。
@@ -30,7 +30,7 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
   照抄那一页说明器件类型的原文（如 “Unidirectional TVS”“N-Channel MOSFET”“X2 capacitor”）。
   `scripts/propose_part_kinds.py <交付目录>` 读手册首页前 8 个非空行（标题与产品描述），给出这三项和 `fields.Category` 的候选，
   设计者核对后写入；候选不算声明。
-- 声明的核对与 SR `scripts/datasheet_kinds.py` 的 `verify` 同一套结果：
+- 声明的核对与 SR 侧 `scripts/datasheet_kinds.py` 的 `verify` 同一套结果：
 
   | 结果 | 含义 | 处理 |
   |---|---|---|
@@ -64,7 +64,7 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
 
 - **`high_voltage_nets`**：设计网表顶层列出工作电压高于 30 V（直流或峰值）或接市电的网络。没有这一项时，所有连接器、继电器和 NTC
   按特殊器件处理（报告说明是这个原因）；板上没有高于 30 V 的网络写空列表。
-- **常规件的规格**写出设计算得的最低额定，没写的按 SR 的最弱档理解（例如电阻按 0402 的额定）：
+- **常规件的规格**写出设计算得的最低额定，没写的按共用层最弱档（[commodity-floors.json](shared/commodity-floors.json)）理解（例如电阻按 0402 的额定）：
   电阻写功率与耐压，检流电阻另写容差和 TCR；电容写耐压（**每个电容都要写**，SR 把没写耐压的电容列为设计输入要改的写法），
   陶瓷电容在手册给了有效容量要求时写偏压后的有效容量；电解电容写耐压、纹波电流，有寿命需求的写“耐久 ≥ X h @ T”（规格要求，不强制料号）；
   二极管写 VRRM、IF、IFSM；电感（含共模扼流圈、耦合电感）写 L 与额定电流（Isat、Irms；**每个电感都要写额定电流**）；磁珠写最大 DCR 与额定电流；
@@ -106,7 +106,7 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
 - 脉冲/浪涌电阻、电容不允许只按常规档位假定能力。旧记录仍执行关键词升为特殊器件的保守规则；新记录有完整性能合同、明确条件、用途计算及规格采购依据时，
   `part_classes` 不再因为脉冲关键词单独强制料号，实际符合性由器件性能检查负责。没有完整合同、或依赖不可替代曲线时仍按原身份要求。
   查阅候选原厂手册不等于电路依赖其独有特性；候选验证放在性能记录，不把候选能力当作已选器件的设计保证。
-- 档位与 SR `commodity-floors.md` 同一写法：只覆盖所列已核系列（核对日期 2026-10-26），是这些系列的保守定界，不是同类所有产品的下限；
+- 档位取共用层 [commodity-floors.json](shared/commodity-floors.json)（核对日期以该文件为准）：只覆盖所列已核系列，是这些系列的保守定界，不是同类所有产品的下限；
   采购范围含其他系列时先查其额定。规格落在档内：常规件，计算按档位最弱值，BOM 采购范围限定在所列系列或经核等同的系列；
   任何一项超出（功率超过上限、容差比 ±1% 更紧、写明的 TCR 比档位最弱值更小、阻值不在任何一档）：特殊器件。
 
@@ -141,7 +141,7 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
   计算的 `refs`，两侧都算：`no_false_trip`（正常工作、开机浪涌、最高输入下不误动作）与 `protection`（故障或浪涌时保护有效）。
   例：保险丝 = 开机浪涌 I²t 不熔断 + 短路时分断；压敏 = 最高市电下不导通 + 浪涌钳位低于后级耐压；浪涌 NTC = 冷启动浪涌低于整流桥 IFSM
   + 浪涌能量在额定内。两侧按一条计算统计，一条计算覆盖多个保护器件时不逐个核两侧。
-- **安全防护位置**由脚本从网表推出：按 SR `checkers/domains.py` 的口径划分直流域（电容、变压器、光耦、继电器、晶体、连接器、测试点、
+- **安全防护位置**由脚本从网表推出：按 SR 侧 `checkers/domains.py` 的口径划分直流域（电容、变压器、光耦、继电器、晶体、连接器、测试点、
   电池和认不出的器件不导通，其余器件在全部引脚之间导通），含 `high_voltage_nets` 的域是危险电压域。
   - 跨隔离：引脚同时在危险电压域和另一个域的器件（Y 电容、光耦、变压器……），不论类型和级别；
   - 市电/高压侧：引脚接在 `high_voltage_nets` 上的保险丝、压敏电阻、安规电容、连接器、继电器。

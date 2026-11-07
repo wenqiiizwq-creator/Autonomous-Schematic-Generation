@@ -22,9 +22,9 @@ assembles the built pages under a hierarchical root with the System_block
 cover. `verify_schematic.py` runs every
 automated drawing gate on a saved root sheet (ERC, intent partitions and
 identity, hierarchy/PDF, symbol integrity, readability, per-sheet geometry,
-optional reference and change contracts) and writes `summary.json`. See
-[`schematic-generation.md`](../references/schematic-generation.md) for schema,
-commands, supported objects, limitations and `AUTOMATED_PASS` semantics.
+optional reference and change contracts) and writes `summary.json`. Usage, options and
+`AUTOMATED_PASS` semantics are in SKILL.md task 4.1; the low-level single-page
+generator is described in [`schematic-generation.md`](../references/schematic-generation.md).
 
 `deliver.py <delivery>` runs one delivery end to end in a fixed order (prepare,
 closure audit, preflight, generation, `verify_schematic.py`, report, delivery
