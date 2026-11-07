@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "library_version": "1.9.6",
+  "library_version": "1.9.7",
   "fingerprint_format": "shared-paths-sha256-v2",
   "fingerprint_algorithm": "SHA-256 of UTF-8 canonical JSON mapping relative paths to lowercase file SHA-256 digests; sorted keys, compact separators, no trailing LF. fingerprint_order declares the controlled scope only.",
   "fingerprint_order": [
@@ -13,17 +13,17 @@
     "scripts/guideline_criteria.py",
     "scripts/stress_check.py"
   ],
-  "fingerprint": "38703af9b1237116bf37a6994a0d36018d3e970dc8241aa674f9ddddefc3be58",
+  "fingerprint": "8b5eeff92226d72fd619dd479607154942a3f68910e9e6211a25060e5d45e9bb",
   "payload": {
     "references/shared/shared-layer.md": "91da8f2022f94fe78d7b9cc012b1f613a3aefbbacae2d97abb8de0c008ab95f0",
-    "references/shared/guideline-criteria.json": "224724aa84de46d20d6d0d9018f786719376e45e21fda31bafd12da8d43dd948",
+    "references/shared/guideline-criteria.json": "575a60b07609099f668f16c51b254f1be29826b0100bd252929f159f83e33020",
     "references/shared/guideline-criteria.md": "32342ef303297583bf994e77380193f06abc6b889e069d1cece04279e0ad9d0c",
     "references/shared/derating-rules.json": "590a89c4f318aa9924578d67d4500cbf016ced6e26106c71e3bda9c45413506e",
     "references/shared/derating-rules.md": "839f011383cf711eb09caa5ac054d8d3c795eacd1be73dbbea2836b64ac3d098",
     "references/shared/stress-spec.md": "d3ed940252353b56d1f70c76fa8e1854958d158e2dff4bffaff87a0b195dfe7e",
     "references/shared/vocabulary.json": "86c84fb5a78896b78d3410af592e14de612a9467ca9768975b48de9bdc4acf21",
     "references/shared/commodity-floors.json": "a9bcbfbba448a33207320ee3b1bbcb74b736893850a4119d7fcd01d8e70bed69",
-    "scripts/guideline_criteria.py": "712a9eea0af971892441f46507d79e980dc4f8db3e05b8ab73c4a0c94e425b20",
+    "scripts/guideline_criteria.py": "68a4920faedea56a357ec5995fddb169572d7c27d6cc489fac77091b1e9737f7",
     "scripts/stress_check.py": "50ab4bcafcc3c32e14133ca056694c5c134e2dd56aff5c1186958631b0935fb4"
   },
   "inputs": {
@@ -34,16 +34,16 @@
     "references/shared/shared-layer.md": "91da8f2022f94fe78d7b9cc012b1f613a3aefbbacae2d97abb8de0c008ab95f0",
     "references/shared/stress-spec.md": "d3ed940252353b56d1f70c76fa8e1854958d158e2dff4bffaff87a0b195dfe7e",
     "references/shared/vocabulary.json": "86c84fb5a78896b78d3410af592e14de612a9467ca9768975b48de9bdc4acf21",
-    "scripts/guideline_criteria.py": "712a9eea0af971892441f46507d79e980dc4f8db3e05b8ab73c4a0c94e425b20",
+    "scripts/guideline_criteria.py": "68a4920faedea56a357ec5995fddb169572d7c27d6cc489fac77091b1e9737f7",
     "scripts/stress_check.py": "50ab4bcafcc3c32e14133ca056694c5c134e2dd56aff5c1186958631b0935fb4",
-    "准则登记/G01_准则登记.json": "c2a3f284b289d68d4c553d82964eca34e7d8cb273e991a5696521a4a41ddda3c",
-    "准则登记/G02_准则登记.json": "f53e8914fd22f52f6390055bf0ab212833c7e73bbfad6f36a18338b0bd6a3b7b",
-    "准则登记/G03_准则登记.json": "29adbdefb0bd6ffcae619ff5d576f91260abc03ff09e0792389094095cab9406",
-    "准则登记/G04_准则登记.json": "d09e8c01fd00033ea90a9a797b9ab26736ab51f97ce164aa995c6f7f0dad1504",
-    "准则登记/G05_准则登记.json": "a900c520e40f0687ac4b22f842e3a5dd9d709a0f7fe4344c8644b555971ba2e6",
-    "准则登记/G06_准则登记.json": "4f5a3866e65b903cef60b9a56823c9bce8e46ce63a8f91a94a24adf9e4c3fe88",
-    "准则登记/G07_准则登记.json": "49b657b18c2d958bc0cc28507b8f0cf7adaec2b28e3dd0b0005be40589c57933",
-    "准则登记/G08_准则登记.json": "8fe84fdbb665e4c74144bcbff4f6f856e49f4640da995f69de44b636c550b5dd",
+    "准则登记/G01_准则登记.json": "8ebf4bb30fd4c1bef3da15afc116a13144346d90a337df92b7e5bf296ddfc89f",
+    "准则登记/G02_准则登记.json": "5814a020f6971a076453c424269fa9ae1fe1ca94be003f891b955a76caf3a99f",
+    "准则登记/G03_准则登记.json": "52bfc9f5663d24bc91ff8a7dd9b8755684a54542f8ef9c6a841ef8ef5d62e776",
+    "准则登记/G04_准则登记.json": "0551c0f1609e75609cd08d040beb7c0b4b380152b7d1e34488a74e2df10a1e57",
+    "准则登记/G05_准则登记.json": "095eac2294856e2f789a6ecca3b27d93d77aaf0f630fab12274bbeeb583a0c83",
+    "准则登记/G06_准则登记.json": "865f893d68dd2c625edfcf51655d487f51f136c4b6cd7c06b1a1d826b2a40f05",
+    "准则登记/G07_准则登记.json": "6c6b75cb0817848f7af488e0a349f7852fb2a9c524e0c710375f6023c2c69ab5",
+    "准则登记/G08_准则登记.json": "1c48020cb79d66ef3896f57af798a3c2ffebf035583b766ece55f5ad7b02f8ee",
     "准则登记/G09_准则登记.json": "b86278b6da7b99b470a5c2d7d1c23eb9cf19f7741c2afafdf2ac21e8cb46dd38"
   },
   "auxiliary": {}

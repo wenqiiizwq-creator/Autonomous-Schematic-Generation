@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.9.6",
+  "library_version": "1.9.7",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -68,17 +68,17 @@
     ]
   },
   "specs": {
-    "G01": "1.12",
-    "G02": "1.5",
-    "G03": "1.9",
-    "G04": "1.8",
-    "G05": "1.5",
-    "G06": "1.1",
-    "G07": "1.1",
-    "G08": "1.2",
+    "G01": "1.13",
+    "G02": "1.6",
+    "G03": "1.10",
+    "G04": "1.9",
+    "G05": "1.6",
+    "G06": "1.2",
+    "G07": "1.2",
+    "G08": "1.3",
     "G09": "1.0"
   },
-  "content_sha256": "975187e5033583cf5a4dac91e32676ce8edb8f90bbcac05bc24b0ca478dc28b7",
+  "content_sha256": "e25193df48e4804e4cfdd0037b9e219363bdc24a0e36c043e0e5742772aaa1e9",
   "criteria": [
     {
       "id": "G01-001",
@@ -119,7 +119,8 @@
       "tailoring": "ECSS 原文为 shall，约束对象是需求文档；本规范在工业/通信默认基线下作工程方法采用（2026-11-01 评审确认）。",
       "relations": {
         "related": [
-          "G01-002"
+          "G01-002",
+          "G01-017"
         ]
       }
     },
@@ -161,7 +162,8 @@
       "closing_stage": "schematic",
       "relations": {
         "related": [
-          "G01-001"
+          "G01-001",
+          "G01-017"
         ]
       }
     },
@@ -329,7 +331,9 @@
       "closing_stage": "schematic",
       "relations": {
         "related": [
-          "G01-008"
+          "G01-008",
+          "G01-017",
+          "G02-038"
         ]
       }
     },
@@ -363,7 +367,9 @@
       "closing_stage": "schematic",
       "relations": {
         "related": [
-          "G01-007"
+          "G01-007",
+          "G01-017",
+          "G06-001"
         ]
       }
     },
@@ -498,7 +504,8 @@
       "closing_stage": "schematic",
       "relations": {
         "related": [
-          "G01-011"
+          "G01-011",
+          "G06-026"
         ]
       }
     },
@@ -580,7 +587,8 @@
       "closing_stage": "schematic",
       "relations": {
         "related": [
-          "G01-013"
+          "G01-013",
+          "G01-052"
         ]
       }
     },
@@ -715,7 +723,8 @@
           "G01-061",
           "G01-062",
           "G01-063",
-          "G01-064"
+          "G01-064",
+          "G01-051"
         ]
       }
     },
@@ -760,7 +769,9 @@
           "G01-021",
           "G01-022",
           "G01-023",
-          "G01-017"
+          "G01-017",
+          "G01-055",
+          "G06-021"
         ]
       }
     },
@@ -817,7 +828,8 @@
           "G01-021",
           "G01-022",
           "G01-023",
-          "G01-017"
+          "G01-017",
+          "G01-055"
         ]
       }
     },
@@ -897,7 +909,8 @@
           "G01-022",
           "G01-023",
           "G01-017",
-          "G01-055"
+          "G01-055",
+          "G07-013"
         ]
       }
     },
@@ -948,7 +961,8 @@
           "G01-020",
           "G01-021",
           "G01-023",
-          "G01-017"
+          "G01-017",
+          "G01-055"
         ]
       }
     },
@@ -993,7 +1007,8 @@
           "G01-020",
           "G01-021",
           "G01-022",
-          "G01-017"
+          "G01-017",
+          "G01-055"
         ]
       }
     },
@@ -1030,7 +1045,8 @@
       "relations": {
         "related": [
           "G01-025",
-          "G01-017"
+          "G01-017",
+          "G07-008"
         ]
       }
     },
@@ -1065,7 +1081,8 @@
       "relations": {
         "related": [
           "G01-024",
-          "G01-017"
+          "G01-017",
+          "G07-008"
         ]
       }
     },
@@ -1221,7 +1238,8 @@
           "G01-028",
           "G01-030",
           "G01-031",
-          "G01-017"
+          "G01-017",
+          "G04-104"
         ]
       }
     },
@@ -1258,7 +1276,9 @@
           "G01-028",
           "G01-029",
           "G01-031",
-          "G01-017"
+          "G01-017",
+          "G04-103",
+          "G04-104"
         ]
       }
     },
@@ -1295,7 +1315,8 @@
           "G01-028",
           "G01-029",
           "G01-030",
-          "G01-017"
+          "G01-017",
+          "G04-104"
         ]
       }
     },
@@ -1405,7 +1426,8 @@
           "G01-036",
           "G01-037",
           "G01-038",
-          "G01-017"
+          "G01-017",
+          "G07-054"
         ]
       }
     },
@@ -1519,7 +1541,8 @@
           "G01-035",
           "G01-036",
           "G01-038",
-          "G01-017"
+          "G01-017",
+          "G07-053"
         ]
       }
     },
@@ -1958,7 +1981,16 @@
           "G01-048",
           "G01-049",
           "G01-050",
-          "G01-017"
+          "G01-017",
+          "G01-056",
+          "G01-057",
+          "G01-058",
+          "G01-059",
+          "G01-060",
+          "G01-061",
+          "G01-062",
+          "G01-063",
+          "G01-064"
         ]
       }
     },
@@ -2313,7 +2345,9 @@
           "G01-047",
           "G01-048",
           "G01-049",
-          "G01-017"
+          "G01-017",
+          "G06-012",
+          "G06-016"
         ]
       }
     },
@@ -2526,7 +2560,11 @@
       "relations": {
         "related": [
           "G01-051",
-          "G05-031"
+          "G05-031",
+          "G06-011",
+          "G07-004",
+          "G07-009",
+          "G07-016"
         ]
       }
     },
@@ -2635,7 +2673,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -2695,7 +2734,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -2742,7 +2782,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -2815,7 +2856,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -2881,7 +2923,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -2935,7 +2978,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -2988,7 +3032,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -3042,7 +3087,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -3091,7 +3137,8 @@
       "relations": {
         "related": [
           "G01-043",
-          "G01-045"
+          "G01-045",
+          "G01-017"
         ]
       }
     },
@@ -3236,7 +3283,10 @@
       "relations": {
         "related": [
           "G02-004",
-          "G02-005"
+          "G02-005",
+          "G02-036",
+          "G02-038",
+          "G02-039"
         ]
       },
       "closing_stage": "schematic"
@@ -3279,7 +3329,8 @@
       ],
       "relations": {
         "related": [
-          "G02-003"
+          "G02-003",
+          "G02-039"
         ]
       },
       "closing_stage": "schematic"
@@ -3320,7 +3371,9 @@
           "G02-003",
           "G02-006",
           "G02-008",
-          "G02-009"
+          "G02-009",
+          "G02-017",
+          "G02-034"
         ]
       },
       "closing_stage": "schematic"
@@ -3443,7 +3496,8 @@
       "relations": {
         "related": [
           "G02-005",
-          "G02-009"
+          "G02-009",
+          "G08-038"
         ]
       },
       "closing_stage": "schematic"
@@ -3488,7 +3542,8 @@
       "relations": {
         "related": [
           "G02-008",
-          "G02-016"
+          "G02-016",
+          "G02-005"
         ]
       },
       "closing_stage": "schematic"
@@ -3607,7 +3662,8 @@
       ],
       "relations": {
         "related": [
-          "G02-011"
+          "G02-011",
+          "G02-010"
         ]
       },
       "closing_stage": "schematic"
@@ -3862,7 +3918,9 @@
       "relations": {
         "related": [
           "G02-017",
-          "G02-024"
+          "G02-024",
+          "G09-001",
+          "G09-017"
         ]
       },
       "closing_stage": "schematic"
@@ -3902,7 +3960,9 @@
         "related": [
           "G02-020",
           "G02-021",
-          "G02-023"
+          "G02-023",
+          "G02-022",
+          "G02-027"
         ]
       },
       "closing_stage": "schematic"
@@ -3976,7 +4036,8 @@
       "relations": {
         "related": [
           "G02-019",
-          "G02-020"
+          "G02-020",
+          "G02-028"
         ]
       },
       "closing_stage": "schematic"
@@ -4054,7 +4115,8 @@
       "relations": {
         "related": [
           "G02-019",
-          "G02-022"
+          "G02-022",
+          "G02-039"
         ]
       },
       "closing_stage": "schematic"
@@ -4099,7 +4161,9 @@
         "related": [
           "G02-001",
           "G02-025",
-          "G02-026"
+          "G02-026",
+          "G02-018",
+          "G02-033"
         ]
       },
       "closing_stage": "schematic"
@@ -4186,7 +4250,8 @@
         "related": [
           "G02-024",
           "G02-031",
-          "G02-033"
+          "G02-033",
+          "G02-037"
         ]
       },
       "closing_stage": "schematic"
@@ -4225,7 +4290,8 @@
       "relations": {
         "related": [
           "G02-028",
-          "G02-019"
+          "G02-019",
+          "G02-007"
         ]
       },
       "closing_stage": "schematic"
@@ -4264,7 +4330,8 @@
       "relations": {
         "related": [
           "G02-027",
-          "G02-021"
+          "G02-021",
+          "G07-019"
         ]
       },
       "closing_stage": "schematic"
@@ -4442,7 +4509,9 @@
       "relations": {
         "related": [
           "G02-024",
-          "G02-026"
+          "G02-026",
+          "G02-001",
+          "G02-029"
         ]
       },
       "closing_stage": "schematic"
@@ -4580,7 +4649,10 @@
           "G02-003",
           "G02-037",
           "G02-038",
-          "G04-101"
+          "G04-101",
+          "G09-009",
+          "G09-020",
+          "G09-021"
         ]
       },
       "closing_stage": "schematic"
@@ -4662,7 +4734,8 @@
         "related": [
           "G01-007",
           "G02-003",
-          "G02-036"
+          "G02-036",
+          "G09-020"
         ]
       },
       "closing_stage": "schematic"
@@ -4749,7 +4822,10 @@
         "related": [
           "G03-002",
           "G03-013",
-          "G03-042"
+          "G03-042",
+          "G07-047",
+          "G09-007",
+          "G09-008"
         ]
       },
       "closing_stage": "schematic"
@@ -4783,7 +4859,8 @@
       ],
       "relations": {
         "related": [
-          "G03-001"
+          "G03-001",
+          "G03-017"
         ]
       },
       "closing_stage": "schematic"
@@ -4823,7 +4900,8 @@
         ],
         "related": [
           "G03-004",
-          "G03-005"
+          "G03-005",
+          "G03-010"
         ]
       },
       "closing_stage": "schematic"
@@ -4968,7 +5046,8 @@
         "related": [
           "G03-007",
           "G03-008",
-          "G03-009"
+          "G03-009",
+          "G03-059"
         ]
       },
       "closing_stage": "schematic"
@@ -5107,7 +5186,8 @@
         "related": [
           "G03-008",
           "G03-041",
-          "G03-045"
+          "G03-045",
+          "G03-006"
         ]
       },
       "closing_stage": "simulation"
@@ -5224,7 +5304,8 @@
         "related": [
           "G03-012",
           "G03-041",
-          "G03-048"
+          "G03-048",
+          "G07-045"
         ]
       },
       "closing_stage": "schematic"
@@ -5272,7 +5353,8 @@
         ],
         "related": [
           "G03-011",
-          "G03-049"
+          "G03-049",
+          "G07-045"
         ]
       },
       "closing_stage": "schematic"
@@ -5332,7 +5414,8 @@
           "G03-015",
           "G03-016",
           "G03-017",
-          "G03-018"
+          "G03-018",
+          "G03-010"
         ]
       },
       "closing_stage": "schematic"
@@ -5453,7 +5536,8 @@
       ],
       "relations": {
         "related": [
-          "G03-013"
+          "G03-013",
+          "G08-034"
         ]
       },
       "closing_stage": "schematic"
@@ -5496,7 +5580,8 @@
         ],
         "related": [
           "G03-013",
-          "G03-002"
+          "G03-002",
+          "G05-098"
         ]
       },
       "closing_stage": "schematic"
@@ -5536,7 +5621,8 @@
           "G03-020",
           "G03-021",
           "G03-022",
-          "G03-013"
+          "G03-013",
+          "G03-047"
         ]
       },
       "closing_stage": "schematic"
@@ -5609,7 +5695,9 @@
       ],
       "relations": {
         "related": [
-          "G03-021"
+          "G03-021",
+          "G03-018",
+          "G03-034"
         ]
       },
       "closing_stage": "schematic"
@@ -5740,7 +5828,9 @@
         ],
         "related": [
           "G03-024",
-          "G03-025"
+          "G03-025",
+          "G01-055",
+          "G03-010"
         ]
       },
       "closing_stage": "schematic"
@@ -5823,7 +5913,9 @@
       ],
       "relations": {
         "related": [
-          "G03-024"
+          "G03-024",
+          "G03-023",
+          "G09-005"
         ]
       },
       "closing_stage": "schematic"
@@ -5972,7 +6064,8 @@
       "relations": {
         "related": [
           "G03-027",
-          "G03-022"
+          "G03-022",
+          "G03-041"
         ]
       },
       "closing_stage": "schematic"
@@ -6011,7 +6104,8 @@
       "relations": {
         "related": [
           "G03-027",
-          "G03-030"
+          "G03-030",
+          "G03-024"
         ]
       },
       "closing_stage": "schematic"
@@ -6050,7 +6144,8 @@
       "relations": {
         "related": [
           "G03-029",
-          "G03-031"
+          "G03-031",
+          "G03-027"
         ]
       },
       "closing_stage": "schematic"
@@ -6102,7 +6197,11 @@
         "related": [
           "G03-032",
           "G03-033",
-          "G03-024"
+          "G03-024",
+          "G01-055",
+          "G03-030",
+          "G03-037",
+          "G03-053"
         ]
       },
       "closing_stage": "schematic"
@@ -6219,7 +6318,8 @@
       "relations": {
         "related": [
           "G03-020",
-          "G03-032"
+          "G03-032",
+          "G08-017"
         ]
       },
       "closing_stage": "schematic"
@@ -6257,7 +6357,8 @@
           "G03-010"
         ],
         "related": [
-          "G03-036"
+          "G03-036",
+          "G04-102"
         ]
       },
       "closing_stage": "pcb"
@@ -6383,7 +6484,8 @@
       "relations": {
         "related": [
           "G03-037",
-          "G03-004"
+          "G03-004",
+          "G03-040"
         ]
       },
       "closing_stage": "schematic"
@@ -6456,7 +6558,8 @@
       ],
       "relations": {
         "related": [
-          "G03-038"
+          "G03-038",
+          "G03-037"
         ]
       },
       "closing_stage": "schematic"
@@ -6505,7 +6608,9 @@
           "G03-008",
           "G03-011",
           "G03-026",
-          "G03-028"
+          "G03-028",
+          "G03-009",
+          "G03-050"
         ]
       },
       "closing_stage": "prototype"
@@ -6617,7 +6722,8 @@
       "relations": {
         "related": [
           "G03-008",
-          "G03-045"
+          "G03-045",
+          "G03-046"
         ]
       },
       "closing_stage": "simulation"
@@ -6656,7 +6762,8 @@
       "relations": {
         "related": [
           "G03-009",
-          "G03-044"
+          "G03-044",
+          "G03-046"
         ]
       },
       "closing_stage": "simulation"
@@ -6772,7 +6879,8 @@
       ],
       "relations": {
         "related": [
-          "G03-011"
+          "G03-011",
+          "G03-057"
         ]
       },
       "closing_stage": "simulation"
@@ -7104,7 +7212,8 @@
       ],
       "relations": {
         "related": [
-          "G03-057"
+          "G03-057",
+          "G03-051"
         ]
       },
       "closing_stage": "schematic"
@@ -7143,7 +7252,8 @@
       "relations": {
         "related": [
           "G03-056",
-          "G03-048"
+          "G03-048",
+          "G03-051"
         ]
       },
       "closing_stage": "simulation"
@@ -7324,7 +7434,9 @@
           "G04-004",
           "G04-005",
           "G04-007",
-          "G04-011"
+          "G04-011",
+          "G04-001",
+          "G04-058"
         ]
       },
       "closing_stage": "schematic"
@@ -7379,7 +7491,9 @@
         "related": [
           "G04-002",
           "G04-004",
-          "G04-016"
+          "G04-016",
+          "G04-011",
+          "G04-033"
         ]
       },
       "closing_stage": "schematic"
@@ -7432,7 +7546,8 @@
       ],
       "relations": {
         "related": [
-          "G04-003"
+          "G04-003",
+          "G04-002"
         ]
       },
       "closing_stage": "schematic"
@@ -7486,7 +7601,12 @@
       "relations": {
         "related": [
           "G04-006",
-          "G04-007"
+          "G04-007",
+          "G04-002",
+          "G04-016",
+          "G04-033",
+          "G04-054",
+          "G04-103"
         ]
       },
       "closing_stage": "schematic"
@@ -7533,7 +7653,8 @@
       ],
       "relations": {
         "related": [
-          "G04-005"
+          "G04-005",
+          "G09-015"
         ]
       },
       "closing_stage": "schematic"
@@ -7588,7 +7709,11 @@
         "related": [
           "G04-009",
           "G04-008",
-          "G04-005"
+          "G04-005",
+          "G04-002",
+          "G04-021",
+          "G04-035",
+          "G04-060"
         ]
       },
       "closing_stage": "schematic"
@@ -7634,7 +7759,8 @@
       ],
       "relations": {
         "related": [
-          "G04-007"
+          "G04-007",
+          "G04-060"
         ]
       },
       "closing_stage": "schematic"
@@ -7735,7 +7861,13 @@
       ],
       "relations": {
         "related": [
-          "G04-030"
+          "G04-030",
+          "G04-036",
+          "G04-059",
+          "G04-102",
+          "G05-098",
+          "G09-005",
+          "G09-012"
         ]
       },
       "closing_stage": "schematic"
@@ -7775,7 +7907,8 @@
       "relations": {
         "related": [
           "G04-038",
-          "G04-003"
+          "G04-003",
+          "G04-002"
         ]
       },
       "closing_stage": "schematic"
@@ -7892,7 +8025,8 @@
       ],
       "relations": {
         "related": [
-          "G04-015"
+          "G04-015",
+          "G04-032"
         ]
       },
       "closing_stage": "pcb"
@@ -7964,7 +8098,8 @@
       "relations": {
         "related": [
           "G04-003",
-          "G04-005"
+          "G04-005",
+          "G04-022"
         ]
       },
       "closing_stage": "schematic"
@@ -8071,7 +8206,8 @@
       ],
       "relations": {
         "related": [
-          "G04-017"
+          "G04-017",
+          "G04-020"
         ]
       },
       "closing_stage": "schematic"
@@ -8106,7 +8242,8 @@
       ],
       "relations": {
         "related": [
-          "G04-019"
+          "G04-019",
+          "G04-023"
         ]
       },
       "closing_stage": "schematic"
@@ -8141,7 +8278,8 @@
       ],
       "relations": {
         "related": [
-          "G04-007"
+          "G04-007",
+          "G04-024"
         ]
       },
       "closing_stage": "schematic"
@@ -8211,7 +8349,8 @@
       ],
       "relations": {
         "related": [
-          "G04-020"
+          "G04-020",
+          "G09-017"
         ]
       },
       "closing_stage": "schematic"
@@ -8301,7 +8440,10 @@
       "relations": {
         "related": [
           "G04-026",
-          "G04-040"
+          "G04-040",
+          "G04-067",
+          "G04-069",
+          "G07-044"
         ]
       },
       "closing_stage": "schematic"
@@ -8349,7 +8491,9 @@
       "relations": {
         "related": [
           "G04-027",
-          "G04-028"
+          "G04-028",
+          "G04-025",
+          "G04-061"
         ]
       },
       "closing_stage": "schematic"
@@ -8397,7 +8541,11 @@
       "relations": {
         "related": [
           "G04-028",
-          "G04-029"
+          "G04-029",
+          "G04-026",
+          "G04-062",
+          "G04-063",
+          "G04-064"
         ]
       },
       "closing_stage": "schematic"
@@ -8446,7 +8594,8 @@
       "relations": {
         "related": [
           "G04-027",
-          "G04-026"
+          "G04-026",
+          "G04-061"
         ]
       },
       "closing_stage": "schematic"
@@ -8481,7 +8630,8 @@
       ],
       "relations": {
         "related": [
-          "G04-027"
+          "G04-027",
+          "G04-062"
         ]
       },
       "closing_stage": "schematic"
@@ -8522,7 +8672,8 @@
       ],
       "relations": {
         "related": [
-          "G04-010"
+          "G04-010",
+          "G04-066"
         ]
       },
       "closing_stage": "schematic"
@@ -8605,7 +8756,13 @@
       ],
       "relations": {
         "related": [
-          "G04-014"
+          "G04-014",
+          "G04-031",
+          "G04-034",
+          "G04-072",
+          "G04-074",
+          "G04-075",
+          "G04-076"
         ]
       },
       "closing_stage": "schematic"
@@ -8676,7 +8833,8 @@
       ],
       "relations": {
         "related": [
-          "G04-032"
+          "G04-032",
+          "G04-070"
         ]
       },
       "closing_stage": "schematic"
@@ -8782,7 +8940,8 @@
       ],
       "relations": {
         "related": [
-          "G04-038"
+          "G04-038",
+          "G04-039"
         ]
       },
       "closing_stage": "schematic"
@@ -8824,7 +8983,8 @@
       "relations": {
         "related": [
           "G04-011",
-          "G04-037"
+          "G04-037",
+          "G04-073"
         ]
       },
       "closing_stage": "schematic"
@@ -8865,7 +9025,9 @@
       ],
       "relations": {
         "related": [
-          "G04-037"
+          "G04-037",
+          "G06-014",
+          "G07-029"
         ]
       },
       "closing_stage": "schematic"
@@ -8900,7 +9062,13 @@
       ],
       "relations": {
         "related": [
-          "G04-025"
+          "G04-025",
+          "G04-068",
+          "G06-007",
+          "G06-009",
+          "G06-014",
+          "G06-017",
+          "G09-015"
         ]
       },
       "closing_stage": "schematic"
@@ -8985,7 +9153,8 @@
       "relations": {
         "related": [
           "G04-041",
-          "G04-043"
+          "G04-043",
+          "G04-049"
         ]
       },
       "closing_stage": "schematic"
@@ -9064,7 +9233,8 @@
       "relations": {
         "related": [
           "G04-045",
-          "G04-047"
+          "G04-047",
+          "G04-057"
         ]
       },
       "closing_stage": "schematic"
@@ -9846,7 +10016,8 @@
       ],
       "relations": {
         "related": [
-          "G04-027"
+          "G04-027",
+          "G04-065"
         ]
       },
       "closing_stage": "pcb"
@@ -10049,7 +10220,8 @@
       "relations": {
         "related": [
           "G04-040",
-          "G04-067"
+          "G04-067",
+          "G04-069"
         ]
       },
       "closing_stage": "schematic"
@@ -10122,7 +10294,8 @@
       "relations": {
         "related": [
           "G04-073",
-          "G04-034"
+          "G04-034",
+          "G04-071"
         ]
       },
       "closing_stage": "schematic"
@@ -10195,7 +10368,8 @@
       ],
       "relations": {
         "related": [
-          "G04-032"
+          "G04-032",
+          "G04-077"
         ]
       },
       "closing_stage": "pcb"
@@ -10418,7 +10592,8 @@
       "relations": {
         "related": [
           "G04-079",
-          "G04-083"
+          "G04-083",
+          "G04-082"
         ]
       },
       "closing_stage": "schematic"
@@ -10456,7 +10631,8 @@
         "related": [
           "G04-078",
           "G04-080",
-          "G04-085"
+          "G04-085",
+          "G04-084"
         ]
       },
       "closing_stage": "schematic"
@@ -10754,7 +10930,8 @@
         "related": [
           "G04-088",
           "G04-105",
-          "G04-108"
+          "G04-108",
+          "G06-012"
         ]
       },
       "closing_stage": "schematic"
@@ -10867,7 +11044,9 @@
       "relations": {
         "related": [
           "G04-087",
-          "G04-086"
+          "G04-086",
+          "G07-028",
+          "G07-043"
         ]
       },
       "closing_stage": "schematic"
@@ -10922,7 +11101,8 @@
       ],
       "relations": {
         "related": [
-          "G04-087"
+          "G04-087",
+          "G04-110"
         ]
       },
       "closing_stage": "schematic"
@@ -11040,7 +11220,8 @@
       ],
       "relations": {
         "related": [
-          "G04-093"
+          "G04-093",
+          "G07-036"
         ]
       },
       "closing_stage": "schematic"
@@ -11077,7 +11258,8 @@
       "relations": {
         "related": [
           "G04-092",
-          "G04-106"
+          "G04-106",
+          "G04-110"
         ]
       },
       "closing_stage": "schematic"
@@ -11199,7 +11381,10 @@
       ],
       "relations": {
         "related": [
-          "G04-087"
+          "G04-087",
+          "G04-100",
+          "G07-027",
+          "G07-050"
         ]
       },
       "closing_stage": "schematic"
@@ -11235,7 +11420,9 @@
       ],
       "relations": {
         "related": [
-          "G04-098"
+          "G04-098",
+          "G04-107",
+          "G07-042"
         ]
       },
       "closing_stage": "schematic"
@@ -11271,7 +11458,9 @@
       "relations": {
         "related": [
           "G04-097",
-          "G04-108"
+          "G04-108",
+          "G07-039",
+          "G07-043"
         ]
       },
       "closing_stage": "schematic"
@@ -11396,7 +11585,8 @@
       "relations": {
         "related": [
           "G02-036",
-          "G04-102"
+          "G04-102",
+          "G09-022"
         ]
       },
       "closing_stage": "schematic"
@@ -11446,7 +11636,14 @@
         "related": [
           "G03-035",
           "G04-010",
-          "G04-101"
+          "G04-101",
+          "G09-005",
+          "G09-009",
+          "G09-012",
+          "G09-016",
+          "G09-019",
+          "G09-024",
+          "G09-027"
         ]
       },
       "closing_stage": "schematic"
@@ -12046,7 +12243,9 @@
       "relations": {
         "related": [
           "G05-001",
-          "G05-004"
+          "G05-004",
+          "G05-003",
+          "G05-069"
         ]
       },
       "closing_stage": "schematic"
@@ -12086,7 +12285,11 @@
       "relations": {
         "related": [
           "G05-002",
-          "G05-005"
+          "G05-005",
+          "G05-001",
+          "G05-007",
+          "G05-008",
+          "G05-010"
         ]
       },
       "closing_stage": "schematic"
@@ -12154,7 +12357,9 @@
       "relations": {
         "related": [
           "G05-003",
-          "G05-006"
+          "G05-006",
+          "G05-068",
+          "G09-008"
         ]
       },
       "closing_stage": "schematic"
@@ -12188,7 +12393,11 @@
       "relations": {
         "related": [
           "G05-005",
-          "G05-014"
+          "G05-014",
+          "G05-001",
+          "G05-012",
+          "G05-028",
+          "G05-068"
         ]
       },
       "closing_stage": "schematic"
@@ -12227,7 +12436,11 @@
       ],
       "relations": {
         "related": [
-          "G05-003"
+          "G05-003",
+          "G05-066",
+          "G06-004",
+          "G06-007",
+          "G06-009"
         ]
       },
       "closing_stage": "schematic"
@@ -12261,7 +12474,8 @@
       "relations": {
         "related": [
           "G05-003",
-          "G05-013"
+          "G05-013",
+          "G05-064"
         ]
       },
       "closing_stage": "schematic"
@@ -12336,7 +12550,8 @@
       "relations": {
         "related": [
           "G05-003",
-          "G05-011"
+          "G05-011",
+          "G05-016"
         ]
       },
       "closing_stage": "schematic"
@@ -12370,7 +12585,8 @@
       "relations": {
         "related": [
           "G05-010",
-          "G05-065"
+          "G05-065",
+          "G05-017"
         ]
       },
       "closing_stage": "schematic"
@@ -12439,7 +12655,8 @@
       "relations": {
         "related": [
           "G05-009",
-          "G05-008"
+          "G05-008",
+          "G05-070"
         ]
       },
       "closing_stage": "schematic"
@@ -12479,7 +12696,10 @@
       "relations": {
         "related": [
           "G05-006",
-          "G05-018"
+          "G05-018",
+          "G05-012",
+          "G05-015",
+          "G05-070"
         ]
       },
       "closing_stage": "schematic"
@@ -12615,7 +12835,8 @@
       ],
       "relations": {
         "related": [
-          "G05-014"
+          "G05-014",
+          "G05-027"
         ]
       },
       "closing_stage": "prototype"
@@ -12652,7 +12873,8 @@
       "relations": {
         "related": [
           "G05-020",
-          "G05-024"
+          "G05-024",
+          "G06-006"
         ]
       },
       "closing_stage": "schematic"
@@ -12701,7 +12923,9 @@
           "G05-021",
           "G05-022",
           "G05-026",
-          "G05-024"
+          "G05-024",
+          "G05-019",
+          "G05-025"
         ]
       },
       "closing_stage": "schematic"
@@ -12747,7 +12971,8 @@
       "relations": {
         "related": [
           "G05-020",
-          "G05-022"
+          "G05-022",
+          "G05-091"
         ]
       },
       "closing_stage": "schematic"
@@ -12787,7 +13012,8 @@
       "relations": {
         "related": [
           "G05-021",
-          "G05-023"
+          "G05-023",
+          "G05-020"
         ]
       },
       "closing_stage": "schematic"
@@ -12867,7 +13093,10 @@
         "related": [
           "G05-025",
           "G05-050",
-          "G05-082"
+          "G05-082",
+          "G05-019",
+          "G05-020",
+          "G05-035"
         ]
       },
       "closing_stage": "schematic"
@@ -12962,7 +13191,8 @@
       "relations": {
         "related": [
           "G05-020",
-          "G05-027"
+          "G05-027",
+          "G05-047"
         ]
       },
       "closing_stage": "schematic"
@@ -13006,7 +13236,8 @@
       "relations": {
         "related": [
           "G05-041",
-          "G05-018"
+          "G05-018",
+          "G05-026"
         ]
       },
       "closing_stage": "simulation"
@@ -13043,7 +13274,8 @@
       "relations": {
         "related": [
           "G05-006",
-          "G05-029"
+          "G05-029",
+          "G06-006"
         ]
       },
       "closing_stage": "schematic"
@@ -13116,7 +13348,8 @@
       "relations": {
         "related": [
           "G05-031",
-          "G05-036"
+          "G05-036",
+          "G05-034"
         ]
       },
       "closing_stage": "schematic"
@@ -13156,7 +13389,10 @@
         "related": [
           "G05-032",
           "G05-030",
-          "G05-037"
+          "G05-037",
+          "G01-054",
+          "G05-038",
+          "G07-018"
         ]
       },
       "closing_stage": "schematic"
@@ -13228,7 +13464,8 @@
       ],
       "relations": {
         "related": [
-          "G05-057"
+          "G05-057",
+          "G07-022"
         ]
       },
       "closing_stage": "schematic"
@@ -13264,7 +13501,8 @@
       ],
       "relations": {
         "related": [
-          "G05-030"
+          "G05-030",
+          "G07-038"
         ]
       },
       "closing_stage": "schematic"
@@ -13307,7 +13545,8 @@
       "relations": {
         "related": [
           "G05-004",
-          "G05-024"
+          "G05-024",
+          "G06-023"
         ]
       },
       "closing_stage": "schematic"
@@ -13351,7 +13590,8 @@
       "relations": {
         "related": [
           "G05-037",
-          "G05-030"
+          "G05-030",
+          "G05-092"
         ]
       },
       "closing_stage": "schematic"
@@ -13389,7 +13629,8 @@
       "relations": {
         "related": [
           "G05-036",
-          "G05-031"
+          "G05-031",
+          "G05-092"
         ]
       },
       "closing_stage": "schematic"
@@ -13515,7 +13756,8 @@
         "related": [
           "G05-041",
           "G05-042",
-          "G05-043"
+          "G05-043",
+          "G08-034"
         ]
       },
       "closing_stage": "schematic"
@@ -13645,7 +13887,8 @@
       "relations": {
         "related": [
           "G05-040",
-          "G05-059"
+          "G05-059",
+          "G05-044"
         ]
       },
       "closing_stage": "schematic"
@@ -13736,7 +13979,8 @@
       ],
       "relations": {
         "related": [
-          "G05-048"
+          "G05-048",
+          "G06-022"
         ]
       },
       "closing_stage": "schematic"
@@ -13778,7 +14022,9 @@
       ],
       "relations": {
         "related": [
-          "G05-047"
+          "G05-047",
+          "G05-094",
+          "G05-096"
         ]
       },
       "closing_stage": "schematic"
@@ -13821,7 +14067,9 @@
       "relations": {
         "related": [
           "G05-046",
-          "G05-026"
+          "G05-026",
+          "G05-091",
+          "G05-095"
         ]
       },
       "closing_stage": "schematic"
@@ -13869,7 +14117,8 @@
       ],
       "relations": {
         "related": [
-          "G05-045"
+          "G05-045",
+          "G06-022"
         ]
       },
       "closing_stage": "schematic"
@@ -13911,7 +14160,8 @@
       ],
       "relations": {
         "related": [
-          "G05-050"
+          "G05-050",
+          "G05-053"
         ]
       },
       "closing_stage": "schematic"
@@ -14080,7 +14330,8 @@
       "relations": {
         "related": [
           "G05-049",
-          "G05-059"
+          "G05-059",
+          "G05-097"
         ]
       },
       "closing_stage": "schematic"
@@ -14136,7 +14387,9 @@
         "related": [
           "G05-055",
           "G05-056",
-          "G05-057"
+          "G05-057",
+          "G05-086",
+          "G09-022"
         ]
       },
       "closing_stage": "schematic"
@@ -14177,7 +14430,9 @@
       ],
       "relations": {
         "related": [
-          "G05-054"
+          "G05-054",
+          "G05-086",
+          "G05-087"
         ]
       },
       "closing_stage": "schematic"
@@ -14250,7 +14505,8 @@
       "relations": {
         "related": [
           "G05-033",
-          "G05-056"
+          "G05-056",
+          "G05-054"
         ]
       },
       "closing_stage": "schematic"
@@ -14347,7 +14603,11 @@
         "related": [
           "G05-060",
           "G05-043",
-          "G05-061"
+          "G05-061",
+          "G05-044",
+          "G05-053",
+          "G05-063",
+          "G05-092"
         ]
       },
       "closing_stage": "schematic"
@@ -14390,7 +14650,10 @@
       "relations": {
         "related": [
           "G05-059",
-          "G05-061"
+          "G05-061",
+          "G05-078",
+          "G05-098",
+          "G07-015"
         ]
       },
       "closing_stage": "schematic"
@@ -14424,7 +14687,10 @@
       "relations": {
         "related": [
           "G05-059",
-          "G05-060"
+          "G05-060",
+          "G05-077",
+          "G05-080",
+          "G09-013"
         ]
       },
       "closing_stage": "schematic"
@@ -14461,7 +14727,8 @@
       ],
       "relations": {
         "related": [
-          "G05-063"
+          "G05-063",
+          "G05-085"
         ]
       },
       "closing_stage": "schematic"
@@ -14497,7 +14764,9 @@
       "relations": {
         "related": [
           "G05-062",
-          "G05-059"
+          "G05-059",
+          "G05-093",
+          "G05-098"
         ]
       },
       "closing_stage": "schematic"
@@ -14573,7 +14842,8 @@
       "relations": {
         "related": [
           "G05-011",
-          "G05-064"
+          "G05-064",
+          "G05-079"
         ]
       },
       "closing_stage": "schematic"
@@ -14610,7 +14880,9 @@
       "relations": {
         "related": [
           "G05-007",
-          "G05-067"
+          "G05-067",
+          "G05-075",
+          "G05-076"
         ]
       },
       "closing_stage": "schematic"
@@ -14828,7 +15100,9 @@
       ],
       "relations": {
         "related": [
-          "G05-073"
+          "G05-073",
+          "G05-071",
+          "G05-074"
         ]
       },
       "closing_stage": "schematic"
@@ -15156,7 +15430,9 @@
       ],
       "relations": {
         "related": [
-          "G05-082"
+          "G05-082",
+          "G05-083",
+          "G05-084"
         ]
       },
       "closing_stage": "schematic"
@@ -15352,7 +15628,8 @@
       "relations": {
         "related": [
           "G05-055",
-          "G05-054"
+          "G05-054",
+          "G05-088"
         ]
       },
       "closing_stage": "schematic"
@@ -15388,7 +15665,9 @@
       "relations": {
         "related": [
           "G05-055",
-          "G05-088"
+          "G05-088",
+          "G01-052",
+          "G05-089"
         ]
       },
       "closing_stage": "schematic"
@@ -15693,7 +15972,8 @@
       ],
       "relations": {
         "related": [
-          "G05-047"
+          "G05-047",
+          "G08-043"
         ]
       },
       "closing_stage": "schematic"
@@ -15863,7 +16143,8 @@
       ],
       "relations": {
         "related": [
-          "G01-008"
+          "G01-008",
+          "G08-060"
         ]
       },
       "closing_stage": "schematic",
@@ -15935,6 +16216,9 @@
         ],
         "reuses": [
           "G01-007"
+        ],
+        "related": [
+          "G08-060"
         ]
       },
       "closing_stage": "schematic",
@@ -15996,6 +16280,9 @@
       "relations": {
         "reuses": [
           "G01-009"
+        ],
+        "related": [
+          "G06-027"
         ]
       },
       "closing_stage": "schematic"
@@ -16062,7 +16349,8 @@
           "G05-004"
         ],
         "related": [
-          "G05-007"
+          "G05-007",
+          "G06-027"
         ]
       },
       "closing_stage": "schematic"
@@ -16619,7 +16907,11 @@
           "page": "3"
         }
       ],
-      "relations": {},
+      "relations": {
+        "related": [
+          "G06-027"
+        ]
+      },
       "closing_stage": "schematic"
     },
     {
@@ -17516,7 +17808,8 @@
         "related": [
           "G07-002",
           "G07-003",
-          "G07-005"
+          "G07-005",
+          "G07-011"
         ]
       },
       "closing_stage": "schematic",
@@ -17695,7 +17988,13 @@
         "related": [
           "G07-004",
           "G07-015",
-          "G07-016"
+          "G07-016",
+          "G07-001",
+          "G07-006",
+          "G07-007",
+          "G07-008",
+          "G07-009",
+          "G07-010"
         ]
       },
       "closing_stage": "schematic",
@@ -18121,7 +18420,8 @@
         "related": [
           "G07-005",
           "G07-042",
-          "G05-060"
+          "G05-060",
+          "G07-041"
         ]
       },
       "closing_stage": "schematic"
@@ -18176,7 +18476,8 @@
         "related": [
           "G07-005",
           "G07-018",
-          "G01-054"
+          "G01-054",
+          "G07-010"
         ]
       },
       "closing_stage": "schematic",
@@ -18280,7 +18581,13 @@
           "G07-019",
           "G07-020",
           "G07-021",
-          "G05-031"
+          "G05-031",
+          "G07-004",
+          "G07-007",
+          "G07-016",
+          "G07-017",
+          "G07-022",
+          "G07-025"
         ]
       },
       "closing_stage": "schematic"
@@ -18336,7 +18643,10 @@
         "related": [
           "G07-018",
           "G07-020",
-          "G02-028"
+          "G02-028",
+          "G07-024",
+          "G07-044",
+          "G07-052"
         ],
         "primary": [
           "G05-031",
@@ -18536,7 +18846,8 @@
       "relations": {
         "related": [
           "G07-022",
-          "G07-025"
+          "G07-025",
+          "G07-004"
         ]
       },
       "closing_stage": "schematic"
@@ -18578,7 +18889,8 @@
       ],
       "relations": {
         "related": [
-          "G07-019"
+          "G07-019",
+          "G07-034"
         ],
         "primary": [
           "G05-032"
@@ -18631,7 +18943,11 @@
           "G07-018",
           "G07-026",
           "G07-029",
-          "G07-030"
+          "G07-030",
+          "G07-023",
+          "G07-027",
+          "G07-040",
+          "G07-043"
         ]
       },
       "closing_stage": "schematic"
@@ -18728,7 +19044,11 @@
         "related": [
           "G07-025",
           "G07-028",
-          "G04-096"
+          "G04-096",
+          "G06-009",
+          "G06-021",
+          "G07-026",
+          "G07-050"
         ]
       },
       "closing_stage": "schematic"
@@ -18778,7 +19098,9 @@
         "related": [
           "G07-027",
           "G07-048",
-          "G04-088"
+          "G04-088",
+          "G06-017",
+          "G07-040"
         ]
       },
       "closing_stage": "schematic"
@@ -18822,7 +19144,9 @@
         "related": [
           "G07-025",
           "G07-040",
-          "G04-039"
+          "G04-039",
+          "G06-011",
+          "G06-014"
         ]
       },
       "closing_stage": "schematic"
@@ -18959,7 +19283,8 @@
       "relations": {
         "related": [
           "G07-031",
-          "G07-036"
+          "G07-036",
+          "G07-044"
         ]
       },
       "closing_stage": "schematic"
@@ -19016,7 +19341,8 @@
       ],
       "relations": {
         "related": [
-          "G07-031"
+          "G07-031",
+          "G07-037"
         ],
         "primary": [
           "G05-032"
@@ -19077,7 +19403,8 @@
       ],
       "relations": {
         "related": [
-          "G07-024"
+          "G07-024",
+          "G07-035"
         ],
         "primary": [
           "G05-035"
@@ -19263,7 +19590,9 @@
         "related": [
           "G07-006",
           "G07-039",
-          "G05-034"
+          "G05-034",
+          "G09-025",
+          "G09-026"
         ]
       },
       "closing_stage": "schematic"
@@ -19298,7 +19627,9 @@
       ],
       "relations": {
         "related": [
-          "G04-098"
+          "G04-098",
+          "G07-038",
+          "G09-026"
         ]
       },
       "closing_stage": "schematic"
@@ -19337,7 +19668,8 @@
         "related": [
           "G07-025",
           "G07-029",
-          "G07-028"
+          "G07-028",
+          "G06-019"
         ]
       },
       "closing_stage": "schematic"
@@ -19471,7 +19803,8 @@
           "G07-025",
           "G07-042",
           "G04-088",
-          "G04-098"
+          "G04-098",
+          "G06-012"
         ]
       },
       "closing_stage": "schematic"
@@ -19559,7 +19892,11 @@
           "G07-011",
           "G07-046",
           "G03-011",
-          "G03-012"
+          "G03-012",
+          "G07-012",
+          "G07-014",
+          "G07-047",
+          "G07-049"
         ]
       },
       "closing_stage": "schematic"
@@ -19687,7 +20024,9 @@
       ],
       "relations": {
         "related": [
-          "G07-028"
+          "G07-028",
+          "G06-017",
+          "G06-019"
         ]
       },
       "closing_stage": "schematic"
@@ -19992,6 +20331,9 @@
       "relations": {
         "primary": [
           "G01-009"
+        ],
+        "related": [
+          "G08-006"
         ]
       },
       "closing_stage": "schematic",
@@ -20040,6 +20382,9 @@
         ],
         "reuses": [
           "G01-007"
+        ],
+        "related": [
+          "G08-007"
         ]
       },
       "closing_stage": "schematic",
@@ -20716,7 +21061,10 @@
         "related": [
           "G08-022",
           "G08-023",
-          "G08-024"
+          "G08-024",
+          "G08-009",
+          "G08-016",
+          "G08-020"
         ]
       },
       "closing_stage": "schematic"
@@ -20750,7 +21098,10 @@
       "relations": {
         "related": [
           "G08-049",
-          "G08-051"
+          "G08-051",
+          "G08-011",
+          "G08-020",
+          "G08-021"
         ]
       },
       "closing_stage": "schematic"
@@ -20786,7 +21137,8 @@
         "related": [
           "G08-025",
           "G08-026",
-          "G08-032"
+          "G08-032",
+          "G08-021"
         ]
       },
       "closing_stage": "schematic"
@@ -20823,7 +21175,8 @@
           "G02-009"
         ],
         "related": [
-          "G08-051"
+          "G08-051",
+          "G08-021"
         ]
       },
       "closing_stage": "schematic"
@@ -20858,7 +21211,8 @@
       "relations": {
         "related": [
           "G08-026",
-          "G08-047"
+          "G08-047",
+          "G08-023"
         ]
       },
       "closing_stage": "schematic"
@@ -21008,7 +21362,8 @@
       ],
       "relations": {
         "related": [
-          "G08-051"
+          "G08-051",
+          "G08-028"
         ]
       },
       "closing_stage": "prototype",
@@ -21049,7 +21404,8 @@
       "relations": {
         "related": [
           "G08-013",
-          "G08-031"
+          "G08-031",
+          "G08-018"
         ]
       },
       "closing_stage": "schematic"
@@ -21085,7 +21441,8 @@
       "relations": {
         "related": [
           "G08-030",
-          "G08-047"
+          "G08-047",
+          "G08-011"
         ]
       },
       "closing_stage": "schematic"
@@ -21128,7 +21485,8 @@
         ],
         "related": [
           "G08-023",
-          "G08-035"
+          "G08-035",
+          "G08-033"
         ]
       },
       "closing_stage": "schematic"
@@ -21177,7 +21535,8 @@
       ],
       "relations": {
         "related": [
-          "G08-032"
+          "G08-032",
+          "G08-058"
         ]
       },
       "closing_stage": "schematic"
@@ -21267,12 +21626,10 @@
         "primary": [
           "G05-043"
         ],
-        "reuses": [
-          "G05-043"
-        ],
         "related": [
           "G08-032",
-          "G08-034"
+          "G08-034",
+          "G08-014"
         ]
       },
       "closing_stage": "schematic"
@@ -21402,7 +21759,9 @@
           "G02-008",
           "G08-037",
           "G08-039",
-          "G08-041"
+          "G08-041",
+          "G08-040",
+          "G08-042"
         ]
       },
       "closing_stage": "schematic"
@@ -21533,7 +21892,8 @@
       "relations": {
         "related": [
           "G08-038",
-          "G08-054"
+          "G08-054",
+          "G08-040"
         ]
       },
       "closing_stage": "schematic"
@@ -21656,7 +22016,8 @@
       ],
       "relations": {
         "related": [
-          "G08-045"
+          "G08-045",
+          "G08-057"
         ]
       },
       "closing_stage": "schematic"
@@ -21690,7 +22051,8 @@
       ],
       "relations": {
         "related": [
-          "G08-044"
+          "G08-044",
+          "G08-057"
         ]
       },
       "closing_stage": "prototype",
@@ -21731,7 +22093,10 @@
         "related": [
           "G08-025",
           "G08-031",
-          "G08-049"
+          "G08-049",
+          "G08-019",
+          "G08-027",
+          "G08-048"
         ]
       },
       "closing_stage": "pcb",
@@ -21766,7 +22131,8 @@
       ],
       "relations": {
         "related": [
-          "G08-047"
+          "G08-047",
+          "G06-016"
         ]
       },
       "closing_stage": "schematic"
@@ -21844,7 +22210,10 @@
           "G01-012"
         ],
         "related": [
-          "G08-029"
+          "G08-029",
+          "G08-022",
+          "G08-024",
+          "G08-054"
         ]
       },
       "closing_stage": "prototype",
@@ -21879,6 +22248,10 @@
         "primary": [
           "G01-011",
           "G01-012"
+        ],
+        "related": [
+          "G08-056",
+          "G08-059"
         ]
       },
       "closing_stage": "prototype",

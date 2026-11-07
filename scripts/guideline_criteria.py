@@ -229,6 +229,7 @@ def bundle_errors(bundle, vocabulary_path=None):
     if ids != sorted(ids, key=str):
         errors.append('rules must be sorted by id')
     known = set(ids)
+    errors.extend(relation_shape_errors(rules))
     values = bundle.get('engineering_values', {})
     if not isinstance(values, dict):
         return errors + ['engineering_values must be an object']
@@ -245,6 +246,26 @@ def bundle_errors(bundle, vocabulary_path=None):
                 errors.append('%s: cites engineering value %s, which the bundle does not hold' % (rule.get('id'), name))
     if bundle.get('content_sha256') != content_sha256(rules, values):
         errors.append('content_sha256 does not match the rules')
+    return errors
+
+
+def relation_shape_errors(rules):
+    """related 必须双向；一条规则不能指向自己，也不能把同一条既标主判又标复用。"""
+    errors = []
+    related = {r.get('id'): set((r.get('relations') or {}).get('related') or ())
+               for r in rules if isinstance(r, dict) and isinstance(r.get('relations') or {}, dict)}
+    for rule in rules:
+        if not isinstance(rule, dict) or not isinstance(rule.get('relations') or {}, dict):
+            continue
+        rid, rel = rule.get('id'), rule.get('relations') or {}
+        if any(rid in (v if isinstance(v, list) else ()) for v in rel.values()):
+            errors.append('%s: relations name the rule itself' % rid)
+        both = set(rel.get('primary') or ()) & set(rel.get('reuses') or ())
+        if both:
+            errors.append('%s: %s is both primary and reuses' % (rid, '、'.join(sorted(both))))
+        for target in sorted(related.get(rid, ())):
+            if target in related and rid not in related[target]:
+                errors.append('%s: related %s, but %s does not list it back' % (rid, target, target))
     return errors
 
 
