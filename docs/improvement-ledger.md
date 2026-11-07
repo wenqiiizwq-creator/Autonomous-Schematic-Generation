@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 清理历史遗留：源数据已丢失的基准与已实现的草案（2026-11-06）
+
+`overstrict_bench`、`delivery_replay`、`mutation_bench` 及其辅助（`bench_common.py`、`run_binding.py`、`incremental_delivery.py`、`incremental_deliveries.json`、`compare_calibration_runs.py`、`README-calibration.md`）依赖的 `~/Documents/ChatGPT/Auto-Development/ASG提升计划/` 历史十轮与第 2 批交付已不在本机，也找不到移动后的位置，M6 总验收记为 NOT_RUN，永远无法再跑；连同只测这些基准的三个测试一并移除。`README-calibration.md` 第一段（评测集案例的用法）保留为 `evals/README.md`。`docs/proposals/` 下 11 份草案均已实施或被取代、无任何引用；`docs/release-validation.md` 是 2026-09-15 的发布验证记录，已过时。以上都可从 Git 历史取回。
+
+- Event: user:2026-11-06（“清理ASG、SR、设计规范，这三者里面的历史任务和历史遗留”）
+- Causes: knowledge_wrong 1
+- Changed: evals/README.md, evals/README-calibration.md, evals/overstrict_bench, evals/delivery_replay, evals/mutation_bench, evals/bench_common.py, evals/run_binding.py, evals/incremental_delivery.py, evals/incremental_deliveries.json, evals/compare_calibration_runs.py, tests/test_benchmark_run_binding.py, tests/test_benchmark_revision3.py, tests/test_auto_like_operator.py, docs/proposals, docs/release-validation.md, docs/improvement-ledger.md
+- Gates: 1302 passed（移除的三个基准测试文件共 34 条）；check_ledger.py PASS
+
 ## M6：最终集成与过时入口清理（2026-11-06）
 
 清理 README 中 M3/M4 尚待实施的过时说法，指向各自本地发布检查与显式评测入口。核查草案所列无用 SR_PASSIVE、G02 未接入/登记1.1、G06–G09 待接入和旧双向同步已在 M2/M3/M4 消除，不重复修改发布包或历史文字。N/E 当前入口局部更新，原有历史台账与记录保留；正式包仍为 1.9.4，工程输入与数值不变。ASG 历史回放输入缺失，按 NOT_RUN 独立披露，不作为 PASS。
