@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 1.3 文字去掉库里没有的字段（2026-11-07）
+
+9620a80 合入的 1.3 文字提到“相邻文件”“按文件的决定条件”“排除条件”“未比较”，这些是试点格式的字段，main 的库文件没有。改为：决定条件由 ASG 写出并给本板取值，对照每种候选的适用范围；库里候选不足时先检索知识库再比较。其余句子与做完的标志不变。
+
+- Event: user:2026-11-07（把这个问题修正掉；按草案改）
+- Approved: user:2026-11-07
+- Outline: 804fb160cd9fd208
+- Changed: SKILL.md, docs/improvement-ledger.md
+
 ## 1.3 候选比较记录与弱化典型电路库联动（2026-11-07）
 
 用户只合入 typical-route 分支的 b060c50；它依赖的 c9dfc9d 只取代码部分：取消 `guideline_scope_circuit` 联动（`audit_design_closure.py`、`typical_circuits.py` 删 `claimed`），以及 `references/typical-circuits.md` 规则一节。试点的 3 个多方案文件、40 个文件的“方案覆盖”行、`find_parts.py` 决定条件检索、格式模板新增字段（决定条件、方案覆盖、相邻文件、排除条件、代价、可信度）都没有合入；评估见 `docs/典型电路库选型试点评估与架构建议-2026-11-07.md`。
@@ -22,7 +31,6 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 - 任务 1.3：关键功能块在 `scheme-criteria.json` 写决定条件及本板取值、候选及来源、选中和淘汰理由；`check_scheme_criteria.py` 核单一可行说明、来源格式、未证实禁选、选定方案与页计划一致（无页计划时跳过）。
 - 典型电路标注和 `library_gaps` 只要求关键块；页计划用 `key_blocks`、`circuits`。
 - 库中电路类型和落实规则不再扩展本板 `guideline_scope`，适用准则的普通覆盖核对保留。必算项、已知坑、落实规则可不填全，来源要求不变；SR 坑回填改为“可以”。
-- SKILL.md 任务 1.3 文字与已确认草案一致；其中提到的“决定条件、相邻文件、未比较”是库文件可选字段，现有库文件没有时由 ASG 自己写出决定条件。
 
 - Event: user:2026-11-07（只合 b060c50，合进来之后不用重新跑）
 - Approved: user:2026-11-07
