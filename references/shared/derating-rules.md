@@ -2,7 +2,7 @@
 
 > 读者：审查员（共用层文件，见 [shared-layer.md](shared-layer.md)）。
 
-本规范给出器件应力的降额要求，分 I、II、III 三级。ASG 设计和 SR 审查都按项目定下的降额等级取对应一列的值。
+本规范是共用规范 G10 的降额部分（判法见[应力规范](stress-spec.md)），给出器件应力的降额要求，分 I、II、III 三级。ASG 设计和 SR 审查都按项目定下的降额等级取对应一列的值。
 机器可读的同一份数据在 `references/shared/derating-rules.json`，本文件的表格与它逐条对应（编号相同）。
 本文件属于 ASG 与 SR 的共用层，怎么改、谁来守见 [shared-layer.md](shared-layer.md)。
 

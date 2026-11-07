@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.9.7",
+  "library_version": "1.9.8",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -69,7 +69,7 @@
   },
   "specs": {
     "G01": "1.13",
-    "G02": "1.6",
+    "G02": "1.7",
     "G03": "1.10",
     "G04": "1.9",
     "G05": "1.6",
@@ -78,7 +78,7 @@
     "G08": "1.3",
     "G09": "1.0"
   },
-  "content_sha256": "e25193df48e4804e4cfdd0037b9e219363bdc24a0e36c043e0e5742772aaa1e9",
+  "content_sha256": "a59c6774a0293cc692b17bcdfbfa676f7c7fa89db8fbca105da70dfcf6218be2",
   "criteria": [
     {
       "id": "G01-001",
@@ -3293,9 +3293,9 @@
     },
     {
       "id": "G02-004",
-      "title": "工作条件超出手册测试条件时按定界表推出保证最坏值，推不出时才估算并标“估算”",
+      "title": "工作条件超出手册测试条件时推出保证最坏值，推不出时才估算并标“估算”",
       "spec": "G02",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -3305,7 +3305,7 @@
         "器件手册参数的测试条件",
         "工作条件（电压、电流、温度、负载、时序）"
       ],
-      "asg_action": "逐项比较测试条件与工作条件；超出时按 SR 定界表 G1–G6 推出保证最坏值，推不出时才用估算推法并标“估算”，估算倍数取工程取值表（迁入项，接入阶段实施）。参照 ASG `references/worst-case-bounds.md`“源表条件与工作条件匹配”。",
+      "asg_action": "逐项比较测试条件与工作条件；超出时按 ASG `references/worst-case-bounds.md`“源表条件与工作条件匹配”推出保证最坏值，推不出时才用估算推法并标“估算”，估算倍数取本规范工程取值表。",
       "sr_check": "核对关键参数是否在测试条件外套用（如 25 °C 最大值用于高温）；套用的按定界表重算。估算得出的通过只能判“合格但有风险”，不能用于器件损坏、过热、安全和保护判据。",
       "source": [
         {
