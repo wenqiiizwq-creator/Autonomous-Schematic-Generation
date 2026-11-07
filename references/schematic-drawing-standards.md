@@ -33,7 +33,7 @@
   几何检查项把间距不足但分开的本体记为 `body_clearance`，需要在 KiCad 渲染上审阅；实际重叠的本体外框仍是 `body_overlap` 错误。
   间距警告不产生自动 PASS，也不关闭独立的文字、引脚、导线或覆盖范围发现。
 - 普通字段保持水平，并明显归属于它的器件。密集、规整的电容组可以用一致的 90° Reference/Value 字段，
-  间距要实测并在 KiCad 渲染上目视核对；见 [engineer-template-comparison.md](engineer-template-comparison.md)。
+  间距要实测并在 KiCad 渲染上目视核对；见 [reference-driven-board-design.md](reference-driven-board-design.md) 的“对照工程师参考图”。
   走线前预留文字空间。优先选空出的一侧；没有就扩大或移动功能块，不要把重叠最少的位置当作成功返回。
 - 输入/输出方向要明显。功能块之间用明确的空白分开；不要把无关的控制器件穿插进来，也不要把支持器件散开。
 - 预留图框、标题、注释和其他禁布区。既看整页的分配，也看拥挤的区域。稀疏的小测试块不能证明多块的产品原理图排得好。

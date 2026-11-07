@@ -407,7 +407,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 交付增加 `record/component-requirements.json`，报告分别给出性能定义完整程度、选型核实状态和未关闭项；BOM及图面的可见规格由该记录生成。打包检查性能记录和图纸/BOM是否同源、最新、一致；完整规格采购、候选待核与型号已核准各自表述，不能统一写成选型完成。
 
-- 按 [execution-evidence.md](references/execution-evidence.md) 写 `delivery-evidence.json`，报告前运行
+- 按 [交付证据（快照检查）](references/delivery-report.md#交付证据快照检查) 写 `delivery-evidence.json`，报告前运行
   `scripts/check_delivery_freshness.py`；任何导出后的修改都会使旧结果作废。
 - 交付目录只有下面四样，由 [交付与设计报告](references/delivery-report.md) 规定，`pack_design.py` 检查：
 
@@ -464,7 +464,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 需求没说清：问什么、什么时候问、答复怎样写回需求清单 | [requirement-clarifications.md](references/requirement-clarifications.md) |
 | 架构页、参考设计外围、学习工程师图面 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
-| 技能怎样持续改进：事件、归因、台账、合成测试 | [docs/improvement-plan.md](docs/improvement-plan.md)、每版的固定动作 [docs/operating-cadence.md](docs/operating-cadence.md) |
+| 技能怎样持续改进：原则、事件、归因、台账、合成测试与每版的固定动作 | [docs/operating-cadence.md](docs/operating-cadence.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
 | 一个功能通常怎么实现、有几种实现方案、各自的必算项与已知坑 | [typical-circuits.md](references/typical-circuits.md) 与 `references/typical-circuits/` |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
@@ -480,8 +480,8 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |
 | 重画已有工程 | [existing-project-redraw.md](references/existing-project-redraw.md) |
 | 电气改版与预检 | [electrical-redesign.md](references/electrical-redesign.md)、[change-preflight.md](references/change-preflight.md)、[project-verification.md](references/project-verification.md) |
-| 对照工程师模板 | [engineer-template-comparison.md](references/engineer-template-comparison.md) |
-| 交付证据与是否最新 | [execution-evidence.md](references/execution-evidence.md) |
+| 对照工程师参考图 | [reference-driven-board-design.md](references/reference-driven-board-design.md) 的“对照工程师参考图” |
+| 交付证据与是否最新 | [delivery-report.md](references/delivery-report.md) 的“交付证据（快照检查）” |
 | 用词 | [terminology.md](references/terminology.md) |
 | Circuit IR、低层生成器 | [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md) |
 

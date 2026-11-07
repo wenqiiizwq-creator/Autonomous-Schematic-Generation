@@ -108,6 +108,30 @@ python3 <skill>/scripts/deliver.py <交付目录>
 
 图面审阅要看本次导出的 PDF：先跑 `deliver.py <交付目录> --for-review`，到自动检查为止（不出报告、不打包），按 `原理图/schematic.pdf` 写 `record/visual-review.json`，再跑全程。全程重新出图得到同一份 PDF；器件性能记录的 `RequirementsSHA256` 不含来源文件的哈希，只改计算脚本不会让图面字段和 PDF 变化（来源文件另行按哈希核对）。
 
+## 交付证据（快照检查）
+
+导出后的任何清理、图形、标签或字段改动都使旧的导出和 PASS 作废，要重新导出再写本记录。
+
+最终导出/检查之后，把 `delivery-evidence.json` 存在工程根目录或交付目录的 `record/` 中；放在 `record/` 时其中的路径相对于交付目录
+（如 `原理图/board.kicad_sch`）：
+
+```json
+{
+  "schema_version": 1,
+  "root": "board.kicad_sch",
+  "inputs": {"board.kicad_sch": "<sha256>", "child.kicad_sch": "<sha256>"},
+  "outputs": {"board.xml": "<sha256>", "erc.json": "<sha256>", "geometry.json": "<sha256>", "board.pdf": "<sha256>"},
+  "roles": {"netlist": ["board.xml"], "erc": ["erc.json"], "geometry": ["geometry.json"], "render": ["board.pdf"]}
+}
+```
+
+包含每张活动页、工程配置、符号表和本地 `symbols/*.kicad_sym` 输入。哈希所有引用的输出，用到时包括基线增量和图面审阅记录；
+允许 `identity`、`routing`、`visual_review` 等额外角色。存真实的 SHA-256 字符串，不是占位符。
+
+报告交付前立即运行 `python3 scripts/check_delivery_freshness.py <工程>/delivery-evidence.json`。它核对活动层次的覆盖，
+拒绝缺失/被改动的输入、输出和必需的角色证据。`FRESH` 只表示这份声明的快照没有变。它不能证明某条命令运行过或有人看过 PDF，
+也从不把 ERC 失败、几何缺口、继承的未关闭问题或电气 NO_GO 升为 PASS。
+
 ## 打包检查
 
 ```bash

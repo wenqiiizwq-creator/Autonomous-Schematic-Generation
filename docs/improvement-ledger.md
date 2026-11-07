@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 清理矛盾 第 3 批：删除与合并历史文档（2026-11-07）
+
+D8：删除 docs/shared-release-migration.md（M0–M4 验收记录，v1 指纹已取消；现行流程只在规范 README）和 docs/improvement-plan.md（阶段计划已实施或撤销，仍有效的七条原则与不做的事并入 operating-cadence）；execution-evidence.md 的快照检查并入 delivery-report 后删除；engineer-template-comparison.md 的通用部分并入 reference-driven-board-design.md、显式字段 API 并入 schematic-generation.md、TPS53355 个案移到 examples/tps53355_compact/README.md 后删除；upstream-integration.md 压缩为采纳清单（保留文件名供代码注释引用）；pdf-schematic-extraction.md 删去与 ASG 分页和标签规则相反的“重建/组织多页”与泛泛步骤；README 按五步列入口、共用层段改为指向规范源与 shared-layer.md；agents/openai.yaml 的默认提示补全五步范围。
+
+- Event: user:2026-11-07（逐条裁决 D1–D8，按推荐执行）
+- Approved: user:2026-11-07
+- Outline: d1f85c57173a5323
+- Changed: SKILL.md, README.md, agents/openai.yaml, docs/improvement-ledger.md, docs/operating-cadence.md, references/delivery-report.md, references/reference-driven-board-design.md, references/schematic-generation.md, references/schematic-drawing-standards.md, references/upstream-integration.md, references/pdf-schematic-extraction.md, examples/tps53355_compact/README.md
+
 ## 清理矛盾 第 2 批：去重与口径对齐（2026-11-07）
 
 每条规则只留一处权威定义，其余改为引用：SKILL 主流程的需求澄清、外部依赖选型、应力判法、器件性能、间距与 name_run_steps、System_block、PWR_FLAG、图面审阅、lessons 细则改为指向 references；scheme-criteria 格式只在 typical-circuits（测试钉住的权威出处），delivery-report 改为引用并保留其独有规则；标签角色只在 HR-07；自动检查清单只在 SKILL 4.1；最弱档和降额数值改引用共用层 json。纲要两处只增修正：架构表①产出补 scheme-criteria.json，任务 1.4 补单候选例外。口径对齐：D1 等级未定按 unset_level 预判；D2 应力超幅按共用判法挂待办；D3 交接角色只留审查方实际读取的必需角色和 ASG 实际产出的归档角色；D5 共用规范 G01–G10（G10 降额与应力）；设计定型对应 SR 冻结准出；需求澄清写明与 SR 共享字段和 DEFERRED 差异；calculation-preflight 加两技能差异表（ASG 不设表达式上限，保持 2026-10-23 的决定）。

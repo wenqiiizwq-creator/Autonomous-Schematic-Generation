@@ -3,35 +3,31 @@
 > ASG：从需求文档出发，基于 KiCad 自主绘制可读、电气正确、经 KiCad 导出验证的原理图
 
 Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claude 等 Agent 的 Skill。
-从已确认的需求出发，建立板级电气意图，按绘图纲要 O1–O8 用引脚几何画法（recipes）新建、新增或重画
-KiCad 原理图，并用一键自动检查（`verify_schematic.py`）完成 KiCad ERC、逐脚网表、层次、符号、可读性和几何检查。
-ASG 只做出图自检；严格的电气审查交给 `schematic-review`。
+从需求文档出发，按五步完成一块板的原理图设计：需求与方案（需求追溯、系统架构、功能块方案、核心器件选型）→ 详细设计
+（数据手册核对、设计计算与器件性能要求、选型符合性、设计网表）→ 原理图绘制（按绘图纲要 O1–O8 用引脚几何画法 recipes）
+→ 设计检查（KiCad ERC、逐脚网表、层次、符号、可读性、几何与图面审阅）→ 设计输出（设计报告与固定交付目录）。
+ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 
-流程与规则见 [SKILL.md](SKILL.md)。主要工具：
+流程与规则见 [SKILL.md](SKILL.md)。各步的主要入口：
 
-- `verify_schematic.py`：一键自动检查（ERC、网表对意图、层次、系统框图、符号完整性、可读性与纸张、几何，可选参考合同与改版合同）；`audit_system_block.py` 单独检查架构页。
-- `build_circuit.py` / `generate_schematic.py`：Circuit IR 编译、自动布局和 KiCad 文件生成，见 [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md)。
-- `verify_design_change.py`、`audit_project.py`、`verify_reference_contract.py`：改版合同、多页工程交付核对、器件与外围合同，见 [project-verification.md](references/project-verification.md)。
-- `patch_schematic_values.py`：保持连线与图面的 Value 修改，见 [value-patch.md](references/value-patch.md)。
-- `check_ledger.py`：检查改进台账最新条目的事件来源、归因和改动文件。改进规则见 [docs/improvement-plan.md](docs/improvement-plan.md)。
-- `find_parts.py`：在本机知识库 `~/Documents/知识库/HardwareWiki/raw/` 检索器件手册、参考设计和应用笔记，见 [core-part-selection.md](references/core-part-selection.md)、[part-roles.md](references/part-roles.md)；`--circuits` 检索 [典型电路库](references/typical-circuits.md)。
+| 步骤 | 入口 |
+|---|---|
+| ① 需求与方案 | `find_parts.py`（检索本机知识库 `~/Documents/知识库/HardwareWiki/raw/` 与 `--circuits` 典型电路库）、`check_scheme_criteria.py`、`guideline_criteria.py select` |
+| ② 详细设计 | `fill_pin_maps.py`、`audit_design_closure.py`、`audit_component_requirements.py` |
+| ③ 原理图绘制 | `schematic_layout.recipes.Sheet`、`schematic_layout.root.Root`（见 [drawing-recipes.md](references/drawing-recipes.md)） |
+| ④ 设计检查 | `verify_schematic.py`（一次运行全部自动检查）、`audit_system_block.py` |
+| ⑤ 设计输出 | `deliver.py`（一次跑完出图到打包）、`render_design_report.py`、`pack_design.py`、`check_ledger.py` |
 
-上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）的源码路径、commit、许可证和未采用部分见
-[融合说明](references/upstream-integration.md)；历次改造与发布验证记录在 [docs/](docs/)。
-
-当前生成后端支持多功能块自动排入单页、已覆盖的多单元符号、可见局部布线及显式远端标签。
-多页层次（由 Circuit IR 直接生成）、图形总线、任意隐藏/堆叠引脚、复杂跨网图和已有工程原位增量编辑尚未实现，
-多页工程用 `schematic_layout.root.Root` 组装根图（层次图框、System_block 流向线与隔离边界）并通过相应自动检查。
+其他工作流：改版与多页核对用 `verify_design_change.py`、`audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
+保持图面的 Value 修改用 `patch_schematic_values.py`（见 [value-patch.md](references/value-patch.md)）；导入与草稿用的低层生成器
+`build_circuit.py` / `generate_schematic.py` 见 [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md)，
+它们不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [采纳清单](references/upstream-integration.md)。
 
 ## 运行一个样例
 
 ```bash
-python3 scripts/build_circuit.py \
-  tests/fixtures/generation/dual_filter.circuit.json \
-  tests/fixtures/generation/dual_filter.presentation.json \
-  --output-dir output/dual-filter-run-01
-
 python3 scripts/verify_schematic.py board.kicad_sch --intent electrical-intent.json --out runs/verify-01
+python3 scripts/deliver.py <交付目录>          # 参数在 <交付目录>/record/deliver.json
 
 python3 -m unittest discover -s tests -v
 ```
@@ -55,12 +51,7 @@ PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（
 
 ## 设计约定
 
-以 SKILL.md 的「ASG 纲要」为核心标准（含绘图纲要 O1–O8），修改纲要须先经人确认。
-
-- **数据手册是唯一真值**：值来自手册典型应用 / 设计公式，图纸只决定怎么摆；
-- **工具行为是约束而非风格**：KiCad 的坐标精确连接规则要机械遵守；
-- **可读性是交付标准**：连得对但像器件堆叠的图不算完成；
-- **证据可追溯**：意图追溯到需求和手册页码，验证结果绑定文件哈希；严格审查交 `schematic-review`。
+以 SKILL.md 的「ASG 纲要」为核心标准（原则 P1–P7 与绘图纲要 O1–O8），修改纲要须先经人确认。
 
 ## 免责声明
 
@@ -76,7 +67,8 @@ Copyright (c) 2026 wenqiii.zwq
 改编部分另保留 tscircuit Inc. 和 Osman Aslan 的 MIT 声明，见
 [上游许可证](references/upstream-licenses/)及[来源记录](references/upstream-sources.json)。
 
-## 共用层更新入口
+## 共用层
 
-共用工程判据由硬件设计规范的 `工具/guideline_criteria.py release` 发布，再用 `install --target <选定worktree>` 从同一正式包安装；维护源在规范 `准则登记/`、`共用层/` 和 `工具/`，技能内不得编辑共用载荷。安装路径与 import 不变。
-当前机制与完整清单见 [共用层说明](references/shared/shared-layer.md)，迁移验收见 [迁移记录](docs/shared-release-migration.md)。本地测试只核自己的固定发布包；工程指纹采用包内声明的格式。外部评测显式指定 --guideline-release，现行用法见评测集 发布绑定.md。M0–M6 迁移总验收见硬件设计规范维护目录。
+共用规范 G01–G10（G01–G09 设计准则、G10 降额与应力规范）由硬件设计规范发布，安装在 `references/shared/` 等受控文件里，技能内不得编辑。
+维护源在规范的 `准则登记/`、`规范正文/G10_元器件降额与应力规范/` 和 `工具/`（含 `包说明/`），发布与安装流程只写在规范的 `README.md`；
+技能内有哪些共用文件、谁读、怎样核对见 [共用层说明](references/shared/shared-layer.md)。
