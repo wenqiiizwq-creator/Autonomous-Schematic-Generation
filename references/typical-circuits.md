@@ -28,7 +28,8 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。典�
 - 任务 3.1 写分页方案时，`page-plan.json` 每页用 `key_blocks: [块名]` 声明关键功能块（功率变换、保护、隔离、信号链、对外接口），关键块标注所用典型电路与实现方案：
   `"circuits": {"<块名>": "<典型电路文件名>#<实现方案名>"}`；分页方案第一页是架构页，免标。
   没有适用典型电路文件的关键功能块，在 `lessons.json.library_gaps` 登记资料覆盖待办，说明检索与不适用理由、本版设计依据及拟补文件；分页后精确绑定图页和功能块。检查器对关键块核对已有文件及实现方案，或该块的有效覆盖待办；常规块可不标、不登记。显式标注的文件和方案名始终核对。`scheme-criteria.json` 中的块也按关键块核对，名称与页计划一致。覆盖待办不证明缺知识造成了问题，也不代替设计计算和数据手册依据；真实知识缺陷另在 `events` 中按证据归因。
-- 任务 1.3 关键功能块对照的规则写进 `record/scheme-criteria.json`，格式固定，报告按它核对（字段说明见 [交付与设计报告](delivery-report.md)）：
+- 任务 1.3 关键功能块对照的规则写进 `record/scheme-criteria.json`，格式固定，报告按它核对；本节是该文件的唯一定义：
+  `guideline_scope` 含功率变换、保护、隔离、模拟或对外接口电路类型时必须有这份记录，每个这类类型至少有一块；页计划 `key_blocks` 声明的关键块也必须比较，存在页计划时选定方案须与同名块的 `circuits` 一致。`ports: true` 的块可引用端口矩阵的 G07 全板规则，其余只能引用 `select --typed-only` 选出的规则。这里的结论不代替任务 2.2 的核算，闭环时这些规则仍按原方式引用覆盖。
   每个关键块还写 `decisive: [{condition, value}]`（条件及本板取值）和 `candidates: [{name, source, status, reason, circuit?, unverified?}]`：`source` 是沿用 datasheet/review/test/user 格式的非空来源列表，`status` 为 `selected` 或 `rejected`，`reason` 写选中或淘汰的理由；恰有一个选定方案，`unverified: true` 的候选不能选定。单候选另写 `only_viable` 说明查过哪些资料及只有一种可行的原因。`circuit` 是与页计划 `circuits` 一致的 `文件名#方案名`；省略时以 `name` 与该引用或其方案名精确比较。没有页计划时跳过一致性核对。
   每块写 `block`、`circuit_types`、`device_kinds`、`ports`（有对外端口为 true）和 `criteria`；`criteria` 只列会淘汰某个候选的规则，每项写 `id`、`excludes`（排除的候选）、
   `basis`（`requirement`、`standard`、`datasheet_abs_max` 能硬排除，只来自工程推论的写 `inference`，不作硬排除）、`how`（选定方案怎样满足）、`defer`（留给 2.2 的数值名）；

@@ -15,6 +15,13 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 清理矛盾 收尾：scheme-criteria 规则收为一处（2026-11-07）
+
+`record/scheme-criteria.json` 何时必须有、字段与格式示例只在 typical-circuits.md 规则一节定义；delivery-report.md 原先独有的几条（guideline_scope 含关键电路类型时必有、key_blocks 必须比较、ports 与 typed-only 的引用范围、不代替 2.2 核算）并入该节，delivery-report 只留引用。
+
+- Event: user:2026-11-07（scheme-criteria 相关规则全部收进 typical-circuits）
+- Changed: references/typical-circuits.md, references/delivery-report.md, docs/improvement-ledger.md
+
 ## 清理矛盾 第 3 批：删除与合并历史文档（2026-11-07）
 
 D8：删除 docs/shared-release-migration.md（M0–M4 验收记录，v1 指纹已取消；现行流程只在规范 README）和 docs/improvement-plan.md（阶段计划已实施或撤销，仍有效的七条原则与不做的事并入 operating-cadence）；execution-evidence.md 的快照检查并入 delivery-report 后删除；engineer-template-comparison.md 的通用部分并入 reference-driven-board-design.md、显式字段 API 并入 schematic-generation.md、TPS53355 个案移到 examples/tps53355_compact/README.md 后删除；upstream-integration.md 压缩为采纳清单（保留文件名供代码注释引用）；pdf-schematic-extraction.md 删去与 ASG 分页和标签规则相反的“重建/组织多页”与泛泛步骤；README 按五步列入口、共用层段改为指向规范源与 shared-layer.md；agents/openai.yaml 的默认提示补全五步范围。
