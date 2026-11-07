@@ -24,7 +24,9 @@ def source(tmp_path):
     for name in g.SHARED_FILES:
         if name == 'references/shared/guideline-criteria.json':
             continue
-        shutil.copyfile(ROOT / name, (shared if name.startswith('references/') else tools) / Path(name).name)
+        # 共用源用规范目录里的源文件名（G10 中文名），发布时映射回包内名。
+        source_name = g.SOURCE_NAMES.get(name, Path(name).name)
+        shutil.copyfile(ROOT / name, (shared if name.startswith('references/') else tools) / source_name)
     rule = {'id': 'G01-001', 'spec': 'G01', 'version': '1.0', 'title': '合成设计准则',
             'status': 'active', 'nature': 'shall', 'applies_when': {'board': True},
             'inputs': [], 'asg_action': '核对合成输入', 'sr_check': '独立核对合成输入',

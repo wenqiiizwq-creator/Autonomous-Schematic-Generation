@@ -14,9 +14,12 @@
     python3 guideline_criteria.py release --help                    确定性发布（保存输入快照）
     python3 guideline_criteria.py verify-release DIR                校验正式发布目录
     python3 guideline_criteria.py install DIR --target SKILL         核清单后整批安装
+    python3 guideline_criteria.py prune RELEASES --keep V --target ASG --target SR [--yes]
+                                                                  两技能都装 V 后只留 V，旧版记入版本历史
     python3 guideline_criteria.py shared                              共用层指纹与逐文件 sha256
 """
 import argparse
+import datetime
 import hashlib
 import json
 import os
@@ -39,7 +42,6 @@ SHARED_FILES = ('references/shared/shared-layer.md', 'references/shared/guidelin
                 'references/shared/derating-rules.md', 'references/shared/stress-spec.md',
                 'references/shared/vocabulary.json', 'references/shared/commodity-floors.json',
                 'scripts/guideline_criteria.py', 'scripts/stress_check.py')
-LEGACY_FINGERPRINT_FORMAT = 'shared-files-sha256-lines-v1'
 FINGERPRINT_FORMAT = 'shared-paths-sha256-v2'
 # 降额 Markdown 含规范性取值规则，不能作为纯说明排除。
 ENGINEERING_FILES = tuple(name for name in SHARED_FILES if name not in (
@@ -263,10 +265,8 @@ def _engineering_digest(files):
 
 
 def shared_digest(root=SKILL_ROOT, fingerprint_format=FINGERPRINT_FORMAT):
-    """Installed engineering identity; retain the exact v1 algorithm for historical records/packages."""
+    """Installed engineering identity. Only the current format exists; older packages are not kept."""
     files = shared_files(root)
-    if fingerprint_format == LEGACY_FINGERPRINT_FORMAT:
-        return hashlib.sha256('\n'.join(files[n] for n in SHARED_FILES).encode('utf-8')).hexdigest()
     if fingerprint_format != FINGERPRINT_FORMAT:
         raise ValueError('unsupported fingerprint format: %s' % fingerprint_format)
     return _engineering_digest(files)
@@ -306,13 +306,12 @@ def shared_versions(root=SKILL_ROOT, bundle=None):
 
 
 def identity_errors(record, root=SKILL_ROOT, bundle=None):
-    """Missing format means v1, never v2. Do not rewrite history or migrate an old PASS."""
+    """Any record not in the current format must be regenerated on the current release; an old PASS never migrates."""
     if not isinstance(record, dict):
         return ['missing shared identity: regenerate the plan/audit']
     current = shared_versions(root, bundle)
-    fmt = record.get('fingerprint_format', LEGACY_FINGERPRINT_FORMAT)
-    if fmt not in (LEGACY_FINGERPRINT_FORMAT, FINGERPRINT_FORMAT) or fmt != current['fingerprint_format']:
-        return ['shared fingerprint format changed/unknown: regenerate the plan/audit; retain the historical record']
+    if record.get('fingerprint_format') != current['fingerprint_format']:
+        return ['shared fingerprint format changed/missing: regenerate the plan/audit on the current release']
     errors = []
     for key in ('library_version', 'shared_sha256'):
         if record.get(key) != current[key]:
@@ -323,9 +322,9 @@ def identity_errors(record, root=SKILL_ROOT, bundle=None):
 
 
 def shared_label(root=SKILL_ROOT, identity=None):
-    """Print recorded identity when supplied; absent historical format explicitly means v1."""
+    """Print recorded identity when supplied; a missing format is shown as such, never as the current one."""
     v = shared_versions(root) if identity is None else identity
-    fmt = v.get('fingerprint_format', LEGACY_FINGERPRINT_FORMAT)
+    fmt = v.get('fingerprint_format', '格式未记录')
     label = '共用层 %s [%s]，设计准则库 %s' % (v['shared_sha256'][:12], fmt, v['library_version'])
     return label + ('，降额 v%s' % v['derating_version'] if 'derating_version' in v else '')
 
@@ -464,9 +463,9 @@ def verify_release(release):
     """校验完整发布目录；清单覆盖载荷、持久输入与附加身份记录。"""
     release = Path(release)
     manifest = json.loads((release / 'manifest.json').read_text(encoding='utf-8'))
-    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') not in (LEGACY_FINGERPRINT_FORMAT, FINGERPRINT_FORMAT):
+    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') != FINGERPRINT_FORMAT:
         raise ValueError('unsupported manifest or fingerprint format')
-    if manifest.get('fingerprint_order') != (list(SHARED_FILES) if manifest['fingerprint_format'] == LEGACY_FINGERPRINT_FORMAT else sorted(ENGINEERING_FILES)) or set(manifest.get('payload', {})) != set(SHARED_FILES):
+    if manifest.get('fingerprint_order') != sorted(ENGINEERING_FILES) or set(manifest.get('payload', {})) != set(SHARED_FILES):
         raise ValueError('manifest must name exactly the ten controlled payload files')
     expected = dict(manifest['payload'])
     expected.update({'inputs/' + name: digest for name, digest in manifest['inputs'].items()})
@@ -491,9 +490,9 @@ def verify_installed(root=SKILL_ROOT):
     """Validate only this installed release; no registry, peer skill, VCS or home-directory lookup."""
     root = Path(root)
     manifest = json.loads((root / 'shared-release.json').read_text(encoding='utf-8'))
-    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') not in (LEGACY_FINGERPRINT_FORMAT, FINGERPRINT_FORMAT):
+    if manifest.get('manifest_version') != 1 or manifest.get('fingerprint_format') != FINGERPRINT_FORMAT:
         raise ValueError('unsupported installed manifest or fingerprint format')
-    if manifest.get('fingerprint_order') != (list(SHARED_FILES) if manifest['fingerprint_format'] == LEGACY_FINGERPRINT_FORMAT else sorted(ENGINEERING_FILES)) or set(manifest.get('payload', {})) != set(SHARED_FILES):
+    if manifest.get('fingerprint_order') != sorted(ENGINEERING_FILES) or set(manifest.get('payload', {})) != set(SHARED_FILES):
         raise ValueError('installed manifest must name exactly the ten controlled files')
     for name, expected in manifest['payload'].items():
         if _sha(_safe_file(root, name)) != expected:
@@ -507,10 +506,28 @@ def verify_installed(root=SKILL_ROOT):
     return manifest
 
 
+# 规范侧源文件名与包内文件名不同的载荷（G10 元器件降额与应力规范用中文文件名）；未列出的同名。
+SOURCE_NAMES = {'references/shared/derating-rules.md': '降额规范.md',
+                'references/shared/derating-rules.json': '降额值.json',
+                'references/shared/stress-spec.md': '应力判法.md',
+                'references/shared/commodity-floors.json': '常规件最弱档.json'}
+
+
+def _shared_source_file(dirs, name):
+    """在显式给出的共用源目录中找载荷的源文件；必须恰好一处，不猜。"""
+    wanted = SOURCE_NAMES.get(name, Path(name).name)
+    hits = [d / wanted for d in dirs if (d / wanted).is_file()]
+    if len(hits) != 1:
+        raise ValueError('shared source %s: expected exactly one %s among %s'
+                         % (name, wanted, ', '.join(map(str, dirs))))
+    return hits[0]
+
+
 def publish(registry_dir, shared_source, tools_source, vocabulary_path, library_version, releases_dir,
             scratch_root='/tmp/codex-work/shared-release'):
-    """从显式源构建确定性包；正式版本只增不改，快照是复现输入。"""
-    registry_dir, shared_source, tools_source = map(Path, (registry_dir, shared_source, tools_source))
+    """从显式源构建确定性包；正式版本只增不改，快照是复现输入。shared_source 可为一个或多个目录。"""
+    shared_dirs = [Path(p) for p in ([shared_source] if isinstance(shared_source, (str, Path)) else shared_source)]
+    registry_dir, tools_source = map(Path, (registry_dir, tools_source))
     names = sorted(registry_dir.glob('G0*_准则登记.json'))
     if len(names) != 9:
         raise ValueError('release requires nine direct registry files')
@@ -541,7 +558,8 @@ def publish(registry_dir, shared_source, tools_source, vocabulary_path, library_
                 dest.write_text(dump(bundle), encoding='utf-8')
                 continue
             source = (Path(vocabulary_path) if name == 'references/shared/vocabulary.json' else
-                      shared_source / Path(name).name if name.startswith('references/') else tools_source / Path(name).name)
+                      _shared_source_file(shared_dirs, name) if name.startswith('references/')
+                      else tools_source / Path(name).name)
             shutil.copyfile(source, dest)
             snapshot = inputs / name
             snapshot.parent.mkdir(parents=True, exist_ok=True)
@@ -615,6 +633,48 @@ def install_release(release, target, scratch_root='/tmp/codex-work/shared-releas
     return manifest
 
 
+HISTORY_NAME = '版本历史.md'
+HISTORY_HEAD = ('# 设计准则库版本历史\n\n只保留最新版发布包；旧版删除前在这里留一行。旧版的计划、审计与评测成绩只作历史，'
+                '不能复核，也不转移到新版，用到时按现行版重做。\n\n'
+                '| 版本 | 指纹（前 12 位） | 指纹格式 | 状态 | 说明 |\n|---|---|---|---|---|\n')
+HISTORY_ROW = re.compile(r'^\| (\d+\.\d+\.\d+) \| ([^|]*) \| ([^|]*) \| ([^|]*) \| ([^|]*) \|$')
+
+
+def prune_releases(releases_dir, keep, targets, confirm=False):
+    """只留 keep：先核 keep 包与各目标技能已装同一包，再记版本历史并删除其他版本目录。confirm 为假时只列清单。"""
+    releases_dir = Path(releases_dir)
+    manifest = verify_release(releases_dir / keep)
+    if len(targets) < 2:
+        raise ValueError('prune needs both skill targets (ASG and SR)')
+    for target in targets:
+        installed = verify_installed(target)
+        if (installed['library_version'], installed['fingerprint']) != (keep, manifest['fingerprint']):
+            raise ValueError('target not on release %s: %s' % (keep, target))
+    old = sorted(p for p in releases_dir.iterdir()
+                 if p.is_dir() and re.fullmatch(r'\d+\.\d+\.\d+', p.name) and p.name != keep)
+    if not confirm:
+        return old
+    history = releases_dir / HISTORY_NAME
+    rows = {}
+    if history.exists():
+        for line in history.read_text(encoding='utf-8').splitlines():
+            m = HISTORY_ROW.match(line)
+            if m:
+                rows[m.group(1)] = list(m.groups())
+    today = datetime.date.today().isoformat()
+    for path in old:
+        old_manifest = json.loads((path / 'manifest.json').read_text(encoding='utf-8'))
+        note = rows.get(path.name, [''] * 5)[4]
+        rows[path.name] = [path.name, old_manifest['fingerprint'][:12], old_manifest['fingerprint_format'],
+                           '已删除 %s' % today, note]
+    rows[keep] = [keep, manifest['fingerprint'][:12], manifest['fingerprint_format'], '现行',
+                  rows.get(keep, [''] * 5)[4]]
+    order = sorted(rows, key=lambda v: tuple(int(n) for n in v.split('.')), reverse=True)
+    history.write_text(HISTORY_HEAD + ''.join('| %s |\n' % ' | '.join(rows[v]) for v in order), encoding='utf-8')
+    for path in old:
+        shutil.rmtree(path)
+    return old
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -640,7 +700,8 @@ def main(argv=None):
     sub.add_parser('verify-installed')
     release = sub.add_parser('release')
     release.add_argument('--from', dest='source', required=True)
-    release.add_argument('--shared-source', required=True)
+    release.add_argument('--shared-source', required=True, action='append',
+                         help='repeatable: G10 directory and the package-docs directory')
     release.add_argument('--tools-source', required=True)
     release.add_argument('--vocabulary', required=True)
     release.add_argument('--library-version', required=True)
@@ -652,7 +713,20 @@ def main(argv=None):
     install.add_argument('release')
     install.add_argument('--target', required=True)
     install.add_argument('--scratch-root', default='/tmp/codex-work/shared-release')
+    prune = sub.add_parser('prune', help='keep only one release after both skills installed it')
+    prune.add_argument('releases')
+    prune.add_argument('--keep', required=True)
+    prune.add_argument('--target', required=True, action='append')
+    prune.add_argument('--yes', action='store_true', help='actually write history and delete; default lists only')
     args = parser.parse_args(argv)
+    if args.command == 'prune':
+        try:
+            old = prune_releases(args.releases, args.keep, args.target, args.yes)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(('deleted' if args.yes else 'would delete') + ': ' + (', '.join(p.name for p in old) or '(none)'))
+        return 0
     if args.command in ('release', 'verify-release', 'install', 'verify-installed'):
         try:
             if args.command == 'release':

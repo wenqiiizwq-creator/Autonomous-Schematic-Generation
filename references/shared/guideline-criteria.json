@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.9.4",
+  "library_version": "1.9.6",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [

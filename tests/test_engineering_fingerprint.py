@@ -79,26 +79,25 @@ def test_v2_is_a_sorted_relative_path_hash_map_not_implicit_list_order(package, 
     assert g._engineering_digest(files) != expected
 
 
-def test_legacy_algorithm_and_records_are_preserved_and_never_promoted(package):
-    hashes = g.shared_files(package)
-    expected = hashlib.sha256('\n'.join(hashes[n] for n in g.SHARED_FILES).encode()).hexdigest()
-    assert g.shared_digest(package, 'shared-files-sha256-lines-v1') == expected
+def test_old_format_records_and_installs_are_rejected_not_promoted(package):
+    """v1 and older packages are deleted; any non-current record must be regenerated, never migrated."""
+    current = g.shared_versions(package)
+    for fmt in (None, 'shared-files-sha256-lines-v1'):
+        old = dict(current)
+        old.pop('fingerprint_format')
+        if fmt:
+            old['fingerprint_format'] = fmt
+        original = copy.deepcopy(old)
+        assert any('fingerprint format' in e for e in g.identity_errors(old, package))
+        assert old == original
+    with pytest.raises(ValueError, match='unsupported fingerprint format'):
+        g.shared_digest(package, 'shared-files-sha256-lines-v1')
     manifest_path = package / 'shared-release.json'
     manifest = json.loads(manifest_path.read_text())
-    current = g.shared_versions(package)
-    old = dict(current, shared_sha256=expected)
-    old.pop('fingerprint_format')
-    original = copy.deepcopy(old)
-    assert g.identity_errors(old, package)
-    manifest.update(fingerprint_format='shared-files-sha256-lines-v1',
-                    fingerprint_order=list(g.SHARED_FILES), fingerprint=expected)
+    manifest.update(fingerprint_format='shared-files-sha256-lines-v1', fingerprint_order=list(g.SHARED_FILES))
     manifest_path.write_text(g.dump(manifest))
-    assert g.verify_installed(package)['fingerprint'] == expected
-    assert g.identity_errors(old, package) == []   # Only the v1 installation can validate historical semantics.
-    assert old == original
-    path = package / 'references/shared/shared-layer.md'
-    path.write_text(path.read_text() + '\n旧算法仍绑定说明。\n')
-    assert g.identity_errors(old, package)  # v1 did not lose its old identity check.
+    with pytest.raises(ValueError, match='unsupported installed manifest'):
+        g.verify_installed(package)
 
 
 @pytest.mark.parametrize('field,value', [('fingerprint_format', None), ('fingerprint_format', 'unknown'),
@@ -137,7 +136,7 @@ def test_alternate_input_binds_real_bytes_even_when_test_mode_is_explicit(tmp_pa
 def test_recorded_label_never_prints_the_current_identity_for_old_records():
     record = {'library_version': 'historical', 'shared_sha256': '1'*64}
     label = g.shared_label(identity=record)
-    assert '111111111111 [shared-files-sha256-lines-v1]' in label
+    assert '111111111111 [格式未记录]' in label
     assert '设计准则库 historical' in label
 
 
