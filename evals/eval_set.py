@@ -13,6 +13,16 @@ def root():
     return Path(os.environ.get('CIRCUIT_EVAL_SET') or DEFAULT)
 
 
+def records():
+    """Where run results go: `CIRCUIT_EVAL_RECORDS`, else 评测记录/ next to the evaluation set (append-only, outside its identity)."""
+    return Path(os.environ.get('CIRCUIT_EVAL_RECORDS') or root().parent / '评测记录')
+
+
+def board_library():
+    """Public KiCad boards (catalog.json and pinned originals) kept in the evaluation set."""
+    return root() / '来源' / '公开板库'
+
+
 def available():
     return (root() / '工具' / 'evalset.py').is_file()
 
