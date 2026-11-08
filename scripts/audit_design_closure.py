@@ -104,6 +104,51 @@ def squeeze(value):
     return re.sub(r'\s+', '', str(value or ''))
 
 
+# Who made a decision (整板评测 2026-11-07 A3/A6): words a runner writes when it answers in the user's place.
+# A user answer or confirmation carrying any of them was not the user's (Matrix: source user:<日期>, basis eval-run:auto).
+SELF_ASSIGNED = re.compile(r'eval-run|(?<![A-Za-z])auto(?![A-Za-z])|无用户|运行者|预先授权|代填', re.I)
+
+
+def self_assigned(value):
+    """The runner-marker words found in a decision's strings (nested dicts and lists included)."""
+    if isinstance(value, str):
+        return SELF_ASSIGNED.findall(value)
+    items = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
+    return [w for v in items for w in self_assigned(v)]
+
+
+def load_task(root):
+    """The dispatching task.json copied into the delivery (workflow-handoff.md); None when absent or unreadable."""
+    path = Path(root) / 'record' / 'task.json' if root else None
+    try:
+        data = json.loads(path.read_text(encoding='utf-8')) if path and path.is_file() else None
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+# A decision the task file delegated (workflow-handoff.md delegation): delegate:<代答人>:<日期>, adopting ASG's recommendation.
+DELEGATE_SOURCE = re.compile(r'^delegate:([^:\s]+):(\d{4}-\d{2}-\d{2})$')
+DELEGATE_RULES = ('adopt_recommendation',)
+
+
+def check_delegate(source, scope, root):
+    """(code, why) when a delegate:<by>:<date> source has no matching authorisation in record/task.json, else None."""
+    m = DELEGATE_SOURCE.match(source if isinstance(source, str) else '')
+    if not m:
+        return 'delegate_mismatch', '代答来源要写成 delegate:<代答人>:<日期>'
+    granted = (load_task(root) or {}).get('delegation')
+    if not isinstance(granted, dict):
+        return 'delegate_without_task', '交付目录 record/task.json 没有 delegation（代答授权）'
+    if (granted.get('by'), granted.get('date')) != m.groups():
+        return 'delegate_mismatch', '代答人或日期与任务书 delegation（%s:%s）不一致' % (granted.get('by'), granted.get('date'))
+    if scope not in (granted.get('scope') or []):
+        return 'delegate_mismatch', '任务书 delegation 的 scope 不含 %s' % scope
+    if granted.get('rule') not in DELEGATE_RULES:
+        return 'delegate_mismatch', '任务书 delegation 的 rule 要是 %s' % '/'.join(DELEGATE_RULES)
+    return None
+
+
 def audit_operating_points(record, work, refs, error, need):
     """Pin operating modes: one the datasheet does not specify needs every specified alternative ruled out."""
     points = {}
@@ -224,7 +269,7 @@ def vendor_items_of(work, stage='external'):
     return found
 
 
-def audit_clarifications(record, requirements, work, error):
+def audit_clarifications(record, requirements, work, error, root=None):
     """Requirement questions put to the user: each one answered, the answer written back as a requirement,
     or, when the user deferred it, carried by an open requirement work item on the proposed text."""
     rows = record.get('clarifications', [])
@@ -262,6 +307,29 @@ def audit_clarifications(record, requirements, work, error):
             error('schema', key + ':answer needs decision (%s), text, by, date YYYY-MM-DD and source {source, locator}'
                   % '/'.join(DECISIONS))
             continue
+        if answer['by'].startswith('delegate:'):
+            # Delegated by the task file: the answer adopts ASG's proposal (rule adopt_recommendation).
+            found_problem = check_delegate(answer['by'], 'clarification', root)
+            if found_problem:
+                error(found_problem[0], '%s：%s' % (key, found_problem[1]))
+            elif answer['decision'] != 'ADOPTED_PROPOSAL':
+                error('delegate_mismatch', '%s：任务书代答只能采纳建议条文（ADOPTED_PROPOSAL）' % key)
+            elif source['source'].strip() != '任务书':
+                error('delegate_mismatch', '%s：代答的 source 要写 {source: 任务书, locator: <任务 id> delegation}' % key)
+            marks = []
+        else:
+            marks = self_assigned([answer['by'], source])
+        if marks:
+            error('decision_self_assigned', '%s：答复人或来源写的是运行者自拟（%s），不是用户的答复；'
+                  '无人当场答复时只能用任务书里的答复' % (key, '、'.join(sorted(set(marks)))))
+        if source['source'].strip() == '任务书' and not answer['by'].startswith('delegate:'):
+            task = load_task(root)
+            given = next((a for a in (task or {}).get('clarification_answers') or []
+                          if isinstance(a, dict) and a.get('id') == key), None)
+            if given is None:
+                error('delegate_without_task', '%s：来源写任务书，但交付目录 record/task.json 没有这项 clarification_answers' % key)
+            elif any(given.get(f) != answer.get(f) for f in ('decision', 'text', 'by', 'date')):
+                error('delegate_mismatch', '%s：答复与任务书 clarification_answers 不一致（decision/text/by/date）' % key)
         if answer['decision'] == 'ADOPTED_PROPOSAL' and answer['text'] != row.get('proposed_requirement'):
             error('adopted_text_differs', key)
         if answer['decision'] != 'DEFERRED':
@@ -1289,7 +1357,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             table[row['id']] = row
         tables[key] = table
     evidence, requirements, work, calculations = (tables[k] for k in ('evidence', 'requirements', 'work_items', 'calculations'))
-    clarifications = audit_clarifications(record, requirements, work, error)
+    clarifications = audit_clarifications(record, requirements, work, error, artifact_root)
     if not requirements:
         need('missing_requirements', 'No requirements reviewed')
     for key, row in evidence.items():

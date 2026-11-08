@@ -52,7 +52,8 @@ class Delivery:
                       '输入电压范围': {'value': [4.5, 18], 'page': 1}, '输出电流': {'value': 3.5, 'page': 1},
                       '封装': {'value': 'soic8', 'page': 2}, '使能引脚': {'value': True, 'page': 1}}},
                  {'mpn': 'ABC200', 'vendor': 'Y', 'status': 'rejected', 'datasheet': '设计资料/Y - ABC200.pdf',
-                  'reason': '最大 2 A 不满足', 'values': {'输出电流': {'value': 2, 'page': 1}}}]}]}
+                  'reason': '最大 2 A 不满足', 'values': {'输出电流': {'value': 2, 'page': 1}}}],
+             'decision': {'source': 'user:2026-10-24', 'locator': '对话记录 2026-10-24 选型确认'}}]}
         self.write('selection.json', self.selection)
         self.closure = {
             'schema_version': 1, 'parameter_version': 1, 'gap_version': 1, 'coverage': 'complete',
@@ -526,7 +527,7 @@ class DesignReportTests(unittest.TestCase):
             {'name': 'ABC200 加外置过压', 'parts': ['ABC200', 'TL431'], 'external_dependencies': [],
              'cost': '增加 4 个器件', 'pros': '过压可按手册算', 'cons': '电流只有 2A', 'recommended': False}]
         role['recommendation'] = '推荐方案 1：电流满足需求，过压另有硬件后备'
-        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24'}
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24', 'locator': '对话记录 选型确认'}
         return sel, role
 
     def test_uncertain_selection_lists_options_and_the_users_choice(self):
@@ -545,11 +546,11 @@ class DesignReportTests(unittest.TestCase):
         self.d.write('selection.json', sel)
         _, problems = self.d.report()
         self.assertTrue(any('还没有你的决定' in p for p in problems), problems)
-        role['decision'] = {'option': 'ABC200 加外置过压', 'source': 'user:2026-10-24'}
+        role['decision'] = {'option': 'ABC200 加外置过压', 'source': 'user:2026-10-24', 'locator': '对话记录 选型确认'}
         self.d.write('selection.json', sel)
         _, problems = self.d.report()
         self.assertTrue(any('不在你选的方案' in p for p in problems), problems)
-        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24'}
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24', 'locator': '对话记录 选型确认'}
         role['options'][1]['cons'] = role['options'][0]['cons']
         role['options'][1]['recommended'] = True
         self.d.write('selection.json', sel)
@@ -560,6 +561,73 @@ class DesignReportTests(unittest.TestCase):
         self.d.write('selection.json', sel)
         _, problems = self.d.report()
         self.assertTrue(any('要列 2–3 个选型方案' in p for p in problems), problems)
+
+    def test_every_core_role_has_a_confirmation(self):
+        # 整板评测 2026-11-07 A2: roles without options had decision null and passed; A6: user:<date> written by the runner.
+        sel = json.loads(json.dumps(self.d.selection))
+        role = sel['roles'][0]
+        del role['decision']
+        self.d.write('selection.json', sel)
+        _, problems = self.d.report()
+        self.assertTrue(any('稳压器”还没有确认记录' in p for p in problems), problems)
+        role['decision'] = {'source': 'user:2026-11-07', 'basis': 'eval-run:auto（无用户，按技能推荐）'}
+        self.d.write('selection.json', sel)
+        _, problems = self.d.report()
+        self.assertTrue(any('运行者自拟' in p for p in problems), problems)
+        role['decision'] = {'source': 'user:2026-11-07'}
+        self.d.write('selection.json', sel)
+        _, problems = self.d.report()
+        self.assertTrue(any('用户确认要写 locator' in p for p in problems), problems)
+        role['decision'] = {'source': 'user:2026-11-07', 'locator': '对话记录 选型确认清单'}
+        self.d.write('selection.json', sel)
+        text, problems = self.d.report()
+        self.assertEqual([], problems)
+        self.assertIn('| user:2026-11-07 对话记录 选型确认清单 |', text)
+
+    def test_confirmation_delegated_by_the_task_file(self):
+        # 改进 7: an unattended run confirms through the task file's delegation, adopting ASG's recommendation only.
+        sel, role = self.options_role()
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'delegate:eval-wholeboard:2026-11-07'}
+        self.d.write('selection.json', sel)
+        _, problems = self.d.report()
+        self.assertTrue(any('delegate_without_task' in p for p in problems), problems)
+        task = {'schema_version': 1, 'id': 'T7', 'delegation': {
+            'by': 'eval-wholeboard', 'date': '2026-11-07', 'scope': ['clarification', 'selection'],
+            'rule': 'adopt_recommendation', 'text': '本次评测没有用户可问，采纳 ASG 的推荐。'}}
+        self.d.write('task.json', task)
+        text, problems = self.d.report()
+        self.assertEqual([], problems)
+        self.assertIn('- **任务书代答**：以下 1 处无人当场答复，由任务书代答（eval-wholeboard，授权原文：本次评测没有用户可问，采纳 ASG 的推荐。）：选型“稳压器”。', text)
+        role['decision']['source'] = 'delegate:eval-wholeboard:2026-11-06'
+        self.d.write('selection.json', sel)
+        self.assertTrue(any('代答人或日期' in p for p in self.d.report()[1]))
+        role['decision'] = {'option': 'ABC200 加外置过压', 'source': 'delegate:eval-wholeboard:2026-11-07'}
+        self.d.write('selection.json', sel)
+        self.assertTrue(any('只能采纳 ASG 推荐的方案' in p for p in self.d.report()[1]))
+        task['delegation']['scope'] = ['clarification']
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'delegate:eval-wholeboard:2026-11-07'}
+        self.d.write('selection.json', sel)
+        self.d.write('task.json', task)
+        self.assertTrue(any('scope 不含 selection' in p for p in self.d.report()[1]))
+
+    def test_confirmation_from_the_users_scheme_document(self):
+        req = self.d.root / '需求' / '方案.md'
+        req.parent.mkdir()
+        req.write_text('## 决定表\n\n| D-04 | 稳压器用 XYZ100（用户 2026-10-20 确认） |\n', encoding='utf-8')
+        self.d.closure['evidence'].append({'id': 'E-REQ', 'path': '需求/方案.md', 'sha256': sha256(req), 'locator': '决定表'})
+        self.d.write('design-closure.json', self.d.closure)
+        sel = json.loads(json.dumps(self.d.selection))
+        role = sel['roles'][0]
+        def problems_with(decision):
+            role['decision'] = decision
+            self.d.write('selection.json', sel)
+            return self.d.report()[1]
+        ok = {'source': 'scheme:E-REQ', 'locator': '决定表 D-04', 'quote': '稳压器用 XYZ100（用户 2026-10-20 确认）'}
+        self.assertEqual([], problems_with(ok))
+        self.assertTrue(any('原文在' in p for p in problems_with(dict(ok, quote='稳压器用 XYZ100（已确认）'))))
+        self.assertTrue(any('不含选定型号' in p for p in problems_with(dict(ok, quote='用户 2026-10-20 确认'))))
+        self.assertTrue(any('不在 design-closure.json 的 evidence' in p for p in problems_with(dict(ok, source='scheme:E-X'))))
+        self.assertTrue(any('ASG 自己写的' in p for p in problems_with(dict(ok, source='scheme:E1'))))
 
     def test_selected_candidate_declares_external_dependencies(self):
         sel = json.loads(json.dumps(self.d.selection))
