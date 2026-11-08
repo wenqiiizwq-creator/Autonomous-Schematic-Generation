@@ -181,6 +181,7 @@ fb = s.stub('U1.4', 2); s.connect(fb, tap, y=fb[1] - 10.16)   # FB over the top
 - 只支持单单元符号。按功能分组引脚的表示用符号需要自己的、经核实的物理引脚映射（见 symbol-and-peripheral-contracts.md）。
 - 同网同功能多脚用 KiCad 叠脚编号（`[17,18]`）画成一个引脚：场景把它展开成同一点上的各物理脚，`Sheet` 用任一物理引脚号（`U1.17`）引用，
   连一次即全连；不要再把几个可见引脚叠在同一点（引脚号叠印，符号完整性记 `overprinted_pin_numbers`），电源脚也不要做成隐藏副本。
+  设计网表仍逐物理脚写，漏写的同点脚用 `scripts/expand_stacked_pins.py --write` 补（KiCad 官方库的“可见脚 + 同点隐藏 passive 副本”同样适用）。
 - 每页一个 `Sheet`。层次工程从基线页复制每个符号的工程实例路径和 UUID，因为重画必须保留它们。
 - `check_scene` 接受引脚自身笔直向外、穿过伸出其端点的图形的出线（LED 箭头、磁件圆弧、热敏电阻标记）；其他穿过本体框的导线仍会报告。
 - 文字宽度是估计；KiCad 渲染审阅仍是必需的。

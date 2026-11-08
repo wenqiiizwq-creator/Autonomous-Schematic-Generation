@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
 """Check a component performance record; optionally prepare IR and canonical BOM.
 
-Preparation is explicit (--project-intent/--write-bom) and precedes drawing.
-Default operation only audits; it never repairs an exported schematic or BOM.
+Preparation is explicit (--project-intent/--write-bom) and precedes drawing and the design closure's intent_sha256.
+It rewrites the IR only when the projection changes it; default operation only audits and writes nothing but --out.
 """
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from schematic_layout.component_requirements import audit, project, write_bom
+
+
+def write_projection(intent, path):
+    """Write the projected IR only when its content changes (PoE 2026-11-07 #15): re-running the preparation after the
+    design closure was written must not touch the netlist and stale its intent_sha256. A real change says so."""
+    try:
+        if json.loads(path.read_text(encoding='utf-8')) == intent:
+            return False
+    except (OSError, ValueError):
+        pass
+    path.write_text(json.dumps(intent, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    print('PROJECTED: %s 已按性能要求改写；design-closure 的 intent_sha256 要按新文件重写后再跑闭环审计' % path,
+          file=sys.stderr)
+    return True
 
 
 def main(argv=None):
@@ -29,7 +44,7 @@ def main(argv=None):
         inputs = dict(item.split('=', 1) for item in args.input) if args.input else None
         if args.project_intent:
             intent = project(intent, record, args.artifact_root, inputs)
-            args.project_intent.write_text(json.dumps(intent, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            write_projection(intent, args.project_intent)
         if args.write_bom:
             if not args.project_intent:
                 ap.error('--write-bom requires --project-intent; avoid generating from stale IR')

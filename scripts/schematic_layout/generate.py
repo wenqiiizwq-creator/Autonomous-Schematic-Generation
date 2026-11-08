@@ -351,8 +351,16 @@ def make_root(intent, layout, name, dirs=()):
         raise ValueError("Library no_connect pins require explicit NC assignment")
     actual = {p.id for p in pins}
     if actual != set(mapping) | set(nc):
+        unassigned = actual - set(mapping) - set(nc)
+        # A pad drawn on the same point as a connected pad is a stacked pin (KiCad [a,b] or a hidden copy):
+        # say so, and how to write it (calibration board 2026-11-07 #9).
+        at = {(p.id.rsplit(".", 1)[0], tuple(p.point)): p.id for p in pins if p.id in mapping}
+        stacked = sorted(f"{p.id}->{mapping[at[key]]}" for p in pins if p.id in unassigned
+                         for key in [(p.id.rsplit(".", 1)[0], tuple(p.point))] if key in at)
+        hint = (f"; stacked pads on a connected pin's point: {stacked} (KiCad joins them; write each pad into that net, "
+                f"or run scripts/expand_stacked_pins.py)") if stacked else ""
         raise ValueError(
-            f"Pin coverage mismatch: unassigned={sorted(actual - set(mapping) - set(nc))}; unknown={sorted((set(mapping) | set(nc)) - actual)}"
+            f"Pin coverage mismatch: unassigned={sorted(unassigned)}; unknown={sorted((set(mapping) | set(nc)) - actual)}{hint}"
         )
     for p in pins:
         grid_point(p.point, grid)

@@ -80,6 +80,7 @@ KiCad 导出 XML 时按物理脚展开成同名同类型的几个节点；ERC �
 叠脚的引脚号从引脚线往上竖排，每多一个号约占一行：符号里在它上方留空行，号不压上面的引脚或 Reference/Value。
 旧写法：隐藏的 `passive` 副本（地、裸焊盘）照旧；隐藏的 `power_in`/`power_out` 副本仍为 `INSUFFICIENT`；几个**可见**引脚
 画在同一点且符号显示引脚号时，号会叠印，记 `overprinted_pin_numbers`（FAIL），改成一个叠脚。
+KiCad 官方库自己的同点多脚是一个可见脚加同点隐藏 `passive` 副本（TPS26630RGE OUT 17/18、TPS62130 SW/VIN/GND、STM32F107VCTx VSS、Crystal_GND24 G 2/4），符号完整性照常通过，不必为此自建符号。两种写法的设计网表都逐物理脚写：只写了其中一个脚时，`Sheet` 报 `Pin coverage mismatch` 并列出与已连脚同点的脚，`scripts/expand_stacked_pins.py 设计网表 [--symbol-dir 项目符号库目录] --write` 把同点的其余脚补进同一网络（同点的脚分在不同网络或标了不连接时报错）（校准板、Matrix 2026-11-07）。
 
 有意隔离的端子要保留明确的处置：
 
@@ -128,6 +129,17 @@ python3 scripts/fill_pin_maps.py <交付目录> [--pages U301=28-34] [--write] [
 引脚图里的引脚名只补名字，不给类型；不写 `name_note`、`type_note`，手册名与符号名不同由审计提出、设计者写理由或改符号。
 手册类型码比审计词表粗时如实照填：TI 的 `P` 不分输入输出，开关节点、自举脚会因此与符号的 `power_out`/`passive` 冲突，这些冲突由人判，不改词表放过；判定的读法写进该脚的 `type_note`。
 分立器件（MOSFET、TVS）多数只有封装图没有引脚表，填不上的照单补写。默认只预览，`--write` 才写回；已有值保留，`--overwrite` 才替换。
+
+**缺符号时从手册引脚表生成**（校准板、PoE 2026-11-07 都手写了生成脚本；Matrix 自建符号上下边引脚名在角上压到左右引脚名）：
+
+```sh
+python3 scripts/make_symbol.py 引脚表.json --out 原理图/项目.kicad_sym      # CSV 表头 number,name,type[,side]，CSV 加 --name
+```
+
+逐物理脚写引脚号、手册名和类型（`datasheet_type` 同一套代码，或 KiCad 类型），`side` 可选 L/R/T/B（不写时电源在上、地在下、输出在右、其余在左）。
+同名同类型的电源/地脚合成叠脚 `[a,b]`（`--no-stack` 不合），NC 和信号脚不合；本体按引脚名文字宽度留空，上下边引脚放在左右引脚名之间，
+叠脚上方留竖排引脚号的空行，全部在 2.54 mm 栅格上。生成的符号过符号完整性和原生引脚文字检查；引脚表仍按上节照手册写（不从符号回抄），
+出线方向需要时再调整 `side` 或表内顺序重新生成。已有的 `.kicad_sym` 按符号名替换或追加。
 
 KiCad 的引脚名/类型来自器件确切的 `libsource` → 唯一的 `libparts/libpart` → 唯一的物理引脚号。节点的 `pinfunction` 可能是
 生成的标识，如 `STAT_1`；不要去掉它的后缀，也不要把它当作厂家的引脚名。`Pin_1` 这样的真实名字保持原样。

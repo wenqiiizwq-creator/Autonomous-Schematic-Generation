@@ -1,4 +1,5 @@
 """deliver.py runs the delivery steps in order, goes on only on a known good or design-state status, and writes evidence from its own run."""
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -66,9 +67,11 @@ class DeliverTests(unittest.TestCase):
         (self.root / '原理图' / 'BOM.csv').write_text('ref,value')
         (self.root / '设计资料' / '方案.md').write_text('basis')
         (self.root / 'record' / 'evidence' / 'geometry-stale.json').write_text('{}')
-        for name in ('electrical-intent.json', 'design-closure.json', 'design-preflight.json', 'change-contract.json',
-                     'visual-review.json'):
+        for name in ('electrical-intent.json', 'design-closure.json', 'design-preflight.json', 'change-contract.json'):
             (self.root / 'record' / name).write_text('{}')
+        # A finished review of the PDF the stub verifier exports ('%PDF').
+        (self.root / 'record' / 'visual-review.json').write_text(json.dumps(
+            {'status': 'REVIEWED', 'pdf_sha256': hashlib.sha256(b'%PDF').hexdigest()}))
         make = "import sys,pathlib; p=pathlib.Path(sys.argv[1])/'schematic'; p.mkdir(parents=True); (p/'board.kicad_sch').write_text('new')"
         self.config = {'schema_version': 1, 'generate': {'command': [sys.executable, '-c', make, '{out}'], 'schematic': 'schematic'},
                        'root': '原理图/board.kicad_sch', 'verify': ['--expected-pages', '1'],

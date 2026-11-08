@@ -66,12 +66,13 @@ _UNIT = re.compile(r'^([pnµumkM]?)(A|V|W|F|Ω|H|s|J|Hz)$')
 
 
 # A number written with its unit in a requirement. Prefixes convert only within one base unit: 1.5 mF is 1500 µF, 1.5 A is not.
-_BASES = ('Hz', 'A', 'V', 'W', 'F', 'Ω', 'H', 's', 'J', '℃', '%')
-_PREFIXES = dict(_SI, G=1e9)
+# Lengths too (Matrix 2026-11-07 #14: a requirement writes 30 cm, the calculation 0.3 m); c converts only metres.
+_BASES = ('Hz', 'A', 'V', 'W', 'F', 'Ω', 'H', 's', 'J', '℃', '%', 'm')
+_PREFIXES = dict(_SI, G=1e9, c=1e-2)
 _NUMBER = r'(?<![\d.])(\d+(?:\.\d+)?)'
-_MEASURE = re.compile(_NUMBER + r'\s*([pnµumkMG]?)(Hz|A|V|W|F|Ω|H|s|J|℃|%)(?![A-Za-z])')
+_MEASURE = re.compile(_NUMBER + r'\s*(c(?=m)|[pnµumkMG]?)(Hz|A|V|W|F|Ω|H|s|J|℃|%|m)(?![A-Za-z])')
 # The lower end of a range takes the upper end's unit: 20.4～28.8 V, 1～2 kΩ.
-_RANGE = re.compile(_NUMBER + r'\s*[～~–—至到-]\s*[+\-−]?\s*(\d+(?:\.\d+)?)\s*([pnµumkMG]?)(Hz|A|V|W|F|Ω|H|s|J|℃|%)(?![A-Za-z])')
+_RANGE = re.compile(_NUMBER + r'\s*[～~–—至到-]\s*[+\-−]?\s*(\d+(?:\.\d+)?)\s*(c(?=m)|[pnµumkMG]?)(Hz|A|V|W|F|Ω|H|s|J|℃|%|m)(?![A-Za-z])')
 
 
 def _clean(words):

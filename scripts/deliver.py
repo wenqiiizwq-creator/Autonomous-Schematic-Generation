@@ -18,7 +18,9 @@ each version:
 {root} is the delivery folder and {out} a fresh empty directory. Commands run in the
 delivery folder. A step continues only on a status in CONTINUE; CONDITIONAL and INCOMPLETE
 are normal design states. Any other status, a missing result or a command error stops the
-run. The delivery evidence is written from this run's files and checked fresh before
+run. A run whose PDF has no matching record/visual-review.json stops after the checks
+(exit 2, review pending); a review written on the step-4 PDF matches, so one run delivers.
+The delivery evidence is written from this run's files and checked fresh before
 packing. Exit 0 only when every step finished.
 """
 import argparse
@@ -31,6 +33,7 @@ import tempfile
 from pathlib import Path
 
 from schematic_layout.component_requirements import artifact_audit
+from render_design_report import render_sha256
 
 HERE = Path(__file__).resolve().parent
 KICAD_FILES = ('*.kicad_sch', '*.kicad_pro', '*.kicad_prl', '*.kicad_sym', 'sym-lib-table', 'netlist.xml', 'schematic.pdf')
@@ -124,6 +127,15 @@ def build_evidence(root, schematic_root, outputs):
             'outputs': {p: sha256(root / p) for p in outputs}, 'roles': roles}
 
 
+def review_matches(path, pdf):
+    """record/visual-review.json is a finished review of this PDF (same rendered content, export time ignored)."""
+    try:
+        review = json.loads(Path(path).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return False
+    return isinstance(review, dict) and review.get('status') == 'REVIEWED' and review.get('pdf_sha256') == render_sha256(pdf)
+
+
 def load_config(root):
     path = root / 'record' / 'deliver.json'
     if not path.is_file():
@@ -195,13 +207,19 @@ def deliver(root, log=print, for_review=False):
         written += copy_gates(gates, root)
         step('自动检查', status_of(gates / 'summary.json'))
 
-        if for_review:
-            # Calibration board #20 (2026-11-02): the visual review reads this run's PDF, so the first run stops here
-            # instead of failing at the report; the full run after the review regenerates the same PDF.
-            log('图面审阅：按 原理图/schematic.pdf 写 record/visual-review.json（pdf_sha256 %s），再跑全程'
-                % hashlib.sha256((root / '原理图' / 'schematic.pdf').read_bytes()).hexdigest()
-                if (root / '原理图' / 'schematic.pdf').is_file() else '图面审阅：本次没有导出 PDF')
-            return 0, steps, None
+        # The visual review reads this run's PDF. Drawing is deterministic, so a review written on the PDF of the
+        # step-4 check matches this export and the run goes on in one pass; without a matching review the run stops
+        # here, not at the report (calibration board 2026-11-07: delivery took two full runs).
+        pdf = root / '原理图' / 'schematic.pdf'
+        reviewed = pdf.is_file() and review_matches(record / 'visual-review.json', pdf)
+        if for_review or (pdf.is_file() and not reviewed):
+            log('图面审阅：按 原理图/schematic.pdf 写 record/visual-review.json（pdf_sha256 %s），再跑 deliver.py'
+                % render_sha256(pdf) if pdf.is_file() else '图面审阅：本次没有导出 PDF')
+            if for_review:
+                return 0, steps, None
+            steps.append({'step': '图面审阅', 'status': 'PENDING'})
+            log('%-12s %s' % ('图面审阅', 'PENDING'))
+            return 2, steps, None
 
         if preflight.is_file() and contract.is_file():
             written.append(preflight_check('交付预检', record / 'preflight-delivery.json'))
@@ -233,7 +251,8 @@ def deliver(root, log=print, for_review=False):
         to_file = [line.split(' ', 1)[1] for line in packed.stdout.splitlines() if line.startswith('TO_FILE: ')]
         if to_file:
             log('手册待入库（本项目用到、知识库还没有，设计完成后提示用户复制进知识库）：\n' + '\n'.join(to_file))
-            step('手册待入库', '%d 份' % len(to_file))
+            # A reminder for the user, not a step that can stop the run (Matrix 2026-11-07 #25: exit 1 after pack PASS).
+            steps.append({'step': '手册待入库', 'status': '%d 份' % len(to_file)})
         if config.get('check_inputs'):
             run(fill(config['check_inputs'], root, work / 'check-inputs'), root, '输入核对')
             step('输入核对', 'PASS')
@@ -249,7 +268,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('delivery', type=Path)
     ap.add_argument('--for-review', action='store_true',
-                    help='stop after the automatic checks: the PDF is exported for the visual review, nothing is reported or packed')
+                    help='stop after the automatic checks even if a review matches: the PDF is exported for the visual review')
     args = ap.parse_args(argv)
     code, _, _ = deliver(args.delivery, for_review=args.for_review)
     return code

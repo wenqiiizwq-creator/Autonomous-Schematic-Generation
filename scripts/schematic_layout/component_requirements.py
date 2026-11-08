@@ -576,6 +576,24 @@ def bound_candidate(entry):
     return entry['selection']['status'] == 'candidate' and entry['procurement']['mode'] == 'mpn'
 
 
+# A token naming the nominal itself ("220n", "4k7", "10uF", "100R"); anything else in the value is a rating.
+NOMINAL_TOKEN = re.compile(r'^\d+(?:[.,]\d+)?(?:[pnuµmkMRFHΩ]|ohm)+\d*(?:F|H|Ω|ohm)?$', re.I)
+
+
+def keep_ratings(comp, nominal):
+    """Replacing the value by the contract nominal keeps the rest of it (voltage, dielectric, tolerance, package) in
+    fields.Specification: Matrix 2026-11-07 #24 lost 16V/X7R when 220n/16V/X7R became 220nF."""
+    old = str(comp.get('value') or '').strip()
+    if not old or old == nominal:
+        return
+    extra = [t for t in re.split(r'[/,;_\s]+', old) if t and not NOMINAL_TOKEN.match(t)]
+    fields = comp.setdefault('fields', {})
+    spec = str(fields.get('Specification') or '').strip()
+    missing = [t for t in extra if t not in spec.split() and t not in re.split(r'[/,;\s]+', spec)]
+    if missing:
+        fields['Specification'] = ' '.join(([spec] if spec else []) + missing)
+
+
 def project(intent, record, root, inputs=None):
     """Explicit preparation API. No checking path calls this function to repair outputs."""
     errors, _ = record_errors(record, intent, root, inputs)
@@ -592,6 +610,7 @@ def project(intent, record, root, inputs=None):
         comp['performance_contract'] = copy.deepcopy(entry)
         nominal = nominal_value(entry)
         if nominal is not None:
+            keep_ratings(comp, nominal)
             comp['value'] = nominal
         comp.setdefault('fields', {}).update(fields_for(entry, sha))
         selection = entry['selection']
