@@ -379,7 +379,7 @@ class DesignReportTests(unittest.TestCase):
 
     def test_an_old_gap_record_is_named_in_the_conclusion(self):
         text, _ = self.d.report()
-        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、binding_version 1 写。', text)
+        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、binding_version 1、matrix_version 1 写。', text)
 
     def test_derating_level_and_stress_risks_are_reported(self):
         # stress-spec.md (user 2026-10-27): the level and every stress risk with its improvement are in the report.

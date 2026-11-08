@@ -35,6 +35,13 @@ See [`delivery-report.md`](../references/delivery-report.md).
 `operating_inputs.py` is the closure audit's check that a calculation's external
 conditions (startup load, source impedance, ambient temperature...) have a source, and
 its review list; see `design-closure.md` 工况输入的来源.
+`object_matrices.py skeleton --intent … [--closure …] --out …` lists, from the design
+netlist, every cell of the closure record's `matrix_version: 1` tables (supervised
+rail threshold × each load, each part's operating/storage temperature × the
+requirement, each port stress × each part on its path and the ground paths a
+switched return opens, protection-state rows per latch/shutdown/reset block); the
+closure audit calls its `audit()` and reports missing and failed cells. See
+`design-closure.md` matrix_version.
 `fill_pin_maps.py <delivery>` reads each part's datasheet pin table and fills
 `datasheet_name`/`datasheet_type`/`datasheet_page` in `record/reference-input.json`
 (`--write`); pins it cannot read stay unfilled and are listed with the reason. See

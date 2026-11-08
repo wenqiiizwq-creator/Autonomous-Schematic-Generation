@@ -1415,11 +1415,21 @@ def render(root, notes=None, title=None):
           (['没有 derating_version（器件应力没有按降额等级核对）'] if closure and layered and 'derating_version' not in closure else []) + \
           (['没有 uncertainty_version（工程估计的余量没有对不确定度核对）'] if closure and layered and 'uncertainty_version' not in closure else []) + \
           (['没有 binding_version（料号与手册、符号脚类型、未用脚处置和电源轨最高电压没有核对）']
-           if closure and layered and 'binding_version' not in closure else [])
+           if closure and layered and 'binding_version' not in closure else []) + \
+          (['没有 matrix_version（复位门限、温度、端口应力没有对全部对象核对，保护逻辑没有状态表）']
+           if closure and layered and 'matrix_version' not in closure else [])
     if old:
         out.append('- **记录版本**：%s。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、'
-                   'binding_version 1 写。'
+                   'binding_version 1、matrix_version 1 写。'
                    % '；'.join(old))
+    matrices = audit.get('matrices') if isinstance(audit.get('matrices'), dict) else None
+    if matrices:
+        titles = {'supervised_rails': '受监督轨门限×负载', 'temperature': '温度×器件', 'port_stress': '端口应力×路径器件',
+                  'protection_states': '保护逻辑状态'}
+        out.append('- **对全部对象核对**：%s。缺结论和不满足的格逐条列在 design-closure-audit.json 的 matrices。' % '；'.join(
+            '%s %d 格，有结论 %d，缺 %d，不满足 %d' % (titles.get(k, k), v.get('cells', 0), v.get('concluded', 0),
+                                                 len(v.get('missing') or []), len(v.get('failed') or []))
+            for k, v in matrices.items() if isinstance(v, dict)))
     derating = audit.get('derating') if isinstance(audit.get('derating'), dict) else None
     if derating:
         risks, hints = derating.get('stress_risks') or [], derating.get('hints') or []

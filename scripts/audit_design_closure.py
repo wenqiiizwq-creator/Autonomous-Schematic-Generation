@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 from design_frontier import frontier
 import guideline_criteria
+import object_matrices
 import operating_inputs
 import stress_check
 from schematic_layout import boundary as boundary_nets, part_classes
@@ -1574,6 +1575,16 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'binding_version must be 1')
         else:
             binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need, verified)
+    # Every object a criterion applies to has its own cell (whole-board baseline 2026-11-07: a reset threshold checked against
+    # the MCU only, storage temperature left to "device ratings", reverse polarity checked on the power path only).
+    matrices = None
+    if object_matrices.VERSION_KEY in record:
+        if record[object_matrices.VERSION_KEY] != 1:
+            error('schema', 'matrix_version must be 1')
+        else:
+            passes = lambda c: holds(c) is not None and not failing_checks({'checks': [c]})   # noqa: E731  stress risk passes
+            matrices = object_matrices.audit(record, intent, calculations, evidence, requirements, passes, error, need,
+                                             [root, *(inputs or ())])
     gaps = 'gap_version' in record
     if gaps and record['gap_version'] not in (1, 2):
         error('schema', 'gap_version must be 1 or 2')
@@ -1612,6 +1623,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
             'binding': binding if binding is not None else 'NOT_CHECKED',
+            'matrices': matrices if matrices is not None else 'NOT_CHECKED',
             'boundary_nets': boundary,
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),
             'downstream_handoffs': [k for k, v in work.items() if v.get('stage') in ('validation', 'pcb') and v.get('status') == 'handoff']}
