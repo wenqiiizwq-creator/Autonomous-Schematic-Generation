@@ -261,6 +261,41 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       TVS 的 VRWM（性能记录的 `working_voltage` 下限，或按 VRWM 命名的系列 SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF、PESD/PTVS<a>V<b> 从型号读出）
       低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍按 `derating_version` 写在计算里；这里只拦额定低于工作电压的错。
     - 审计在 `binding` 列出各网络最高电压和处置行数；没有 `binding_version` 的记录，报告在“记录版本”一行写明这些没有核对。
+  - **`matrix_version: 1`：对全部对象核对的矩阵与保护逻辑状态表**（整板评测基线 2026-11-07：6 个漏项里 3 个是同一条判据
+    只核了一个对象——复位门限只对 MCU 的 2.0 V 核、没对 YT9218 的 3.135 V；−45 ℃ 存储只写“由器件额定覆盖”；防反接只看功率路径、
+    没看低边 MOS 断开地回路；另 1 个是软件正常关断时“PG 先于 FLT 失效”的固件判据会不会误置锁没有列）。
+    行和格由 `scripts/object_matrices.py` 从设计网表列出，设计者不挑对象，只逐格写结论：
+    `python3 <skill>/scripts/object_matrices.py skeleton --intent electrical-intent.json --closure design-closure.json --out matrices.json`
+    输出全部行和格（已写的结论原样保留），每格的 `candidates` 列出名字点到这个对象、又核这条判据的现有检查，只作提示，
+    不是结论。把 `matrix_version: 1` 与 `matrices` 写进 `design-closure.json`。四张表：
+    - `supervised_rails`：电压监控/复位器件（库目录“Supervisor/电压监控”、TPS38xx、MAX8xx 等系列，或 `ComponentRole: supervisor`）接到的每条
+      `power` 轨，连同经 `filtered_supply` 从它派生的轨，× 轨上每颗 IC/光耦负载：`{rail, cells: [{ref, calc, check}]}`。
+      检查名要有门限类的词（门限、阈值、复位、欠压、UV、BOR……），否则 `matrix_check_not_about_criterion`：稳压精度“+3V3 下限 对 YT9218 3.135 V”
+      不顶“复位门限 对 YT9218”。热插拔欠压门限这类别的监督可以自己加一行 `rail`，同样逐格核。
+    - `temperature`：表头 `operating`、`storage` 各写 `{min, max, source}`，`source` 是 `req:<需求编号>`（需求文字要写出这个范围，
+      如“−45～+70 ℃”）或 `clarification:<编号>`；`rows` 每行 `{refs, operating, storage}`，每颗器件（测试点、机械件除外）正好在一行。
+      温度写 `{min, max, source}`：`source` 引手册页（`datasheet:<库内路径>#p<页>`，按手册引用核对），或写 `spec` 表示这个范围已写进
+      每颗器件的规格（设计网表 `Specification`/值字段要写出不窄于它的“−55～+125 ℃”，否则 `matrix_temperature_not_in_spec`）。
+      骨架给关键/特殊器件各一行、常规件按类型一行，可以再拆。器件范围不覆盖需求范围是 `matrix_cell_failed`。
+    - `port_stress`：每个连接器一行。`stresses: [{id, kind, source}]`（`kind` 取 surge、esd、eft、reverse_polarity、overvoltage、short、
+      miswire、hot_plug；`source` 写需求或标准），或 `no_stress_reason`（箱内、板上调试座）。格是应力 × 路径上每颗器件：端口网络上的，
+      以及经保险丝、检流电阻、磁珠、电感这类串联两端器件最多三跳到的（不走进回流网络和 25 脚以上的主电源轨；电阻、磁珠、电感本身的应力由功耗和降额检查管，不进格）：
+      `cells: [{stress, ref, calc, check}]`，检查名要有这类应力的词（钳位、浪涌、反接……）并点名器件。
+      端口的回流网络只经开关器件（MOS、二极管、继电器；隔离器不算）接到另一回流网络时，那一侧的其他每个端口是一格
+      `return_paths: [{via, port, calc, check}]`：回线被断开（低边防反接 MOS 关断）时电流是否改经这些端口的地回流，检查名要有
+      地回路、回流、反接等词并点名那个端口。
+    - `protection_states`：有 eFuse/热插拔/负载开关、电压监控器件，或 IC/晶体管接到故障/关断/复位网络（FLT、FAULT、LATCH、SHDN、RST、RESET……）
+      的功能块（`fields.Circuit`）。`latch` 写 `hardware`、`firmware` 或 `none`；`rows` 是上电、正常开、正常关、短路、复位
+      （`power_up`、`normal_on`、`normal_off`、`short`、`reset`）× 锁清除/置位（`clear`、`set`；`none` 只一列），每行
+      `{state, latch, outcome, ...结论}`：`outcome` 写各输出与锁在这一状态怎样变化（缺了不算结论，记 `matrix_state_without_outcome`），
+      结论引用计算检查，或 `evidence: "<证据编号>#<节/表/行>"` 加 `verdict: ok|fail`。另有的状态可以多写行。
+    - 每格的结论只有三种：`calc` + `check`（结论由检查推出，降额偏离仍算满足；检查名或检查的 `ref`/`objects` 要点名这个对象，
+      位号、值、料号或其前段都算，否则 `matrix_check_not_about_object`）、温度格的手册数值、`verdict: not_applicable` 加 `reason`。
+      写了 `verdict` 又与检查推出的不同记 `matrix_verdict_contradicts_check`；检查或证据不存在记 `matrix_check_unknown` / `matrix_evidence_unknown`；
+      对象不在矩阵里记 `matrix_unknown_object`。缺结论记 `matrix_cell_missing`、结论不满足记 `matrix_cell_failed`，两者都使审计为
+      INCOMPLETE（设计没做完），审计的 `matrices` 按表列出格数、有结论数和缺的、不满足的格。
+    - 工具只列对象，不判对象选得对不对：监控器件、端口路径和状态块按网表规则认，漏认的可以自己加行；格的结论对不对仍要人看。
+    - 没有 `matrix_version` 的记录照旧审计，审计的 `matrices` 是 `NOT_CHECKED`，报告在“记录版本”一行写明。
   - `parameter_version: 1` 的旧记录照旧审计（下面两段），报告写明“结论没有按依据分层”；版本 2 的旧记录照旧审计，报告在“记录版本”一行写明门槛出处和需求检查没核对。
   - `refs`：这条计算决定了哪些位号的取值，非空，且都在设计网表里。
   - `checks`：非空列表，每项是一个算出来的值和它必须满足的门槛 `{name, value, operator(<=,<,>=,>), limit, unit}`。

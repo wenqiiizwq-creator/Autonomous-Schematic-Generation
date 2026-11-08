@@ -15,6 +15,13 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 整板评测改进 4、5：对全部对象核对的矩阵与保护逻辑状态表（2026-11-07）
+
+整板评测基线（ASG 128178e）6 个漏项里 3 个是同一条判据只核了一个对象（Matrix 复位门限只对 STM32 的 2.0 V、没对 YT9218 的 3.135 V；−45 ℃ 存储只写“由器件额定覆盖”；低边防反接 MOS 断开地回路没有识别），1 个是软件正常关断时固件判据会不会误置锁没有列；校准板 SM712 钳位对收发器总线脚额定也没有比较。新增 `object_matrices.py`：从设计网表列出受监督轨门限 × 每颗负载、每颗器件工作/存储温度 × 需求范围、端口应力 × 路径上每颗器件（含回线被开关器件断开时经其他端口的地回路）、有锁存/关断/复位的块的状态 × 锁状态，逐格要结论；结论引用的检查要点名这个对象、核的是这条判据。closure 审计在 `matrix_version: 1` 时核对，缺格与不满足记 INCOMPLETE。用 Matrix 与校准板归档交付物重放：上述漏项都成了缺结论的格。纲要（2.2、2.4）改动只写了草案，待确认。
+
+- Event: test:评测记录/ASG/2026-11-07-wholeboard-128178e
+- Changed: scripts/object_matrices.py, scripts/audit_design_closure.py, scripts/render_design_report.py, scripts/README.md, references/design-closure.md, tests/test_object_matrices.py, docs/纲要草案-对全部对象核对与状态表-2026-11-07.md, docs/improvement-ledger.md
+
 ## 清理矛盾 收尾：scheme-criteria 规则收为一处（2026-11-07）
 
 `record/scheme-criteria.json` 何时必须有、字段与格式示例只在 typical-circuits.md 规则一节定义；delivery-report.md 原先独有的几条（guideline_scope 含关键电路类型时必有、key_blocks 必须比较、ports 与 typed-only 的引用范围、不代替 2.2 核算）并入该节，delivery-report 只留引用。
