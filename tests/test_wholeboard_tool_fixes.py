@@ -1,5 +1,5 @@
 """Tool issues from the whole-board baseline (ASG 128178e, 2026-11-07; runs in 评测记录/ASG/2026-11-07-wholeboard-128178e,
-improvement 9 of docs/整板评测基线结果与改进方案-2026-11-07.md). One class per issue, each with the failing case it fixes."""
+improvement 9 of 评测记录/ASG/2026-11-07-wholeboard-128178e/分析与改进方案.md in the 原理图设计规范 folder). One class per issue, each with the failing case it fixes."""
 import copy
 import io
 import json
