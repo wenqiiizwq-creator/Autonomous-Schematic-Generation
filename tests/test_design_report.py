@@ -1088,19 +1088,43 @@ class PackDesignTests(unittest.TestCase):
                                                                  scope['device_kinds'])]
         self.assertTrue(applicable)
 
+        found = {}
+
         def repack(not_applicable):
             self.d.closure.update(guideline_version=1, guideline_scope=dict(scope, not_applicable=not_applicable))
             self.d.write('design-closure.json', self.d.closure)
-            self.d.write('design-closure-audit.json', audit(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root))
+            result = audit(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root)
+            found['uncovered'] = [p['item'].split('：')[0] for p in result['pending'] if p['code'] == 'guideline_uncovered']
+            self.d.write('design-closure-audit.json', result)
             (self.d.root / REPORT).write_text(self.d.report()[0])
             return [e for e in self.run_pack()[0] if '适用准则未覆盖' in e]
 
         uncovered = repack([])
+        manual = found['uncovered']   # auto-check group rules are covered by the audit itself
+        self.assertTrue(manual and set(manual) <= set(applicable), manual)
         self.assertEqual(1, len(uncovered), uncovered)
-        self.assertIn('%d 条适用准则未覆盖' % len(applicable), uncovered[0])
+        self.assertIn('%d 条适用准则未覆盖' % len(manual), uncovered[0])
         self.assertIn('not_applicable', uncovered[0])
-        self.assertEqual(1, len(repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in applicable[1:]])))
-        self.assertEqual([], repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in applicable]))
+        self.assertEqual(1, len(repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in manual[1:]])))
+        self.assertEqual([], repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in manual]))
+
+    def test_matrix_cells_without_conclusion_cannot_be_packed(self):
+        # SKILL.md 5.1 done mark: no matrix or state-table cell is missing or failing; the audit only marks it pending.
+        import pack_design
+        real = pack_design.audit
+
+        def with_cells(*args, **kwargs):
+            result = real(*args, **kwargs)
+            result['pending'] = list(result.get('pending', [])) + [
+                {'code': 'matrix_cell_missing', 'item': '受监督轨 +3V3 × U2 最低工作电压'},
+                {'code': 'matrix_cell_failed', 'item': '温度 × U3 存储下限'}]
+            return result
+
+        with mock.patch.object(pack_design, 'audit', with_cells):
+            errors = [e for e in self.run_pack()[0] if '矩阵与状态表' in e]
+        self.assertEqual(1, len(errors), errors)
+        self.assertIn('2 格缺结论或不满足', errors[0])
+        self.assertEqual([], [e for e in self.run_pack()[0] if '矩阵与状态表' in e])
 
     def test_clean_delivery_packs_with_manifest(self):
         errors, manifest = self.run_pack()

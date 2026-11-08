@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 合入整板评测五项修正，纲要合并文字确认（2026-11-07）
+
+gate-fixes、decision-source、matrix-checks、guideline-bookkeeping、tool-fixes 五个分支依次合入 main。三个分支各自改过纲要（各自经用户确认），合并后：1.1、1.4、2.x 处理差距取 decision-source，2.2 两条新增分别取 matrix-checks 与 guideline-bookkeeping；5.1 做完的标志两边都改了同一句，合成一句（“矩阵与状态表没有缺结论或不满足的格”在前，准则按自动检查组、文档组、其余逐条覆盖在后），用户确认合并后的纲要。合并修正：`render_design_report.py` 的 import 两边合并（含 `holds`）；A1 打包测试改为从审计结果取未覆盖清单，扣除自动检查组已覆盖的准则。matrix-checks 只把矩阵缺格写进做完的标志，`pack_design` 不拦，与 A1 同一类漏洞：现在审计有 `matrix_cell_missing`、`matrix_cell_failed` 时拒绝打包，delivery-report 写明。全量测试通过。
+
+- Event: user:2026-11-07（确认并合入）
+- Approved: user:2026-11-07
+- Outline: 05807602f0c8935d
+- Changed: SKILL.md, scripts/pack_design.py, scripts/render_design_report.py, references/delivery-report.md, tests/test_design_report.py, docs/improvement-ledger.md
+
 ## 整板评测门禁 A1/A4/A5：准则覆盖、defer 闭合、library_gaps 先检索（2026-11-07）
 
 整板评测基线（ASG 128178e，三块板）发现纲要已有要求、脚本没执行的三处：

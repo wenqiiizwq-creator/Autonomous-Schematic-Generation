@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import calculation_basis, check_delegate, failing_checks, load_task, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import calculation_basis, check_delegate, failing_checks, holds, load_task, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402

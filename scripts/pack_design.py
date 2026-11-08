@@ -274,6 +274,11 @@ def check(root, inputs=(), previous=None):
                 errors.append('design-closure.json: %d 条适用准则未覆盖（%s%s）；逐条在计算、待办、器件性能要求或证据条目的 '
                               'guidelines 里引用，或在 guideline_scope.not_applicable 写不适用理由' % (
                                   len(uncovered), '、'.join(uncovered[:10]), ' 等' if len(uncovered) > 10 else ''))
+            # SKILL.md 5.1: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
+            cells = [p['item'] for p in result.get('pending', []) if p.get('code') in ('matrix_cell_missing', 'matrix_cell_failed')]
+            if cells:
+                errors.append('design-closure.json: 矩阵与状态表有 %d 格缺结论或不满足（%s%s）；按 object_matrices.py 列出的格逐格写结论，'
+                              '不满足的改设计' % (len(cells), '；'.join(cells[:5]), ' 等' if len(cells) > 5 else ''))
     if (root / REPORT).is_file() and record.is_dir():
         _, problems = render(root)
         errors += ['report records: ' + p for p in problems]
