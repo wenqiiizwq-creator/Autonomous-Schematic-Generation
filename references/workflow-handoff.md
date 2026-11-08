@@ -46,7 +46,7 @@
   `pack_design.py` 检查通过，再用流程提供的 `pack-result --roles roles.json --open-items open-items.json`
   生成 result.json；不手填哈希。
 - 无人当场答复需求澄清时，ASG 用 `task.json` 的 `clarification_answers` 填 `answer`（`source` 写
-  `{"source": "任务书", "locator": "<任务 id> clarification_answers <澄清编号>"}`）；没覆盖到的问题不往下设计，
+  `{"source": "任务书", "locator": "<任务 id> clarification_answers <澄清编号>"}`，`by` 照抄该项，并把 task.json 原样复制为 `record/task.json` 供审计核对）；没覆盖到的问题不往下设计，
   `status` 写 `NEEDS_INPUT`，每个问题是一件 `REQUIREMENT` 待办，`summary` 写问题，`next_action` 写建议条文。
 - `DELIVERED` 只表示交付目录完整、可核对，不表示电路通过。缺需求、资料或方案输入时用 `NEEDS_INPUT`；
   工具没跑完用 `TOOL_FAILED`。后两者可以没有文件，但至少要有一个待办，不得用假文件凑角色。

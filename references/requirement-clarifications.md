@@ -93,6 +93,9 @@
 | `assumption_differs_from_proposal` | 暂缓待办的 `assumption` 与建议条文不一致 |
 | `requirement_files_not_asked` | 给定或采纳的答复没有记下用户是否让改原始需求文件（`requirement_files` 缺失或 `decision` 不是 `UPDATED`/`KEPT`） |
 | `requirement_files_without_files` | 记为已改原始需求文件，但 `files` 是空的 |
+| `decision_self_assigned` | `by` 或 `source` 是运行者自拟的（含 eval-run、auto、无用户、运行者、预先授权、代填），不是用户的答复（整板评测 2026-11-07） |
+| `delegate_without_task` | `source` 写任务书，交付目录 `record/task.json`（派发的任务书原样复制）没有这项 `clarification_answers` |
+| `delegate_mismatch` | 答复的 `decision`、`text`、`by`、`date` 与任务书 `clarification_answers` 该项不一致 |
 
 ## 报告
 

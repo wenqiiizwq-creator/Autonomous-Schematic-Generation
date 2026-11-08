@@ -15,6 +15,13 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 谁做的决定：每个核心角色要有确认记录，答复人不得自拟（2026-11-07）
+
+整板评测基线 A2、A3、A6：校准板 10 个选型角色 `decision` 为 null 照样过（只在有 `options` 时查）；校准板与 Matrix 的澄清答复 `by` 写 `eval-run:auto` 也通过；Matrix 两个角色写 `user:2026-11-07`，同一对象却写着 `basis: eval-run:auto`。现在 `render_design_report.check_selection` 要求每个核心角色有 `decision`：`user:<日期>`，或 `scheme:<证据编号>`（引用户的需求或方案文档，`quote` 原样在文件里且含选定型号，不能是 ASG 自己写的 `设计资料/`、`record/`）；确认记录或澄清答复里出现运行者自拟标记（eval-run、auto、无用户、运行者、预先授权、代填）报 `decision_self_assigned`；澄清来源写“任务书”的，要在 `record/task.json` 的 `clarification_answers` 有一字不差的对应项（`delegate_without_task`、`delegate_mismatch`）。报告“核心器件选型”表加“确认来源”列。归档重放：校准板 10 个角色与 CL-SURGE-ZS、Matrix 两个冒填与三项澄清被拦；PoE 温湿度传感器的真实 `user:` 不报，其余 9 个运行者自认的角色报缺确认记录。任务书代答 `delegate:`（改进 7）涉及纲要，草案见 docs/决定来源与代答-草案-2026-11-07.md，待确认。
+
+- Event: user:2026-11-07（整板评测改进方案逐项修正，经主会话转达）
+- Changed: scripts/render_design_report.py, scripts/audit_design_closure.py, tests/test_design_report.py, tests/test_design_closure.py, references/core-part-selection.md, references/requirement-clarifications.md, references/workflow-handoff.md, docs/improvement-ledger.md, docs/决定来源与代答-草案-2026-11-07.md
+
 ## 清理矛盾 收尾：scheme-criteria 规则收为一处（2026-11-07）
 
 `record/scheme-criteria.json` 何时必须有、字段与格式示例只在 typical-circuits.md 规则一节定义；delivery-report.md 原先独有的几条（guideline_scope 含关键电路类型时必有、key_blocks 必须比较、ports 与 typed-only 的引用范围、不代替 2.2 核算）并入该节，delivery-report 只留引用。

@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
+from audit_design_closure import calculation_basis, failing_checks, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
 import operating_inputs  # noqa: E402
@@ -109,6 +109,10 @@ TERMINOLOGY = Path(__file__).resolve().parent.parent / 'references' / 'terminolo
 # A written total and what it is counted against (references/terminology.md).
 COUNT_PATTERN = re.compile(r'(?:共|全部)\s*(\d+)\s*(项计算|件未关闭项|条需求|条审查意见|个器件|页)')
 USER_SOURCE = re.compile(r'^user:\d{4}-\d{2}-\d{2}$')
+# A confirmation already given in the requirement or scheme documents (SKILL 1.4): scheme:<evidence id>, with locator and quote.
+SCHEME_SOURCE = re.compile(r'^scheme:(\S+)$')
+# Files ASG writes itself; a scheme confirmation must cite the user's documents, not ASG's own basis.
+OWN_WRITING = ('设计资料/', 'record/')
 
 
 def text(value):
@@ -554,7 +558,7 @@ def check_options(name, role, selected):
         problems.append('选型角色“%s”有方案的缺点写得一字不差，每个方案要写自己的缺点' % name)
     decision = role.get('decision') if isinstance(role.get('decision'), dict) else {}
     chosen = next((o for o in options if o.get('name') == decision.get('option')), None)
-    if not chosen or not (isinstance(decision.get('source'), str) and USER_SOURCE.match(decision['source'])):
+    if not chosen:
         problems.append('选型角色“%s”还没有你的决定：decision 要写 {option: 方案名, source: user:<日期>}，'
                         '定下来之前不进入设计网表' % name)
     elif norm_mpn(selected.get('mpn', '')) not in {norm_mpn(p) for p in chosen.get('parts') or [] if text(p)}:
@@ -562,7 +566,43 @@ def check_options(name, role, selected):
     return problems
 
 
-def check_selection(data, intent, root):
+def check_confirmation(name, role, selected, evidence, root):
+    """Every core role carries who confirmed it (整板评测 2026-11-07 A2/A6): the user (user:<日期>), or the user's
+    requirement or scheme documents (scheme:<证据编号> with the quoted words naming the selected part)."""
+    decision = role.get('decision') if isinstance(role.get('decision'), dict) else {}
+    source = decision.get('source') if text(decision.get('source')) else ''
+    marks = self_assigned({k: v for k, v in decision.items() if k not in ('option', 'quote')})
+    if marks:
+        return ['选型角色“%s”的确认记录是运行者自拟的（%s），不是用户的确认：无人当场确认时不能自填 user:，'
+                '停下来问，或交 NEEDS_INPUT' % (name, '、'.join(sorted(set(marks))))]
+    if USER_SOURCE.match(source):
+        return []
+    m = SCHEME_SOURCE.match(source)
+    if not m:
+        return ['选型角色“%s”还没有确认记录：decision.source 写 user:<日期>（用户确认），或 scheme:<证据编号>'
+                '（需求或方案文档已写明用户确认，另写 locator 与原文 quote）；确认前不进入步骤 ②' % name]
+    row = (evidence or {}).get(m.group(1))
+    path = row.get('path') if isinstance(row, dict) and text(row.get('path')) else ''
+    quote = decision.get('quote') if text(decision.get('quote')) else ''
+    where = '选型角色“%s”的确认引用 %s' % (name, source)
+    if not path:
+        return ['%s 不在 design-closure.json 的 evidence 里' % where]
+    if path.startswith(OWN_WRITING):
+        return ['%s 指向 ASG 自己写的 %s：要引用户的需求或方案文档' % (where, path)]
+    if not text(decision.get('locator')) or not quote:
+        return ['%s 要写 locator（文档里哪一处）和 quote（原文）' % where]
+    try:
+        body = (Path(root) / path).read_text(encoding='utf-8')
+    except (OSError, UnicodeDecodeError):
+        return ['%s：%s 读不到或不是文本文件，核对不了原文' % (where, path)]
+    if squeeze(quote) not in squeeze(body):
+        return ['%s 的原文在 %s 里找不到' % (where, path)]
+    if selected and text(selected.get('mpn')) and norm_mpn(selected['mpn']) not in norm_mpn(quote):
+        return ['%s 的原文不含选定型号 %s：文档确认的不是这颗器件，要另交用户确认' % (where, selected['mpn'])]
+    return []
+
+
+def check_selection(data, intent, root, evidence=None):
     """Every core part was chosen from compared candidates whose datasheets are in the library. The refs and part
     numbers are bound to the design netlist only once it exists: task 1.4 runs before task 2.4 writes it (Matrix R3 S06)."""
     roles = data.get('roles') if isinstance(data, dict) else None
@@ -595,6 +635,7 @@ def check_selection(data, intent, root):
         if len(cands) < 2 and not text(role.get('single_candidate_reason')):
             problems.append('选型角色“%s”只有 %d 个候选又没写 single_candidate_reason' % (name, len(cands)))
         selected = [c for c in cands if c.get('status') == 'selected']
+        problems += check_confirmation(name, role, selected[0] if len(selected) == 1 else None, evidence, root)
         if len(selected) != 1:
             problems.append('选型角色“%s”要恰好一个 selected 候选，现在 %d 个' % (name, len(selected)))
         else:
@@ -1205,7 +1246,8 @@ def render(root, notes=None, title=None):
         problems += check_page_plan(data['page-plan.json'], intent, visual, lessons, root=root, scheme=scheme if isinstance(scheme, dict) else None)
     selection = data['selection.json'] or {}
     if data['selection.json'] is not None:
-        problems += check_selection(selection, intent, root)
+        evidence = {e.get('id'): e for e in closure.get('evidence') or [] if isinstance(e, dict)}
+        problems += check_selection(selection, intent, root, evidence)
     ordering = lifecycle.audit(intent, [root, root / 'record'])
     for f in ordering['flagged']:
         if not text(f['reason']):
@@ -1429,14 +1471,16 @@ def render(root, notes=None, title=None):
 
     roles = [r for r in selection.get('roles') or [] if isinstance(r, dict)]
     if roles:
-        out += ['## 核心器件选型', '', '| 角色 | 位号 | 选定 | 候选数 | 理由 | 淘汰依据 |', '|---|---|---|---|---|---|']
+        out += ['## 核心器件选型', '', '| 角色 | 位号 | 选定 | 候选数 | 理由 | 淘汰依据 | 确认来源 |', '|---|---|---|---|---|---|---|']
         for r in roles:
             chosen = [c for c in r.get('candidates') or [] if isinstance(c, dict) and c.get('status') == 'selected']
-            out.append('| %s | %s | %s | %d | %s | %s |' % (
+            confirmed = r.get('decision') if isinstance(r.get('decision'), dict) else {}
+            out.append('| %s | %s | %s | %d | %s | %s | %s |' % (
                 cell(r.get('role', '')), '、'.join(r.get('refs') or []),
                 cell(chosen[0].get('mpn', '')) if chosen else '未选定', len(r.get('candidates') or []),
                 cell(chosen[0].get('reason', '')) if chosen else cell(r.get('single_candidate_reason', '')),
-                cell('；'.join(r.get('_basis') or []))))
+                cell('；'.join(r.get('_basis') or [])),
+                cell(' '.join(str(confirmed[k]) for k in ('source', 'locator') if text(confirmed.get(k))) or '未确认')))
         out.append('')
         optioned = [r for r in roles if r.get('options')]
         if optioned:

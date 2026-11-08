@@ -117,11 +117,16 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 - 设计网表里每个 U/Q/T 开头的器件都属于某个角色；一个角色可以覆盖多个位号（例如两只并联 MOS）。
 - 上两条是位号绑定，设计网表写出（任务 2.4）后才查；任务 1.4 还没有设计网表，`check_selection` 只查候选、资料和用户决定
   （Matrix R3：1.4 时设计网表不存在，绑定检查使做完的标志无法达到）。
+- 每个角色都有确认记录 `decision`（任务 1.4 选型确认，整板评测 2026-11-07）：用户确认的写 `{"source": "user:<日期>", "locator": "<对话里哪一处>"}`；
+  需求或方案文档已写明用户确认、选型与之一致的写 `{"source": "scheme:<证据编号>", "locator": "<文档里哪一处>", "quote": "<原文>"}`，
+  证据编号在 `design-closure.json` 的 `evidence` 里，文件是用户的文档（不是 ASG 写的 `设计资料/`、`record/`），`quote` 原样在文件里且含选定型号。
+  一次汇总确认的清单，各角色写同一个来源。确认记录里不得出现运行者自拟的标记（eval-run、auto、无用户、运行者、预先授权、代填）：
+  没人确认就停下来问，不自填 `user:`。
 - `selected` 候选写 `external_dependencies`（字符串列表，没有写空列表）。不为空时角色还要有：
   - `options`：2–3 个方案，每个 `{name, parts, external_dependencies, cost, pros, cons, recommended}`，
     `parts` 是涉及的型号列表，恰好一个 `recommended: true`，各方案的 `cons` 不能一字不差；
   - `recommendation`：ASG 推荐哪个、为什么，拿到哪些资料后结论会变；
-  - `decision`：`{"option": "<用户选的方案名>", "source": "user:<日期>"}`，选定候选的型号必须在该方案的 `parts` 里。
+  - `decision` 另写 `option`（用户选的方案名），选定候选的型号必须在该方案的 `parts` 里。
 
 ```json
 "external_dependencies": ["补偿网络编码表（p13 只给范围）", "阻断管驱动的带载能力与关断时延（p18 只在空载测试）"],
@@ -134,6 +139,6 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 "decision": {"option": "控制器 B + 外置环路", "source": "user:2026-10-24"}
 ```
 
-报告的"核心器件选型"一节由这份记录生成：角色、选定型号、候选数、一句理由和每个淘汰候选的依据（哪条条件不满足，或 `reject_kind`）。
+报告的"核心器件选型"一节由这份记录生成：角色、选定型号、候选数、一句理由、每个淘汰候选的依据（哪条条件不满足，或 `reject_kind`）和确认来源。
 有方案的角色另列"外部条件不确定的选型"一节：每个方案的型号、外部依赖、代价、优缺点，ASG 的建议和你的决定。
 理由用中文，型号和单位可以保留。
