@@ -197,19 +197,17 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
     计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表）。
-    [准则证据分组](guideline-evidence-groups.md)（用户 2026-11-07，改进 8）里的准则不必逐条写：自动检查组在检查跑过且没有它的错误时由审计记为 `check:<检查名>`；
-    文档组由写了 `carrier: <组名>` 的证据条目整组覆盖，审计读这些文件，核必备章节齐全、非空、该写的对象都写到，通过记为 `carrier:<证据编号>`，
-    不过记 `guideline_carrier_incomplete`（列出缺项），这一组的准则同时未覆盖；声明了的组只认文档核对，别处的逐条引用不再算；组名不在表里记 `guideline_carrier_unknown`。
-    审计在 `guidelines.by_group` 列出两组的结果，报告各成一张表。审计按范围选出适用准则：每条要被它们引用，或写进 `not_applicable`，
-    否则 `guideline_uncovered`（设计没做完）；已关闭的待办引用准则时，`guideline_evidence` 逐条写
+    只有能淘汰候选方案（任务 1.3 的 `scheme-criteria.json`）、改变选型（性能记录）或进入计算（计算）的准则逐条落实，其余按设计动作照做，
+    不要求逐条引用（用户 2026-11-08 按草案实施）。审计按范围选出适用准则，在 `guidelines` 列出适用（`applicable`）、已引用（`covered`）、
+    不适用（`not_applicable`）、没引用（`uncited`）和下游规则，供审查对照；没引用的不报待办，不挡打包。
+    写了的引用照样核：已关闭的待办引用准则时，`guideline_evidence` 逐条写
     `<证据编号>#<节/表/行>`（证据编号在这件待办的 `evidence` 里），缺记 `guideline_work_without_evidence`，同一处顶 3 条以上准则记
     `guideline_evidence_repeated`（工业校准板：一件已关闭的文档待办批量引用了 205 条，2026-11-02）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`
-    （补范围或去掉引用）；关闭阶段在原理图之后的规则要有待办引用，缺了记 `guideline_downstream_without_work_item`。范围写错记 `guideline_scope`。
-    准则的 `coverage`（用户 2026-11-04）决定怎样覆盖，缺省是 `item`，即上面的逐条引用。`project_input` 由一份需求基线回答：`guideline_project_input` 写
-    `baseline`（证据或需求澄清编号的列表）和 `answers`（`{准则编号: 回答项}`，回答项是需求编号、需求澄清编号、`<基线>#<节/表/行>` 或 `TBR`），不要求逐条证据；没写进 `answers` 记 `guideline_uncovered`，别处引用不能代替，基线不在记录里或回答项不成立记 `guideline_project_input`。
-    `handoff` 进下游交接清单：一件待办或一条证据（交接表）可以引用多条，不要 `guideline_evidence`，不记 `guideline_evidence_repeated`，也满足 `guideline_downstream_without_work_item`。
-    逐条的不跟批量的混：`item` 准则和批量准则写在同一件待办或同一条证据里、或 `item`、`handoff` 准则写进 `answers`，都记 `guideline_batch_mixed_item`。审计的 `guidelines.by_coverage` 分列三类（全是 `item` 时没有这一项），报告把 `project_input`、`handoff` 各合成一张表。
-    设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。审计在 `guidelines` 列出适用、已引用、不适用、未覆盖与下游规则。
+    （补范围或去掉引用）；引用了的、关闭阶段在原理图之后的规则要有待办（`handoff` 类也可以是一条交接表证据），缺了记 `guideline_downstream_without_work_item`。范围写错记 `guideline_scope`。
+    有对外连接器的板必须写 FMEA 和 EMC 端口矩阵（[必写的设计文档](guideline-evidence-groups.md)）：证据条目写 `carrier: FMEA`/`carrier: EMC`，审计核必备章节齐全、非空、
+    每个连接器位号都写到；没登记或不齐记 `design_document_incomplete`（INCOMPLETE，打包被拒），`carrier` 写了别的名字记 `guideline_carrier_unknown`。
+    审计在 `guidelines.documents` 列出两份文档的核对结果。
+    设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。
     [典型电路库](typical-circuits.md) 的电路类型和可选落实规则只作方案比较参考，不扩展或约束 `guideline_scope`；本板的功能电路类型和器件类别决定准则适用范围，普通引用覆盖要求不变。
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
     （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），

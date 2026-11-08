@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 准则覆盖只留决定性准则（2026-11-08）
+
+按确认的草案（docs/准则覆盖只留决定性准则-纲要草案-2026-11-08.md）：只有能淘汰候选方案、改变选型或进入计算的共用设计准则逐条落实，其余按设计动作照做，不要求逐条引用。纲要改五处：任务 1.3 第二段末句、2.2“按适用的共用设计准则设计”、2.3 第 6 条、5.1 做完的标志、5.3 目录树。审计不再报 `guideline_uncovered`，`guidelines` 里列出适用、已引用和没引用（`uncited`）的准则供审查对照；删去自动检查组、7 个文档组和需求基线批量回答（`guideline_project_input`、`guideline_batch_mixed_item`）；FMEA 与 EMC 端口矩阵对有对外连接器的板仍必须写，没登记或章节、连接器不齐记 `design_document_incomplete`，`pack_design.py` 以它代替 A1 门禁拒绝打包。`guideline-evidence-groups.json/.md` 只留这两份文档；报告“共用规范”一行改为适用与引用条数。共用层未改。
+
+- Event: user:2026-11-08（按草案实施）
+- Approved: user:2026-11-08
+- Outline: e804abefcb170515
+- Changed: SKILL.md, scripts/audit_design_closure.py, scripts/pack_design.py, scripts/render_design_report.py, references/guideline-evidence-groups.json, references/guideline-evidence-groups.md, references/design-closure.md, references/delivery-report.md, tests/test_guideline_closure.py, tests/test_guideline_evidence_groups.py, tests/test_design_report.py, tests/test_typical_circuits.py, docs/准则覆盖只留决定性准则-纲要草案-2026-11-08.md, docs/improvement-ledger.md
+
 ## 清理主线外工作流与记账留档（2026-11-08）
 
 纲要写明三项能力目标后，用户要求把不在“需求 → 原理图”主线上的工作流和记账留档从 ASG 清理掉。删去主线外工作流：PDF 参考设计提取（`references/pdf-schematic-extraction.md` 及只读它的测试）、CopperPilot 协助、SKiDL/circuit-synth 导入（`import_circuit_synth.py`、`schematic_layout/importers.py`、`tests/probe_structured_upstream.py`、`circuit-ir.md` 的导入一节及测试）；`circuit_ir.py`、`placement.py` 仍有改写自 SKiDL、circuit-synth 的机制，两份许可证保留。上游采纳清单与来源记录移到 `docs/`。记账留档：设计报告不再输出逐条准则表（共用设计准则覆盖、需求基线回答、下游交接清单、自动检查组、文档组、下游约束），结论一节只留一行条数，逐条留在 `record/design-closure-audit.json`；审计与报告只读现行记录版本（parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、binding_version 1、matrix_version 1，lessons schema 2），旧版本记 `outdated_record`/记录问题，要求按现行格式重写，删去 parameter_version 1 的计算分支、gap_version 1、版本缺失时跳过检查和报告的“记录版本”一行；测试夹具用 `tests/current_record.py` 补齐现行格式。《PCB与结构要求》改为需求要求时才写。准则覆盖只留决定性准则会改纲要，只写了草案（`docs/准则覆盖只留决定性准则-纲要草案-2026-11-08.md`），未改纲要、A1 门禁和准则证据分组。

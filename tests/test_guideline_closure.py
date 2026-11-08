@@ -87,34 +87,33 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertEqual(result['guidelines']['covered']['G07-001'], ['work:W1'])
         self.assertEqual(result['guidelines']['downstream'], ['G07-001'])
 
-    def test_an_uncited_rule_is_pending_until_cited_or_held_not_applicable(self):
+    def test_an_uncited_rule_is_listed_not_pending(self):
+        # user 2026-11-08 (按草案实施): only rules that rule out a scheme, change a selection or enter a calculation are cited.
         self.record['calculations'][0]['guidelines'] = ['G01-001']
-        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
+        result = self.run_audit()
+        self.assertFalse({c for c in self.codes(result) if c.startswith('guideline')}, result)
+        self.assertEqual(result['guidelines']['uncited'], ['G04-001'])
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G04-001', 'reason': '只接本板内部总线'}]
         result = self.run_audit()
-        self.assertNotIn('guideline_uncovered', self.codes(result))
+        self.assertEqual(result['guidelines']['uncited'], [])
         self.assertEqual(result['guidelines']['not_applicable'], {'G04-001': '只接本板内部总线'})
 
     def test_an_evidence_entry_may_cite_a_rule(self):
         # user 2026-11-03: 照此写入 — a documentation rule hangs on the evidence entry that implements it.
         self.record['calculations'][0]['guidelines'] = ['G01-001']
-        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
         self.record['evidence'][0]['guidelines'] = ['G04-001']
         result = self.run_audit()
-        self.assertNotIn('guideline_uncovered', self.codes(result))
         self.assertEqual(result['guidelines']['covered']['G04-001'], ['evidence:E1'])
         self.record['evidence'][0]['guidelines'] = 'G04-001'
         self.assertIn('schema', self.codes(self.run_audit()))
 
     def test_a_component_requirement_may_cite_a_rule(self):
         self.record['calculations'][0]['guidelines'] = ['G01-001']
-        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
         record_dir = self.root / 'record'
         record_dir.mkdir()
         (record_dir / 'component-requirements.json').write_text(
             json.dumps({'components': [{'ref': 'U1', 'guidelines': ['G04-001']}]}), encoding='utf-8')
         result = self.run_audit()
-        self.assertNotIn('guideline_uncovered', self.codes(result))
         self.assertEqual(result['guidelines']['covered']['G04-001'], ['component:U1'])
 
     def test_the_six_external_interface_types_select_their_rules(self):
@@ -196,43 +195,15 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['work_items'][0]['guidelines'] = ['G07-001', 'G07-002']
         self.record['evidence'][0].pop('guidelines', None)
         self.record['clarifications'] = []
-        self.record['guideline_project_input'] = {'baseline': ['E1'], 'answers': {'G08-001': 'R1', 'G08-002': 'TBR'}}
 
-    def test_a_record_and_library_without_coverage_are_audited_as_before(self):
-        result = self.run_audit()
-        self.assertNotIn('by_coverage', result['guidelines'])
-        self.assertNotIn('project_input_tbr', result['guidelines'])
-
-    def test_a_baseline_answers_project_input_rules_and_one_work_item_hands_off_many(self):
+    def test_one_work_item_hands_off_many_downstream_rules(self):
         self.batch_record()
         result = self.run_audit(self.batch_library())
         self.assertFalse({c for c in self.codes(result) if c.startswith('guideline')}, result)
         found = result['guidelines']
-        self.assertEqual(found['by_coverage'], {'item': ['G01-001', 'G04-001'], 'project_input': ['G08-001', 'G08-002'],
-                                                'handoff': ['G07-001', 'G07-002']})
-        self.assertEqual(found['covered']['G08-001'], ['baseline:R1'])
-        self.assertEqual(found['project_input_tbr'], ['G08-002'])
-
-    def test_a_project_input_rule_needs_its_answer_and_the_baseline_in_the_record(self):
-        self.batch_record()
-        del self.record['guideline_project_input']['answers']['G08-002']
-        self.record['calculations'][0]['guidelines'].append('G08-002')   # a citation does not stand in for the answer
-        self.assertIn('guideline_uncovered', self.codes(self.run_audit(self.batch_library())))
-        self.batch_record()
-        self.record['guideline_project_input']['baseline'] = ['E9']
-        codes = self.codes(self.run_audit(self.batch_library()))
-        self.assertIn('guideline_project_input', codes)
-        self.assertIn('guideline_uncovered', codes)
-        self.batch_record()
-        self.record['guideline_project_input']['answers']['G08-001'] = 'R9'
-        self.assertIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
-        self.record['guideline_project_input']['answers']['G08-001'] = 'E1#§3.2'
-        self.assertNotIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
-        self.record['guideline_project_input'] = {'answers': {}}
-        self.assertIn('guideline_project_input', self.codes(self.run_audit(self.batch_library())))
-        self.batch_record()
-        self.record['guideline_project_input']['answers']['G09-999'] = 'R1'
-        self.assertIn('guideline_unknown', self.codes(self.run_audit(self.batch_library())))
+        self.assertEqual(found['covered']['G07-002'], ['work:W1'])
+        self.assertEqual(found['uncited'], ['G08-001', 'G08-002'])     # project-input rules need no baseline answer now
+        self.assertNotIn('by_coverage', found)
 
     def test_a_clarification_can_be_the_baseline_and_the_answer(self):
         self.batch_record()
@@ -259,24 +230,6 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['work_items'][0]['guidelines'] = []
         self.record['calculations'][0]['guidelines'] += ['G07-001', 'G07-002']
         self.assertIn('guideline_downstream_without_work_item', self.codes(self.run_audit(self.batch_library())))
-
-    def test_an_item_rule_in_a_batch_is_refused(self):
-        self.batch_record()
-        self.record['work_items'][0]['guidelines'] = ['G07-001', 'G07-002', 'G01-001']
-        self.assertIn('guideline_batch_mixed_item', self.codes(self.run_audit(self.batch_library())))
-        self.batch_record()
-        self.record['evidence'][0]['guidelines'] = ['G08-001', 'G01-001']
-        self.assertIn('guideline_batch_mixed_item', self.codes(self.run_audit(self.batch_library())))
-        self.batch_record()
-        self.record['guideline_project_input']['answers']['G01-001'] = 'R1'
-        result = self.run_audit(self.batch_library())
-        self.assertIn('guideline_batch_mixed_item', self.codes(result))
-        self.assertEqual(result['guidelines']['covered']['G01-001'], ['calc:C1'])   # the refused answer covers nothing
-
-    def test_a_handoff_rule_cannot_be_answered_by_the_baseline(self):
-        self.batch_record()
-        self.record['guideline_project_input']['answers']['G07-001'] = 'R1'
-        self.assertIn('guideline_batch_mixed_item', self.codes(self.run_audit(self.batch_library())))
 
     def test_item_rules_still_trip_the_repeated_evidence_check_beside_a_batch(self):
         # the calibration board's single closed item citing 205 rules stays refused

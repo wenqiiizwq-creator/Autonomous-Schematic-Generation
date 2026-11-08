@@ -138,9 +138,12 @@ class PatternClosureTests(unittest.TestCase):
         result = self.run_audit()
         self.assertFalse({c for c in self.codes(result) if c.startswith('guideline')}, result)
 
-    def test_board_applicable_rules_still_require_coverage(self):
+    def test_board_applicable_rules_are_listed_by_the_board_scope(self):
+        # The pattern does not narrow the board's scope; an uncited rule is listed, not pending (user 2026-11-08: 按草案实施).
         self.record['calculations'][0]['guidelines'] = ['G01-001']
-        self.assertIn('guideline_uncovered', self.codes(self.run_audit()))
+        result = self.run_audit()
+        self.assertIn('G03-001', result['guidelines']['uncited'])
+        self.assertNotIn('guideline_uncovered', self.codes(result))
 
 
 if __name__ == '__main__':

@@ -1,15 +1,13 @@
-"""Improvement 8 (user 2026-11-07: 按推荐实施): rules an audit check proves are covered by the check passing, and the
-board-wide method and document rules by one design document whose sections and objects are all there, instead of one
-hand-written citation each. A declared document that falls short leaves its rules uncovered."""
+"""User 2026-11-08 (按草案实施): only the guideline rules that rule out a scheme candidate, change a selection or enter a
+calculation are implemented one by one; an uncited rule raises nothing. A board with external connectors carries the FMEA
+and the EMC port matrix, each with all its sections and every connector (references/guideline-evidence-groups.md)."""
 import json
 from pathlib import Path
 import sys
 import unittest
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-import guideline_criteria
 from audit_design_closure import load_guideline_groups, markdown_sections, mentions, sha256
 import test_guideline_closure as base
 from test_guideline_closure import card, library
@@ -46,11 +44,18 @@ TVS 开路无告警，登记待测。
 对应原理图 v1。
 '''
 
+EMC = '''# EMC 端口矩阵
+
+| 端口 | 归类 | 判据 | 浪涌 | 耦合 | 源阻抗 | 波形 | 极性 | 屏蔽 | 泄放 | 机壳 | 跨端口 | 静电 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| J1 | 信号端口 | B | 1 kV 线对地 | 线对地 | 42 Ω | 1.2/50 µs | 正负 | 非屏蔽 | 经 TVS 到 PE | 单点 | 无 | 接触 4 kV |
+'''
+
 
 setUpModule, tearDownModule = base.setUpModule, base.tearDownModule
 
 
-class EvidenceGroupTests(unittest.TestCase):
+class DesignDocumentTests(unittest.TestCase):
     """The record of test_guideline_closure, with a connector J1 added."""
     run_audit, codes = base.GuidelineClosureTests.run_audit, base.GuidelineClosureTests.codes
 
@@ -62,81 +67,63 @@ class EvidenceGroupTests(unittest.TestCase):
         self.record['intent_sha256'] = sha256(self.intent)
         self.record['calculations'][0]['guidelines'] = ['G01-001', 'G04-001']
 
-    def run_groups(self):
+    def run_docs(self):
         return self.run_audit(LIB)
 
-    def write_fmea(self, body=FMEA, carrier='FMEA'):
-        (self.root / 'fmea.md').write_text(body, encoding='utf-8')
-        self.record['evidence'].append({'id': 'E-FMEA', 'path': 'fmea.md', 'sha256': sha256(self.root / 'fmea.md'),
+    def write_doc(self, name, body, carrier):
+        (self.root / name).write_text(body, encoding='utf-8')
+        self.record['evidence'].append({'id': 'E-' + carrier, 'path': name, 'sha256': sha256(self.root / name),
                                         'locator': '全文', 'carrier': carrier})
 
-    def test_the_groups_name_item_rules_of_the_installed_library_once(self):
-        groups, lib = load_guideline_groups(), {r['id']: r for r in guideline_criteria.load()['criteria']}
-        named = list(groups['checks']) + [g for c in groups['carriers'].values() for g in c['rules']]
-        self.assertEqual(len(named), len(set(named)))
-        for gid in named:
-            self.assertEqual(guideline_criteria.coverage_class(lib[gid]), 'item', gid)
-            self.assertEqual(lib[gid]['closing_stage'], 'schematic', gid)
-            self.assertEqual(lib[gid]['status'], 'active', gid)
+    def incomplete(self, result):
+        return [p['item'] for p in result['pending'] if p['code'] == 'design_document_incomplete']
+
+    def test_only_fmea_and_the_emc_port_matrix_are_required(self):
+        groups = load_guideline_groups()
+        self.assertEqual(sorted(groups['carriers']), ['EMC', 'FMEA'])
+        self.assertNotIn('checks', groups)
         for name, c in groups['carriers'].items():
+            self.assertEqual(c['objects'], 'connectors', name)
             self.assertTrue(c['sections'] and all(s['match'] for s in c['sections']), name)
 
-    def test_a_passing_check_covers_its_rule_and_a_failing_one_does_not(self):
-        self.write_fmea()
-        result = self.run_groups()
-        self.assertEqual(result['guidelines']['covered']['G09-018'], ['check:装配状态独立字段'])
-        self.assertEqual(result['guidelines']['by_group']['check'], {'G09-018': '装配状态独立字段'})
-        components = json.loads(self.intent.read_text())['components'] + [{'ref': 'R1', 'lib_id': 'Device:R', 'value': '10k DNP'}]
-        self.intent.write_text(json.dumps({'components': components}))
+    def test_an_uncited_rule_raises_nothing(self):
+        self.record['work_items'][0]['guidelines'] = []     # G07-001 is not in this library
+        self.write_doc('fmea.md', FMEA, 'FMEA')
+        self.write_doc('emc.md', EMC, 'EMC')
+        result = self.run_docs()
+        self.assertFalse({c for c in self.codes(result) if c.startswith(('guideline', 'design_document'))}, result)
+        self.assertEqual(result['guidelines']['uncited'], ['G05-001', 'G05-002', 'G09-018'])
+        self.assertEqual(result['guidelines']['documents']['FMEA'], {'evidence': ['E-FMEA'], 'objects': ['J1'], 'problems': []})
+
+    def test_a_board_with_a_connector_carries_both_documents(self):
+        missing = self.incomplete(self.run_docs())
+        self.assertEqual(2, len(missing), missing)
+        self.assertTrue(missing[0].startswith('FMEA（FMEA）：有对外连接器 J1，没有登记这份文档'), missing)
+        self.write_doc('fmea.md', FMEA, 'FMEA')
+        missing = self.incomplete(self.run_docs())
+        self.assertEqual(1, len(missing), missing)
+        self.assertTrue(missing[0].startswith('EMC（EMC 端口矩阵）'), missing)
+
+    def test_a_board_without_connectors_needs_neither(self):
+        self.intent.write_text(json.dumps({'components': [{'ref': 'U1', 'lib_id': 'Interface:RS485', 'value': 'X'}]}))
         self.record['intent_sha256'] = sha256(self.intent)
-        result = self.run_groups()
-        self.assertIn('G09-018', result['guidelines']['uncovered'])
-        self.assertTrue(any('G09-018' in p['item'] and 'dnp_in_value' in p['item'] for p in result['pending']), result['pending'])
+        self.assertEqual([], self.incomplete(self.run_docs()))
 
-    def test_a_check_that_did_not_run_covers_nothing(self):
-        lib = library(card('G01-001'), card('G04-001', applies_when={'circuit_types': ['RS485']}), card('G02-038'))
-        result = self.run_audit(lib)   # G02-038 needs binding_version 1
-        self.assertIn('G02-038', result['guidelines']['uncovered'])
-        self.assertTrue(any('binding_version' in p['item'] for p in result['pending'] if p['code'] == 'guideline_uncovered'))
-
-    def test_a_complete_document_covers_its_group(self):
-        self.write_fmea()
-        result = self.run_groups()
-        found = result['guidelines']
-        self.assertNotIn('guideline_carrier_incomplete', self.codes(result))
-        self.assertEqual(found['covered']['G05-001'], ['carrier:E-FMEA'])
-        self.assertEqual(found['covered']['G05-002'], ['carrier:E-FMEA'])
-        self.assertEqual(found['by_group']['carrier']['FMEA'], {'evidence': ['E-FMEA'], 'rules': ['G05-001', 'G05-002'],
-                                                                'problems': []})
-        self.assertNotIn('guideline_uncovered', self.codes(result))
-
-    def test_a_missing_or_empty_section_or_object_leaves_the_group_uncovered(self):
+    def test_a_missing_or_empty_section_or_connector_is_named(self):
         for broken, word in ((FMEA.replace('## 潜伏故障\nTVS 开路无告警，登记待测。\n', ''), '缺“潜伏故障”'),
                              (FMEA.replace('TVS 开路无告警，登记待测。', ''), '“潜伏故障”是空的'),
                              (FMEA.replace('J1', 'J10'), '没写到 J1')):
             with self.subTest(word=word):
                 self.record['evidence'] = self.record['evidence'][:1]
-                self.write_fmea(broken)
-                result = self.run_groups()
-                problem = [p['item'] for p in result['pending'] if p['code'] == 'guideline_carrier_incomplete']
-                self.assertEqual(len(problem), 1, result['pending'])
+                self.write_doc('fmea.md', broken, 'FMEA')
+                self.write_doc('emc.md', EMC, 'EMC')
+                problem = self.incomplete(self.run_docs())
+                self.assertEqual(len(problem), 1, problem)
                 self.assertIn(word, problem[0])
-                self.assertIn('G05-001', result['guidelines']['uncovered'])
 
-    def test_a_declared_group_is_not_rescued_by_a_stray_citation(self):
-        self.write_fmea(FMEA.replace('## 关键项', '## 别的'))
-        self.record['calculations'][0]['guidelines'] = ['G01-001', 'G04-001', 'G05-001', 'G05-002']
-        self.assertIn('G05-001', self.run_groups()['guidelines']['uncovered'])
-
-    def test_an_undeclared_group_still_counts_its_citations(self):
-        self.record['calculations'][0]['guidelines'] = ['G01-001', 'G04-001', 'G05-001', 'G05-002']
-        result = self.run_groups()
-        self.assertEqual(result['guidelines']['covered']['G05-001'], ['calc:C1'])
-        self.assertEqual(result['guidelines']['by_group']['carrier'], {})
-
-    def test_an_unknown_group_name_is_an_error(self):
-        self.write_fmea(carrier='失效分析')
-        self.assertIn('guideline_carrier_unknown', self.codes(self.run_groups()))
+    def test_an_unknown_document_name_is_an_error(self):
+        self.write_doc('fmea.md', FMEA, '失效分析')
+        self.assertIn('guideline_carrier_unknown', self.codes(self.run_docs()))
 
     def test_markdown_sections_and_mentions(self):
         lines = ['# A', '', '## B', '', '## C', 'text', '| x | y |', '|---|---|', '| | |']

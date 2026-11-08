@@ -1349,12 +1349,10 @@ def render(root, notes=None, title=None):
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
     guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
     if guidelines and guidelines.get('applicable'):
-        classes = guidelines.get('by_coverage') or {}
-        batch = '其中需求基线回答 %d 条（TBR %d 条）、进交接清单 %d 条；' % (
-            len(classes['project_input']), len(guidelines.get('project_input_tbr') or ()), len(classes['handoff'])) if classes else ''
-        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；%s交下游 %d 条。逐条在 record/design-closure-audit.json 的 guidelines。' % (
+        out.append('- **共用规范**：%s，适用 %d 条，其中计算、选型、待办或证据引用 %d 条，写明不适用 %d 条；'
+                   '只有淘汰候选方案、改变选型或进入计算的准则逐条落实。逐条在 record/design-closure-audit.json 的 guidelines。' % (
             guideline_criteria.shared_label(identity=guidelines), len(guidelines['applicable']), len(guidelines['covered']),
-            len(guidelines['not_applicable']), len(guidelines['uncovered']), batch, len(guidelines['downstream'])))
+            len(guidelines['not_applicable'])))
     inputs_found = audit.get('operating_inputs') if isinstance(audit.get('operating_inputs'), dict) else None
     if inputs_found:
         out.append('- **工况输入**：声明了来源的 %d 项；启动计算 %d 条。见“工况输入来源”。' % (

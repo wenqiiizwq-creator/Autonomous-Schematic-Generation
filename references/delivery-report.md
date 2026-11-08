@@ -143,7 +143,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 （待办和需求状态不与上一版比较，只由本版设计确认）。顶层只能有上面四样；`原理图/` 和 `record/` 的必需文件齐全；
 `设计资料/` 里的表格（有位号列的 CSV）和装配文件（JSON 的 `ref`/`refs`/`fit`/`dnp`）提到的位号都在设计网表里，
 表格给出的型号（mpn）和值（value）与设计网表一致；`设计资料/*.md` 正文里写成“位号 型号”的（如“U801 LTC4367”：位号字母是设计网表用到的前缀，紧随的词含数字和大写字母、至少 4 个字符，不是带单位的数值如 100uF、不是 Pin3/4 这类词加编号），位号要在设计网表里，型号要与该位号的 mpn 对得上（忽略大小写和连字符，可省封装/变体后缀和 SN74 这类系列前缀：LM5069-1 对 LM5069MM-1/NOPB、LVC07A 对 SN74LVC07APWR），否则按文件和行号报错（Matrix R2：器件改成 LTC4367 后 `供电路径复核.md` 还写着“U801 LM5060”）；表格行（`|` 开头）和代码块不核，其余说明文字（只提位号不写型号、写功能描述）不在自动检查范围，改版时要人工清理；
-`record/` 只有允许的子目录；没有日志和超大文件；`design-closure.json` 在交付目录内重新审核不出错，且没有 `guideline_uncovered`（每条适用准则被引用，或在 `guideline_scope.not_applicable` 写了不适用理由；整板评测基线 2026-11-07：Matrix、PoE 大量准则未覆盖仍打包通过），也没有 `matrix_cell_missing`、`matrix_cell_failed`（`object_matrices.py` 列出的矩阵与状态表逐格有结论且满足）；
+`record/` 只有允许的子目录；没有日志和超大文件；`design-closure.json` 在交付目录内重新审核不出错，且没有 `design_document_incomplete`（有对外连接器的板 FMEA 与 EMC 端口矩阵齐全，见[必写的设计文档](guideline-evidence-groups.md)；没引用的适用准则不挡打包），也没有 `matrix_cell_missing`、`matrix_cell_failed`（`object_matrices.py` 列出的矩阵与状态表逐格有结论且满足）；
 报告用到的记录没有问题——可读性或几何检查 FAIL 也算问题（画图问题要改图到 PASS），打包失败；
 通过后写 `record/manifest.json`。`datasheets` 目录里还不在知识库 `~/Documents/知识库/HardwareWiki/raw/` 的 PDF
 （同哈希或同文件名都算在库，`find_parts.py --file <pdf>` 可查）不挡打包，列进 manifest 的 `datasheets_to_file` 并打印出来，

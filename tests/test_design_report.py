@@ -367,7 +367,8 @@ class DesignReportTests(unittest.TestCase):
         with mock.patch('render_design_report.guideline_criteria.identity_errors', lambda found: []), \
                 mock.patch('render_design_report.guideline_criteria.shared_label', lambda identity=None: '共用层 x'):
             text, _ = self.d.report()
-        self.assertIn('- **共用规范**：共用层 x，适用 2 条：已引用 2 条', text)
+        self.assertIn('- **共用规范**：共用层 x，适用 2 条，其中计算、选型、待办或证据引用 2 条，写明不适用 0 条；'
+                      '只有淘汰候选方案、改变选型或进入计算的准则逐条落实。', text)
         self.assertIn('逐条在 record/design-closure-audit.json 的 guidelines', text)
         for heading in ('## 共用设计准则覆盖', '## 下游约束', '## 由自动检查覆盖', '## 由设计文档整组覆盖'):
             self.assertNotIn(heading, text)
@@ -1076,35 +1077,33 @@ class PackDesignTests(unittest.TestCase):
         errors, _ = pack(self.d.root, {'requirements': str(self.inputs), 'previous': str(prev)})
         self.assertFalse(any('与上一版相同' in e for e in errors), errors)
 
-    def test_uncovered_guidelines_cannot_be_packed_unless_each_is_held_not_applicable(self):
-        # A1 (whole-board baseline 2026-11-07): Matrix left 366 of 366 applicable rules uncovered and still packed.
+    def test_uncited_guidelines_do_not_block_but_missing_port_documents_do(self):
+        # user 2026-11-08 (按草案实施): A1 is gone; a board with external connectors carries FMEA and the EMC port matrix.
         import guideline_criteria
         library = guideline_criteria.load()
         scope = {'library_version': library['library_version'], 'baseline': 'industrial_telecom',
-                 'circuit_types': ['I2C'], 'device_kinds': ['resistor']}
-        applicable = [r['id'] for r in guideline_criteria.select(library, scope['baseline'], scope['circuit_types'],
-                                                                 scope['device_kinds'])]
-        self.assertTrue(applicable)
+                 'circuit_types': ['I2C'], 'device_kinds': ['resistor'], 'not_applicable': []}
 
-        found = {}
-
-        def repack(not_applicable):
-            self.d.closure.update(guideline_version=1, guideline_scope=dict(scope, not_applicable=not_applicable))
+        def repack():
+            self.d.closure.update(guideline_version=1, guideline_scope=scope)
+            make_current(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root)
             self.d.write('design-closure.json', self.d.closure)
             result = audit(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root)
-            found['uncovered'] = [p['item'].split('：')[0] for p in result['pending'] if p['code'] == 'guideline_uncovered']
             self.d.write('design-closure-audit.json', result)
             (self.d.root / REPORT).write_text(self.d.report()[0])
-            return [e for e in self.run_pack()[0] if '适用准则未覆盖' in e]
+            return result, [e for e in self.run_pack()[0] if '准则' in e or '必写的设计文档' in e]
 
-        uncovered = repack([])
-        manual = found['uncovered']   # auto-check group rules are covered by the audit itself
-        self.assertTrue(manual and set(manual) <= set(applicable), manual)
-        self.assertEqual(1, len(uncovered), uncovered)
-        self.assertIn('%d 条适用准则未覆盖' % len(manual), uncovered[0])
-        self.assertIn('not_applicable', uncovered[0])
-        self.assertEqual(1, len(repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in manual[1:]])))
-        self.assertEqual([], repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in manual]))
+        result, errors = repack()
+        self.assertTrue(result['guidelines']['uncited'])
+        self.assertEqual([], errors)
+        intent = json.loads((self.d.record / 'electrical-intent.json').read_text())
+        intent['components'].append({'ref': 'J1', 'lib_id': 'Connector:Conn_01x02', 'value': 'Conn_01x02'})
+        self.d.write('electrical-intent.json', intent)
+        self.d.closure['intent_sha256'] = sha256(self.d.record / 'electrical-intent.json')
+        _, errors = repack()
+        self.assertEqual(1, len(errors), errors)
+        self.assertIn('FMEA（FMEA）：有对外连接器 J1', errors[0])
+        self.assertIn('EMC（EMC 端口矩阵）', errors[0])
 
     def test_matrix_cells_without_conclusion_cannot_be_packed(self):
         # SKILL.md 5.1 done mark: no matrix or state-table cell is missing or failing; the audit only marks it pending.

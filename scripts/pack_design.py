@@ -267,13 +267,11 @@ def check(root, inputs=(), previous=None):
                 errors.append('design-closure.json fails inside the delivery (cited evidence must be in this folder, '
                               'paths relative to it, or in an --input): ' + '; '.join('%s %s' % (e['code'], e['item'])
                                                                     for e in result['errors'][:5]))
-            # SKILL.md step 4 is done only when every applicable rule is cited or held not applicable with a reason
-            # (whole-board baseline 2026-11-07, A1: Matrix 366 of 366 and PoE 366 of 397 rules uncovered, both packed).
-            uncovered = result['guidelines'].get('uncovered') if isinstance(result.get('guidelines'), dict) else None
-            if uncovered:
-                errors.append('design-closure.json: %d 条适用准则未覆盖（%s%s）；逐条在计算、待办、器件性能要求或证据条目的 '
-                              'guidelines 里引用，或在 guideline_scope.not_applicable 写不适用理由' % (
-                                  len(uncovered), '、'.join(uncovered[:10]), ' 等' if len(uncovered) > 10 else ''))
+            # SKILL.md 5.1 (user 2026-11-08: 按草案实施): an uncited rule no longer blocks; a board with external connectors
+            # carries its FMEA and EMC port matrix with every section and connector.
+            docs = [p['item'] for p in result.get('pending', []) if p.get('code') == 'design_document_incomplete']
+            if docs:
+                errors.append('design-closure.json: 必写的设计文档不齐（%s）；见 references/guideline-evidence-groups.md' % '；'.join(docs))
             # SKILL.md 5.1: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
             cells = [p['item'] for p in result.get('pending', []) if p.get('code') in ('matrix_cell_missing', 'matrix_cell_failed')]
             if cells:
