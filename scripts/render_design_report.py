@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import calculation_basis, failing_checks, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import calculation_basis, check_delegate, failing_checks, load_task, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
 import operating_inputs  # noqa: E402
@@ -571,16 +571,27 @@ def check_confirmation(name, role, selected, evidence, root):
     requirement or scheme documents (scheme:<证据编号> with the quoted words naming the selected part)."""
     decision = role.get('decision') if isinstance(role.get('decision'), dict) else {}
     source = decision.get('source') if text(decision.get('source')) else ''
+    if source.startswith('delegate:'):
+        # Delegated by the task file (workflow-handoff.md delegation): only ASG's recommended option may be taken.
+        found = check_delegate(source, 'selection', root)
+        if found:
+            return ['选型角色“%s”的任务书代答不成立（%s）：%s' % (name, found[0], found[1])]
+        picked = next((o for o in role.get('options') or [] if isinstance(o, dict) and o.get('name') == decision.get('option')), None)
+        if role.get('options') and not (picked and picked.get('recommended') is True):
+            return ['选型角色“%s”的任务书代答只能采纳 ASG 推荐的方案（recommended）' % name]
+        return []
     marks = self_assigned({k: v for k, v in decision.items() if k not in ('option', 'quote')})
     if marks:
         return ['选型角色“%s”的确认记录是运行者自拟的（%s），不是用户的确认：无人当场确认时不能自填 user:，'
-                '停下来问，或交 NEEDS_INPUT' % (name, '、'.join(sorted(set(marks))))]
+                '按任务书代答授权写 delegate:，没有授权就停下来问' % (name, '、'.join(sorted(set(marks))))]
     if USER_SOURCE.match(source):
-        return []
+        return [] if text(decision.get('locator')) else [
+            '选型角色“%s”的用户确认要写 locator（对话里哪一处）' % name]
     m = SCHEME_SOURCE.match(source)
     if not m:
-        return ['选型角色“%s”还没有确认记录：decision.source 写 user:<日期>（用户确认），或 scheme:<证据编号>'
-                '（需求或方案文档已写明用户确认，另写 locator 与原文 quote）；确认前不进入步骤 ②' % name]
+        return ['选型角色“%s”还没有确认记录：decision.source 写 user:<日期>（用户确认，另写 locator）、scheme:<证据编号>'
+                '（需求或方案文档已写明用户确认，另写 locator 与原文 quote），或 delegate:<代答人>:<日期>（任务书代答）；'
+                '确认前不进入步骤 ②' % name]
     row = (evidence or {}).get(m.group(1))
     path = row.get('path') if isinstance(row, dict) and text(row.get('path')) else ''
     quote = decision.get('quote') if text(decision.get('quote')) else ''
@@ -1440,6 +1451,14 @@ def render(root, notes=None, title=None):
         out.append('- **外部条件不确定的选型**：%d 个角色（%s），方案与 ASG 的建议见“外部条件不确定的选型”一节。' % (
             len(optioned), '、'.join('%s→%s' % (r.get('role', ''), (r.get('decision') or {}).get('option') or '未决定')
                                     for r in optioned)))
+    delegated = ['选型“%s”' % r.get('role', '') for r in selection.get('roles') or [] if isinstance(r, dict)
+                 and str((r.get('decision') or {}).get('source') or '').startswith('delegate:')]
+    delegated += ['澄清 %s' % q.get('id') for q in clarifications
+                  if str((q.get('answer') or {}).get('by') or '').startswith('delegate:')]
+    if delegated:
+        granted = (load_task(root) or {}).get('delegation') or {}
+        out.append('- **任务书代答**：以下 %d 处无人当场答复，由任务书代答（%s，授权原文：%s）：%s。' % (
+            len(delegated), granted.get('by', '?'), granted.get('text', '未找到'), '、'.join(delegated)))
     if open_work:
         out.append('- **未关闭项**：共 %d 件，%s按后果等级从重到轻列在“未关闭项”一节。'
                    % (len(open_work), '用户暂缓的需求排最前，其余' if asks else ''))

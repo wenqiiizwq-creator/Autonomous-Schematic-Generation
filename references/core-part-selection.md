@@ -120,8 +120,11 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 - 每个角色都有确认记录 `decision`（任务 1.4 选型确认，整板评测 2026-11-07）：用户确认的写 `{"source": "user:<日期>", "locator": "<对话里哪一处>"}`；
   需求或方案文档已写明用户确认、选型与之一致的写 `{"source": "scheme:<证据编号>", "locator": "<文档里哪一处>", "quote": "<原文>"}`，
   证据编号在 `design-closure.json` 的 `evidence` 里，文件是用户的文档（不是 ASG 写的 `设计资料/`、`record/`），`quote` 原样在文件里且含选定型号。
-  一次汇总确认的清单，各角色写同一个来源。确认记录里不得出现运行者自拟的标记（eval-run、auto、无用户、运行者、预先授权、代填）：
-  没人确认就停下来问，不自填 `user:`。
+  无人当场确认、任务书有代答授权（[任务输入输出格式](workflow-handoff.md) 的 `delegation`，`scope` 含 `selection`）时写
+  `{"source": "delegate:<代答人>:<日期>"}`，代答人与日期和授权一致；代答只能采纳 ASG 的建议，有 `options` 的角色要选 `recommended` 的方案。
+  ② 中改变已确认的选型后重新确认，同样按这三种来源写。
+  一次汇总确认的清单，各角色写同一个来源。`user:` 来源与用户答复里不得出现运行者自拟的标记（eval-run、auto、无用户、运行者、预先授权、代填）：
+  没人确认、也没有代答授权就停下来问，不自填 `user:`。
 - `selected` 候选写 `external_dependencies`（字符串列表，没有写空列表）。不为空时角色还要有：
   - `options`：2–3 个方案，每个 `{name, parts, external_dependencies, cost, pros, cons, recommended}`，
     `parts` 是涉及的型号列表，恰好一个 `recommended: true`，各方案的 `cons` 不能一字不差；

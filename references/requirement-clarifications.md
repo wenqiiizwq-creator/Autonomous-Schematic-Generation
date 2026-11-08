@@ -77,6 +77,14 @@
   `proposed_requirement` 写建议补进需求的条文，要具体到可验收的数值、工况或允许/禁止的行为，有多个口径时写推荐项并注明其他选项。
 - 还没答复时不写 `answer`。答复写 `decision`、`text`（定下的需求，或暂缓的原话）、`by`、`date` 和能定位的 `source`
   （对话记录或任务书 `clarification_answers` 里的一处）。`by` 写真实答复人或角色，不虚构。
+
+  | 答复来自 | `by` | `source` |
+  |---|---|---|
+  | 用户当场答复 | 真实答复人或角色（“用户”“产品负责人”） | `{"source": "对话记录", "locator": …}` |
+  | 任务书逐项预填 | 与 `clarification_answers` 该项的 `by` 相同 | `{"source": "任务书", "locator": "<任务 id> clarification_answers <澄清编号>"}` |
+  | 任务书代答 | `delegate:<代答人>:<日期>`，与 `delegation` 一致 | `{"source": "任务书", "locator": "<任务 id> delegation"}`；代答只能采纳建议（`ADOPTED_PROPOSAL`） |
+
+  后两种都要把派发的 task.json 原样复制为 `record/task.json`。
 - 给定和采纳的答复还要写 `requirement_files`：`decision` 为 `UPDATED`（用户确认后已直接改原始需求文件，`files` 列改过的文件，非空）
   或 `KEPT`（用户不让改，只写回需求清单）。暂缓的不写。
 
@@ -94,8 +102,8 @@
 | `requirement_files_not_asked` | 给定或采纳的答复没有记下用户是否让改原始需求文件（`requirement_files` 缺失或 `decision` 不是 `UPDATED`/`KEPT`） |
 | `requirement_files_without_files` | 记为已改原始需求文件，但 `files` 是空的 |
 | `decision_self_assigned` | `by` 或 `source` 是运行者自拟的（含 eval-run、auto、无用户、运行者、预先授权、代填），不是用户的答复（整板评测 2026-11-07） |
-| `delegate_without_task` | `source` 写任务书，交付目录 `record/task.json`（派发的任务书原样复制）没有这项 `clarification_answers` |
-| `delegate_mismatch` | 答复的 `decision`、`text`、`by`、`date` 与任务书 `clarification_answers` 该项不一致 |
+| `delegate_without_task` | `source` 写任务书或 `by` 写 `delegate:`，交付目录 `record/task.json`（派发的任务书原样复制）没有这项 `clarification_answers` 或没有 `delegation` |
+| `delegate_mismatch` | 答复与任务书 `clarification_answers` 该项不一致（`decision`、`text`、`by`、`date`）；或代答人、日期与 `delegation` 不一致、`scope` 不含 `clarification`、答复不是采纳建议 |
 
 ## 报告
 

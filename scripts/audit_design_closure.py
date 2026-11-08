@@ -127,6 +127,28 @@ def load_task(root):
     return data if isinstance(data, dict) else None
 
 
+# A decision the task file delegated (workflow-handoff.md delegation): delegate:<代答人>:<日期>, adopting ASG's recommendation.
+DELEGATE_SOURCE = re.compile(r'^delegate:([^:\s]+):(\d{4}-\d{2}-\d{2})$')
+DELEGATE_RULES = ('adopt_recommendation',)
+
+
+def check_delegate(source, scope, root):
+    """(code, why) when a delegate:<by>:<date> source has no matching authorisation in record/task.json, else None."""
+    m = DELEGATE_SOURCE.match(source if isinstance(source, str) else '')
+    if not m:
+        return 'delegate_mismatch', '代答来源要写成 delegate:<代答人>:<日期>'
+    granted = (load_task(root) or {}).get('delegation')
+    if not isinstance(granted, dict):
+        return 'delegate_without_task', '交付目录 record/task.json 没有 delegation（代答授权）'
+    if (granted.get('by'), granted.get('date')) != m.groups():
+        return 'delegate_mismatch', '代答人或日期与任务书 delegation（%s:%s）不一致' % (granted.get('by'), granted.get('date'))
+    if scope not in (granted.get('scope') or []):
+        return 'delegate_mismatch', '任务书 delegation 的 scope 不含 %s' % scope
+    if granted.get('rule') not in DELEGATE_RULES:
+        return 'delegate_mismatch', '任务书 delegation 的 rule 要是 %s' % '/'.join(DELEGATE_RULES)
+    return None
+
+
 def audit_operating_points(record, work, refs, error, need):
     """Pin operating modes: one the datasheet does not specify needs every specified alternative ruled out."""
     points = {}
@@ -285,11 +307,22 @@ def audit_clarifications(record, requirements, work, error, root=None):
             error('schema', key + ':answer needs decision (%s), text, by, date YYYY-MM-DD and source {source, locator}'
                   % '/'.join(DECISIONS))
             continue
-        marks = self_assigned([answer['by'], source])
+        if answer['by'].startswith('delegate:'):
+            # Delegated by the task file: the answer adopts ASG's proposal (rule adopt_recommendation).
+            found_problem = check_delegate(answer['by'], 'clarification', root)
+            if found_problem:
+                error(found_problem[0], '%s：%s' % (key, found_problem[1]))
+            elif answer['decision'] != 'ADOPTED_PROPOSAL':
+                error('delegate_mismatch', '%s：任务书代答只能采纳建议条文（ADOPTED_PROPOSAL）' % key)
+            elif source['source'].strip() != '任务书':
+                error('delegate_mismatch', '%s：代答的 source 要写 {source: 任务书, locator: <任务 id> delegation}' % key)
+            marks = []
+        else:
+            marks = self_assigned([answer['by'], source])
         if marks:
             error('decision_self_assigned', '%s：答复人或来源写的是运行者自拟（%s），不是用户的答复；'
                   '无人当场答复时只能用任务书里的答复' % (key, '、'.join(sorted(set(marks)))))
-        if source['source'].strip() == '任务书':
+        if source['source'].strip() == '任务书' and not answer['by'].startswith('delegate:'):
             task = load_task(root)
             given = next((a for a in (task or {}).get('clarification_answers') or []
                           if isinstance(a, dict) and a.get('id') == key), None)

@@ -229,6 +229,31 @@ class DesignClosureTests(unittest.TestCase):
         task.write_text(json.dumps({'schema_version': 1, 'id': 'T7', 'clarification_answers': [given]}))
         self.assertEqual('PASS', self.run_audit()['status'], self.run_audit()['errors'])
 
+    def test_answer_delegated_by_the_task_file(self):
+        # 改进 7: delegate:<by>:<date> adopts ASG's proposal, as the task file's delegation allows.
+        q = self.clarification('ADOPTED_PROPOSAL')
+        self.written_back(q['proposed_requirement'])
+        q['answer'].update(by='delegate:eval-wholeboard:2026-11-07', source={'source': '任务书', 'locator': 'T7 delegation'})
+        self.assertIn('delegate_without_task', self.codes())
+        (self.root / 'record').mkdir()
+        task = {'schema_version': 1, 'id': 'T7', 'delegation': {
+            'by': 'eval-wholeboard', 'date': '2026-11-07', 'scope': ['clarification'], 'rule': 'adopt_recommendation',
+            'text': '采纳 ASG 的建议条文'}}
+        (self.root / 'record' / 'task.json').write_text(json.dumps(task))
+        self.assertEqual('PASS', self.run_audit()['status'], self.run_audit()['errors'])
+        q['answer']['by'] = 'delegate:someone-else:2026-11-07'
+        self.assertIn('delegate_mismatch', self.codes())
+        q['answer']['by'] = 'delegate:eval-wholeboard:2026-11-07'
+        task['delegation']['scope'] = ['selection']
+        (self.root / 'record' / 'task.json').write_text(json.dumps(task))
+        self.assertIn('delegate_mismatch', self.codes())
+        task['delegation']['scope'] = ['clarification']
+        (self.root / 'record' / 'task.json').write_text(json.dumps(task))
+        self.clarification('DECIDED', '待机功耗 ≤0.2 W')['answer'].update(
+            by='delegate:eval-wholeboard:2026-11-07', source={'source': '任务书', 'locator': 'T7 delegation'})
+        self.written_back('待机功耗 ≤0.2 W')
+        self.assertIn('delegate_mismatch', self.codes())    # a delegate does not decide its own requirement
+
     def test_unanswered_clarification_fails(self):
         self.clarification()
         self.assertEqual('FAIL', self.run_audit()['status'])

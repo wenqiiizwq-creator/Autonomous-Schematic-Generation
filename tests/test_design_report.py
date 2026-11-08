@@ -527,7 +527,7 @@ class DesignReportTests(unittest.TestCase):
             {'name': 'ABC200 加外置过压', 'parts': ['ABC200', 'TL431'], 'external_dependencies': [],
              'cost': '增加 4 个器件', 'pros': '过压可按手册算', 'cons': '电流只有 2A', 'recommended': False}]
         role['recommendation'] = '推荐方案 1：电流满足需求，过压另有硬件后备'
-        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24'}
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24', 'locator': '对话记录 选型确认'}
         return sel, role
 
     def test_uncertain_selection_lists_options_and_the_users_choice(self):
@@ -546,11 +546,11 @@ class DesignReportTests(unittest.TestCase):
         self.d.write('selection.json', sel)
         _, problems = self.d.report()
         self.assertTrue(any('还没有你的决定' in p for p in problems), problems)
-        role['decision'] = {'option': 'ABC200 加外置过压', 'source': 'user:2026-10-24'}
+        role['decision'] = {'option': 'ABC200 加外置过压', 'source': 'user:2026-10-24', 'locator': '对话记录 选型确认'}
         self.d.write('selection.json', sel)
         _, problems = self.d.report()
         self.assertTrue(any('不在你选的方案' in p for p in problems), problems)
-        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24'}
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'user:2026-10-24', 'locator': '对话记录 选型确认'}
         role['options'][1]['cons'] = role['options'][0]['cons']
         role['options'][1]['recommended'] = True
         self.d.write('selection.json', sel)
@@ -574,11 +574,41 @@ class DesignReportTests(unittest.TestCase):
         self.d.write('selection.json', sel)
         _, problems = self.d.report()
         self.assertTrue(any('运行者自拟' in p for p in problems), problems)
+        role['decision'] = {'source': 'user:2026-11-07'}
+        self.d.write('selection.json', sel)
+        _, problems = self.d.report()
+        self.assertTrue(any('用户确认要写 locator' in p for p in problems), problems)
         role['decision'] = {'source': 'user:2026-11-07', 'locator': '对话记录 选型确认清单'}
         self.d.write('selection.json', sel)
         text, problems = self.d.report()
         self.assertEqual([], problems)
         self.assertIn('| user:2026-11-07 对话记录 选型确认清单 |', text)
+
+    def test_confirmation_delegated_by_the_task_file(self):
+        # 改进 7: an unattended run confirms through the task file's delegation, adopting ASG's recommendation only.
+        sel, role = self.options_role()
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'delegate:eval-wholeboard:2026-11-07'}
+        self.d.write('selection.json', sel)
+        _, problems = self.d.report()
+        self.assertTrue(any('delegate_without_task' in p for p in problems), problems)
+        task = {'schema_version': 1, 'id': 'T7', 'delegation': {
+            'by': 'eval-wholeboard', 'date': '2026-11-07', 'scope': ['clarification', 'selection'],
+            'rule': 'adopt_recommendation', 'text': '本次评测没有用户可问，采纳 ASG 的推荐。'}}
+        self.d.write('task.json', task)
+        text, problems = self.d.report()
+        self.assertEqual([], problems)
+        self.assertIn('- **任务书代答**：以下 1 处无人当场答复，由任务书代答（eval-wholeboard，授权原文：本次评测没有用户可问，采纳 ASG 的推荐。）：选型“稳压器”。', text)
+        role['decision']['source'] = 'delegate:eval-wholeboard:2026-11-06'
+        self.d.write('selection.json', sel)
+        self.assertTrue(any('代答人或日期' in p for p in self.d.report()[1]))
+        role['decision'] = {'option': 'ABC200 加外置过压', 'source': 'delegate:eval-wholeboard:2026-11-07'}
+        self.d.write('selection.json', sel)
+        self.assertTrue(any('只能采纳 ASG 推荐的方案' in p for p in self.d.report()[1]))
+        task['delegation']['scope'] = ['clarification']
+        role['decision'] = {'option': 'XYZ100 单芯片', 'source': 'delegate:eval-wholeboard:2026-11-07'}
+        self.d.write('selection.json', sel)
+        self.d.write('task.json', task)
+        self.assertTrue(any('scope 不含 selection' in p for p in self.d.report()[1]))
 
     def test_confirmation_from_the_users_scheme_document(self):
         req = self.d.root / '需求' / '方案.md'
