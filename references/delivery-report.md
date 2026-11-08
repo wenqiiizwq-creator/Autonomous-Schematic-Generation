@@ -107,7 +107,7 @@ python3 <skill>/scripts/deliver.py <交付目录>
 只有 PASS、DONE、有条件通过、未完成、AUTOMATED_PASS、FRESH 继续往下，其余状态、没写出结果或命令出错都停下并说明是哪一步。
 下面的分步命令仍然可用。
 
-图面审阅要看本次导出的 PDF：先跑 `deliver.py <交付目录> --for-review`，到自动检查为止（不出报告、不打包），按 `原理图/schematic.pdf` 写 `record/visual-review.json`，再跑全程。全程重新出图得到同一份 PDF；器件性能记录的 `RequirementsSHA256` 不含来源文件的哈希，只改计算脚本不会让图面字段和 PDF 变化（来源文件另行按哈希核对）。
+图面审阅要看本次导出的 PDF。出图是确定的（同一输入每次画出同一份图），任务 4 自动检查导出的 PDF 与 `deliver.py` 重新导出的 PDF 渲染内容相同（`render_design_report.py --pdf-sha256` 不计导出时间），所以按任务 4 的 PDF 写好 `record/visual-review.json` 后，`deliver.py` 跑一遍就到打包。`visual-review.json` 缺、不是 `REVIEWED` 或 `pdf_sha256` 对不上本次 PDF 时，运行在自动检查之后停在“图面审阅”（退出码 2，打印本次 PDF 的哈希），不再跑到报告才失败；按这份 PDF 审阅后再跑。`--for-review` 仍可用，自动检查后无条件停下。自写出图脚本要保证确定：对集合、字典的遍历排序时给全序键（Matrix 2026-11-07：按“是否回线”一个布尔键排序，平局时顺序随 `PYTHONHASHSEED` 变，两脚器件朝向随之翻转，两次 PDF 不同）。器件性能记录的 `RequirementsSHA256` 不含来源文件的哈希，只改计算脚本不会让图面字段和 PDF 变化（来源文件另行按哈希核对）。打包后列出的“手册待入库”只是提示，不使运行失败。
 
 ## 交付证据（快照检查）
 

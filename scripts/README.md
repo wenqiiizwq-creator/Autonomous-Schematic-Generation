@@ -46,6 +46,11 @@ closure audit calls its `audit()` and reports missing and failed cells. See
 `datasheet_name`/`datasheet_type`/`datasheet_page` in `record/reference-input.json`
 (`--write`); pins it cannot read stay unfilled and are listed with the reason. See
 [`symbol-and-peripheral-contracts.md`](../references/symbol-and-peripheral-contracts.md).
+`make_symbol.py` writes a rectangular KiCad symbol from a datasheet pin table (JSON/CSV) that passes the
+symbol-integrity and native pin-text checks; `complete_pin_coverage.py` writes every pad of a stacked pin (KiCad
+`[a,b]` or a library's hidden same-point copies) into the net that names one of them and a library's
+no_connect pins into `no_connect`; `select_guidelines.py`
+is the many-values wrapper of the shared `guideline_criteria.py select`.
 `schematic_layout.citations` checks `datasheet:<library path>#p<page>` citations
 for the closure audit, the report and the ledger: a missing file or a page
 beyond the document fails; a cited value the page text does not show is listed

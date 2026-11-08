@@ -71,6 +71,31 @@ A5 `library_gaps` 不核库里有没有（Matrix 复位块 U702 登记缺口，`
 - Outline: 9b1b6e8d255b97e0
 - Changed: SKILL.md, references/guideline-evidence-groups.md, references/guideline-evidence-groups.json, references/design-closure.md, references/delivery-report.md, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_guideline_evidence_groups.py, docs/准则记账减负草案-2026-11-07.md, docs/improvement-ledger.md
 
+## 整板评测工具修正补充：多单元符号与库 NC 脚（2026-11-07）
+
+Matrix 运行问题 7 的另两条：
+- 多单元符号（74LVC3G17）：`Sheet` 只按单元 1 取形状、按位号存放置。现在从库读出全部单元写进本页设计网表副本的 `units`，`place(..., unit=)` 逐单元放置（给 `pin=`/`facing=` 时由引脚推出单元），放置键为 `U1:2`，未放的单元在 `build` 报出；`units()`、`unit_of()` 查单元；单元 0 共用脚重复放置时报错。KiCad 网表核对与符号完整性 PASS。
+- 库 NC 脚（TPS26630RGE NC 19–24）：原报错只说“需要显式 NC”。现在列出脚号，未接的提示写进 `no_connect`、已接的提示改项目符号为 passive；上一条的 `expand_stacked_pins.py` 改名 `complete_pin_coverage.py`，同时补叠脚与库 NC 脚，已接的 NC 脚列为 `CONNECTED_NC`（退出码 1）不改。
+
+- Event: user:2026-11-07（多单元符号（74LVC3G17），以及 TPS26630 有 NC 脚时要显式写不连接，这两条也修正好）
+- Changed: scripts/schematic_layout/recipes.py, scripts/schematic_layout/generate.py, scripts/schematic_layout/circuit_ir.py, scripts/complete_pin_coverage.py, references/drawing-recipes.md, references/symbol-and-peripheral-contracts.md, README.md, scripts/README.md, tests/test_wholeboard_tool_fixes.py, docs/improvement-ledger.md
+
+## 整板评测工具修正（改进 9，2026-11-07）
+
+整板基线（ASG 128178e，三块板）运行问题里的工具项，逐条复现后修正：
+1 多值参数：共用层 `guideline_criteria.py` 不在技能内改，新增技能侧 `select_guidelines.py`，一个选项接多个值（空格或逗号分隔，zsh 不分词的 "$TYPES" 也行），可 `--scope` 读 design-closure 的 guideline_scope，输出与共用层 select 相同。
+2 出图随散列种子变（Matrix 23）：复现于运行者自写 draw.py（按“是否回线”一个布尔键给集合排序，平局随种子翻转两脚器件朝向）；改成全序键后 4 个种子 11 页逐字节相同，ASG 自身确定；加跨种子回归测试，delivery-report 写明自写脚本要用全序键。
+3 投影丢介质耐压（Matrix 24）：`project` 用合同标称值替换 Value 时，原值里的耐压、介质、容差、封装写进 fields.Specification。
+4 投影改写网表使 closure 过期（PoE 15）：`--project-intent` 只在内容变化时写，变化时提示 PROJECTED 并说明要重写 intent_sha256。
+5 需求数字匹配（Matrix 14）：kV/V 前缀换算本已支持；补长度单位 m（cm、mm、km 换算），30 cm 可写 0.3 m。
+6 叠脚（校准板 9、Matrix 7）：KiCad 官方库“一个可见脚 + 同点隐藏 passive 副本”现行审计照常 PASS（Matrix 所说 overprinted 复现不了）；冲突在设计网表逐脚覆盖：新增 `expand_stacked_pins.py`（补充条目改名 `complete_pin_coverage.py`）把同点脚补进同一网络，`Pin coverage mismatch` 报错直接列出同点脚。
+7 缺符号（校准板 9、PoE；Matrix 20 角上引脚名相压）：新增 `make_symbol.py`，引脚表 JSON/CSV 生成矩形符号，电源/地同名脚合叠脚，按文字宽度定本体，符号完整性与原生引脚文字检查 PASS（窄本体对照组复现 native_pin_text_overlap）。
+8 交付两遍（校准板）：deliver 在自动检查后核对图面审阅，审阅与本次 PDF 渲染哈希一致就一遍到打包，否则停在“图面审阅”（退出码 2）；“手册待入库”只提示，不再让打包 PASS 的运行退出码 1（Matrix 25）。
+9 大板通用出图：只出方案，见汇报。
+
+- Event: test:评测记录/ASG/2026-11-07-wholeboard-128178e
+- Changed: scripts/select_guidelines.py, scripts/schematic_layout/component_requirements.py, scripts/audit_component_requirements.py, scripts/operating_inputs.py, scripts/schematic_layout/circuit_ir.py, scripts/schematic_layout/generate.py, scripts/complete_pin_coverage.py, scripts/make_symbol.py, scripts/deliver.py, references/component-requirements.md, references/symbol-and-peripheral-contracts.md, references/drawing-recipes.md, references/delivery-report.md, README.md, scripts/README.md, tests/test_wholeboard_tool_fixes.py, tests/test_deliver.py, docs/improvement-ledger.md
+
 ## 清理矛盾 收尾：scheme-criteria 规则收为一处（2026-11-07）
 
 `record/scheme-criteria.json` 何时必须有、字段与格式示例只在 typical-circuits.md 规则一节定义；delivery-report.md 原先独有的几条（guideline_scope 含关键电路类型时必有、key_blocks 必须比较、ports 与 typed-only 的引用范围、不代替 2.2 核算）并入该节，delivery-report 只留引用。
