@@ -5,9 +5,7 @@
 `build_circuit.py` compiles Circuit IR v2, resolves named pins/physical units,
 automatically places and packs functional blocks, retries with bounded spacing,
 and supports baseline diffs plus locked-block regeneration. See
-[`circuit-ir.md`](../references/circuit-ir.md). `import_circuit_synth.py` imports
-audited upstream JSON; `schematic_layout.importers.skidl_to_ir` reads an already
-built SKiDL Circuit. Neither executes an input Python file.
+[`circuit-ir.md`](../references/circuit-ir.md).
 
 `generate_schematic.py` consumes separate electrical intent and layout JSON,
 writes a new single-sheet project, and runs native ERC/XML/PDF verification.

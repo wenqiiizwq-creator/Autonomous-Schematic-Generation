@@ -1,4 +1,4 @@
-"""IR/compiler, automatic placement, imports and protected regeneration regressions."""
+"""IR/compiler, automatic placement and protected regeneration regressions."""
 
 import json
 from pathlib import Path
@@ -13,7 +13,6 @@ from schematic_layout.placement import plan_layout
 from schematic_layout.generate import generate, library_dirs
 from schematic_layout.native import find_cli, compare_netlist
 from schematic_layout.sexpr import all_nodes, value, dump
-from schematic_layout.importers import circuit_synth_to_ir
 from schematic_layout.change_control import electrical_diff, load_baseline
 from build_circuit import build
 
@@ -189,45 +188,6 @@ class CircuitIRTests(unittest.TestCase):
         diff = electrical_diff(before, after)
         self.assertEqual([c["id"] for c in diff["components"]], ["filter_b/series"])
         self.assertEqual(diff["pins"], [])
-
-
-class ImportTests(unittest.TestCase):
-    def test_circuit_synth_formats_scopes_and_missing_symbol(self):
-        source = {"name": "root", "components": {}, "nets": {}, "subcircuits": []}
-        for name, ref in (("a", "R1"), ("b", "R2")):
-            source["subcircuits"].append(
-                {
-                    "name": name,
-                    "components": {
-                        ref: {"symbol": "Device:R", "value": "1k", "footprint": ""}
-                    },
-                    "nets": {
-                        "TOP": [{"component": ref, "pin": {"number": "1"}}],
-                        "BOTTOM": {
-                            "nodes": [{"component": ref, "pin": {"number": "2"}}],
-                            "is_power": True,
-                        },
-                    },
-                }
-            )
-        with self.assertRaisesRegex(ValueError, "Ambiguous"):
-            circuit_synth_to_ir(source, "imported")
-        doc, audit = circuit_synth_to_ir(
-            source, "imported", shared_nets=["BOTTOM"], local_nets=["TOP"]
-        )
-        self.assertEqual(audit["shared_nets"], ["BOTTOM"])
-        if library_dirs():
-            intent, _ = compile_circuit(doc)
-            self.assertEqual(
-                next(n["pins"] for n in intent["nets"] if n["name"] == "BOTTOM"),
-                ["R1.2", "R2.2"],
-            )
-            self.assertEqual(len(intent["nets"]), 3)
-        source["subcircuits"][0]["components"]["R1"]["symbol"] = ""
-        with self.assertRaisesRegex(ValueError, "missing library"):
-            circuit_synth_to_ir(
-                source, "imported", shared_nets=["BOTTOM"], local_nets=["TOP"]
-            )
 
 
 @unittest.skipUnless(find_cli() and library_dirs(), "Native KiCad unavailable")

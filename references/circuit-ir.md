@@ -3,7 +3,7 @@
 用于从已确认电路创建新图。`build_circuit.py` 将模块化电路编译为逐脚设计网表，
 按真实符号、引脚出线区和字段尺寸自动放置，再调用避障布线和 KiCad 验证。
 运行时只需 Python 3.10+、KiCad CLI 与符号库；不依赖上游仓库或在线服务。
-自动放置与避障布线只用于导入、固定夹具与草稿；交付页一律按 SKILL.md 任务 3.2 用 recipes 画，不由 MST/A* 出可读页面。
+自动放置与避障布线只用于固定夹具与草稿；交付页一律按 SKILL.md 任务 3.2 用 recipes 画，不由 MST/A* 出可读页面。
 
 ## 从两个项目提取的内容
 
@@ -12,12 +12,9 @@
 | SKiDL `Circuit/Part/Pin/Net` | 电路是器件与真实引脚构成的连接图，图面属性是另一个层次 | `circuit_ir.py` 编译器；真实库引脚解析；独立 presentation JSON |
 | SKiDL `Node`、`@subcircuit`、`tag` | 子电路复用；实例路径和稳定标签；父子接口 | `modules/root/instances/bindings`；稳定 component ID、明确 reference map 和 UUID |
 | SKiDL `generate_schematic` | 按功能分块、放置布线、有限重试 | 按块选模板，测量占用，拼入允许纸张；3 次有限扩距重排并保留失败记录 |
-| circuit-synth `Component.to_dict`、`NetlistExporter.to_dict` | 器件字典、引脚号/名称/类型、网络连接、递归子电路、属性元数据 | `import_circuit_synth.py` 导入；`importers.py` 适配两种已核实的 net 形式 |
 | circuit-synth 连接感知放置 | 使用已知连接组织器件 | `functional` 按连接遍历，高扇出网络不支配顺序；外加本体/字段/出线区硬占用 |
 
-精确源文件及 commit 见 [upstream-sources.json](upstream-sources.json)。
-SKiDL 对象桥读取已建立的真实对象；circuit-synth JSON 不区分局部/外部网络，
-同名网络跨子电路出现时必须明确声明共享或独立，不能自动合并。
+精确源文件及 commit 见 [upstream-sources.json](../docs/upstream-sources.json)。
 没有移植 SKiDL 的自动标签降级/ERC 修正循环，也没有采用隐式重新编号。
 
 ## 电气输入
@@ -140,33 +137,5 @@ python3 scripts/build_circuit.py revised.circuit.json presentation.json \
 KiCad 工程的原位增量编辑；其他模块加入后若无法同时满足锁定和几何约束，
 必须调整候选或换合适 writer，不能移动锁定模块来取得通过。
 
-## 两种上游入口
-
-```bash
-python3 scripts/import_circuit_synth.py exported.json --design-id imported \
-  --shared-net GND --local-net SENSE --output-dir output/import-01
-```
-
-只支持已核实的 `nets[name]=[connection]` 和 `nets[name]={nodes:[connection],...}`。
-缺 lib_id/真实引脚号拒绝导入；遗漏 NC 在编译时仍失败。重复名字须声明 shared
-或 local，混合共享范围应编辑 IR 的显式端口对应。原坐标、注释和其他源数据
-保存在 `import-audit.json`，不冒充已采用的布局或已验证的电气约束。
-
-对可信且已构建的 SKiDL Circuit，在其 Python 环境调用：
-
-```python
-from schematic_layout.importers import skidl_to_ir
-document = skidl_to_ir(circuit, "my_design", {"R1":"Device:R", "R2":"Device:R"})
-# 把 document 保存为 JSON，再交给 build_circuit.py。
-```
-
-将本 skill 的 `scripts` 目录加入 Python import 路径。桥接函数读取真实
-Circuit/Node/Part/Net 对象、实际连接对象及 NC，不执行传入源码，不改写源电路。
-必须明确提供每个实体器件的符号映射；SKiDL 的临时/备份库名称不能替代真实
-KiCad 库身份。Node/Part tag 保持实例与器件稳定，重复 tag/name 直接拒绝。
-
-开发验证：`python3 -m unittest discover -s tests -v`；可选的
-`tests/probe_structured_upstream.py` 要求固定 SKiDL 源码安装在隔离环境中，
-实际验证其对象提取，以及 circuit-synth 原始 `to_dict` 方法的两种输出形式。
-该探针未运行两个上游的整套布局/布线系统。所有示例均是软件验证夹具，
+开发验证：`python3 -m unittest discover -s tests -v`。所有示例均是软件验证夹具，
 `AUTOMATED_PASS` 不能代替目标电路的电气及 KiCad 图面审查。

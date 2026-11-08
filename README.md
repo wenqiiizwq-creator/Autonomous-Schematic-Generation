@@ -19,9 +19,9 @@ ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 | ⑤ 设计输出 | `deliver.py`（一次跑完出图到打包）、`render_design_report.py`、`pack_design.py`、`check_ledger.py` |
 
 其他工作流：改版与多页核对用 `verify_design_change.py`、`audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
-保持图面的 Value 修改用 `patch_schematic_values.py`（见 [value-patch.md](references/value-patch.md)）；导入与草稿用的低层生成器
+保持图面的 Value 修改用 `patch_schematic_values.py`（见 [value-patch.md](references/value-patch.md)）；夹具与草稿用的低层生成器
 `build_circuit.py` / `generate_schematic.py` 见 [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md)，
-它们不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [采纳清单](references/upstream-integration.md)。
+它们不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [采纳清单](docs/upstream-integration.md)。
 
 ## 运行一个样例
 
@@ -65,7 +65,7 @@ MIT License
 Copyright (c) 2026 wenqiii.zwq
 
 改编部分另保留 tscircuit Inc. 和 Osman Aslan 的 MIT 声明，见
-[上游许可证](references/upstream-licenses/)及[来源记录](references/upstream-sources.json)。
+[上游许可证](references/upstream-licenses/)及[来源记录](docs/upstream-sources.json)。
 
 ## 共用层
 

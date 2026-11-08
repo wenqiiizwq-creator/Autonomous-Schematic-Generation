@@ -4,7 +4,7 @@ MST port adapted from tscircuit getMspConnectionPairsFromPins.ts (MIT, 2024
 tscircuit Inc.). A* architecture informed by kicad-mcp-pro schematic_router.py
 (MIT, 2026 Osman Aslan). Local implementation retains heading in search state,
 checks complete edges, rejects off-grid pins, and never bypasses obstacles at
-terminals. See references/upstream-integration.md and upstream-licenses/.
+terminals. See docs/upstream-integration.md and references/upstream-licenses/.
 """
 
 import heapq

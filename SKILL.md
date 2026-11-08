@@ -9,8 +9,8 @@ description: >-
   checks (ERC, netlist, hierarchy, symbol integrity, readability, geometry, visual
   review) → design output (generated report and fixed delivery folder).
   Also redraws existing KiCad projects without
-  electrical change, applies authorized electrical revisions, works through
-  review comments and extracts PDF reference designs. Self-checks only; owns
+  electrical change, applies authorized electrical revisions and works through
+  review comments. Self-checks only; owns
   design feasibility, selection, calculations and functional completion. Use for .kicad_sch
   generation or redraw, 原理图自动生成、从需求画原理图、画原理图、重画原理图、原理图排版.
 ---
@@ -103,9 +103,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 | 已授权、保持连线与图面的 Value 参数修改 | [value-patch.md](references/value-patch.md) 生成 KiCad 验证的草稿图，再更新设计网表/脚本与计算，走步骤 ④–⑤ |
 | 授权的电气改版 | 先读 [electrical-redesign.md](references/electrical-redesign.md) 和 [change-preflight.md](references/change-preflight.md)，再走主流程 |
 | 收到审查意见后继续设计 | 按 [处理审查意见](references/review-comments.md) 逐条登记处理方式，再按电气改版处理需要改图的项；每条意见写本版做了什么，补设计的待办写 `progress`，没改电路的叫“补计算/补文档”不叫“改图” |
-| 从 PDF 参考设计提取电路 | [pdf-schematic-extraction.md](references/pdf-schematic-extraction.md)；提取结果只作线索，仍按任务 2.1 核对数据手册 |
-| 模块化数据、SKiDL/circuit-synth 导入、锁定基线 | [circuit-ir.md](references/circuit-ir.md)。人读的页面仍按任务 3.2 用 recipes 画 |
-| 用户要求 CopperPilot 协助 | [copperpilot-reference-workflow.md](references/copperpilot-reference-workflow.md) |
+| 模块化数据、锁定基线 | [circuit-ir.md](references/circuit-ir.md)。人读的页面仍按任务 3.2 用 recipes 画 |
 
 ## 主流程
 
