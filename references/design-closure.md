@@ -192,7 +192,11 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用设计准则（G01–G09，见[共用设计准则库](shared/guideline-criteria.md)）。
     `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
-    计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表；文档类准则直接挂在落实它的接口表、工况矩阵、FMEA 等证据条目上，用户 2026-11-03）。审计按范围选出适用准则：每条要被它们引用，或写进 `not_applicable`，
+    计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表）。
+    [准则证据分组](guideline-evidence-groups.md)（用户 2026-11-07，改进 8）里的准则不必逐条写：自动检查组在检查跑过且没有它的错误时由审计记为 `check:<检查名>`；
+    文档组由写了 `carrier: <组名>` 的证据条目整组覆盖，审计读这些文件，核必备章节齐全、非空、该写的对象都写到，通过记为 `carrier:<证据编号>`，
+    不过记 `guideline_carrier_incomplete`（列出缺项），这一组的准则同时未覆盖；声明了的组只认文档核对，别处的逐条引用不再算；组名不在表里记 `guideline_carrier_unknown`。
+    审计在 `guidelines.by_group` 列出两组的结果，报告各成一张表。审计按范围选出适用准则：每条要被它们引用，或写进 `not_applicable`，
     否则 `guideline_uncovered`（设计没做完）；已关闭的待办引用准则时，`guideline_evidence` 逐条写
     `<证据编号>#<节/表/行>`（证据编号在这件待办的 `evidence` 里），缺记 `guideline_work_without_evidence`，同一处顶 3 条以上准则记
     `guideline_evidence_repeated`（工业校准板：一件已关闭的文档待办批量引用了 205 条，2026-11-02）；引用库里没有的编号记 `guideline_unknown`，引用不适用的规则记 `guideline_cited_not_applicable`

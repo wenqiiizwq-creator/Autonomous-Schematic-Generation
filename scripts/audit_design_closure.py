@@ -886,14 +886,113 @@ def audit_project_input(record, classes, requirements, clarifications, evidence,
     return answered
 
 
+GUIDELINE_GROUPS = Path(__file__).resolve().parent.parent / 'references' / 'guideline-evidence-groups.json'
+MD_HEADING = re.compile(r'^(#{1,6})\s+(.*)$')
+MD_RULE = re.compile(r'^\s*\|?(\s*:?-{3,}:?\s*\|)+\s*(:?-{3,}:?)?\s*$')
+
+
+def load_guideline_groups(path=None):
+    """references/guideline-evidence-groups.json (user 2026-11-07: 按推荐实施, improvement 8): the rules an audit check
+    proves and the rules one design document covers as a group."""
+    return json.loads(Path(path or GUIDELINE_GROUPS).read_text(encoding='utf-8'))
+
+
+def guideline_checks(groups, record, problems):
+    """({rule: 'check:<name>'} for the checks that ran and raised none of their codes, {rule: [why not]}). A code written
+    code@prefix counts only items starting with prefix."""
+    passed, failed = {}, {}
+    for gid, spec in (groups.get('checks') or {}).items():
+        missing = ['%s: %s' % (k, v) for k, v in (spec.get('requires') or {}).items() if record.get(k) != v]
+        if missing:
+            failed[gid] = ['检查没有运行：记录没有 ' + '、'.join(missing)]
+            continue
+        hits = []
+        for code in spec['codes']:
+            name, _, prefix = code.partition('@')
+            hits += ['%s %s' % (p['code'], p['item']) for p in problems if p['code'] == name and p['item'].startswith(prefix)]
+        if hits:
+            failed[gid] = hits
+        else:
+            passed[gid] = 'check:' + spec['check']
+    return passed, failed
+
+
+def markdown_sections(lines):
+    """[(title, nonempty)] for every heading (its body runs to the next heading of the same or a higher level) and every
+    table header row (nonempty when a data row has text)."""
+    found = []
+    heads = [(i, len(m.group(1)), m.group(2)) for i, line in enumerate(lines) for m in [MD_HEADING.match(line)] if m]
+    for n, (i, level, title) in enumerate(heads):
+        end = next((j for j, lv, _ in heads[n + 1:] if lv <= level), len(lines))
+        found.append((title, any(line.strip() and not MD_HEADING.match(line) for line in lines[i + 1:end])))
+    for i, line in enumerate(lines[:-1]):
+        if line.lstrip().startswith('|') and MD_RULE.match(lines[i + 1]):
+            rows, j = 0, i + 2
+            while j < len(lines) and lines[j].lstrip().startswith('|'):
+                rows += bool(re.sub(r'[|\s:-]', '', lines[j]))
+                j += 1
+            found.append((line, rows > 0))
+    return found
+
+
+def mentions(textual, token):
+    """token stands on its own in the text: J1 is not in J10, CALC-IN is not in CALC-IN-SURGE."""
+    return re.search(r'(?<![A-Za-z0-9_])' + re.escape(token) + r'(?![A-Za-z0-9_]|-[A-Za-z])', textual) is not None
+
+
+def carrier_objects(kind, record, intent, calculations, requirements):
+    comps = [c for c in intent.get('components') or [] if isinstance(c, dict) and text(c.get('ref'))]
+    if kind == 'requirements':
+        return sorted(requirements)
+    if kind == 'calculations':
+        return sorted(calculations)
+    if kind == 'connectors':
+        return sorted(c['ref'] for c in comps if part_classes.kind_of(c)[0] == 'connector'
+                      or (is_connector_part(c) and part_classes.kind_of(c)[0] not in ('testpoint', 'mechanical')))
+    if kind == 'isolators':
+        return sorted(c['ref'] for c in comps if part_classes.kind_of(c)[0] in ('opto', 'transformer'))
+    if kind == 'thermal_refs':
+        return sorted({r for row in calculations.values() if any(str(g).startswith('G08-') for g in row.get('guidelines') or [])
+                       for r in row.get('refs') or [] if isinstance(r, str)})
+    if kind == 'rails':
+        return sorted({row['net'] for row in record.get('net_voltages') or [] if isinstance(row, dict) and text(row.get('net'))})
+    return []
+
+
+def audit_carrier(spec, files, objects):
+    """Problems of one carrier group: sections missing or empty, objects not mentioned, files unreadable."""
+    problems, lines, whole = [], [], []
+    for eid, path in files:
+        if path is None:
+            problems.append('%s 的文件读不到' % eid)
+            continue
+        body = path.read_text(encoding='utf-8', errors='replace')
+        whole.append(body)
+        lines.extend(body.splitlines() + [''])
+    sections = markdown_sections(lines)
+    for section in spec['sections']:
+        hits = [full for title, full in sections if any(m in title for m in section['match'])]
+        if not hits:
+            problems.append('缺“%s”' % section['name'])
+        elif not any(hits):
+            problems.append('“%s”是空的' % section['name'])
+    absent = [o for o in objects if not any(mentions(b, o) for b in whole)]
+    if absent:
+        problems.append('没写到 %s' % '、'.join(absent))
+    return problems
+
+
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None,
-                     requirements=None, clarifications=None):
+                     requirements=None, clarifications=None, groups=None, raised=None, intent=None, read=None):
     """guideline_version 1 (user 2026-10-31: 请开始执行这个方案): the shared guideline rules this design triggers
     (references/shared/guideline-criteria.md). Each applicable rule is cited by a calculation, work item, component requirement
     or evidence entry (user 2026-11-03: 照此写入 — a documentation rule hangs on the interface table, operating matrix or FMEA
     entry that implements it, not on one closed work item), or held not applicable with a reason; one that closes after the schematic is cited by a work item, its handoff
     downstream. Rules whose library card says so are covered in bulk (user 2026-11-04): project_input by the baseline's
-    answers, handoff by one work item or evidence entry. An item rule is never carried along with them."""
+    answers, handoff by one work item or evidence entry. An item rule is never carried along with them.
+    Item rules in references/guideline-evidence-groups.json (user 2026-11-07, improvement 8) are covered without a
+    citation: a check group by its audit check passing (raised: every error and pending item so far), a carrier
+    group by the evidence entries that declare `carrier` once their files hold the group's sections and objects."""
     library = library or guideline_criteria.load()
     scope = record.get('guideline_scope')
     problems = guideline_criteria.scope_errors(scope, library)
@@ -924,6 +1023,34 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
             if kind == 'work' and row.get('status') == 'closed' and items:
                 audit_guideline_evidence(key, row, items, error)
     applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
+    groups = groups if groups is not None else load_guideline_groups()
+    ids = {r['id'] for r in applicable if classes.get(r['id']) == 'item'}
+    passed, failed = guideline_checks(groups, record, raised or [])
+    for gid in sorted(ids & set(passed)):
+        cited.setdefault(gid, []).append(passed[gid])
+    carriers, by_carrier = groups.get('carriers') or {}, {}
+    for key, row in (evidence or {}).items():
+        name = row.get('carrier')
+        if name is None:
+            continue
+        if name not in carriers:
+            error('guideline_carrier_unknown', '%s：carrier %s 不在准则证据分组里（%s）' % (key, name, '/'.join(carriers)))
+        else:
+            by_carrier.setdefault(name, []).append(key)
+    groups_found = {}
+    for name, keys in sorted(by_carrier.items()):
+        spec = carriers[name]
+        rules = [g for g in spec['rules'] if g in ids]
+        files = [(k, read(evidence[k].get('path')) if read else None) for k in keys]
+        objects = carrier_objects(spec.get('objects'), record, intent or {}, calculations, requirements or {})
+        trouble = audit_carrier(spec, files, objects)
+        for gid in rules:   # a declared group answers for its rules alone; a stray citation elsewhere does not rescue them
+            cited.pop(gid, None)
+            if not trouble:
+                cited[gid] = ['carrier:' + k for k in keys]
+        if trouble and rules:
+            need('guideline_carrier_incomplete', '%s（%s，%s）：%s' % (name, spec['title'], '、'.join(keys), '；'.join(trouble)))
+        groups_found[name] = {'evidence': keys, 'rules': rules, 'problems': trouble}
     found = guideline_criteria.coverage(library, applicable, cited,
                                      {i['id']: i['reason'] for i in scope.get('not_applicable', [])}, answered)
     for gid in found['unknown_cited']:
@@ -933,12 +1060,19 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
     for gid in found['uncovered']:
         if classes.get(gid) == 'project_input':
             need('guideline_uncovered', '%s：写进 guideline_project_input.answers（由哪项需求回答或 TBR），或在 guideline_scope.not_applicable 写理由' % gid)
+        elif gid in failed:
+            need('guideline_uncovered', '%s：由检查覆盖，检查没过：%s' % (gid, '；'.join(failed[gid][:5])))
+        elif any(gid in carriers[n]['rules'] for n in groups_found):
+            need('guideline_uncovered', '%s：所在文档组没有核对通过（见 guideline_carrier_incomplete）' % gid)
         else:
-            need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由' % gid)
+            group = next((n for n, c in carriers.items() if gid in c['rules']), None)
+            need('guideline_uncovered', '%s：在计算、待办、器件性能要求或证据条目的 guidelines 里引用，或在 guideline_scope.not_applicable 写理由%s' % (
+                gid, '；它属于文档组 %s（%s），也可以登记这份文档并写 carrier' % (group, carriers[group]['title']) if group else ''))
     for gid in found['downstream']:
         if gid in found['covered'] and gid not in by_work and not (classes.get(gid) == 'handoff' and gid in by_evidence) \
                 and classes.get(gid) != 'project_input':
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
+    found['by_group'] = {'check': {g: passed[g][len('check:'):] for g in sorted(ids & set(passed))}, 'carrier': groups_found}
     found.update(guideline_criteria.shared_versions(bundle=library))
     if found.get('by_coverage'):
         found['project_input_tbr'] = [g for g in found['by_coverage']['project_input'] if answered.get(g) == 'TBR']
@@ -1486,15 +1620,6 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', 'uncertainty_version must be 1, with parameter_version 2 or 3')
         else:
             margins = audit_estimate_margins(calculations, error)
-    guidelines = None
-    if 'guideline_version' in record:
-        if record['guideline_version'] != 1:
-            error('schema', 'guideline_version must be 1')
-        else:
-            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
-                                          requirements=requirements, clarifications=clarifications)
-    elif guideline_criteria.load()['criteria']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
     audit_placeholders(intent, error, strict='binding_version' in record)
     # Nets declared to leave the design to another board each have a row in their interface contract (Matrix R2).
@@ -1523,6 +1648,18 @@ def audit(record, intent_path, artifact_root, inputs=None):
         error('schema', 'coverage must be complete or partial')
     if record.get('coverage') != 'complete':
         need('partial_review', 'Not all requirements/design obligations reviewed')
+    # Last of the record checks: the rules a check proves read every error and pending item raised above (improvement 8).
+    guidelines = None
+    if 'guideline_version' in record:
+        if record['guideline_version'] != 1:
+            error('schema', 'guideline_version must be 1')
+        else:
+            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
+                                          requirements=requirements, clarifications=clarifications, raised=errors + pending,
+                                          intent=intent, read=lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
+                                          and not Path(p).is_absolute() else None)
+    elif guideline_criteria.load()['criteria']:
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     convergence = {'status': 'NOT_ASSESSED'}
     if 'convergence_version' in record:
         if record['convergence_version'] != 1:

@@ -15,6 +15,26 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 改进 8：准则记账按证据分组（2026-11-07）
+
+整板评测基线（ASG 128178e）里，每块板适用的准则有 366～397 条要逐条引用，三个运行者都说这是最大的负担，Matrix 和 PoE 没有做完。
+现在把准则分三组：
+
+- 自动检查组 5 条（G01-003、G01-005、G02-038、G04-102、G09-018）：本次审计里对应检查跑过且没有报错，就记为覆盖。
+- 文档组 9 组 100 条：需求追溯、工况矩阵、接口定义、WCA、FMEA、隔离与绝缘、EMC、热、可测试性。证据条目写 `carrier`，审计核对必备章节齐全非空、对象（连接器、需求、计算、电源轨等）写全，通过才整组覆盖；核对不过的组，别处的逐条引用也不再算。
+- 其余照旧逐条引用。
+
+草案中 G02-003/024/026 并入 WCA 组；G02-036、G02-037、G04-101 因现有检查只能证明一部分，退回逐条组。分组表在 ASG，不改共用层。
+
+校准板复制重放的结果：
+- 记录不动：结论不变，覆盖 349、不适用 27、未覆盖 0。
+- 声明 7 个文档组并删去对应的手写引用：手写的准则编号从 327 个降到 250 个，引用次数从 396 降到 311。7 份文档都没有按模板分节，有的确实缺内容（源阻抗、波形、端口功率、校准路径、WCM 映射，8 条计算和 12 条电源轨没写到），72 条准则因此变为未覆盖，结论比原来严。
+
+- Event: user:2026-11-07（按推荐实施；整板评测基线改进 8，草案 docs/准则记账减负草案-2026-11-07.md）
+- Approved: user:2026-11-07
+- Outline: 9b1b6e8d255b97e0
+- Changed: SKILL.md, references/guideline-evidence-groups.md, references/guideline-evidence-groups.json, references/design-closure.md, references/delivery-report.md, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/test_guideline_evidence_groups.py, docs/准则记账减负草案-2026-11-07.md, docs/improvement-ledger.md
+
 ## 清理矛盾 收尾：scheme-criteria 规则收为一处（2026-11-07）
 
 `record/scheme-criteria.json` 何时必须有、字段与格式示例只在 typical-circuits.md 规则一节定义；delivery-report.md 原先独有的几条（guideline_scope 含关键电路类型时必有、key_blocks 必须比较、ports 与 typed-only 的引用范围、不代替 2.2 核算）并入该节，delivery-report 只留引用。
