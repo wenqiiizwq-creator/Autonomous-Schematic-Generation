@@ -132,6 +132,7 @@ def test_locator_and_cross_record_report():
     try:
         data = lessons()
         data['library_gaps'][0].update(page='board.kicad_sch', block='稳压', design_basis='record/evidence/design.md#regulator')
+        g = data['library_gaps'][0]; g['reason'] = '检索到 %s，电压范围不适用' % '、'.join(report.library_hits(g))
         d.write('lessons.json', data)
         plan = json.loads((d.record / 'page-plan.json').read_text()); plan['pages'][0]['circuits'] = {}
         d.write('page-plan.json', plan)
@@ -209,3 +210,33 @@ def test_scheme_blocks_are_key_even_without_page_key_declaration():
     problems = report.check_page_plan(plan, intent, visual, lessons=lessons([]),
                                      scheme={'blocks': [{'block': '关键'}]})
     assert len(problems) == 1 and '关键' in problems[0]
+
+
+# A5 (whole-board baseline 2026-11-07): Matrix registered its reset block U702 as a library gap (target
+# mcu-reset-supervisor.md) while multi-domain-reset covers MCU reset split from network reset.
+def test_an_open_gap_names_why_each_typical_circuit_found_does_not_apply(tmp_path):
+    circuits = tmp_path / 'references/typical-circuits'; circuits.mkdir(parents=True)
+    (circuits / 'multi-domain-reset.md').write_text('# 多域复位监督\n功能：MCU 复位与网络复位分域\n## 实现方案\n### 每域一颗监督器\n')
+    (circuits / 'ldo.md').write_text('# 线性稳压\n功能：LDO\n## 实现方案\n### 固定输出\n')
+    g = gap(); g.update(block='U702', target='references/typical-circuits/mcu-reset-supervisor.md',
+                        reason='库内没有与本块做法相符的典型电路（锚点 U702）')
+    assert report.library_hits(g, circuits) == ['multi-domain-reset']
+    errors, valid = report.check_library_gaps(lessons([g]), circuits_dir=circuits)
+    assert len(errors) == 1 and 'multi-domain-reset' in errors[0] and not valid
+    g['reason'] += '；multi-domain-reset 要求多颗监督器分域，本板只有 MCU 一个复位域，不适用'
+    assert report.check_library_gaps(lessons([g]), circuits_dir=circuits) == ([], {('a.kicad_sch', 'U702')})
+
+
+def test_the_block_name_is_searched_as_find_parts_does(tmp_path):
+    circuits = tmp_path / 'references/typical-circuits'; circuits.mkdir(parents=True)
+    (circuits / 'ldo.md').write_text('# 线性稳压\n功能：LDO 稳压\n## 实现方案\n### 固定输出\n')
+    g = gap(); g.update(block='LDO', target='references/typical-circuits/aux-rail.md')
+    assert report.library_hits(g, circuits) == ['ldo']
+    assert report.check_library_gaps(lessons([g]), circuits_dir=circuits)[0]
+
+
+def test_a_closed_gap_and_a_gap_with_no_hit_are_not_searched(tmp_path):
+    circuits = tmp_path / 'references/typical-circuits'; circuits.mkdir(parents=True)
+    (circuits / 'ldo.md').write_text('# 线性稳压\n功能：LDO\n## 实现方案\n### 固定输出\n')
+    assert report.library_hits(gap(), circuits) == []
+    assert not report.check_library_gaps(lessons(), circuits_dir=circuits)[0]

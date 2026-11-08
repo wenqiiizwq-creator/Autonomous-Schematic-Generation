@@ -267,6 +267,13 @@ def check(root, inputs=(), previous=None):
                 errors.append('design-closure.json fails inside the delivery (cited evidence must be in this folder, '
                               'paths relative to it, or in an --input): ' + '; '.join('%s %s' % (e['code'], e['item'])
                                                                     for e in result['errors'][:5]))
+            # SKILL.md step 4 is done only when every applicable rule is cited or held not applicable with a reason
+            # (whole-board baseline 2026-11-07, A1: Matrix 366 of 366 and PoE 366 of 397 rules uncovered, both packed).
+            uncovered = result['guidelines'].get('uncovered') if isinstance(result.get('guidelines'), dict) else None
+            if uncovered:
+                errors.append('design-closure.json: %d 条适用准则未覆盖（%s%s）；逐条在计算、待办、器件性能要求或证据条目的 '
+                              'guidelines 里引用，或在 guideline_scope.not_applicable 写不适用理由' % (
+                                  len(uncovered), '、'.join(uncovered[:10]), ' 等' if len(uncovered) > 10 else ''))
     if (root / REPORT).is_file() and record.is_dir():
         _, problems = render(root)
         errors += ['report records: ' + p for p in problems]

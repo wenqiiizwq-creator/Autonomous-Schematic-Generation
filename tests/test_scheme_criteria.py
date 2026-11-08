@@ -15,9 +15,18 @@ import render_design_report as report  # noqa: E402
 BUNDLE = guideline_criteria.load()
 
 
-def closure(types=('POWER_PROTECTION', 'DC_24V'), kinds=('tvs', 'mosfet')):
+def closing_check(name):
+    return {'name': name, 'value': 30, 'operator': '<=', 'limit': 36, 'unit': 'V'}
+
+
+def closure(types=('POWER_PROTECTION', 'DC_24V'), kinds=('tvs', 'mosfet'), calculations=None):
+    # The values the records below leave to task 2.2 are closed by a calculation citing their rules (A4).
+    if calculations is None:
+        calculations = [{'id': 'CALC-CLAMP', 'guidelines': ['G07-022', 'G07-023', 'G07-030'],
+                         'checks': [closing_check(n + ' 对 下游绝对最大值') for n in ('负向浪涌残压', '负向残压', '钳位器件脉冲能量')]}]
     return {'guideline_scope': {'library_version': BUNDLE['library_version'], 'baseline': 'industrial_telecom',
-                                'circuit_types': list(types), 'device_kinds': list(kinds)}}
+                                'circuit_types': list(types), 'device_kinds': list(kinds)},
+            'calculations': calculations}
 
 
 def criterion(gid='G07-023', basis='standard'):
@@ -268,3 +277,37 @@ def test_comparison_is_in_the_report():
     rendered = '\n'.join(report.render_scheme_criteria(data))
     for value in ('功能块方案比较', '现场口是否可能反接', '输出钳位', '只保护输入', 'user:2026-11-07', '选定', '淘汰'):
         assert value in rendered
+
+
+# A4 (whole-board baseline 2026-11-07): the calibration board left "SM712 钳位对收发器总线额定" to task 2.2; CALC-RS485
+# cited G05-033 and G04-005 but compared no clamp voltage with the transceiver's bus rating.
+def test_a_deferred_value_no_calculation_computes_is_not_closed():
+    problems = check(record(criterion()), closure(calculations=[]))
+    assert len(problems) == 1 and '负向浪涌残压' in problems[0] and '没有闭合' in problems[0]
+
+
+def test_a_rule_cited_by_a_calculation_that_skips_the_value_is_covered_in_form_only():
+    rs485 = {'id': 'CALC-RS485', 'guidelines': ['G07-023'],
+             'checks': [closing_check('D501 反向工作电压 对 总线共模下限幅值 7 V')]}
+    problems = check(record(criterion()), closure(calculations=[rs485]))
+    assert len(problems) == 1 and 'calc:CALC-RS485' in problems[0] and '形式覆盖' in problems[0]
+
+
+def test_the_closing_check_must_be_in_a_calculation_citing_the_rule():
+    other = {'id': 'CALC-OTHER', 'guidelines': ['G07-022'], 'checks': [closing_check('负向浪涌残压 对 36 V')]}
+    assert check(record(criterion()), closure(calculations=[other]))
+
+
+def test_a_check_without_a_conclusion_does_not_close_the_value():
+    bare = {'id': 'CALC-CLAMP', 'guidelines': ['G07-023'], 'checks': [{'name': '负向浪涌残压', 'value': 30}]}
+    assert check(record(criterion()), closure(calculations=[bare]))
+
+
+def test_a_check_named_otherwise_closes_the_value_through_its_defer_field():
+    named = closing_check('D501 钳位 对 U501 A/B 绝对最大 14 V')
+    calc = {'id': 'CALC-RS485', 'guidelines': ['G07-023'], 'checks': [named]}
+    assert check(record(criterion()), closure(calculations=[calc]))
+    named['defer'] = '负向浪涌残压'
+    assert check(record(criterion()), closure(calculations=[calc])) == []
+    named['defer'] = ['别的数值', '负向 浪涌残压']
+    assert check(record(criterion()), closure(calculations=[calc])) == []

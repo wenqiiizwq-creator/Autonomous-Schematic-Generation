@@ -1010,6 +1010,30 @@ class PackDesignTests(unittest.TestCase):
         errors, _ = pack(self.d.root, {'requirements': str(self.inputs), 'previous': str(prev)})
         self.assertFalse(any('与上一版相同' in e for e in errors), errors)
 
+    def test_uncovered_guidelines_cannot_be_packed_unless_each_is_held_not_applicable(self):
+        # A1 (whole-board baseline 2026-11-07): Matrix left 366 of 366 applicable rules uncovered and still packed.
+        import guideline_criteria
+        library = guideline_criteria.load()
+        scope = {'library_version': library['library_version'], 'baseline': 'industrial_telecom',
+                 'circuit_types': ['I2C'], 'device_kinds': ['resistor']}
+        applicable = [r['id'] for r in guideline_criteria.select(library, scope['baseline'], scope['circuit_types'],
+                                                                 scope['device_kinds'])]
+        self.assertTrue(applicable)
+
+        def repack(not_applicable):
+            self.d.closure.update(guideline_version=1, guideline_scope=dict(scope, not_applicable=not_applicable))
+            self.d.write('design-closure.json', self.d.closure)
+            self.d.write('design-closure-audit.json', audit(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root))
+            (self.d.root / REPORT).write_text(self.d.report()[0])
+            return [e for e in self.run_pack()[0] if '适用准则未覆盖' in e]
+
+        uncovered = repack([])
+        self.assertEqual(1, len(uncovered), uncovered)
+        self.assertIn('%d 条适用准则未覆盖' % len(applicable), uncovered[0])
+        self.assertIn('not_applicable', uncovered[0])
+        self.assertEqual(1, len(repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in applicable[1:]])))
+        self.assertEqual([], repack([{'id': g, 'reason': '本板只有内部 I2C'} for g in applicable]))
+
     def test_clean_delivery_packs_with_manifest(self):
         errors, manifest = self.run_pack()
         self.assertEqual(errors, [])

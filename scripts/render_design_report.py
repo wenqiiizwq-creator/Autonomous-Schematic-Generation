@@ -15,7 +15,8 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import calculation_basis, failing_checks, severity_of, vendor_items_of  # noqa: E402
+from audit_design_closure import calculation_basis, failing_checks, holds, severity_of, squeeze, vendor_items_of  # noqa: E402
+import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
 import operating_inputs  # noqa: E402
@@ -282,6 +283,18 @@ def check_record_locator(value, base):
         return False
 
 
+def library_hits(gap, circuits_dir=CIRCUITS_DIR):
+    """Typical circuits an open library gap must say why it does not use (whole-board baseline 2026-11-07, A5: Matrix
+    registered its reset block U702 as missing while multi-domain-reset covers MCU reset split from network reset).
+    The search find_parts.py --circuits runs for the block name, plus each word of the target file name (mcu, reset,
+    supervisor) that is a word of a typical circuit's file name; block names are often refs, the target names the
+    function."""
+    hits = [h['id'] for h in find_parts.search_circuits([gap['block']], Path(circuits_dir))['results']] if text(gap.get('block')) else []
+    words = {w for w in re.split(r'[-_]', Path(str(gap.get('target') or '')).stem.lower()) if len(w) >= 3} - {'and', 'the', 'with', 'for'}
+    hits += [pid for pid in find_parts.circuit_index(Path(circuits_dir)) if words & set(pid.lower().split('-'))]
+    return list(OrderedDict.fromkeys(hits))
+
+
 def check_library_gaps(lessons, plan=None, root=None, circuits_dir=CIRCUITS_DIR):
     """Schema 2 structure and cross-record bindings; return only valid open (page, block) pairs."""
     if not isinstance(lessons, dict) or lessons.get('schema_version') != 2:
@@ -344,6 +357,11 @@ def check_library_gaps(lessons, plan=None, root=None, circuits_dir=CIRCUITS_DIR)
                         bad.append(where + ' closed 页计划没有标注目标文件的有效实现方案')
                 if text(gap.get('resolution')) and gap['resolution'].partition('#')[0] != target:
                     bad.append(where + ' resolution 必须指向 target 的补写位置')
+        if gap.get('status') == 'open':
+            unexplained = [pid for pid in library_hits(gap, circuits_dir) if pid not in str(gap.get('reason') or '')]
+            if unexplained:
+                bad.append(where + ' 登记库内没有，但按块名和 target 检索典型电路命中 %s；在 reason 里逐个写明它为什么不适用'
+                           % '、'.join(unexplained))
         if not bad and gap.get('status') == 'open':
             valid.add(pair)
         errors += bad
@@ -1019,6 +1037,32 @@ def check_scheme_candidates(block, where, plan=None):
     return problems
 
 
+def closes(check, name):
+    """A check closes a deferred value when its name mentions the value ("LDO 结温 对 Tjmax 125 °C×0.8" closes
+    "LDO 结温") or its `defer` field (a string or a list) names it, and it has a conclusion: value, operator and limit."""
+    named = check.get('defer') if isinstance(check.get('defer'), list) else [check.get('defer')]
+    return holds(check) is not None and (squeeze(name) in squeeze(check.get('name'))
+                                         or squeeze(name) in {squeeze(n) for n in named if text(n)})
+
+
+def check_deferred(where, gid, defer, closure):
+    """Each value task 1.3 left to task 2.2 is closed there: a calculation that cites the rule in its guidelines has a
+    check that closes it (closes). A rule cited by a calculation that computes none of it is covered in form only
+    (whole-board baseline 2026-11-07, A4: the calibration board deferred "SM712 钳位对收发器总线额定", CALC-RS485 cited
+    G05-033 and G04-005 but compared no clamp voltage with the transceiver's bus rating)."""
+    rows = closure.get('calculations')
+    rows = list(rows.values()) if isinstance(rows, dict) else rows if isinstance(rows, list) else []
+    citing = [r for r in rows if isinstance(r, dict) and isinstance(r.get('guidelines'), list) and gid in r['guidelines']]
+    problems = []
+    for name in defer:
+        if not any(closes(c, name) for r in citing for c in r.get('checks') or [] if isinstance(c, dict)):
+            problems.append('%s 的 %s 留给 2.2 的“%s”没有闭合：在引用 %s 的计算里加一项核对（name 含这个数值名，或 defer 字段写它），'
+                            '给出 value、operator、limit%s' % (
+                                where, gid, name, gid, '；现引用它的 %s 没算这一项，只是形式覆盖' % '、'.join(
+                                    'calc:%s' % r.get('id') for r in citing) if citing else ''))
+    return problems
+
+
 def check_scheme_criteria(data, closure, bundle=None, plan=None):
     """record/scheme-criteria.json (SKILL.md task 1.3): required when guideline_scope names a key-block circuit type.
     Each key circuit type of the scope is in some block; each listed rule exists, is active and is triggered by that
@@ -1086,6 +1130,8 @@ def check_scheme_criteria(data, closure, bundle=None, plan=None):
             defer = item.get('defer', [])
             if not (isinstance(defer, list) and all(text(d) for d in defer)):
                 problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))
+            else:
+                problems += check_deferred(where, gid, defer, closure)
     recorded_blocks = {b.get('block') for b in data['blocks'] if isinstance(b, dict) and text(b.get('block'))}
     if page_keys - recorded_blocks:
         problems.append('scheme-criteria.json 没有比较关键功能块：' + '、'.join(sorted(page_keys - recorded_blocks)))

@@ -15,6 +15,17 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 整板评测门禁 A1/A4/A5：准则覆盖、defer 闭合、library_gaps 先检索（2026-11-07）
+
+整板评测基线（ASG 128178e，三块板）发现纲要已有要求、脚本没执行的三处：
+A1 `pack_design` 在 `guideline_uncovered` 非空时照样打包（Matrix 适用 366 条未覆盖 366 条，PoE 397 条未覆盖 366 条），现在拒绝打包，除非每条未覆盖准则在 `guideline_scope.not_applicable` 写了理由；
+A4 `scheme-criteria.json` 的 `defer` 不核闭合（校准板“SM712 钳位对收发器总线额定”留给 2.2，CALC-RS485 没算，G04-005/G05-033 却挂在它上面），现在每个 defer 名要由引用该规则的计算里一项有结论的核对闭合（name 含该数值名，或核对的 `defer` 字段写它），否则报未闭合并点名只做了形式覆盖的计算；
+A5 `library_gaps` 不核库里有没有（Matrix 复位块 U702 登记缺口，`multi-domain-reset` 正适用），现在开着的缺口按块名（与 `find_parts.py --circuits` 同样检索）和 target 文件名的英文词检索典型电路，命中的文件名要写进 reason 说明为什么不适用。
+用三板归档副本重放：三处证据都被拦下，校准板 A1 不报。
+
+- Event: test:评测记录/ASG/2026-11-07-wholeboard-128178e, user:2026-11-07（把你发现的这些问题，逐项都修正好，可以开多个分支对话完成）
+- Changed: scripts/pack_design.py, scripts/render_design_report.py, references/delivery-report.md, references/typical-circuits.md, tests/test_design_report.py, tests/test_scheme_criteria.py, tests/test_lessons_v2.py, docs/improvement-ledger.md
+
 ## 清理矛盾 收尾：scheme-criteria 规则收为一处（2026-11-07）
 
 `record/scheme-criteria.json` 何时必须有、字段与格式示例只在 typical-circuits.md 规则一节定义；delivery-report.md 原先独有的几条（guideline_scope 含关键电路类型时必有、key_blocks 必须比较、ports 与 typed-only 的引用范围、不代替 2.2 核算）并入该节，delivery-report 只留引用。
