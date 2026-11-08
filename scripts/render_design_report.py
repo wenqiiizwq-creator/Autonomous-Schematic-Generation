@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import calculation_basis, check_delegate, failing_checks, holds, load_task, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import CURRENT_VERSIONS, calculation_basis, check_delegate, failing_checks, holds, load_task, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
@@ -57,7 +57,7 @@ OPTIONAL_RESULTS = ('CONDITIONAL', 'INCOMPLETE')
 VISUAL = {'REVIEWED': '已完成', 'REVIEW_PENDING': '未完成', 'REWORK_REQUIRED': '发现需返工的问题'}
 STAGES = {'requirement': '用户暂缓的需求', 'design': '设计未完成', 'external': '外部资料缺口', 'validation': '样机或试验验证', 'pcb': 'PCB 实现'}
 REQUIREMENTS = OrderedDict([('design_supported', '有设计依据'), ('conditional', '有条件成立'), ('open', '还没有设计')])
-# parameter_version 2: what a calculation rests on, derived from its inputs.
+# What a calculation rests on, derived from its inputs.
 TIERS = OrderedDict([('supported', '设计成立'), ('estimate', '依赖工程估计'), ('vendor_data', '依赖厂家资料'),
                      ('user_deferred', '依赖暂缓的需求'), ('failed', '不满足')])
 # Tiers shown only when a calculation falls in them.
@@ -376,18 +376,13 @@ def check_block_circuits(name, blocks, patterns, implementations, lessons, root=
     """Each key functional block names an existing pattern approach, or lessons.json registers the gap."""
     errors = []
     lessons = lessons if isinstance(lessons, dict) else {}
-    version = lessons.get('schema_version', 1)
-    registered = version == 1 and any(
-        isinstance(e, dict) and e.get('cause') == 'knowledge_missing'
-        and 'typical-circuits' in str(e.get('change') or '')
-        for e in lessons.get('events') or [])
     _, valid_gaps = check_library_gaps(lessons, root=root)
     patterns = patterns if isinstance(patterns, dict) else {}
     for block in blocks:
         ref = patterns.get(block)
         if not text(ref):
-            if block in key_blocks and not registered and (name, block) not in valid_gaps:
-                errors.append('%s：功能块“%s”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/' % (name, block) if version == 1 else '%s：功能块“%s”没有典型电路或有效的 library_gaps 逐块覆盖待办' % (name, block))
+            if block in key_blocks and (name, block) not in valid_gaps:
+                errors.append('%s：功能块“%s”没有典型电路或有效的 library_gaps 逐块覆盖待办' % (name, block))
             continue
         pid, _, approach = ref.partition('#')
         if pid not in implementations:
@@ -704,12 +699,12 @@ def check_selection(data, intent, root, evidence=None):
 
 def check_lessons(data):
     """What this version taught the skill: each event has a source, a cause class and a concrete change."""
-    version = data.get('schema_version', 1) if isinstance(data, dict) else None
-    if type(version) is not int or version not in (1, 2):
-        return ['lessons.json schema_version 只支持 1（历史）或 2'], {}
+    version = data.get('schema_version') if isinstance(data, dict) else None
+    if type(version) is not int or version != 2:
+        return ['lessons.json 只读现行 schema_version 2（现在是 %s）：按 delivery-report.md 的现行格式重写' % version], {}
     gap_problems, _ = check_library_gaps(data)
-    events = data.get('events') if isinstance(data, dict) else None
-    if version == 2 and isinstance(events, list) and not events and data.get('library_gaps') and not gap_problems:
+    events = data.get('events')
+    if isinstance(events, list) and not events and data.get('library_gaps') and not gap_problems:
         return [], {}
     if not isinstance(events, list) or not events:
         return gap_problems + ['lessons.json 没有 events：每次设计至少登记一条学到的东西，没有就登记 cause=none 并写明核对了什么'], {}
@@ -727,7 +722,7 @@ def check_lessons(data):
         if cause not in CAUSES and cause != 'none':
             problems.append('lessons.json 第 %d 条的 cause 必须是 %s 或 none' % (i, '/'.join(CAUSES)))
             continue
-        if version == 2 and cause == 'knowledge_missing':
+        if cause == 'knowledge_missing':
             problems += check_knowledge_event(e, 'lessons.json 第 %d 条' % i)
         if cause == 'none':
             if not text(e.get('why_none')):
@@ -928,9 +923,6 @@ def worst(levels):
     return found[0] if found else None
 
 
-STAGE_WORDS = {'schematic': '原理图', 'pcb': 'PCB', 'simulation': '仿真', 'prototype': '样机', 'production': '生产'}
-
-
 def render_operating_inputs(found):
     """The declared condition inputs and the review list of design-closure.md 工况输入; an error is listed with the others."""
     if not found:
@@ -969,95 +961,6 @@ def render_operating_inputs(found):
             calcs = missing.get(r['role']) or []
             out.append('| %s | %d | %s | %s |' % (r['title'], r['rules'], '、'.join(r.get('requirements') or []) or '**没有**',
                                                   ('、'.join(calcs[:5]) + ('等 %d 条' % len(calcs) if len(calcs) > 5 else '')) or '—'))
-        out.append('')
-    return out
-
-
-def render_batch_guidelines(guidelines, cards):
-    """The rules covered in bulk (user 2026-11-04), one table per class: which baseline item answers each project_input
-    rule, and the downstream handoff list."""
-    classes = guidelines.get('by_coverage') or {}
-    out = []
-    if classes.get('project_input'):
-        out += ['## 需求基线回答的设计准则', '',
-                '这些设计准则由一份需求基线或需求澄清记录一次回答；TBR 是还没有答复的项。', '',
-                '| 设计准则 | 内容 | 回答项 |', '|---|---|---|']
-        for gid in classes['project_input']:
-            answer = '不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else \
-                '、'.join(w.partition(':')[2] for w in guidelines['covered'].get(gid) or []) or '未回答'
-            out.append('| %s | %s | %s |' % (gid, cell(cards.get(gid, {}).get('title', '')), cell(answer)))
-        out.append('')
-    down = [gid for gid in classes.get('handoff') or [] if gid not in guidelines['not_applicable']]
-    if down:
-        out += ['## 下游交接清单', '',
-                '这些设计准则进下游交接清单，由所列待办或交接表带给下游；原理图阶段只列出，不宣布已满足。', '',
-                '| 设计准则 | 关闭阶段 | 交接处 | 下游要做的（设计准则 asg_action） |', '|---|---|---|---|']
-        for gid in down:
-            c = cards.get(gid, {'closing_stage': '', 'asg_action': ''})
-            where = '、'.join(w for w in guidelines['covered'].get(gid) or [] if w.startswith(('work:', 'evidence:')))
-            out.append('| %s | %s | %s | %s |' % (gid, STAGE_WORDS.get(c['closing_stage'], ''), where or '无', cell(c['asg_action'])))
-        out.append('')
-    return out
-
-
-def render_group_guidelines(guidelines, cards):
-    """The rules an audit check or one design document covers (references/guideline-evidence-groups.md, user 2026-11-07):
-    the check and its result, or the document, its rules and what its check found missing."""
-    groups = guidelines.get('by_group') or {}
-    out = []
-    if groups.get('check'):
-        out += ['## 由自动检查覆盖的设计准则', '', '这些设计准则由设计完成核对里的检查完整证明，检查没有报错。', '',
-                '| 设计准则 | 内容 | 检查 |', '|---|---|---|']
-        for gid, name in groups['check'].items():
-            out.append('| %s | %s | %s |' % (gid, cell(cards.get(gid, {}).get('title', '')), cell(name)))
-        out.append('')
-    carriers = {n: g for n, g in (groups.get('carrier') or {}).items() if g['rules']}
-    if carriers:
-        out += ['## 由设计文档整组覆盖的设计准则', '',
-                '每组由所列证据文件承担；审计核对文件里必备章节齐全、非空，该写的对象都写到。核对只证明写全，不证明写对。', '',
-                '| 文档组 | 证据 | 设计准则 | 核对结果 |', '|---|---|---|---|']
-        for name, g in carriers.items():
-            out.append('| %s | %s | %s | %s |' % (name, '、'.join(g['evidence']), '、'.join(g['rules']),
-                                                  cell('；'.join(g['problems'])) if g['problems'] else '齐全'))
-        out.append('')
-    return out
-
-
-def render_guidelines(guidelines):
-    """共用设计准则覆盖与下游约束（references/shared/guideline-criteria.md）：适用准则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
-    if not (guidelines and guidelines.get('applicable')):
-        return []
-    cards = {r['id']: r for r in guideline_criteria.load()['criteria']}
-    where = lambda gid: ('、'.join(guidelines['covered'].get(gid) or [])
-                         or ('不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else '未覆盖'))
-    out = ['## 共用设计准则覆盖', '',
-           '本设计按设计准则库 %s 适用的共用设计准则；“落实处”是引用它的计算（calc）、待办（work）、器件性能要求（component）或证据条目（evidence）；由自动检查或设计文档整组覆盖的另列在后面。' % guidelines['library_version'], '',
-           '| 设计准则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
-    classes = guidelines.get('by_coverage') or {}
-    batch = set(classes.get('project_input') or ()) | set(classes.get('handoff') or ())
-    grouped = guidelines.get('by_group') or {}
-    batch |= set(grouped.get('check') or ()) | {g for c in (grouped.get('carrier') or {}).values() if not c['problems']
-                                                for g in c['rules']}
-    for gid in guidelines['applicable']:
-        if gid in batch:
-            continue
-        c = cards.get(gid, {'title': '', 'source': [], 'closing_stage': ''})
-        source = '；'.join('%s %s %s 第%s页' % (s['document'], s['edition'], s['clause'], s['page']) for s in c['source'])
-        out.append('| %s | %s | %s | %s | %s |' % (gid, cell(c['title']), cell(source), cell(where(gid)),
-                                                    STAGE_WORDS.get(c['closing_stage'], '')))
-    out.append('')
-    out += render_batch_guidelines(guidelines, cards)
-    out += render_group_guidelines(guidelines, cards)
-    down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable'] and gid not in batch]
-    if down:
-        out += ['## 下游约束（共用规范）', '',
-                '这些设计准则在原理图之后的环节关闭，由所列待办交给下游；原理图阶段不宣布它们已满足。', '',
-                '| 设计准则 | 关闭阶段 | 技术转交待办 | 下游要做的（设计准则 asg_action） |', '|---|---|---|---|']
-        for gid in down:
-            c = cards.get(gid, {'closing_stage': '', 'asg_action': ''})
-            work = [w for w in guidelines['covered'].get(gid) or [] if w.startswith('work:')]
-            out.append('| %s | %s | %s | %s |' % (gid, STAGE_WORDS.get(c['closing_stage'], ''), '、'.join(work) or '无',
-                                                  cell(c['asg_action'])))
         out.append('')
     return out
 
@@ -1242,7 +1145,7 @@ def render_scheme_criteria(data):
             out += ['', '%s：只有一种可行方案，%s' % (cell(b.get('block')), cell(b['only_viable'])), '']
     out += ['', '## 方案阶段对照的规则', '',
            '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 1.3）。这里的结论不代替任务 2.2 的核算，'
-           '这些规则在设计闭环时仍按“共用设计准则覆盖”核对；依据为工程推论的不作硬排除。', '',
+           '留给 2.2 的数值由引用该规则的计算关闭；依据为工程推论的不作硬排除。', '',
            '| 功能块 | 设计准则 | 排除的候选 | 依据 | 选定方案怎样满足 | 留给 2.2 核算 |', '|---|---|---|---|---|---|']
     for b in blocks:
         items = [c for c in b.get('criteria') or [] if isinstance(c, dict)]
@@ -1290,11 +1193,11 @@ def render(root, notes=None, title=None):
     work = {w['id']: w for w in closure.get('work_items') or [] if isinstance(w, dict) and text(w.get('id'))}
     requirements = [r for r in closure.get('requirements') or [] if isinstance(r, dict)]
     calculations = [c for c in closure.get('calculations') or [] if isinstance(c, dict)]
-    if closure and closure.get('parameter_version') not in (1, 2, 3):
-        problems.append('计算没有逐项登记参数来源：design-closure.json 要写 parameter_version 3，'
-                        '每条计算的 parameters 写明每个器件参数的值、依据和手册页码，每条检查写明门槛的依据和出处（见 design-closure.md）')
-    layered = closure.get('parameter_version') in (2, 3)
-    if closure.get('parameter_version') == 3:
+    outdated = ['%s %s' % (k, closure.get(k, '缺')) for k, v in CURRENT_VERSIONS.items() if closure.get(k) != v]
+    if closure and outdated:
+        problems.append('design-closure.json 是旧版本记录（%s）：只读现行格式（%s），按 design-closure.md 重写' % (
+            '、'.join(outdated), '、'.join('%s %d' % kv for kv in CURRENT_VERSIONS.items())))
+    if closure:
         reasons = Counter(' '.join(p['reason'].split()) for c in calculations for p in c.get('parameters') or []
                           if isinstance(p, dict) and p.get('basis') == 'model' and text(p.get('reason')))
         for reason, n in reasons.items():
@@ -1302,18 +1205,13 @@ def render(root, notes=None, title=None):
                 problems.append('%d 个工程估计参数共用同一句理由“%s”：每个估计写它自己的依据（见 design-closure.md）' % (n, reason[:40]))
     vendor_items, deferred_items = vendor_items_of(work), vendor_items_of(work, 'requirement')
     basis = {c.get('id'): calculation_basis(c, vendor_items.get(c.get('id'), []), deferred_items.get(c.get('id'), []))
-             for c in calculations} if layered else {}
+             for c in calculations}
     clarifications = [q for q in closure.get('clarifications') or [] if isinstance(q, dict)]
     unanswered = [q.get('id') for q in clarifications if not q.get('answer')]
     if unanswered:
         problems.append('需求澄清 %s 还没有答复：要当场问用户，答复写回需求清单后再往下设计（见 requirement-clarifications.md）'
                         % '、'.join(map(str, unanswered)))
     tier = {cid: rests or conclusion for cid, (conclusion, rests, _) in basis.items()}
-    open_external = any(isinstance(w, dict) and w.get('stage') == 'external' and w.get('status') != 'closed'
-                        for w in closure.get('work_items') or [])
-    if closure.get('gap_version') not in (1, 2) and open_external:
-        problems.append('缺外部资料的待办没有写清缺口：design-closure.json 要写 gap_version 2，每件写明手册给了什么、'
-                        '还缺什么、缺的是哪一类、影响哪些计算、要问的问题和本项的替代做法（见 design-closure.md）')
     if visual and visual.get('status') not in VISUAL:
         problems.append('visual-review.json 的 status 必须是 %s 之一' % '/'.join(VISUAL))
     lessons, events = {}, None
@@ -1413,42 +1311,27 @@ def render(root, notes=None, title=None):
         out.extend('- **性能要求提示**：%s。' % cell(h) for h in performance.get('hints') or [])
     out.append('- **需求**：共 %d 条。%s。' % (len(requirements), '，'.join(
         '%s %d 条' % (label, req_counts.get(key, 0)) for key, label in REQUIREMENTS.items())))
-    if layered:
-        tier_counts = Counter(tier.values())
-        out.append('- **计算**：共 %d 项。%s。' % (len(calculations), '，'.join(
-            '%s %d 项' % (label, tier_counts.get(key, 0)) for key, label in TIERS.items()
-            if key not in OPTIONAL_TIERS or tier_counts.get(key))))
-        # A conditional requirement rests on the vendor when any of its calculations or dependencies does.
-        rests = Counter()
-        for r in requirements:
-            if r.get('status') != 'conditional':
-                continue
-            tiers = {tier.get(c.get('id')) for c in calculations if r.get('id') in (c.get('requirements') or [])}
-            if 'vendor_data' in tiers or any(work.get(d, {}).get('stage') == 'external' and work[d].get('status') == 'open'
+    tier_counts = Counter(tier.values())
+    out.append('- **计算**：共 %d 项。%s。' % (len(calculations), '，'.join(
+        '%s %d 项' % (label, tier_counts.get(key, 0)) for key, label in TIERS.items()
+        if key not in OPTIONAL_TIERS or tier_counts.get(key))))
+    # A conditional requirement rests on the vendor when any of its calculations or dependencies does.
+    rests = Counter()
+    for r in requirements:
+        if r.get('status') != 'conditional':
+            continue
+        tiers = {tier.get(c.get('id')) for c in calculations if r.get('id') in (c.get('requirements') or [])}
+        if 'vendor_data' in tiers or any(work.get(d, {}).get('stage') == 'external' and work[d].get('status') == 'open'
+                                         for d in r.get('depends_on') or []):
+            rests['vendor_data'] += 1
+        elif 'user_deferred' in tiers or any(work.get(d, {}).get('stage') == 'requirement' and work[d].get('status') == 'open'
                                              for d in r.get('depends_on') or []):
-                rests['vendor_data'] += 1
-            elif 'user_deferred' in tiers or any(work.get(d, {}).get('stage') == 'requirement' and work[d].get('status') == 'open'
-                                                 for d in r.get('depends_on') or []):
-                rests['user_deferred'] += 1
-            elif 'estimate' in tiers:
-                rests['estimate'] += 1
-        if rests:
-            out[-2] = out[-2][:-1] + '（有条件成立的需求中%s）。' % '、'.join(
-                '%s %d 条' % (TIERS[k], rests[k]) for k in ('vendor_data', 'user_deferred', 'estimate') if rests.get(k))
-    else:
-        out.append('- **计算**：共 %d 项，记录是 parameter_version 1，结论没有按依据分层。' % len(calculations))
-    old = (['parameter_version 2（检查门槛的出处、每条需求有没有检查没核对）'] if closure.get('parameter_version') == 2 else []) + \
-          (['gap_version 1（外部资料缺口没有分类）'] if closure.get('gap_version') == 1 and open_external else []) + \
-          (['没有 derating_version（器件应力没有按降额等级核对）'] if closure and layered and 'derating_version' not in closure else []) + \
-          (['没有 uncertainty_version（工程估计的余量没有对不确定度核对）'] if closure and layered and 'uncertainty_version' not in closure else []) + \
-          (['没有 binding_version（料号与手册、符号脚类型、未用脚处置和电源轨最高电压没有核对）']
-           if closure and layered and 'binding_version' not in closure else []) + \
-          (['没有 matrix_version（复位门限、温度、端口应力没有对全部对象核对，保护逻辑没有状态表）']
-           if closure and layered and 'matrix_version' not in closure else [])
-    if old:
-        out.append('- **记录版本**：%s。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、'
-                   'binding_version 1、matrix_version 1 写。'
-                   % '；'.join(old))
+            rests['user_deferred'] += 1
+        elif 'estimate' in tiers:
+            rests['estimate'] += 1
+    if rests:
+        out[-2] = out[-2][:-1] + '（有条件成立的需求中%s）。' % '、'.join(
+            '%s %d 条' % (TIERS[k], rests[k]) for k in ('vendor_data', 'user_deferred', 'estimate') if rests.get(k))
     matrices = audit.get('matrices') if isinstance(audit.get('matrices'), dict) else None
     if matrices:
         titles = {'supervised_rails': '受监督轨门限×负载', 'temperature': '温度×器件', 'port_stress': '端口应力×路径器件',
@@ -1469,7 +1352,7 @@ def render(root, notes=None, title=None):
         classes = guidelines.get('by_coverage') or {}
         batch = '其中需求基线回答 %d 条（TBR %d 条）、进交接清单 %d 条；' % (
             len(classes['project_input']), len(guidelines.get('project_input_tbr') or ()), len(classes['handoff'])) if classes else ''
-        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；%s交下游 %d 条。见“共用设计准则覆盖”。' % (
+        out.append('- **共用规范**：%s，适用 %d 条：已引用 %d 条、写明不适用 %d 条、未覆盖 %d 条；%s交下游 %d 条。逐条在 record/design-closure-audit.json 的 guidelines。' % (
             guideline_criteria.shared_label(identity=guidelines), len(guidelines['applicable']), len(guidelines['covered']),
             len(guidelines['not_applicable']), len(guidelines['uncovered']), batch, len(guidelines['downstream'])))
     inputs_found = audit.get('operating_inputs') if isinstance(audit.get('operating_inputs'), dict) else None
@@ -1626,8 +1509,6 @@ def render(root, notes=None, title=None):
     lesson_events = lessons.get('events')
     events_list = [e for e in lesson_events if isinstance(e, dict)] if isinstance(lesson_events, list) else []
     if events_list:
-        if lessons.get('schema_version', 1) == 1:
-            out += ['历史归因，尚未按 schema 2 新口径复核；不计入有证据后果统计。', '']
         out += ['## 改进记录', '', '| 来源 | 归因 | 改了什么 |', '|---|---|---|']
         for e in events_list:
             out.append('| %s | %s | %s |' % (cell(e.get('source', '')), CAUSE_WORDS.get(e.get('cause'), cell(e.get('cause', ''))),
@@ -1730,7 +1611,7 @@ def render(root, notes=None, title=None):
 
     # A calculation that misses its target leads the calculation tables, with the terms it sums (R10 ENERGY was listed
     # only as a work item; user 2026-10-28: 先改前四条).
-    failed = [c for c in calculations if (tier.get(c.get('id')) if layered else c.get('conclusion')) == 'failed']
+    failed = [c for c in calculations if tier.get(c.get('id')) == 'failed']
     if failed:
         out += ['## 不满足的计算', '',
                 '这些计算算出的值没达到门槛，设计未完成。“最好情景”是各项取有利端仍不满足，等资料关不掉，要改设计；'
@@ -1747,7 +1628,7 @@ def render(root, notes=None, title=None):
                 cell('；'.join(w['redesign'] for w in items if text(w.get('redesign')))), '、'.join(w['id'] for w in items)))
         out.append('')
 
-    for key in ('vendor_data', 'user_deferred', 'estimate') if layered else ():
+    for key in ('vendor_data', 'user_deferred', 'estimate'):
         group = [c for c in calculations if tier.get(c.get('id')) == key]
         if not group:
             continue
@@ -1765,20 +1646,6 @@ def render(root, notes=None, title=None):
                                                      cell('；'.join(check_text(k) for k in c.get('checks') or [])),
                                                      cell('、'.join(map(str, basis[c.get('id')][2]))), '、'.join(owed)))
         out.append('')
-    conditional = [c for c in calculations if c.get('conclusion') == 'conditional'] if not layered else []
-    if conditional:
-        out += ['## 有条件成立的计算', '',
-                '这些计算按设计用途已经够用，不阻塞出图；结论建立在下面写明的假设或没算进去的项上，'
-                '按最坏情况逐条证明留给独立审查。', '',
-                '| 计算 | 涉及的需求 | 算出的值与门槛 | 假设或没算进去的项 | 对应待办 |', '|---|---|---|---|---|']
-        for c in conditional:
-            owed = [w['id'] for w in open_work if c.get('id') in (w.get('calculations') or [])]
-            out.append('| %s | %s | %s | %s | %s |' % (c.get('id'), '、'.join(c.get('requirements') or []),
-                                            cell('；'.join(check_text(k) for k in c.get('checks') or [])),
-                                            cell('；'.join((c.get('assumptions') or []) + (c.get('omitted_terms') or []))),
-                                            '、'.join(owed)))
-        out.append('')
-
     risks = (derating or {}).get('stress_risks') or []
     if risks:
         severe = (derating or {}).get('severe_thresholds') or {}
@@ -1809,7 +1676,6 @@ def render(root, notes=None, title=None):
         out.append('')
     out += render_operating_inputs(inputs_found)
     out += render_scheme_criteria(scheme)
-    out += render_guidelines(guidelines)
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:
         out += ['## 手册未规定的工作点', '',
@@ -1868,16 +1734,13 @@ def render(root, notes=None, title=None):
         out += ['## 关键设计依据', ''] + ['- ' + h for h in notes['highlights'][:8]] + ['']
 
     cov = Counter(c.get('coverage') for c in calculations)
-    con = Counter(c.get('conclusion') for c in calculations)
     stage_status = Counter((w.get('stage'), w.get('status')) for w in work.values())
     shown_tiers = [k for k in TIERS if k not in OPTIONAL_TIERS or k in tier.values()]
     out += ['## 统计', '', '| 项目 | 数量 |', '|---|---|',
             '| 器件 / 图纸页数 | %d / %d |' % (parts, sheets),
             '| 需求：%s | %s |' % (' / '.join(REQUIREMENTS.values()), ' / '.join(str(req_counts.get(k, 0)) for k in REQUIREMENTS)),
             '| 计算：上下界完整 / 只算了一部分 | %d / %d |' % (cov.get('bounded', 0), cov.get('partial', 0)),
-            ('| 计算结论：%s | %s |' % (' / '.join(TIERS[k] for k in shown_tiers), ' / '.join(str(Counter(tier.values()).get(k, 0)) for k in shown_tiers))
-             if layered else
-             '| 计算结论：满足 / 有条件满足 / 不满足 | %d / %d / %d |' % (con.get('supported', 0), con.get('conditional', 0), con.get('failed', 0))),
+            '| 计算结论：%s | %s |' % (' / '.join(TIERS[k] for k in shown_tiers), ' / '.join(str(Counter(tier.values()).get(k, 0)) for k in shown_tiers)),
             '| 未关闭项：设计未完成 / 外部资料缺口 | %d / %d |' % (stage_status.get(('design', 'open'), 0), stage_status.get(('external', 'open'), 0)),
         ] + (['| 未关闭项：用户暂缓的需求 | %d |' % stage_status[('requirement', 'open')]]
              if stage_status.get(('requirement', 'open')) else []) + [

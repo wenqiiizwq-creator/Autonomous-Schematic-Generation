@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import audit_design_closure as closure
+from current_record import make_current  # noqa: E402
 import guideline_criteria
 import operating_inputs as oi
 import render_design_report
@@ -266,7 +267,7 @@ class WholeAuditTests(unittest.TestCase):
     def codes(self, parameter):
         with tempfile.TemporaryDirectory() as d:
             intent, record = self.record(d, parameter)
-            out = closure.audit(record, intent, Path(d))
+            out = closure.audit(make_current(record, intent, Path(d)), intent, Path(d))
         return {e['code'] for e in out['errors']}, out
 
     def test_audit_runs_the_check_and_reports_the_list(self):
@@ -276,12 +277,6 @@ class WholeAuditTests(unittest.TestCase):
         self.assertFalse(codes & {'startup_load_undeclared', 'operating_input_without_source'}, codes)
         self.assertEqual('startup_load', out['operating_inputs']['declared'][0]['role'])
         self.assertIn('checklist', out['operating_inputs'])
-
-    def test_a_record_before_parameter_version_2_is_not_checked(self):
-        with tempfile.TemporaryDirectory() as d:
-            intent, record = self.record(d, LOAD)
-            del record['parameter_version']
-            self.assertEqual('NOT_CHECKED', closure.audit(record, intent, Path(d))['operating_inputs'])
 
     def test_a_declared_load_above_the_limit_fails_the_calculation(self):
         with tempfile.TemporaryDirectory() as d:

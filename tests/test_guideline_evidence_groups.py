@@ -10,7 +10,6 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria
-import render_design_report
 from audit_design_closure import load_guideline_groups, markdown_sections, mentions, sha256
 import test_guideline_closure as base
 from test_guideline_closure import card, library
@@ -138,17 +137,6 @@ class EvidenceGroupTests(unittest.TestCase):
     def test_an_unknown_group_name_is_an_error(self):
         self.write_fmea(carrier='失效分析')
         self.assertIn('guideline_carrier_unknown', self.codes(self.run_groups()))
-
-    def test_the_report_lists_the_groups_apart(self):
-        self.write_fmea()
-        found = self.run_groups()['guidelines']
-        with mock.patch.object(guideline_criteria, 'load', lambda *args: LIB):
-            text = '\n'.join(render_design_report.render_guidelines(found))
-        self.assertIn('| G09-018 | 示例规则 G09-018 | 装配状态独立字段 |', text)
-        self.assertIn('| FMEA | E-FMEA | G05-001、G05-002 | 齐全 |', text)
-        main = text.split('## 由自动检查覆盖')[0]
-        self.assertNotIn('G05-001', main)
-        self.assertIn('G04-001', main)
 
     def test_markdown_sections_and_mentions(self):
         lines = ['# A', '', '## B', '', '## C', 'text', '| x | y |', '|---|---|', '| | |']

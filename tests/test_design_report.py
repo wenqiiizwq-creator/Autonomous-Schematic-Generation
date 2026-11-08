@@ -13,6 +13,7 @@ from render_design_report import check_selection, num, render, render_sha256, RE
 from pack_design import pack
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_citations import pdf
+from current_record import make_current
 
 JARGON = ('合同', '冻结', '门禁', '原生', '闭环', '移交', 'SR', 'schematic-review', 'design_supported', 'handoff')
 
@@ -37,7 +38,7 @@ class Delivery:
         (self.root / '设计资料' / '方案与选型依据.md').write_text('# basis')
         (self.record / 'evidence' / 'design.md').write_text('regulator design basis')
         self.write('electrical-intent.json', {'components': [{'ref': 'U1', 'value': 'XYZ100', 'mpn': 'XYZ100',
-                                                                   'datasheet': '设计资料/X - XYZ100.pdf'}, {'ref': 'R1'}]})
+                                                                   'datasheet': '设计资料/X - XYZ100.pdf'}, {'ref': 'R1', 'value': '10k'}]})
         (self.root / '设计资料' / 'X - XYZ100.pdf').write_bytes(pdf(['VIN 4.5 V to 18 V  IOUT 3.5 A  EN', 'SOIC-8  OVP 25 C']))
         (self.root / '设计资料' / 'Y - ABC200.pdf').write_bytes(pdf(['IOUT 2 A']))
         self.selection = {'schema_version': 1, 'library_root': str(self.root), 'roles': [
@@ -56,7 +57,7 @@ class Delivery:
              'decision': {'source': 'user:2026-10-24', 'locator': '对话记录 2026-10-24 选型确认'}}]}
         self.write('selection.json', self.selection)
         self.closure = {
-            'schema_version': 1, 'parameter_version': 1, 'gap_version': 1, 'coverage': 'complete',
+            'schema_version': 1, 'coverage': 'complete',
             'intent_sha256': sha256(self.record / 'electrical-intent.json'),
             'evidence': [{'id': 'E1', 'path': 'record/evidence/design.md',
                           'sha256': sha256(self.record / 'evidence' / 'design.md'), 'locator': 'section 1'}],
@@ -68,17 +69,17 @@ class Delivery:
                 {'id': 'W-FW', 'stage': 'external', 'status': 'open', 'consequence_class': 'damage', 'occurrence': 'normal', 'requirements': ['R-OUT'],
                  'evidence': [], 'owner': 'X 公司应用支持', 'action': '取得过压保护配置表后重算 C1', 'fallback': '评估独立硬件过压关断',
                  'missing': [{'source': 'datasheet:设计资料/X - XYZ100.pdf#p2', 'given': '过压门限只在 25°C 规定',
-                              'needed': '全温过压门限与关断时延'}],
+                              'needed': '全温过压门限与关断时延', 'kind': 'firmware'}],
                  'why_external': '过压动作由固件配置决定，手册没有公开', 'calculations': ['C1'],
                  'consequence': '过压时输出电容过充，负载损坏', 'questions': ['全温下过压门限的范围', '从检测到关断的最大时延']},
                 {'id': 'W-TEST', 'stage': 'validation', 'status': 'handoff', 'requirements': ['R-OUT'],
                  'evidence': ['E1'], 'owner': '样机验证', 'action': '满载温升测试'}],
             'calculations': [{'id': 'C1', 'requirements': ['R-OUT'], 'evidence': ['E1'], 'refs': ['U1'],
-                              'coverage': 'partial', 'conclusion': 'conditional', 'omitted_terms': ['ripple'],
-                              'missing_guarantee': '纹波电流在 105°C 的额定',
+                              'coverage': 'bounded', 'conclusion': 'conditional', 'rests_on': 'vendor_data', 'omitted_terms': [],
                               'parameters': [{'name': 'IOUT', 'ref': 'U1', 'value': 3.5, 'unit': 'A', 'basis': 'guaranteed',
                                               'source': 'datasheet:设计资料/X - XYZ100.pdf#p1', 'locator': '电气特性表 IOUT'}],
                               'checks': [{'name': '输出纹波', 'value': 18, 'operator': '<=', 'limit': 30, 'unit': 'mV'}]}]}
+        make_current(self.closure, self.record / 'electrical-intent.json', self.root)
         self.write('design-closure.json', self.closure)
         self.write('design-closure-audit.json', audit(self.closure, self.record / 'electrical-intent.json', self.root))
         self.write('summary.json', {'status': 'INCOMPLETE', 'sheets': ['a', 'b'], 'gates': {
@@ -90,7 +91,7 @@ class Delivery:
         self.write('page-plan.json', {'schema_version': 1, 'pages': [
             {'file': 'board.kicad_sch', 'reader_tasks': ['跟随 VIN 到 VOUT 的能量流'], 'blocks': {'稳压': ['U1', 'R1']},
              'circuits': {'稳压': 'output-filter-storage#电解/聚合物 + MLCC 并联'}}]})
-        self.write('lessons.json', {'schema_version': 1, 'events': [
+        self.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
             {'source': 'datasheet:raw/Datasheet/08_电源管理/X - XYZ100.pdf#p3', 'cause': 'none',
              'why_none': 'p.3 的输出电容要求与 part-roles.md 降压转换器行一致'}]})
         self.write('delivery-evidence.json', {'schema_version': 1})
@@ -119,7 +120,8 @@ class DesignReportTests(unittest.TestCase):
         self.assertEqual(lines[2], '- **规模**：器件 2 个，图纸 2 页。')
         self.assertEqual(lines[3], '- **图纸自动检查**：共 4 项。通过（PASS） 2 项，没通过（FAIL） 0 项，资料不足（INSUFFICIENT） 1 项，'
                                    '未完成（INCOMPLETE） 1 项。')
-        self.assertIn('- **需求**：共 1 条。有设计依据 0 条，有条件成立 1 条，还没有设计 0 条。', text)
+        self.assertIn('- **需求**：共 1 条。有设计依据 0 条，有条件成立 1 条，还没有设计 0 条（有条件成立的需求中依赖厂家资料 1 条）。', text)
+        self.assertIn('- **计算**：共 1 项。设计成立 0 项，依赖工程估计 0 项，依赖厂家资料 1 项，不满足 0 项。', text)
         self.assertIn('- **设计完成状态**：未完成。未完成项：', text)
         self.assertIn('2 项图纸自动检查资料不足或未执行：图面几何（重叠、穿线）、设计记录闭合审计', text)
         self.assertIn('2 件未关闭项（设计未完成 1 件，外部资料缺口 1 件）', text)
@@ -162,7 +164,7 @@ class DesignReportTests(unittest.TestCase):
         section = text.split('## 未关闭项')[1].split('\n## ')[0]
         self.assertIn('  - 手册已给出：过压门限只在 25°C 规定；设计所需：全温过压门限与关断时延'
                       '（datasheet:设计资料/X - XYZ100.pdf#p2）', section)
-        self.assertIn('  - C1：纹波电流在 105°C 的额定', section)
+        self.assertIn('  - C1：依赖 待办 W-FW', section)
         self.assertIn('- **外部依赖原因**：过压动作由固件配置决定，手册没有公开', section)
         self.assertIn('- **关闭方式**：取得过压保护配置表后重算 C1', section)
         self.assertIn('  2. 从检测到关断的最大时延', section)
@@ -261,12 +263,6 @@ class DesignReportTests(unittest.TestCase):
         self.assertEqual(problems, ['RC2：引用的需求澄清 CL-LOAD 不在 design-closure.json 里',
                                     'RC3：处理方式为“请用户定需求”时必须填 clarifications'])
 
-    def test_conditional_calculations_listed_with_assumptions(self):
-        text, _ = self.d.report()
-        section = text.split('## 有条件成立的计算')[1].split('## ')[0]
-        self.assertIn('| C1 | R-OUT | 输出纹波：18 ≤ 30 mV | ripple | W-FW |', section)
-        self.assertIn('不阻塞出图', section)
-
     def test_calculations_without_parameter_sources_are_a_problem(self):
         del self.d.closure['parameter_version']
         self.d.write('design-closure.json', self.d.closure)
@@ -333,53 +329,59 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('| C1 | 正常峰值不误触发 | 96.9 / 97.6 V | 0.72% / 10% | 提高门槛 |',
                       text.split('## 余量不足以覆盖估计误差')[1])
 
-    def test_version_1_says_its_conclusions_are_not_layered(self):
-        text, _ = self.d.report()
-        self.assertIn('记录是 parameter_version 1，结论没有按依据分层', text)
-
     def test_small_values_are_not_shown_as_zero(self):
         # R8 showed a 379 ns > 343 ns check as "0 > 0 s".
         self.assertEqual('3.79e-07', num(3.7914e-07))
         self.assertEqual('0.000275', num(0.0002748))
         self.assertEqual('144', num(144.4))
 
-    def estimate_case(self, version=2):
+    def estimate_case(self):
         c1 = self.d.closure['calculations'][0]
         c1.update(coverage='bounded', conclusion='conditional', rests_on='estimate', omitted_terms=[], parameters=[
             {'name': 'eta', 'value': 0.9, 'unit': '1', 'basis': 'model', 'reason': '满载效率工程包络'}],
             checks=[{'name': '空载功耗', 'value': 0.1445, 'operator': '<=', 'limit': 0.15, 'unit': 'W'},
                     {'name': '输出纹波', 'value': 18, 'operator': '<=', 'limit': 30, 'unit': 'mV'},
                     {'name': '每日能量配对', 'value': 217.5, 'operator': '==', 'limit': 217.5, 'unit': 'Wh'}])
-        self.d.closure.update(parameter_version=version)
+        make_current(self.d.closure)
         self.d.write('design-closure.json', self.d.closure)
         return c1
 
-    def test_a_version_2_record_and_a_consistency_check_are_shown(self):
-        self.estimate_case()
-        text, _ = self.d.report()
-        self.assertIn('每日能量配对：218 = 218 Wh', text)
-        self.assertIn('- **记录版本**：parameter_version 2（检查门槛的出处、每条需求有没有检查没核对）', text)
-        self.assertIn('没有 binding_version（料号与手册、符号脚类型、未用脚处置和电源轨最高电压没有核对）', text)
-        self.d.closure.update(binding_version=1)
+    def test_an_older_closure_record_is_refused(self):
+        # user 2026-11-08: only the current versions are read; an older record is rewritten, not reported version by version.
+        self.d.closure['parameter_version'] = 2
+        del self.d.closure['matrix_version']
         self.d.write('design-closure.json', self.d.closure)
-        self.assertNotIn('没有 binding_version', self.d.report()[0])
+        text, problems = self.d.report()
+        self.assertTrue(any(p.startswith('design-closure.json 是旧版本记录（parameter_version 2、matrix_version 缺）') for p in problems),
+                        problems)
+        self.assertNotIn('记录版本', text)
 
-    def test_version_3_estimates_each_say_why(self):
-        c1 = self.estimate_case(3)
+    def test_the_rule_by_rule_tables_stay_in_the_record(self):
+        # user 2026-11-08: the report keeps the decisions; each rule's citation stays in design-closure-audit.json.
+        audit_out = json.loads((self.d.record / 'design-closure-audit.json').read_text())
+        audit_out['guidelines'] = {'library_version': '1.9.8', 'applicable': ['G01-001', 'G07-001'],
+                                   'covered': {'G01-001': ['calc:C1'], 'G07-001': ['work:W-TEST']}, 'not_applicable': {},
+                                   'uncovered': [], 'downstream': ['G07-001'],
+                                   'identity': {}}
+        self.d.write('design-closure-audit.json', audit_out)
+        with mock.patch('render_design_report.guideline_criteria.identity_errors', lambda found: []), \
+                mock.patch('render_design_report.guideline_criteria.shared_label', lambda identity=None: '共用层 x'):
+            text, _ = self.d.report()
+        self.assertIn('- **共用规范**：共用层 x，适用 2 条：已引用 2 条', text)
+        self.assertIn('逐条在 record/design-closure-audit.json 的 guidelines', text)
+        for heading in ('## 共用设计准则覆盖', '## 下游约束', '## 由自动检查覆盖', '## 由设计文档整组覆盖'):
+            self.assertNotIn(heading, text)
+
+    def test_estimates_each_say_why(self):
+        c1 = self.estimate_case()
         c1['parameters'] = [{'name': 'p%d' % i, 'value': 1, 'unit': '1', 'basis': 'model',
                              'reason': '本版工程模型；见设计计算及可复算脚本'} for i in range(4)]
         self.d.write('design-closure.json', self.d.closure)
         text, problems = self.d.report()
         self.assertTrue(any(p.startswith('4 个工程估计参数共用同一句理由') for p in problems), problems)
-        self.assertNotIn('parameter_version 2（', text)
-        self.assertIn('没有 derating_version（器件应力没有按降额等级核对）', text)
         c1['parameters'] = c1['parameters'][:3]
         self.d.write('design-closure.json', self.d.closure)
         self.assertFalse(any('共用同一句理由' in p for p in self.d.report()[1]))
-
-    def test_an_old_gap_record_is_named_in_the_conclusion(self):
-        text, _ = self.d.report()
-        self.assertIn('- **记录版本**：gap_version 1（外部资料缺口没有分类）。新设计按 parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、binding_version 1、matrix_version 1 写。', text)
 
     def test_derating_level_and_stress_risks_are_reported(self):
         # stress-spec.md (user 2026-10-27): the level and every stress risk with its improvement are in the report.
@@ -682,10 +684,10 @@ class DesignReportTests(unittest.TestCase):
         (self.d.record / 'lessons.json').unlink()
         _, problems = self.d.report()
         self.assertIn('缺少 record/lessons.json', problems)
-        self.d.write('lessons.json', {'schema_version': 1, 'events': []})
+        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': []})
         _, problems = self.d.report()
         self.assertTrue(any('没有 events' in p for p in problems), problems)
-        self.d.write('lessons.json', {'schema_version': 1, 'events': [
+        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
             {'source': 'SR-R3/W-1', 'cause': 'rule_missing', 'change': 'scripts/x.py'},
             {'source': 'review:SR-R3/W-2', 'cause': 'knowledge_missing', 'change': 'scripts/x.py'},
             {'source': 'review:SR-R3/W-3', 'cause': 'judgment', 'change': 'SKILL.md 任务 2.1'},
@@ -702,18 +704,18 @@ class DesignReportTests(unittest.TestCase):
 
     def test_a_lesson_changed_in_the_delivery_is_not_a_skill_change(self):
         # R8 wrote its new circuit patterns into 设计资料/references/typical-circuits/, so the skill learned nothing.
-        self.d.write('lessons.json', {'schema_version': 1, 'events': [
+        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
             {'source': 'user:2026-10-27', 'cause': 'knowledge_missing',
-             'change': '设计资料/references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法'},
+             'change': '设计资料/references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法', 'knowledge_kind': 'approach', 'impact': 'uncertain', 'problem': '缺一次侧 VCC 供电 LED 做法', 'uncertainty': '尚无复核', 'pending': '核对典型电路'},
             {'source': 'user:2026-10-27', 'cause': 'knowledge_missing',
-             'change': 'references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法'}]})
+             'change': 'references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法', 'knowledge_kind': 'approach', 'impact': 'uncertain', 'problem': '缺一次侧 VCC 供电 LED 做法', 'uncertainty': '尚无复核', 'pending': '核对典型电路'}]})
         _, problems = self.d.report()
         self.assertTrue(any(p.startswith('lessons.json 第 1 条的 change 写在交付目录里') for p in problems), problems)
         self.assertFalse(any(p.startswith('lessons.json 第 2 条') for p in problems), problems)
 
     def test_a_deferred_comment_is_still_attributed(self):
         # R6 marked nine deferred review comments cause=none "下一轮处理时再归因", among them the P1 F-SR-TONMIN.
-        self.d.write('lessons.json', {'schema_version': 1, 'events': [
+        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
             {'source': 'review:SR-R5/F-SR-TONMIN', 'cause': 'none',
              'why_none': '本版范围外暂缓，未做根因归类；已读该意见原文，下一轮处理时再归因。'},
             {'source': 'review:SR-R5/W-REQ', 'cause': 'none', 'why_none': '需求取舍，用户决定本版暂缓；不反映技能缺口。'}]})
@@ -728,7 +730,7 @@ class DesignReportTests(unittest.TestCase):
             {'id': 'W-B', 'source': 'SR', 'locator': 'W-B', 'comment': 'b', 'response': 'DECLINE', 'detail': '不采纳 b', 'evidence': ['E1'], 'cause': 'rule_missing'},
             {'id': 'W-C', 'source': 'SR', 'locator': 'W-C', 'comment': 'c', 'response': 'DECLINE', 'detail': '不采纳 c', 'evidence': ['E1'], 'cause': 'knowledge_wrong'},
             {'id': 'W-D', 'source': 'SR', 'locator': 'W-D', 'comment': 'd', 'response': 'DECLINE', 'detail': '不采纳 d', 'evidence': ['E1'], 'cause': 'none'}]})
-        self.d.write('lessons.json', {'schema_version': 1, 'events': [
+        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
             {'source': 'review:SR-R3/W-C', 'cause': 'knowledge_missing', 'change': 'references/part-roles.md 光耦行'}]})
         _, problems = self.d.report()
         self.assertIn('W-A：要归因（cause）：rule_missing/rule_not_enforced/knowledge_missing/knowledge_wrong/judgment 或 none', problems)
@@ -739,7 +741,7 @@ class DesignReportTests(unittest.TestCase):
     def test_a_recurring_comment_is_not_a_judgment_slip(self):
         item = {'id': 'W-A', 'source': 'SR', 'locator': 'W-A', 'comment': 'a', 'response': 'DECLINE', 'detail': '不采纳 a',
                 'evidence': ['E1'], 'cause': 'judgment', 'recurs_from': 'review:SR-R4/W-7'}
-        self.d.write('lessons.json', {'schema_version': 1, 'events': [
+        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
             {'source': 'review:SR-R5/W-A', 'cause': 'judgment', 'change': 'SKILL.md 任务 2.3', 'why_not_rule': 'x'}]})
         self.d.write('review-responses.json', {'schema_version': 1, 'sources': [{'id': 'SR', 'path': 'r.md', 'sha256': 'x'}],
                                                'items': [item]})
@@ -788,11 +790,7 @@ class DesignReportTests(unittest.TestCase):
         page['key_blocks'] = ['稳压']
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertIn('board.kicad_sch：功能块“稳压”没有标注典型电路（patterns），没有合适典型电路时在 lessons.json 登记 knowledge_missing 并补写 references/typical-circuits/', problems)
-        self.d.write('lessons.json', {'schema_version': 1, 'events': [
-            {'source': 'user:2026-10-19', 'cause': 'knowledge_missing', 'change': 'references/typical-circuits/ldo-regulator.md 新增'}]})
-        _, problems = self.d.report()
-        self.assertFalse(any('没有标注典型电路' in p for p in problems), problems)
+        self.assertIn('board.kicad_sch：功能块“稳压”没有典型电路或有效的 library_gaps 逐块覆盖待办', problems)
         self.assertTrue(any('scheme-criteria.json' in p for p in problems), problems)
         page['circuits'] = {'稳压': 'no-such#做法'}
         self.d.write('page-plan.json', plan)
@@ -1064,7 +1062,7 @@ class PackDesignTests(unittest.TestCase):
         self.assertFalse(any(e.startswith('previous:') for e in errors), errors)
 
     def test_redesign_must_change_the_named_part_since_previous(self):
-        prev = self.previous(intent={'components': [{'ref': 'U1'}, {'ref': 'R1'}]})
+        prev = self.previous(intent={'components': [{'ref': 'U1'}, {'ref': 'R1', 'value': '10k'}]})
         self.d.write('review-responses.json', {'schema_version': 1,
             'sources': [{'id': 'S1', 'path': '/x', 'sha256': '0' * 64}],
             'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'REDESIGN',

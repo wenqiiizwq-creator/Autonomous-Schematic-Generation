@@ -8,7 +8,7 @@
 |---|---|---|
 | `设计报告.md` | `render_design_report.py` 生成 | 手写的 README、说明、HTML |
 | `原理图/` | `.kicad_pro`、根图与各页 `.kicad_sch`、项目符号库/封装库及库表、`schematic.pdf`、`netlist.xml`、`BOM.csv` | 草稿图、旧版图 |
-| `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`PCB与结构要求.md`、`磁件设计单.md` | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
+| `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`磁件设计单.md`；`PCB与结构要求.md` 只在需求要求时写，PCB 要求平时由 `pcb` 阶段的技术转交待办带给下游 | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
 | `record/` | 见下表 | 日志、历史快照、审查方的其他文件（本版独立审查报告放 `sr-review/`） |
 
 `record/` 内容：
@@ -24,7 +24,7 @@
 | `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注 `references/typical-circuits/` 里的典型电路与实现方案，或登记资料覆盖待办，常规块可不标；显式标注均检查（第一页架构页免标） |
 | `selection.json` | 核心器件选型：每个角色的位号、决定性条件、≥2 个候选（选中/淘汰理由、相对知识库的手册路径）；每个 U/Q/T 器件都要属于一个角色；选定候选写外部依赖，依赖未公开资料时附 2–3 个方案、建议和用户的决定，格式见 [核心器件选型](core-part-selection.md) |
 | `scheme-criteria.json` | 任务 1.3 关键功能块的候选比较；何时必须有、字段与格式示例见 [典型电路库](typical-circuits.md) 的规则一节 |
-| `lessons.json` | 本版资料覆盖待办与事件：`{"schema_version": 2, "library_gaps": [], "events": [{"source", "cause", "change" 或 "why_none", "why_not_rule"}]}`；来源只能是 `review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:<记录>`、`user:<日期>`；`datasheet:` 来源核对文件和页码；schema 2 字段、事件非空例外及历史兼容见下节；归因与改动位置的要求见 [处理审查意见](review-comments.md) |
+| `lessons.json` | 本版资料覆盖待办与事件：`{"schema_version": 2, "library_gaps": [], "events": [{"source", "cause", "change" 或 "why_none", "why_not_rule"}]}`；来源只能是 `review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:<记录>`、`user:<日期>`；`datasheet:` 来源核对文件和页码；schema 2 字段与事件非空例外见下节；归因与改动位置的要求见 [处理审查意见](review-comments.md) |
 | `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要在对应页有非空处置，写出在本版 PDF 上看到了什么；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `原理图/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 原理图/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
 | `delivery-evidence.json` | 导出后有没有再改过的核对记录 |
 | `review-responses.json` | 收到审查意见时必有，格式见 [处理审查意见](review-comments.md) |
@@ -50,24 +50,23 @@
 3. **审查意见怎么处理的**：逐条列出意见、处理方式、说明。
 4. **待办**：`design-closure.json` 里未关闭的待办。用户暂缓的需求（`requirement`）的排最前，其余按由 `consequence_class` 和 `occurrence` 推出的等级
    从重到轻排；写明类型、本版按什么假设设计、要做什么、找谁、拿不到时的替代做法。
-   缺外部资料的待办（`gap_version: 2`，旧记录 1）改写为：找谁、为什么只能找他、搞错的后果、资料到手后怎么关、拿不到时的替代做法，
+   缺外部资料的待办（`gap_version: 2`）改写为：找谁、为什么只能找他、搞错的后果、资料到手后怎么关、拿不到时的替代做法，
    再列缺什么（手册给了 / 设计还需要 / 出处）、影响的计算（附它依赖的参数）和要问的问题。
    **要向外部要的资料**：按负责方汇总上述问题，每题注明对应待办，可整段发给负责方。
 5. **交给后续环节的要求**：状态为 handoff 的 validation / pcb 待办，按负责方列表。
    **引用待人工核对**：设计待办记录、选型记录里的数值在所引手册页的文字里没找到的，逐条列出位置、手册页和数值，请对照原页确认；手册文件不存在或页码越界算记录问题（打包被拒）；没有知识库或 PDF 工具时写明“没核对”。
    **不满足的计算**（计算表的第一节）：每条不满足的检查的值与门槛（最好情景注明）、`contributors` 里最大的几项、
    design 待办的改设计候选（须用户批准）和对应待办。
-   **依赖厂家资料的计算**、**依赖工程估计的计算**、**依赖暂缓的需求的计算**（`parameter_version: 3`，旧记录 2，分档由审计推出，见 design-closure.md）：列出算出的值与门槛（`checks`）、依赖的参数或没算的项和对应待办；结论一节按设计成立 / 依赖工程估计 / 依赖厂家资料 / 依赖暂缓的需求 / 不满足计数。旧记录（版本 1）仍是一节“有条件成立的计算”，列写明的假设或没算进去的项。
+   **依赖厂家资料的计算**、**依赖工程估计的计算**、**依赖暂缓的需求的计算**（`parameter_version: 3`，分档由审计推出，见 design-closure.md）：列出算出的值与门槛（`checks`）、依赖的参数或没算的项和对应待办；结论一节按设计成立 / 依赖工程估计 / 依赖厂家资料 / 依赖暂缓的需求 / 不满足计数。
    **应力风险**（`derating_version: 1`）：在额定内但超过降额值的应力，逐条列出计算、位号、降额规则、应力 / 降额值 / 额定和改进；
    合格但有风险，不挡交付（见 [器件应力规范](shared/stress-spec.md)）。结论一节的“降额等级”一行写等级、来源、应力风险处数和没点名规则的提示数。
    **余量不足以覆盖估计误差**（`uncertainty_version: 1`）：余量小于所依赖工程估计不确定度的检查，列值 / 门槛、余量 / 不确定度和改进；
    合格但有风险，不挡交付，结论一节写处数。
-   **共用设计准则覆盖**、**下游约束（共用规范）**（`guideline_version: 1`）：适用的设计准则逐条列出处、落实处（引用它的计算或待办，或不适用的理由）和关闭阶段；
-   关闭阶段在原理图之后的另列一表，写技术转交待办和设计准则的设计动作。
-   由自动检查覆盖的、由设计文档整组覆盖的（[准则证据分组](guideline-evidence-groups.md)）各列一表：前者写检查名，后者写文档组、证据、准则和核对结果。结论一节的“共用规范”一行写设计准则库版本和各类条数。
+   **共用设计准则**（`guideline_version: 1`）：报告只在结论一节写一行设计准则库版本和各类条数，不逐条列准则；
+   每条准则的落实处、不适用理由、分组核对结果和下游约束只留在 `record/design-closure-audit.json` 的 `guidelines`（用户 2026-11-08）。
+   准则对设计的影响按决定写在别的节里：淘汰候选方案的写在方案比较（`scheme-criteria.json`），转交下游的写在“交给后续环节的要求”。
    器件性能流程一行之后：按 BOM 规格转交采购的件只写一行总数；性能要求提示（不起约束的要求、套用的同一句条件）每类一行。
-   结论一节的“记录版本”一行写明旧版本没核对的内容（版本 2 没核门槛出处和需求检查，`gap_version 1` 没给缺口分类，
-   没有 `uncertainty_version` 没对不确定度核对估计余量）。
+   记录不是现行版本（[design-closure.md](design-closure.md) 开头列的六个版本）时，报告开头提出记录问题，打包被拒，按现行格式重写。
 6. **自动检查明细**、**设计资料**链接、**关键设计依据**（notes 的 `highlights`，最多 8 条）、**数字一览**、**详细记录**。
 
 报告里的数字和状态都来自记录，不手改报告；要改内容就改记录后重新生成。agent 只通过 notes.json 补充摘要和说明，与记录按 [术语对照](terminology.md) 同一套术语写：
@@ -150,9 +149,9 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 （同哈希或同文件名都算在库，`find_parts.py --file <pdf>` 可查）不挡打包，列进 manifest 的 `datasheets_to_file` 并打印出来，
 设计完成后提示用户复制进知识库（SKILL.md 任务 2.1 的资料规则）。
 
-### lessons schema 2（新交付）
+### lessons schema 2
 
-新交付采用 `schema_version: 2`，同时写 `library_gaps` 和 `events` 列表。覆盖待办不带 cause、不进入事件索引；有有效覆盖待办时 events 可空，两者均空时写 `cause: none` 核对记录。旧 schema 1 或缺版本记录仅按历史路径兼容，不自动迁移、不计入新口径归因统计。当前交付入口没有可信的历史/新建身份标识，因此仍接受旧版，不能声称已强制新交付使用 2；未知版本明确拒绝。
+只读 `schema_version: 2`，同时写 `library_gaps` 和 `events` 列表。覆盖待办不带 cause、不进入事件索引；有有效覆盖待办时 events 可空，两者均空时写 `cause: none` 核对记录。schema 1、缺版本或其他版本的记录都算记录问题，按本节格式重写（用户 2026-11-08）。
 
 ```json
 {"schema_version": 2, "library_gaps": [
@@ -167,4 +166,4 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 
 schema 2 的 knowledge_missing 要写 knowledge_kind（approach/criterion/pitfall）、problem（缺少的知识、触发条件及其如何造成具体问题）、impact（observed/uncertain）。observed 必须有 consequence 和非空 evidence 来源列表；uncertain 必须有 uncertainty（不确定原因）和 pending（待核内容），有 evidence 时仍核其来源格式与手册页。只有 observed 且字段完整的事件计入有证据后果，uncertain 单列，覆盖待办独立展示；按事件计数，同一事件的多个来源不重复计数。跨事件同一问题的合并需人工说明。来源存在不等于因果已证实。
 
-引用延用已有语法及检查边界：datasheet 核文件/页码，review/test/user 的来源语义仍需人工核对。历史缺版本的受控识别、新交付版本强制和迁移工具尚未实施；历史数据不得自动改判或改写。覆盖待办不能代替真实审查意见所需的 lessons 事件。
+引用延用已有语法及检查边界：datasheet 核文件/页码，review/test/user 的来源语义仍需人工核对。覆盖待办不能代替真实审查意见所需的 lessons 事件。

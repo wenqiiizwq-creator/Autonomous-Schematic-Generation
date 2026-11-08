@@ -11,7 +11,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria  # noqa: E402
 import object_matrices as om  # noqa: E402
-from audit_design_closure import audit as closure_audit, failing_checks, holds, sha256  # noqa: E402
+from audit_design_closure import CURRENT_VERSIONS, audit as closure_audit, failing_checks, holds, sha256  # noqa: E402
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'object_matrices.py'
 _env = None
@@ -274,7 +274,7 @@ class ProtectionStateTests(unittest.TestCase):
 
 
 class ClosureIntegrationTests(unittest.TestCase):
-    def test_matrix_version_is_audited_and_missing_cells_keep_the_record_incomplete(self):
+    def test_matrices_are_audited_and_missing_cells_keep_the_record_incomplete(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             intent = root / 'intent.json'
@@ -287,13 +287,14 @@ class ClosureIntegrationTests(unittest.TestCase):
                       'work_items': [],
                       'calculations': [dict(CALCS['C-RST'], requirements=['R1'], evidence=['E1'], refs=['U1'], coverage='bounded',
                                             conclusion='supported', omitted_terms=[])]}
-            self.assertEqual('NOT_CHECKED', closure_audit(record, intent, root)['matrices'])
-            record.update(matrix_version=1, matrices={})
+            record.update(CURRENT_VERSIONS)
+            self.assertIn('matrix_schema', {e['code'] for e in closure_audit(record, intent, root)['errors']})
+            record.update(matrices={})
             result = closure_audit(record, intent, root)
             self.assertIn('matrix_cell_missing', {p['code'] for p in result['pending']})
             self.assertIn('supervised_rails', result['matrices'])
             record['matrix_version'] = 2
-            self.assertIn('schema', {e['code'] for e in closure_audit(record, intent, root)['errors']})
+            self.assertIn('outdated_record', {e['code'] for e in closure_audit(record, intent, root)['errors']})
 
 
 if __name__ == '__main__':

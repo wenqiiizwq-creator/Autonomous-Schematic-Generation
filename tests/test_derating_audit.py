@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria
 import audit_design_closure as adc
 from audit_design_closure import audit, sha256
+from current_record import make_current  # noqa: E402
 
 
 
@@ -66,6 +67,7 @@ class DeratingAuditTests(unittest.TestCase):
                             'limit_basis': 'standard', 'limit_source': 'standard:derating-rules#MOS-VDS-S'}]}]}
 
     def run_audit(self):
+        make_current(self.record, self.intent, self.root)
         return audit(self.record, self.intent, self.root)
 
     def codes(self):
@@ -209,7 +211,7 @@ class DeratingAuditTests(unittest.TestCase):
         self.assertIn('stress_risk_without_improvement', self.codes())
         check['improvement'] = '换 6 A 母座或限流 4.5 A'
         result = self.run_audit()
-        self.assertEqual('PASS', result['status'], result['errors'])
+        self.assertEqual([], result['errors'])      # a risk, not an error (the new connector's matrix cells stay pending)
         risk = result['derating']['stress_risks'][0]
         self.assertEqual(('J1', 'USB-I', 5, 4.5, 5), (risk['ref'], risk['rule'], risk['value'], risk['limit'], risk['rating']))
         self.assertFalse(any(h.startswith('derating_rule_available C-VBUS') for h in result['derating']['hints']))
@@ -296,9 +298,6 @@ class DeratingAuditTests(unittest.TestCase):
                          (guideline_criteria.engineering_value('weakest_share'), guideline_criteria.engineering_value('assumed_resistor_package')))
         self.assertEqual(adc.WEAKEST_SHARE, 0.5)
 
-    def test_derating_needs_a_layered_record(self):
-        self.record['parameter_version'] = 1
-        self.assertIn('schema', self.codes())
 
 
 class SevereStressTests(unittest.TestCase):

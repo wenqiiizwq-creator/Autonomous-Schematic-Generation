@@ -51,23 +51,25 @@ def threshold_part(c):
                 or any(THRESHOLD_SERIES.match(str(c.get(k, '')).strip()) for k in ('value', 'mpn'))
                 or (c.get('fields') or {}).get('ComponentRole') == 'threshold')
 WINDOW_SIDES = ('no_false_trip', 'protection')
-# Where each number in a calculation comes from (parameter_version 1). A device
-# parameter cites the datasheet page it was read from; one the datasheet does
-# not give is "unspecified" and ties to a recorded operating-point decision.
-# Version 2 adds requirement inputs and physical constants, no longer filed as models.
-PARAMETER_BASES = ('guaranteed', 'typical', 'derived', 'design_choice', 'model', 'unspecified')
-PARAMETER_BASES_V2 = PARAMETER_BASES + ('requirement', 'constant')
-# Version 3 (R8, user 2026-10-27): each check also says where its limit comes from, so a limit ASG set itself
+# The record versions this audit reads (user 2026-11-08: 记账和留档的都从 ASG 里面清理掉). An older record is not read
+# version by version any more: it fails as outdated and is rewritten in the current format (design-closure.md).
+CURRENT_VERSIONS = {'parameter_version': 3, 'gap_version': 2, 'derating_version': 1, 'uncertainty_version': 1,
+                    'binding_version': 1, 'matrix_version': 1}
+# Where each number in a calculation comes from. A device parameter cites the datasheet page it was read from; one the
+# datasheet does not give is "unspecified" and ties to a recorded operating-point decision; requirement inputs and
+# physical constants are not filed as models.
+PARAMETER_BASES = ('guaranteed', 'typical', 'derived', 'design_choice', 'model', 'unspecified', 'requirement', 'constant')
+# Each check says where its limit comes from (R8, user 2026-10-27), so a limit ASG set itself
 # ("20 J 采购资格", "60 V 筛查值") no longer reads like a rating; and every requirement is checked or says why not.
 LIMIT_BASES = ('requirement', 'guaranteed', 'typical', 'standard', 'derived', 'model')
-# Version 2: the conclusion follows from the inputs. A typical or unspecified device value, or an open
+# The conclusion follows from the inputs. A typical or unspecified device value, or an open
 # vendor-data item, leaves it resting on the vendor; an engineering model or a term not calculated
 # leaves it resting on ASG's own estimate; otherwise the design holds.
 VENDOR_BASES, ESTIMATE_BASES = ('typical', 'unspecified'), ('model',)
 SCENARIOS = ('best', 'worst', 'nominal')
 OMISSION_KINDS = ('not_calculated', 'verify_by_test')
 DATASHEET = re.compile(r'^datasheet:.+#p\d+$')
-# Where a data gap was found (gap_version 1): a datasheet page, a review item or a user decision.
+# Where a data gap was found: a datasheet page, a review item or a user decision.
 GAP_SOURCE = re.compile(r'^(datasheet:.+#p\d+|review:[^/\s]+/\S+|user:\d{4}-\d{2}-\d{2})$')
 GAP_FIELDS = ('missing', 'why_external', 'calculations', 'consequence', 'questions', 'owner', 'fallback', 'action')
 # gap_version 2 (R8): what kind of data each gap lacks. Tests, approvals, certification and quotes are not datasheet
@@ -233,7 +235,7 @@ def estimate_margin(c, uncertainty):
 
 
 def calculation_basis(row, vendor_items=(), deferred_items=()):
-    """(conclusion, rests_on, reasons) a parameter_version 2 calculation follows to.
+    """(conclusion, rests_on, reasons) a calculation follows to.
 
     ``vendor_items`` are the open external work items whose ``calculations`` name this one;
     ``deferred_items`` the open requirement work items (requirements the user deferred) that do.
@@ -384,7 +386,7 @@ def audit_omissions(key, row, work, error):
     return kinds
 
 
-def audit_parameters(key, row, refs, points, calculations, error, version=1, requirements=()):
+def audit_parameters(key, row, refs, points, calculations, error, requirements=()):
     params = row.get('parameters')
     if not isinstance(params, list) or not params:
         error('missing_parameters', key)
@@ -396,9 +398,8 @@ def audit_parameters(key, row, refs, points, calculations, error, version=1, req
             continue
         where = key + ':' + p['name']
         basis = p.get('basis')
-        bases = PARAMETER_BASES_V2 if version >= 2 else PARAMETER_BASES
-        if basis not in bases:
-            error('schema', where + ':basis must be one of ' + '/'.join(bases))
+        if basis not in PARAMETER_BASES:
+            error('schema', where + ':basis must be one of ' + '/'.join(PARAMETER_BASES))
             continue
         if basis != 'unspecified' and not finite(p.get('value')):
             error('schema', where + ':value must be a finite number')
@@ -422,8 +423,6 @@ def audit_parameters(key, row, refs, points, calculations, error, version=1, req
             point = points.get(p.get('operating_point'))
             if not point or point.get('specified') is not False:
                 error('unspecified_parameter_without_operating_point', where)
-        if version == 1 and basis in ('typical', 'unspecified') and row.get('conclusion') == 'supported':
-            error('supported_with_unguaranteed_parameter', where)
 
 
 def shown(value, words):
@@ -442,7 +441,7 @@ def named_limits(c):
 
 
 def audit_limits(key, row, requirements, calculations, error):
-    """Version 3: each check names where its limit comes from."""
+    """Each check names where its limit comes from."""
     for i, c in enumerate(row.get('checks') or []):
         if not isinstance(c, dict):
             continue
@@ -492,7 +491,7 @@ def audit_gap_kinds(key, row, error):
                 error('gap_alternative_feasible', where + ':' + alt['approach'])
 
 
-def audit_gaps(work, calculations, error, version=1):
+def audit_gaps(work, calculations, error):
     """Open external items say which data is missing, why only the owner has it and what to ask."""
     fallbacks, reasons = {}, {}
     for key, row in work.items():
@@ -518,10 +517,9 @@ def audit_gaps(work, calculations, error, version=1):
                 error('gap_unlinked_calculation', key + ':' + str(cid))
         if text(row.get('fallback')):
             fallbacks.setdefault(' '.join(row['fallback'].split()), []).append(key)
-        if version == 2:
-            audit_gap_kinds(key, row, error)
-            if text(row.get('why_external')):
-                reasons.setdefault(' '.join(row['why_external'].split()), []).append(key)
+        audit_gap_kinds(key, row, error)
+        if text(row.get('why_external')):
+            reasons.setdefault(' '.join(row['why_external'].split()), []).append(key)
     for keys in fallbacks.values():
         if len(keys) > 1:
             error('gap_generic_fallback', '、'.join(keys))
@@ -1183,10 +1181,9 @@ TVS_VRWM = (re.compile(r'^(?:SMAJ|SMBJ|SMCJ|SMDJ|SMLJ|SMF)(\d+(?:\.\d+)?)C?A', r
 VOLTS = re.compile(r'(\d+(?:\.\d+)?)\s*(k?)V(?![A-Za-z])')
 
 
-def audit_placeholders(intent, error, strict=False):
+def audit_placeholders(intent, error):
     """A value or part number still holding a library default or a wildcard never ships (DOC-D01: R_Small, C, BZT52Bxx,
-    xx, - on real boards); a reference still carrying ? is unannotated (DOC-Q01: K?). With ``strict`` (binding_version 1)
-    an empty value counts too."""
+    xx, - on real boards); a reference still carrying ? is unannotated (DOC-Q01: K?); an empty value counts too."""
     for c in intent.get('components') or []:
         if not isinstance(c, dict):
             continue
@@ -1202,7 +1199,7 @@ def audit_placeholders(intent, error, strict=False):
         generic = str(c.get('lib_id') or '').partition(':')[0] == 'Device'   # a project symbol named after its part is no default
         if value in PLACEHOLDER_VALUES or (kind in VALUE_KINDS and value and value == symbol and generic):
             error('placeholder_value', '%s：值 %s 是库默认名或占位，写设计值（阻值/容值/稳压值/型号）' % (ref, value))
-        elif strict and not value and kind not in ('mechanical', 'testpoint', 'connector'):
+        elif not value and kind not in ('mechanical', 'testpoint', 'connector'):
             error('placeholder_value', '%s：没有写值' % ref)
         if FIT_STATE_IN_VALUE.search(value):
             error('dnp_in_value', '%s：值 %s 里写了装配状态；值只写值和规格，不装用 dnp 标明（BOM 的 Assembly 列随之写“%s”），'
@@ -1470,6 +1467,10 @@ def audit(record, intent_path, artifact_root, inputs=None):
         return {'status': 'FAIL', 'errors': [{'code': 'schema', 'item': 'record must be an object'}], 'pending': []}
     if record.get('schema_version') != 1:
         error('schema', 'schema_version must be 1')
+    for key, current in CURRENT_VERSIONS.items():
+        if record.get(key) != current:
+            error('outdated_record', '%s 是 %s，只读现行版本 %d：按 design-closure.md 的现行格式重写记录' % (
+                key, record.get(key, '缺'), current))
     if record.get('intent_sha256') != sha256(intent_path):
         error('stale_intent', intent_path.name)
     intent = json.loads(intent_path.read_text(encoding='utf-8'))
@@ -1580,142 +1581,44 @@ def audit(record, intent_path, artifact_root, inputs=None):
             if state == 'design_supported' and not closed:
                 error('unsupported_requirement_claim', key + ':' + dep)
 
-    parameters = 'parameter_version' in record
-    if parameters and record['parameter_version'] not in (1, 2, 3):
-        error('schema', 'parameter_version must be 1, 2 or 3')
-        parameters = False
-    version = record['parameter_version'] if parameters else None
-    points = audit_operating_points(record, work, refs, error, need) if parameters else {}
+    points = audit_operating_points(record, work, refs, error, need)
     vendor_items, deferred_items, derived = vendor_items_of(work), vendor_items_of(work, 'requirement'), {}
     for key, row in calculations.items():
-        if parameters:
-            audit_parameters(key, row, refs, points, calculations, error, version, requirements)
+        audit_parameters(key, row, refs, points, calculations, error, requirements)
         linked(row, 'requirements', requirements, True)
         linked(row, 'evidence', evidence, True)
         coverage, conclusion = row.get('coverage'), row.get('conclusion')
         if coverage not in ('bounded', 'partial') or conclusion not in ('supported', 'conditional', 'failed'):
             error('schema', key + ':invalid coverage/conclusion')
-        if version in (2, 3):
-            audit_calculation_v2(key, row, work, vendor_items.get(key, []), deferred_items.get(key, []), derived, error, need)
-            if version == 3:
-                audit_limits(key, row, requirements, calculations, error)
-            continue
-        omitted = row.get('omitted_terms')
-        if not isinstance(omitted, list) or any(not isinstance(x, str) for x in omitted):
-            error('schema', key + ':omitted_terms must be a string list')
-            omitted = []
-        if coverage == 'bounded' and omitted:
-            error('contradictory_coverage', key)
-        if conclusion == 'supported' and (coverage != 'bounded' or omitted):
-            error('partial_calculation_claimed_supported', key)
-        assumptions = row.get('assumptions', [])
-        if not isinstance(assumptions, list) or any(not isinstance(x, str) for x in assumptions):
-            error('schema', key + ':assumptions must be a string list')
-            assumptions = []
-        # Design-level threshold: a conditional result with its assumptions written down is enough to
-        # draw the schematic; proving it under every guaranteed condition belongs to independent review.
-        if conclusion == 'conditional' and not (omitted or assumptions):
-            error('conditional_without_assumptions', key)
-        # Conditional is not a hedge: it names the guarantee the datasheet or the
-        # requirement does not give; partial coverage names what was left out.
-        if conclusion == 'conditional' and not (isinstance(row.get('missing_guarantee'), str) and row['missing_guarantee'].strip()):
-            error('conditional_without_missing_guarantee', key)
-        if coverage == 'partial' and not omitted:
-            error('partial_without_omitted_terms', key)
-        linked(row, 'refs', refs, True)
-        # The conclusion follows from the numbers: each check compares a computed
-        # value with the limit it must meet. A failed check cannot be called
-        # conditional, and a calculation without any check proves nothing.
-        checks = row.get('checks')
-        if not isinstance(checks, list) or not checks:
-            error('missing_checks', key)
-            checks = []
-        results, sides = [], set()
-        for i, c in enumerate(checks):
-            where = key + ':checks[' + str(i) + ']'
-            if (not isinstance(c, dict) or not isinstance(c.get('name'), str) or not c['name'].strip()
-                    or not finite(c.get('value')) or not finite(c.get('limit'))
-                    or c.get('operator') not in OPERATORS or not isinstance(c.get('unit'), str)):
-                error('schema', where + ' needs name, finite value/limit, operator (<=, <, >=, >, ==) and unit')
-                continue
-            results.append(holds(c))
-            if c.get('side') is not None:
-                if c['side'] not in WINDOW_SIDES:
-                    error('schema', where + ':side must be no_false_trip or protection')
-                sides.add(c['side'])
-        if results and conclusion in ('supported', 'conditional') and not all(results):
-            error('conclusion_contradicts_checks', key)
-        if results and conclusion == 'failed' and all(results):
-            error('conclusion_contradicts_checks', key)
-        # A threshold has two sides: normal operation must stay clear of the
-        # minimum trip point, and the maximum trip point must still protect.
-        if row.get('kind') == 'threshold':
-            for side in WINDOW_SIDES:
-                if side not in sides:
-                    error('threshold_window_incomplete', key + ':' + side)
-        elif row.get('kind') is not None:
-            error('schema', key + ':kind must be threshold when present')
-        if conclusion == 'failed':
-            need('calculation_failed', key)
-            for rid in row.get('requirements', []):
-                if rid in requirements and requirements[rid].get('status') == 'design_supported':
-                    error('unsupported_calculation_dependency', rid + ':' + key)
-    if version in (2, 3):
-        for rid, req in requirements.items():
-            weak = [k for k, row in calculations.items() if rid in (row.get('requirements') or [])
-                    and derived.get(k, {}).get('conclusion') != 'supported']
-            if req.get('status') == 'design_supported' and weak:
-                error('requirement_status_not_derived', rid + ': rests on ' + '、'.join(weak))
-    if version == 3:
-        # R8: the cost target was "estimated in the selection record" and never was; every requirement is checked.
-        checked = {r for row in calculations.values() for r in row.get('requirements') or [] if isinstance(r, str)}
-        for rid, req in requirements.items():
-            if rid not in checked and not text(req.get('no_check_reason')):
-                error('requirement_without_check', rid)
-    derating = None
-    if 'derating_version' in record:
-        if record['derating_version'] != 1 or version not in (2, 3):
-            error('schema', 'derating_version must be 1, with parameter_version 2 or 3')
-        else:
-            derating = audit_derating(record, intent, calculations, requirements, clarifications, error, work=work)
-    # Inputs that describe the board's surroundings have a source, whatever the record version since parameter_version 2
+        audit_calculation_v2(key, row, work, vendor_items.get(key, []), deferred_items.get(key, []), derived, error, need)
+        audit_limits(key, row, requirements, calculations, error)
+    for rid, req in requirements.items():
+        weak = [k for k, row in calculations.items() if rid in (row.get('requirements') or [])
+                and derived.get(k, {}).get('conclusion') != 'supported']
+        if req.get('status') == 'design_supported' and weak:
+            error('requirement_status_not_derived', rid + ': rests on ' + '、'.join(weak))
+    # R8: the cost target was "estimated in the selection record" and never was; every requirement is checked.
+    checked = {r for row in calculations.values() for r in row.get('requirements') or [] if isinstance(r, str)}
+    for rid, req in requirements.items():
+        if rid not in checked and not text(req.get('no_check_reason')):
+            error('requirement_without_check', rid)
+    derating = audit_derating(record, intent, calculations, requirements, clarifications, error, work=work)
+    # Inputs that describe the board's surroundings have a source
     # (Matrix R2, user 2026-11-04: a 1 A startup load written into a script and a parameter's name reversed a check).
-    inputs_found = None
-    if version in (2, 3):
-        inputs_found = audit_operating_inputs(record, calculations, requirements, clarifications, work, intent, error)
-    margins = None
-    if 'uncertainty_version' in record:
-        if record['uncertainty_version'] != 1 or version not in (2, 3):
-            error('schema', 'uncertainty_version must be 1, with parameter_version 2 or 3')
-        else:
-            margins = audit_estimate_margins(calculations, error)
-    # Placeholders never ship, whatever the record version (DOC-D01); binding_version 1 adds the identity, pin and rail checks.
-    audit_placeholders(intent, error, strict='binding_version' in record)
+    inputs_found = audit_operating_inputs(record, calculations, requirements, clarifications, work, intent, error)
+    margins = audit_estimate_margins(calculations, error)
+    # Placeholders never ship (DOC-D01); the identity, pin and rail checks follow.
+    audit_placeholders(intent, error)
     # Nets declared to leave the design to another board each have a row in their interface contract (Matrix R2).
     verified = set()
     boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error, verified)
-    binding = None
-    if 'binding_version' in record:
-        if record['binding_version'] != 1:
-            error('schema', 'binding_version must be 1')
-        else:
-            binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need, verified)
+    binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need, verified)
     # Every object a criterion applies to has its own cell (whole-board baseline 2026-11-07: a reset threshold checked against
     # the MCU only, storage temperature left to "device ratings", reverse polarity checked on the power path only).
-    matrices = None
-    if object_matrices.VERSION_KEY in record:
-        if record[object_matrices.VERSION_KEY] != 1:
-            error('schema', 'matrix_version must be 1')
-        else:
-            passes = lambda c: holds(c) is not None and not failing_checks({'checks': [c]})   # noqa: E731  stress risk passes
-            matrices = object_matrices.audit(record, intent, calculations, evidence, requirements, passes, error, need,
-                                             [root, *(inputs or ())])
-    gaps = 'gap_version' in record
-    if gaps and record['gap_version'] not in (1, 2):
-        error('schema', 'gap_version must be 1 or 2')
-        gaps = False
-    if gaps:
-        audit_gaps(work, calculations, error, record['gap_version'])
+    passes = lambda c: holds(c) is not None and not failing_checks({'checks': [c]})   # noqa: E731  stress risk passes
+    matrices = object_matrices.audit(record, intent, calculations, evidence, requirements, passes, error, need,
+                                     [root, *(inputs or ())])
+    audit_gaps(work, calculations, error)
     citations = audit_citations(record, calculations, work, [root, *(inputs or ())], error)
     covered = {r for row in calculations.values() if isinstance(row.get('refs'), list) for r in row['refs']}
     for ref in threshold_parts:
@@ -1752,15 +1655,10 @@ def audit(record, intent_path, artifact_root, inputs=None):
             'severities': {k: severity_of(v) for k, v in work.items() if v.get('status') == 'open' and severity_of(v)},
             'pcb_handoffs': [k for k, v in work.items() if v.get('stage') == 'pcb' and v.get('status') == 'handoff'],
             'counts': {k: len(v) for k, v in tables.items()}, 'convergence': convergence,
-            'parameters': 'CHECKED' if parameters else 'NOT_CHECKED', 'parameter_version': version,
-            'calculation_basis': derived,
-            'gaps': 'CHECKED' if gaps else 'NOT_CHECKED', 'citations': citations,
-            'derating': derating if derating is not None else 'NOT_CHECKED',
-            'operating_inputs': inputs_found if inputs_found is not None else 'NOT_CHECKED',
-            'estimate_margins': margins if margins is not None else 'NOT_CHECKED',
+            'calculation_basis': derived, 'citations': citations, 'derating': derating,
+            'operating_inputs': inputs_found, 'estimate_margins': margins,
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
-            'binding': binding if binding is not None else 'NOT_CHECKED',
-            'matrices': matrices if matrices is not None else 'NOT_CHECKED',
+            'binding': binding, 'matrices': matrices,
             'boundary_nets': boundary,
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),
             'downstream_handoffs': [k for k, v in work.items() if v.get('stage') in ('validation', 'pcb') and v.get('status') == 'handoff']}

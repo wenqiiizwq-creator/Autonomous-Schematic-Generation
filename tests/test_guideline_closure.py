@@ -12,7 +12,6 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria
-import render_design_report
 from audit_design_closure import audit, sha256
 
 ASG = Path(__file__).resolve().parents[1]
@@ -173,18 +172,14 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertNotIn('guideline_scope_missing', self.codes(result))
         self.assertEqual(result['guidelines'], 'NOT_CHECKED')
 
-    def test_the_report_lists_the_rules_and_the_downstream_ones(self):
+    def test_the_audit_binds_the_shared_layer_it_read(self):
         self.record['guideline_scope']['device_kinds'] = ['fuse']
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G05-001', 'reason': '输入由上级设备熔断'}]
         result = self.run_audit()
         self.assertEqual(result['guidelines']['fingerprint_format'], 'shared-paths-sha256-v2')
         self.assertEqual(result['guidelines']['shared_sha256'], guideline_criteria.shared_versions(bundle=LIBRARY)['shared_sha256'])   # binds the actual test input
-        with mock.patch.object(guideline_criteria, 'load', lambda *args: LIBRARY):
-            text = '\n'.join(render_design_report.render_guidelines(result['guidelines']))
-        self.assertIn('| G04-001 | 示例规则 G04-001 | GB/T 17799.2 2023 表4 第9页 | calc:C1 | 原理图 |', text)
-        self.assertIn('| G05-001 | 示例规则 G05-001 | GB/T 17799.2 2023 表4 第9页 | 不适用：输入由上级设备熔断 | 原理图 |', text)
-        self.assertIn('| G07-001 | PCB | work:W1 | 设计动作 |', text.split('## 下游约束（共用规范）')[1])
-        self.assertEqual(render_design_report.render_guidelines(None), [])
+        self.assertEqual(result['guidelines']['covered']['G04-001'], ['calc:C1'])
+        self.assertEqual(result['guidelines']['not_applicable']['G05-001'], '输入由上级设备熔断')
 
     def test_the_shared_directory_holds_exactly_the_shared_files(self):
         listed = {Path(n).name for n in SHARED if n.startswith('references/shared/')}
@@ -207,11 +202,6 @@ class GuidelineClosureTests(unittest.TestCase):
         result = self.run_audit()
         self.assertNotIn('by_coverage', result['guidelines'])
         self.assertNotIn('project_input_tbr', result['guidelines'])
-        with mock.patch.object(guideline_criteria, 'load', lambda *args: LIBRARY):
-            report = '\n'.join(render_design_report.render_guidelines(result['guidelines']))
-        self.assertNotIn('需求基线回答', report)
-        self.assertNotIn('下游交接清单', report)
-        self.assertIn('下游约束', report)
 
     def test_a_baseline_answers_project_input_rules_and_one_work_item_hands_off_many(self):
         self.batch_record()
@@ -296,24 +286,6 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['work_items'][0].update(status='closed', closure={'type': 'x'}, guidelines=rules,
                                             guideline_evidence={r: 'E1#一处' for r in rules})
         self.assertIn('guideline_evidence_repeated', self.codes(self.run_audit(lib)))
-
-    def test_the_report_folds_each_batch_class_into_one_table(self):
-        self.batch_record()
-        lib = self.batch_library()
-        found = self.run_audit(lib)['guidelines']
-        with mock.patch.object(guideline_criteria, 'load', lambda *args: lib):
-            lines = render_design_report.render_guidelines(found)
-        text = '\n'.join(lines)
-        self.assertEqual(lines.count('## 需求基线回答的设计准则'), 1)
-        self.assertEqual(lines.count('## 下游交接清单'), 1)
-        self.assertIn('| G08-001 | 示例规则 G08-001 | R1 |', text)
-        self.assertIn('| G08-002 | 示例规则 G08-002 | TBR |', text)
-        self.assertIn('| G07-001 | PCB | work:W1 | 设计动作 |', text)
-        self.assertNotIn('## 下游约束', text)     # every downstream rule here is in the handoff table
-        main = text.split('## 需求基线回答')[0]
-        self.assertNotIn('G08-001', main)
-        self.assertNotIn('G07-001', main)
-        self.assertIn('G01-001', main)
 
     def test_the_library_checks_the_field(self):
         field_errors = lambda *cards: [e for e in guideline_criteria.bundle_errors(library(*cards))

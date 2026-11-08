@@ -10,6 +10,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria
 from audit_design_closure import audit, sha256
+from current_record import make_current
 
 # Citations here name no real PDF; without a library they are NOT_CHECKED and leave these checks alone
 # (test_citations covers the citation check itself). The CLI subprocesses inherit the setting.
@@ -55,6 +56,7 @@ class DesignClosureTests(unittest.TestCase):
                               'checks': [{'name': 'output ripple', 'value': 18, 'operator': '<=', 'limit': 30, 'unit': 'mV'}]}]}
 
     def run_audit(self):
+        make_current(self.record, self.intent, self.root)
         return audit(self.record, self.intent, self.root)
 
     def codes(self):
@@ -62,7 +64,11 @@ class DesignClosureTests(unittest.TestCase):
 
     def external(self):
         self.record['work_items'][0].update(stage='external', status='open', owner='vendor', consequence_class='function', occurrence='normal',
-            action='Obtain exact firmware feature evidence', fallback='Compare independent hardware implementation')
+            action='Obtain exact firmware feature evidence', fallback='Compare independent hardware implementation',
+            missing=[{'source': 'user:2026-10-27', 'given': 'feature list without limits', 'needed': 'firmware feature limits',
+                      'kind': 'firmware'}], why_external='the firmware is the vendor\'s', calculations=[],
+            no_calculation_reason='feature presence only', consequence='feature missing at bring-up',
+            questions=['Is the feature in the shipped firmware?'])
 
     def test_complete_design_record_passes_but_does_not_claim_native_or_sr(self):
         result = self.run_audit()
@@ -89,46 +95,14 @@ class DesignClosureTests(unittest.TestCase):
         self.assertEqual('PASS', self.run_audit()['status'])
         self.assertEqual(['W1'], self.run_audit()['downstream_handoffs'])
 
-    def test_omitted_loss_terms_cannot_prove_budget(self):
-        self.record['calculations'][0].update(coverage='partial', omitted_terms=['core loss', 'clamp loss'])
-        self.assertIn('partial_calculation_claimed_supported', self.codes())
-        self.record['calculations'][0].update(conclusion='conditional', missing_guarantee='loss model at full load')
-        self.record['requirements'][0]['status'] = 'conditional'
-        self.assertEqual('INCOMPLETE', self.run_audit()['status'])
-
-    def test_conditional_calculation_with_written_assumptions_does_not_block(self):
-        self.record['calculations'][0].update(coverage='partial', conclusion='conditional',
-                                              omitted_terms=['line regulation has only a typical value'],
-                                              missing_guarantee='line regulation over temperature')
-        result = self.run_audit()
-        self.assertEqual('PASS', result['status'], result)
-        self.record['calculations'][0].update(coverage='bounded', omitted_terms=[], assumptions=['typical Vth used'])
-        self.assertEqual('PASS', self.run_audit()['status'])
-
-    def test_conditional_names_the_missing_guarantee_and_partial_names_omissions(self):
-        self.record['calculations'][0].update(coverage='partial', conclusion='conditional', assumptions=['typ Vf'])
-        codes = self.codes()
-        self.assertIn('conditional_without_missing_guarantee', codes)
-        self.assertIn('partial_without_omitted_terms', codes)
-        self.record['calculations'][0].update(omitted_terms=['ESR drift'], missing_guarantee='Vf at -10 °C')
-        self.assertEqual('PASS', self.run_audit()['status'], self.run_audit())
-
-    def test_conditional_calculation_must_state_its_assumptions(self):
-        self.record['calculations'][0].update(conclusion='conditional')
-        self.assertIn('conditional_without_assumptions', self.codes())
-
     def test_failed_calculation_blocks_and_cannot_support_requirement(self):
         self.record['calculations'][0]['conclusion'] = 'failed'
         self.record['calculations'][0]['checks'][0]['value'] = 45
-        self.assertIn('unsupported_calculation_dependency', self.codes())
+        self.assertIn('requirement_status_not_derived', self.codes())
         self.record['requirements'][0]['status'] = 'conditional'
         result = self.run_audit()
         self.assertEqual('INCOMPLETE', result['status'])
         self.assertIn({'code': 'calculation_failed', 'item': 'C1'}, result['pending'])
-
-    def test_omissions_cannot_be_marked_bounded(self):
-        self.record['calculations'][0]['omitted_terms'] = ['bias loss']
-        self.assertIn('contradictory_coverage', self.codes())
 
     def test_stale_intent_and_source_are_rejected(self):
         self.intent.write_text(json.dumps({'components': [{'ref': 'U1'}, {'ref': 'U2'}]}))
@@ -148,6 +122,7 @@ class DesignClosureTests(unittest.TestCase):
 
     def test_partial_review_cannot_pass_and_no_calculations_needs_reason(self):
         self.record.update(coverage='partial', calculations=[])
+        self.record['requirements'][0]['no_check_reason'] = 'review not finished'
         result = self.run_audit()
         self.assertEqual('INCOMPLETE', result['status'])
         self.assertTrue({'partial_review', 'calculation_scope_missing'} <= {x['code'] for x in result['pending']})
@@ -187,7 +162,8 @@ class DesignClosureTests(unittest.TestCase):
 
     def written_back(self, text):
         self.record['requirements'].append({'id': 'CL-STBY', 'status': 'design_supported', 'text': text, 'refs': ['U1'],
-                                            'evidence': ['E1'], 'implementation': '启动电阻按待机功耗上限取值', 'depends_on': []})
+                                            'evidence': ['E1'], 'implementation': '启动电阻按待机功耗上限取值', 'depends_on': [],
+                                            'no_check_reason': '测试夹具只核需求澄清'})
 
     def deferred_item(self, assumption='待机功耗 ≤0.1 W（230 Vac 空载）'):
         self.record['requirements'][0]['status'] = 'conditional'
@@ -222,7 +198,7 @@ class DesignClosureTests(unittest.TestCase):
         self.assertIn('delegate_without_task', self.codes())
         given = {k: q['answer'][k] for k in ('id', 'decision', 'text', 'by', 'date') if k in q['answer']}
         given['id'] = 'CL-STBY'
-        (self.root / 'record').mkdir()
+        (self.root / 'record').mkdir(exist_ok=True)
         task = self.root / 'record' / 'task.json'
         task.write_text(json.dumps({'schema_version': 1, 'id': 'T7', 'clarification_answers': [dict(given, by='用户')]}))
         self.assertIn('delegate_mismatch', self.codes())
@@ -235,7 +211,7 @@ class DesignClosureTests(unittest.TestCase):
         self.written_back(q['proposed_requirement'])
         q['answer'].update(by='delegate:eval-wholeboard:2026-11-07', source={'source': '任务书', 'locator': 'T7 delegation'})
         self.assertIn('delegate_without_task', self.codes())
-        (self.root / 'record').mkdir()
+        (self.root / 'record').mkdir(exist_ok=True)
         task = {'schema_version': 1, 'id': 'T7', 'delegation': {
             'by': 'eval-wholeboard', 'date': '2026-11-07', 'scope': ['clarification'], 'rule': 'adopt_recommendation',
             'text': '采纳 ASG 的建议条文'}}
@@ -378,6 +354,7 @@ class DesignClosureTests(unittest.TestCase):
         self.addCleanup(lambda: [f.unlink() for f in library.iterdir()] and library.rmdir())
         self.source.rename(library / 'design.txt')
         record, out = self.root / 'record.json', self.root / 'result.json'
+        make_current(self.record, self.intent, self.root)
         record.write_text(json.dumps(self.record))
         cli = [sys.executable, '-B', str(Path(__file__).resolve().parents[1] / 'scripts/audit_design_closure.py'),
                str(record), '--intent', str(self.intent), '--artifact-root', str(self.root), '--out', str(out)]
@@ -401,19 +378,18 @@ class CalculationChecksTests(unittest.TestCase):
         self.intent.write_text(json.dumps({'components': [{'ref': 'U1'}, {'ref': 'D1', 'lib_id': 'Device:D_Zener'}]}))
         self.record['intent_sha256'] = sha256(self.intent)
 
-    def test_calculation_needs_checks_and_refs(self):
+    def test_calculation_needs_checks(self):
         del self.record['calculations'][0]['checks']
-        self.record['calculations'][0]['refs'] = []
-        self.assertTrue({'missing_checks', 'missing_refs'} <= self.codes())
+        self.assertIn('missing_checks', self.codes())
 
     def test_failed_check_cannot_be_called_conditional(self):
-        self.record['calculations'][0].update(coverage='partial', conclusion='conditional', assumptions=['typ Vf'])
+        self.record['calculations'][0].update(conclusion='conditional', rests_on='estimate')
         self.record['calculations'][0]['checks'][0]['value'] = 45
-        self.assertIn('conclusion_contradicts_checks', self.codes())
+        self.assertIn('conclusion_not_derived', self.codes())
 
     def test_passing_checks_cannot_be_called_failed(self):
         self.record['calculations'][0]['conclusion'] = 'failed'
-        self.assertIn('conclusion_contradicts_checks', self.codes())
+        self.assertIn('conclusion_not_derived', self.codes())
 
     def test_malformed_check_is_schema_error(self):
         self.record['calculations'][0]['checks'][0]['operator'] = 'about'
@@ -450,11 +426,10 @@ class CalculationChecksTests(unittest.TestCase):
     def test_threshold_false_trip_margin_failure_must_be_failed(self):
         self.zener_board()
         calc = self.record['calculations'][0]
-        calc.update(kind='threshold', refs=['D1'], coverage='partial', conclusion='conditional',
-                    assumptions=['leakage peak 10 %'], checks=[
+        calc.update(kind='threshold', refs=['D1'], conclusion='conditional', rests_on='estimate', checks=[
             {'name': 'no false trip', 'side': 'no_false_trip', 'value': 71.0, 'operator': '<', 'limit': 69.4, 'unit': 'V'},
             {'name': 'protects', 'side': 'protection', 'value': 25.0, 'operator': '<=', 'limit': 35.0, 'unit': 'V'}])
-        self.assertIn('conclusion_contradicts_checks', self.codes())
+        self.assertIn('conclusion_not_derived', self.codes())
 
 
 class ParameterSourceTests(unittest.TestCase):
@@ -467,15 +442,19 @@ class ParameterSourceTests(unittest.TestCase):
     def opto_board(self):
         # The R5 case: a PD controller GPIO sinks an optocoupler LED; the datasheet gives no sink current or VOL.
         self.intent.write_text(json.dumps({'components': [{'ref': 'U1'}, {'ref': 'U601'}, {'ref': 'R407'}]}))
-        self.record.update(parameter_version=1, intent_sha256=sha256(self.intent))
+        self.record['intent_sha256'] = sha256(self.intent)
         self.record['work_items'].append({'id': 'W-OPTO', 'stage': 'external', 'status': 'open', 'requirements': ['R1'],
                                           'evidence': [], 'consequence_class': 'function', 'occurrence': 'normal', 'owner': '原厂', 'action': '取得 GPIO 灌电流保证',
-                                          'fallback': '见 OP-GPIO1'})
+                                          'fallback': '见 OP-GPIO1', 'why_external': 'GPIO 驱动能力只有原厂知道', 'calculations': ['C1'],
+                                          'consequence': '光耦电流不足时信号丢失', 'questions': ['GPIO1 灌 2 mA 时的最大 VOL'],
+                                          'missing': [{'source': self.SHEET, 'given': '开路电压', 'needed': '灌电流时的 VOL',
+                                                       'kind': 'unspecified', 'alternatives': [
+                                                           {'approach': '小信号 MOS 缓冲', 'specified': True, 'feasible': False,
+                                                            'reason': '占位'}]}]})
         self.record['requirements'][0].update(status='conditional', depends_on=['W1', 'W-OPTO'])
-        self.record['calculations'][0].update(refs=['U601', 'R407'], coverage='partial', conclusion='conditional',
-                                              omitted_terms=['寿命 CTR'], missing_guarantee='GPIO1 灌电流时的 VOL', parameters=[
+        self.record['calculations'][0].update(refs=['U601', 'R407'], conclusion='conditional', rests_on='vendor_data', parameters=[
             {'name': 'R407', 'ref': 'R407', 'value': 470, 'unit': 'ohm', 'basis': 'design_choice'},
-            {'name': 'CTR 寿命保持', 'value': 0.5, 'unit': '1', 'basis': 'model', 'reason': '设计折减'},
+            {'name': 'CTR 寿命保持', 'value': 0.5, 'unit': '1', 'basis': 'model', 'reason': '设计折减', 'uncertainty': 0.2},
             {'name': 'VOL', 'ref': 'U601', 'value': 0.4, 'unit': 'V', 'basis': 'unspecified',
              'source': self.SHEET, 'locator': 'GPIO1 一节只有开路电压与偏置电流档', 'operating_point': 'OP-GPIO1'}])
         self.record['operating_points'] = [{
@@ -484,10 +463,17 @@ class ParameterSourceTests(unittest.TestCase):
             'alternatives': [{'approach': '小信号 MOS 缓冲', 'specified': True, 'feasible': False, 'reason': '占位'}]}]
         return self.record['calculations'][0], self.record['operating_points'][0]
 
-    def test_parameters_are_checked_only_with_parameter_version(self):
-        self.assertEqual('NOT_CHECKED', self.run_audit()['parameters'])
-        self.record['parameter_version'] = 1
-        self.assertIn('missing_parameters', self.codes())
+    def test_an_older_record_fails_and_is_rewritten_in_the_current_format(self):
+        # user 2026-11-08: the audit no longer reads older versions one by one.
+        self.run_audit()
+        self.record['parameter_version'] = 2
+        del self.record['matrix_version']
+        result = audit(self.record, self.intent, self.root)
+        self.assertEqual('FAIL', result['status'])
+        self.assertEqual(['parameter_version', 'matrix_version'],
+                         [e['item'].split()[0] for e in result['errors'] if e['code'] == 'outdated_record'])
+        del self.record['calculations'][0]['parameters']
+        self.assertIn('missing_parameters', {e['code'] for e in audit(self.record, self.intent, self.root)['errors']})
 
     def test_device_parameter_needs_a_datasheet_page(self):
         calc, _ = self.opto_board()
@@ -508,11 +494,6 @@ class ParameterSourceTests(unittest.TestCase):
         self.assertNotIn('unspecified_parameter_without_operating_point', self.codes())
         point['specified'] = True
         self.assertIn('unspecified_parameter_without_operating_point', self.codes())
-
-    def test_unguaranteed_parameter_cannot_support_a_conclusion(self):
-        calc, _ = self.opto_board()
-        calc.update(coverage='bounded', conclusion='supported', omitted_terms=[])
-        self.assertIn('supported_with_unguaranteed_parameter', self.codes())
 
     def test_feasible_specified_alternative_refuses_the_unspecified_mode(self):
         _, point = self.opto_board()
@@ -536,14 +517,13 @@ class ParameterSourceTests(unittest.TestCase):
 
 
 class DerivedConclusionTests(unittest.TestCase):
-    """parameter_version 2: the conclusion follows from the inputs (R1-R6: all 164 calculations were conditional)."""
+    """The conclusion follows from the inputs (R1-R6: all 164 calculations were conditional)."""
     setUp = DesignClosureTests.setUp
     run_audit = DesignClosureTests.run_audit
     codes = DesignClosureTests.codes
     SHEET = 'datasheet:Datasheet/X/Vendor - XYZ.pdf#p4'
 
     def calc(self, *bases, conclusion='supported', rests_on=None, omitted=()):
-        self.record['parameter_version'] = 2
         params = {'guaranteed': {'name': 'Vref', 'ref': 'U1', 'value': 1.2, 'unit': 'V', 'source': self.SHEET, 'locator': '表 6'},
                   'design_choice': {'name': 'R1', 'ref': 'U1', 'value': 1e4, 'unit': 'ohm'},
                   'requirement': {'name': 'P_out', 'value': 100, 'unit': 'W', 'source': 'req:R1'},
@@ -639,19 +619,19 @@ class DerivedConclusionTests(unittest.TestCase):
         c = self.calc('requirement')
         c['parameters'][0]['source'] = 'req:R9'
         self.assertIn('requirement_parameter_without_requirement', self.codes())
-        self.record['parameter_version'] = 1
-        self.assertIn('schema', self.codes())   # version 1 has no requirement basis
 
 
     def v3(self, **limit):
         # R8 (user 2026-10-27): limits ASG set itself read like ratings; the cost target was never checked.
         self.calc('guaranteed', 'design_choice', 'requirement', 'constant')
-        self.record['parameter_version'] = 3
         check = self.record['calculations'][0]['checks'][0]
+        for key in ('limit_basis', 'limit_source'):
+            check.pop(key, None)
         check.update(limit)
+        check.setdefault('limit_basis', None)     # written but empty: the fixture helper leaves it for the audit
         return check
 
-    def test_version_3_checks_say_where_their_limit_comes_from(self):
+    def test_checks_say_where_their_limit_comes_from(self):
         check = self.v3()
         self.assertIn('check_limit_without_basis', self.codes())
         check.update(limit_basis='requirement', limit_source='req:R9')
@@ -674,15 +654,12 @@ class DerivedConclusionTests(unittest.TestCase):
         check.update(limit_basis='typical', limit_source=self.SHEET)
         self.assertEqual('vendor_data', self.basis()['rests_on'])
 
-    def test_version_3_checks_every_requirement_or_says_why_not(self):
+    def test_every_requirement_is_checked_or_says_why_not(self):
         self.v3(limit_basis='requirement', limit_source='req:R1')
         self.record['requirements'].append({'id': 'R-COST', 'status': 'conditional', 'refs': [], 'evidence': ['E1'],
                                             'implementation': '整机物料目标 60 元', 'depends_on': []})
         self.assertIn('requirement_without_check', self.codes())
         self.record['requirements'][-1]['no_check_reason'] = '只定认证范围，不对应电路'
-        self.assertNotIn('requirement_without_check', self.codes())
-        self.record['parameter_version'] = 2
-        del self.record['requirements'][-1]['no_check_reason']
         self.assertNotIn('requirement_without_check', self.codes())
 
     def test_a_consistency_check_holds_only_when_equal(self):
@@ -709,29 +686,21 @@ class DataGapTests(unittest.TestCase):
 
     def gap_board(self):
         # The R6 case: USBP is specified only unloaded, so the blocking MOS turn-off path is unknown.
-        self.record['gap_version'] = 1
         self.record['requirements'][0].update(status='conditional')
-        self.record['calculations'][0].update(coverage='partial', conclusion='conditional', omitted_terms=['开关轨迹'],
-                                              missing_guarantee='USBP 带载驱动能力与关断时延')
+        self.record['calculations'][0].update(conclusion='conditional', rests_on='vendor_data')
         item = self.record['work_items'][0]
         item.update(stage='external', status='open', consequence_class='function', occurrence='normal', owner='Richtek 应用支持',
                     action='按关断时延积分 Q701 的 VDS-ID-t 并核 SOA',
-                    missing=[{'source': self.SHEET, 'given': 'VOH_USBP 只在 RL=10MΩ 下规定', 'needed': '带 120nC 栅荷时的开通与关断时间'}],
+                    missing=[{'source': self.SHEET, 'given': 'VOH_USBP 只在 RL=10MΩ 下规定', 'needed': '带 120nC 栅荷时的开通与关断时间',
+                              'kind': 'internal'}],
                     why_external='电荷泵驱动和故障时序在芯片内部与固件里', calculations=['C1'],
                     consequence='Q701 超出 SOA 后 D-S 短路，端口无法断开', questions=['从检测到故障到 USBP 下拉的最大时延'],
                     fallback='栅极加由短路检测触发的快放电')
         return item
 
-    def test_gaps_are_checked_only_with_gap_version(self):
-        self.external()
-        self.assertEqual('NOT_CHECKED', self.run_audit()['gaps'])
-        self.record['gap_version'] = 1
-        self.assertIn('gap_missing_fields', self.codes())
-
     def test_complete_gap_record_has_no_gap_errors(self):
         self.gap_board()
         result = self.run_audit()
-        self.assertEqual('CHECKED', result['gaps'])
         self.assertEqual([], [e for e in result['errors'] if e['code'].startswith('gap_')])
 
     def test_each_gap_field_is_required(self):
@@ -748,12 +717,12 @@ class DataGapTests(unittest.TestCase):
         item['no_calculation_reason'] = '只确认固件上电默认行为，没有数值计算依赖它'
         self.assertNotIn('gap_missing_fields', self.codes())
 
-    def test_version_2_gaps_say_what_kind_of_data_is_missing(self):
+    def test_gaps_say_what_kind_of_data_is_missing(self):
         # R8: an ESD test, a quote and an inrush comparison were all filed as datasheet gaps.
         item = self.gap_board()
-        self.record['gap_version'] = 2
-        self.assertIn('gap_kind_missing', self.codes())
         gap = item['missing'][0]
+        del gap['kind']
+        self.assertIn('gap_kind_missing', self.codes())
         gap['kind'] = 'test'
         self.assertIn('gap_not_external', self.codes())
         gap['kind'] = 'firmware'
@@ -761,7 +730,6 @@ class DataGapTests(unittest.TestCase):
 
     def test_an_unguaranteed_value_rules_out_the_parts_that_guarantee_it(self):
         item = self.gap_board()
-        self.record['gap_version'] = 2
         gap = item['missing'][0]
         gap['kind'] = 'typical_only'
         self.assertIn('gap_without_alternatives', self.codes())
@@ -773,7 +741,6 @@ class DataGapTests(unittest.TestCase):
 
     def test_one_reason_for_every_external_item_is_no_reason(self):
         item = self.gap_board()
-        self.record['gap_version'] = 2
         item['missing'][0]['kind'] = 'internal'
         other = copy.deepcopy(item)
         other.update(id='W2', fallback='改用带公开驱动能力的独立高边驱动')

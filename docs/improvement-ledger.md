@@ -15,6 +15,13 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 清理主线外工作流与记账留档（2026-11-08）
+
+纲要写明三项能力目标后，用户要求把不在“需求 → 原理图”主线上的工作流和记账留档从 ASG 清理掉。删去主线外工作流：PDF 参考设计提取（`references/pdf-schematic-extraction.md` 及只读它的测试）、CopperPilot 协助、SKiDL/circuit-synth 导入（`import_circuit_synth.py`、`schematic_layout/importers.py`、`tests/probe_structured_upstream.py`、`circuit-ir.md` 的导入一节及测试）；`circuit_ir.py`、`placement.py` 仍有改写自 SKiDL、circuit-synth 的机制，两份许可证保留。上游采纳清单与来源记录移到 `docs/`。记账留档：设计报告不再输出逐条准则表（共用设计准则覆盖、需求基线回答、下游交接清单、自动检查组、文档组、下游约束），结论一节只留一行条数，逐条留在 `record/design-closure-audit.json`；审计与报告只读现行记录版本（parameter_version 3、gap_version 2、derating_version 1、uncertainty_version 1、binding_version 1、matrix_version 1，lessons schema 2），旧版本记 `outdated_record`/记录问题，要求按现行格式重写，删去 parameter_version 1 的计算分支、gap_version 1、版本缺失时跳过检查和报告的“记录版本”一行；测试夹具用 `tests/current_record.py` 补齐现行格式。《PCB与结构要求》改为需求要求时才写。准则覆盖只留决定性准则会改纲要，只写了草案（`docs/准则覆盖只留决定性准则-纲要草案-2026-11-08.md`），未改纲要、A1 门禁和准则证据分组。
+
+- Event: user:2026-11-08（不在‘需求 → 原理图’这条主线上，可以剥离出 ASG 的，记账和留档的，都从 ASG 里面清理掉）
+- Changed: SKILL.md, README.md, scripts/README.md, references/circuit-ir.md, references/schematic-generation.md, references/delivery-report.md, references/design-closure.md, references/pdf-schematic-extraction.md, references/copperpilot-reference-workflow.md, docs/upstream-integration.md, docs/upstream-sources.json, scripts/import_circuit_synth.py, scripts/schematic_layout/importers.py, scripts/schematic_layout/__init__.py, scripts/schematic_layout/routing.py, scripts/audit_design_closure.py, scripts/render_design_report.py, tests/current_record.py, tests/probe_structured_upstream.py, tests/test_circuit_ir.py, tests/test_derating_rules.py, tests/test_design_closure.py, tests/test_design_report.py, tests/test_derating_audit.py, tests/test_estimate_margins.py, tests/test_board_defect_guards.py, tests/test_operating_inputs.py, tests/test_object_matrices.py, tests/test_guideline_closure.py, tests/test_guideline_evidence_groups.py, tests/test_lessons_v2.py, docs/准则覆盖只留决定性准则-纲要草案-2026-11-08.md, docs/improvement-ledger.md
+
 ## 纲要写明三项能力目标，不过度设计为宗旨（2026-11-08）
 
 用户指出 ASG 的输入是板卡设计需求，输出是方案确定后的原理图，能力体现在三项：选对功能电路、设计合理（成本合适）、图面清晰易读，要求在纲要里明确。纲要原先只写怎么做，没写要达到什么能力，也没有“不过度设计”。按确认的草案（docs/能力目标-纲要草案-2026-11-08.md）：纲要开头新增「能力目标」三项，第 2 项写成“设计合理，不过度设计”，评测 ASG 按这三项衡量；任务 2.3 新增第 5 条“不过度设计”（额定、精度、封装和保护级数按需要取，取高一档写明理由），原第 5、6 条顺延。用户同日调整：经济成本暂不写进纲要，不设门禁。

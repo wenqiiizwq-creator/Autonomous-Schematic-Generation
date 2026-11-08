@@ -101,15 +101,15 @@ def test_unknown_versions(value):
     assert report.check_lessons(data)[0]
 
 
-def test_legacy_compatibility():
+def test_an_older_lessons_record_is_refused():
+    # user 2026-11-08: only the current schema 2 is read; an older record is rewritten.
     old = {'events': [{'source': 'user:2026-11-05', 'cause': 'knowledge_missing',
                        'change': 'references/typical-circuits/new.md'}]}
     for version in (None, 1):
         data = copy.deepcopy(old)
         if version: data['schema_version'] = version
-        assert not report.check_lessons(data)[0]
-        assert not report.check_block_circuits('any.kicad_sch', {'甲': [], '乙': []}, {}, {}, data)
-    assert report.check_lessons({'schema_version': 1, 'events': []})[0]
+        assert any('schema_version 2' in p for p in report.check_lessons(data)[0])
+        assert report.check_block_circuits('any.kicad_sch', {'甲': [], '乙': []}, {}, {}, data, key_blocks=['甲'])
 
 
 @pytest.mark.parametrize('field', ['knowledge_kind', 'impact', 'problem', 'consequence', 'evidence'])

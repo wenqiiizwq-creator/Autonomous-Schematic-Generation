@@ -12,6 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from audit_design_closure import audit, sha256
+from current_record import make_current  # noqa: E402
 
 
 def setUpModule():
@@ -61,6 +62,7 @@ class Fixture(unittest.TestCase):
                             'limit_basis': 'requirement', 'limit_source': 'req:R1'}]}]}
 
     def run_audit(self):
+        make_current(self.record, self.intent, self.root)
         return audit(self.record, self.intent, self.root)
 
     def codes(self):
@@ -82,9 +84,6 @@ class EstimateMarginTests(Fixture):
         self.assertIn('model_without_uncertainty', self.codes())
         self.calc['parameters'][1]['uncertainty'] = 1.5
         self.assertIn('model_without_uncertainty', self.codes())
-        del self.record['uncertainty_version'], self.calc['parameters'][1]['uncertainty']
-        result = self.run_audit()
-        self.assertEqual(([], 'NOT_CHECKED'), (result['errors'], result['estimate_margins']))
 
     def test_a_margin_inside_the_estimate_is_a_risk_with_an_improvement(self):
         self.calc['checks'][1]['value'] = 96.9            # 0.7 % short of the limit against a ±10 % estimate

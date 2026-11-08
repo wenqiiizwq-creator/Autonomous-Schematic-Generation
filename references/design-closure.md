@@ -60,9 +60,14 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 
 `design-closure.json` 是设计审查记录的索引，不复制计算预检的数值模型。
 
+只读现行版本：`parameter_version: 3`、`gap_version: 2`、`derating_version: 1`、`uncertainty_version: 1`、
+`binding_version: 1`、`matrix_version: 1` 六个都要写。缺一个或版本更旧，审计记 `outdated_record`（FAIL），报告提出问题，
+`pack_design.py` 拒绝打包：按本页的现行格式重写记录，不再逐版兼容旧记录（用户 2026-11-08）。
+
 ```json
 {
-  "schema_version": 1, "parameter_version": 2,
+  "schema_version": 1, "parameter_version": 3, "gap_version": 2, "derating_version": 1, "uncertainty_version": 1,
+  "binding_version": 1, "matrix_version": 1,
   "intent_sha256": "<electrical-intent.json 的 SHA256>",
   "coverage": "complete",
   "evidence": [
@@ -102,7 +107,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   `contract` 文档在交付目录或声明的输入里存在（`boundary_contract_missing`），该网络在文档的表格里有一行
   （`boundary_net_not_in_contract`）；声明本身格式错、网络不存在或重复记 `boundary_schema`。审计结果的 `boundary_nets` 列出声明的网络。
 - `clarifications`：问用户的需求问题和答复，给定或采纳的以同编号、`text` 等于答复写进 `requirements`；字段与核对见 [需求澄清](requirement-clarifications.md)。
-- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb`；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的 `gap_version 2` 写（旧记录 1）；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
+- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb`；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的 `gap_version 2` 写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
 - 计算：`coverage` 为 `bounded` / `partial`；`conclusion` 为 `supported` / `conditional` / `failed`。无适用计算时提供 `no_calculations_reason`，不能用空列表绕过。
   - **结论由记录推出**（`parameter_version: 2`）：审计按下表推出结论，写的 `conclusion`/`rests_on` 与推出的不一致记
     `conclusion_not_derived`。报告按三档计数，分“依赖厂家资料的计算”“依赖工程估计的计算”两节列出每条依赖的参数或项。
@@ -188,7 +193,6 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       `stress_risks` 里加 `required_severity`、`loosest_limit`、`margin_to_rating`，`derating.severe_thresholds` 写所用阈值；
       报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
       应力超幅是[器件应力规范](shared/stress-spec.md)判定表中的一档，这里是它在 ASG 设计记录里的写法。
-    - 没有 `derating_version` 的记录照旧审计，报告在“记录版本”一行写明器件应力没有按降额等级核对。
   - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用设计准则（G01–G09，见[共用设计准则库](shared/guideline-criteria.md)）。
     `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
@@ -264,7 +268,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       额定电压（性能记录的 `working_voltage`/`rated_voltage` 下限，或值/规格字段里写的电压）低于它记 `capacitor_rating_below_net_voltage`；
       TVS 的 VRWM（性能记录的 `working_voltage` 下限，或按 VRWM 命名的系列 SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF、PESD/PTVS<a>V<b> 从型号读出）
       低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍按 `derating_version` 写在计算里；这里只拦额定低于工作电压的错。
-    - 审计在 `binding` 列出各网络最高电压和处置行数；没有 `binding_version` 的记录，报告在“记录版本”一行写明这些没有核对。
+    - 审计在 `binding` 列出各网络最高电压和处置行数。
   - **`matrix_version: 1`：对全部对象核对的矩阵与保护逻辑状态表**（整板评测基线 2026-11-07：6 个漏项里 3 个是同一条判据
     只核了一个对象——复位门限只对 MCU 的 2.0 V 核、没对 YT9218 的 3.135 V；−45 ℃ 存储只写“由器件额定覆盖”；防反接只看功率路径、
     没看低边 MOS 断开地回路；另 1 个是软件正常关断时“PG 先于 FLT 失效”的固件判据会不会误置锁没有列）。
@@ -299,8 +303,6 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       对象不在矩阵里记 `matrix_unknown_object`。缺结论记 `matrix_cell_missing`、结论不满足记 `matrix_cell_failed`，两者都使审计为
       INCOMPLETE（设计没做完），审计的 `matrices` 按表列出格数、有结论数和缺的、不满足的格。
     - 工具只列对象，不判对象选得对不对：监控器件、端口路径和状态块按网表规则认，漏认的可以自己加行；格的结论对不对仍要人看。
-    - 没有 `matrix_version` 的记录照旧审计，审计的 `matrices` 是 `NOT_CHECKED`，报告在“记录版本”一行写明。
-  - `parameter_version: 1` 的旧记录照旧审计（下面两段），报告写明“结论没有按依据分层”；版本 2 的旧记录照旧审计，报告在“记录版本”一行写明门槛出处和需求检查没核对。
   - `refs`：这条计算决定了哪些位号的取值，非空，且都在设计网表里。
   - `checks`：非空列表，每项是一个算出来的值和它必须满足的门槛 `{name, value, operator(<=,<,>=,>), limit, unit}`。
     核对两处数据一致的检查（寿命剖面的每日能量等于需求给的剖面、两份记录里的同一个数）写 `operator: "=="`，不写成 `≤`/`≥`：不相等就是不满足（R8 C-LIFE 写成“218 ≤ 218 Wh”）。
@@ -312,9 +314,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - 设计网表里的稳压管、TVS、基准源都必须出现在某条计算的 `refs` 里：按 lib_id（含 Zener/TVS/TL431/LM4040/Ref 等）、
     value 或 mpn 的系列前缀（1N47、BZX、SMBJ、PESD、TLV431、LM385 等）识别，通用符号画的其他阈值器件在 `fields.ComponentRole` 写 `threshold`；
     否则审计报 `threshold_part_uncalculated`。设计资料里写的阈值（如“对应30V包络”）必须与这条计算的数字一致。
-  旧记录（`parameter_version: 1`）：门槛按设计用途：`conditional` 必须用 `omitted_terms` 或 `assumptions`（字符串列表）写明假设，并在 `missing_guarantee` 里写明缺的是哪一项保证（哪个器件、哪个参数、哪个条件手册或需求没给）；写明后不阻塞设计完成，需求也可以据此记为 `design_supported`；报告把它们列在“有条件成立的计算”一节，交独立审查严格核对。只有 `failed` 计入未完成，且不能支撑 `design_supported` 的需求。
-  `coverage: partial` 必须有非空 `omitted_terms`：说不出漏了什么就不是 partial。`conditional` 不是免责词：1.33 A < 3 A 这种没有缺失保证的核对要写 `bounded`/`supported`，审计报 `conditional_without_missing_guarantee` 和 `partial_without_omitted_terms`。
-- **参数来源**（新交付写 `"parameter_version": 3`；都没有时报告提出问题、`pack_design.py` 拒绝打包）：
+- **参数来源**（`"parameter_version": 3`）：
   每条计算加非空 `parameters`，每项 `{name, value, unit, basis, ref, source, locator}`。`basis` 取：
   - `guaranteed`：手册保证的 MIN/MAX；`typical`：手册典型值。两者都要 `ref`（位号）和 `source`
     `datasheet:<库内路径>#p<页>` 加 `locator`（表名/参数符号/条件）。
@@ -331,8 +331,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - `derived`：由其他值推出，写 `derivation`，`source` 是手册页或 `calc:<计算 id>`。
   - `design_choice`：本设计选定的值（电阻阻值、容差档、匝数），写 `ref`。
   - `model`：工程假设或折减（CTR 保持系数、效率包络等），写 `reason`。
-  - `requirement`（版本 2）：来自需求的输入（额定功率、最低输入电压），`source` 写 `req:<需求编号>`，编号须在 `requirements` 里。
-  - `constant`（版本 2）：物理常数（铜电阻率），写 `reason`。
+  - `requirement`：来自需求的输入（额定功率、最低输入电压），`source` 写 `req:<需求编号>`，编号须在 `requirements` 里。
+  - `constant`：物理常数（铜电阻率），写 `reason`。
   - `unspecified`：手册没给的器件参数。`source`/`locator` 写查过的位置，`operating_point` 指向一条 `specified: false` 的工作点；
     `value` 可留空。含 `typical` 或 `unspecified` 的计算不能是 `supported`。
 - **工作点**（`operating_points`，与 `parameter_version` 一起检查）：`{id, refs, pins, mode, specified, source, locator}`。
@@ -346,21 +346,21 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
    "work_item": "W-OPTO",
    "alternatives": [{"approach": "小信号 MOS 缓冲", "specified": true, "feasible": false, "reason": "……"}]}
   ```
-- **资料缺口**（新交付写 `"gap_version": 2`，旧记录 1；有未关闭的 external 待办而没有它时报告提出问题、`pack_design.py` 拒绝打包）：
+- **资料缺口**（`"gap_version": 2`）：
   每件未关闭的 external 待办写：
   - `missing`：非空列表，每项 `{source, given, needed}`。`source` 是发现缺口的位置：`datasheet:<库内路径>#p<页>`、
     `review:<审查目录>/<待办编号>` 或 `user:<日期>`；`given` 写手册给了什么（含测试条件），`needed` 写设计还需要什么。
     `source` 是器件手册（`datasheet:Datasheet/…`）时加 `refs`：缺口说的是哪些位号，它们在设计网表里的 `datasheet` 必须是这份手册；
     标准、应用笔记不写。
-  - 版本 2 的每项 `missing` 加 `kind`，写缺的是哪一类：`unspecified`（手册没给）、`typical_only`（只有典型值）、
+  - 每项 `missing` 加 `kind`，写缺的是哪一类：`unspecified`（手册没给）、`typical_only`（只有典型值）、
     `firmware`（固件或配置）、`internal`（芯片内部行为）。没写记 `gap_kind_missing`；试验、认证、承认、报价不在其中
     （记 `gap_not_external`），改记 `validation` 转交。`unspecified`、`typical_only` 还要写 `alternatives`
     （每项 `{approach, specified, feasible, reason}`，与工作点相同）：评估过的替代做法，例如换一颗手册保证该参数的器件；
     没写记 `gap_without_alternatives`，有手册保证且可行的替代仍保留缺口记 `gap_alternative_feasible`（R8：比较器只给典型延迟）。
-  - `why_external`：为什么只能由这个负责方给，例如行为在芯片内部或固件里，外部推不出来；版本 2 中两件以上待办写同一句，
+  - `why_external`：为什么只能由这个负责方给，例如行为在芯片内部或固件里，外部推不出来；两件以上待办写同一句，
     审计报 `gap_reason_repeated`（R8：七件待办共用一句）。
-  - `calculations`：依赖这项资料的计算 id，非空，且都是 `conditional`；报告在待办下列出这些计算依赖的参数（版本 1 为 `missing_guarantee`），
-    并在“依赖厂家资料的计算”表（版本 1 为“有条件成立的计算”）里反查对应待办。确实没有计算依赖它（固件行为确认、安规资格这类）时写空列表，
+  - `calculations`：依赖这项资料的计算 id，非空，且都是 `conditional`；报告在待办下列出这些计算依赖的参数，
+    并在“依赖厂家资料的计算”表里反查对应待办。确实没有计算依赖它（固件行为确认、安规资格这类）时写空列表，
     并用 `no_calculation_reason` 说明为什么，不为凑字段挂不相关的计算。
   - `consequence`：资料与假设不符时具体会出什么问题，不能只写后果等级。
   - `questions`：能直接发给负责方的问题，每条独立成句；报告按 `owner` 汇总到“要向外部要的资料”一节。

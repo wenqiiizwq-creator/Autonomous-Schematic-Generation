@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import guideline_criteria  # noqa: E402
 from audit_design_closure import audit, sha256  # noqa: E402
+from current_record import make_current  # noqa: E402
 from schematic_layout import component_requirements as cr  # noqa: E402
 from schematic_layout.reference_contract import verify_reference  # noqa: E402
 
@@ -91,7 +92,7 @@ class BindingTests(unittest.TestCase):
                                       'net_roles': {'VIN': 'power', 'VOUT': 'power', 'GND': 'return'},
                                       'boundary_nets': self.boundary}))
         (self.root / 'record' / 'reference-input.json').write_text(json.dumps(self.contract))
-        record = dict(self.record, intent_sha256=sha256(intent))
+        record = make_current(dict(self.record, intent_sha256=sha256(intent)), intent, self.root)
         return audit(record, intent, self.root)
 
     def codes(self):
