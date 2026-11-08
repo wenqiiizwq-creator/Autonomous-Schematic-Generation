@@ -15,6 +15,15 @@ user:<date>` and `Outline:` the hash from `check_ledger.py --outline-hash`.
 
 
 
+## 纲要写明三项能力目标，不过度设计为宗旨（2026-11-08）
+
+用户指出 ASG 的输入是板卡设计需求，输出是方案确定后的原理图，能力体现在三项：选对功能电路、设计合理（成本合适）、图面清晰易读，要求在纲要里明确。纲要原先只写怎么做，没写要达到什么能力，也没有“不过度设计”。按确认的草案（docs/能力目标-纲要草案-2026-11-08.md）：纲要开头新增「能力目标」三项，第 2 项写成“设计合理，不过度设计”，评测 ASG 按这三项衡量；任务 2.3 新增第 5 条“不过度设计”（额定、精度、封装和保护级数按需要取，取高一档写明理由），原第 5、6 条顺延。用户同日调整：经济成本暂不写进纲要，不设门禁。
+
+- Event: user:2026-11-08（ASG 的总体能力要求体现在 1、选择合适的功能电路来实现设计需求和系统规格，2、电路原理图设计合理、成本合适，3、原理图画图的结果模块清晰，图形连接明确，方便人类阅读；这个 ASG 的纲要要在 skill 里面明确下来；经济上的成本暂时不写在里面，但是要明确“不做过度设计”作为宗旨；不设门禁；按草案改）
+- Approved: user:2026-11-08
+- Outline: 100f2858f20e0bc9
+- Changed: SKILL.md, docs/improvement-ledger.md, docs/能力目标-纲要草案-2026-11-08.md
+
 ## 合入整板评测五项修正，纲要合并文字确认（2026-11-07）
 
 gate-fixes、decision-source、matrix-checks、guideline-bookkeeping、tool-fixes 五个分支依次合入 main。三个分支各自改过纲要（各自经用户确认），合并后：1.1、1.4、2.x 处理差距取 decision-source，2.2 两条新增分别取 matrix-checks 与 guideline-bookkeeping；5.1 做完的标志两边都改了同一句，合成一句（“矩阵与状态表没有缺结论或不满足的格”在前，准则按自动检查组、文档组、其余逐条覆盖在后），用户确认合并后的纲要。合并修正：`render_design_report.py` 的 import 两边合并（含 `holds`）；A1 打包测试改为从审计结果取未覆盖清单，扣除自动检查组已覆盖的准则。matrix-checks 只把矩阵缺格写进做完的标志，`pack_design` 不拦，与 A1 同一类漏洞：现在审计有 `matrix_cell_missing`、`matrix_cell_failed` 时拒绝打包，delivery-report 写明。全量测试通过。
