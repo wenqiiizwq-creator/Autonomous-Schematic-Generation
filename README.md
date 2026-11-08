@@ -13,7 +13,7 @@ ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 | 步骤 | 入口 |
 |---|---|
 | ① 需求与方案 | `find_parts.py`（检索本机知识库 `~/Documents/知识库/HardwareWiki/raw/` 与 `--circuits` 典型电路库）、`check_scheme_criteria.py`、`select_guidelines.py`（`guideline_criteria.py select` 的多值包装） |
-| ② 详细设计 | `fill_pin_maps.py`、`make_symbol.py`（从手册引脚表生成符号）、`expand_stacked_pins.py`、`audit_design_closure.py`、`audit_component_requirements.py` |
+| ② 详细设计 | `fill_pin_maps.py`、`make_symbol.py`（从手册引脚表生成符号）、`complete_pin_coverage.py`、`audit_design_closure.py`、`audit_component_requirements.py` |
 | ③ 原理图绘制 | `schematic_layout.recipes.Sheet`、`schematic_layout.root.Root`（见 [drawing-recipes.md](references/drawing-recipes.md)） |
 | ④ 设计检查 | `verify_schematic.py`（一次运行全部自动检查）、`audit_system_block.py` |
 | ⑤ 设计输出 | `deliver.py`（一次跑完出图到打包）、`render_design_report.py`、`pack_design.py`、`check_ledger.py` |

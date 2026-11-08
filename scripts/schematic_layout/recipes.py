@@ -14,6 +14,7 @@ audits the drawing against them; a deviation needs a recorded reason.
 import copy
 import json
 import math
+import re
 from collections import Counter
 
 from .boundary import declarations as boundary_declarations
@@ -177,9 +178,11 @@ class Sheet:
         self.label_parts = {}
         self.libraries = Libraries(library_dirs(dirs))
         self.dirs = tuple(dirs)
+        self._fill_units()
         self.paper = paper
         self.power_ref_start = power_ref_start
         self.placements = {}
+        self.pin_keys = {}       # pin id -> (placement key, unit)
         self.pins = {}
         self.segments = []
         self.powers = []
@@ -291,12 +294,55 @@ class Sheet:
         self.reasons[subject] = reason
 
     # ----- geometry -------------------------------------------------------
-    def _shape(self, ref, rotation=0, mirror=""):
+    def _fill_units(self):
+        """A multi-unit library symbol (74LVC3G17: three gates and a supply unit) is drawn unit by unit; the page's
+        copy of the intent names every unit, which the native writer requires (Matrix 2026-11-07 #7)."""
+        units = {}
+        for ref, c in self.components.items():
+            found = sorted({int(m[1]) for sub in all_nodes(self.libraries.load(c["lib_id"]), "symbol")
+                            if (m := re.search(r"_(\d+)_(\d+)$", str(sub[1]))) and int(m[1]) > 0})
+            if len(found) > 1:
+                if "units" in c and sorted(c["units"]) != found:
+                    raise ValueError(f"{ref}: units {c['units']} do not match the library's units {found}")
+                units[ref] = found
+        if units:
+            self.intent = copy.deepcopy(self.intent)
+            for c in self.intent["components"]:
+                if c["ref"] in units:
+                    c["units"] = units[c["ref"]]
+            self.components = {c["ref"]: c for c in self.intent["components"]}
+
+    def units(self, ref):
+        """The units of ``ref`` ([1] for a single-unit symbol)."""
+        return list(self.components[ref].get("units", [1]))
+
+    def _key(self, ref, unit):
+        return ref if self.units(ref) == [1] else f"{ref}:{unit}"
+
+    def unit_of(self, ref, pin):
+        """The unit that draws ``pin`` of ``ref``."""
+        for unit in self.units(ref):
+            if str(pin) in self._shape(ref, unit=unit)[0]:
+                return unit
+        raise ValueError(f"{ref} has no pin {pin}")
+
+    def _shape(self, ref, rotation=0, mirror="", unit=None):
+        """({pin: (point, direction)}, body) of one unit; with ``unit=None`` a multi-unit part lists every unit's pins
+        (counting and roles only, the points of different units overlap)."""
+        units = self.units(ref)
+        if unit is None and len(units) > 1:
+            pins = {}
+            for u in units:
+                pins.update(self._shape(ref, rotation, mirror, u)[0])
+            return pins, self._shape(ref, rotation, mirror, units[0])[1]
+        unit = units[0] if unit is None else unit
+        if unit not in units:
+            raise ValueError(f"{ref} has no unit {unit}; units {units}")
         lib_id = self.components[ref]["lib_id"]
-        key = (lib_id, rotation, mirror)
+        key = (lib_id, rotation, mirror, unit)
         if key not in self._shapes:
             lib = self.libraries.load(lib_id)
-            sym = form("symbol", form("lib_id", lib_id), form("at", 0, 0, rotation), form("unit", 1))
+            sym = form("symbol", form("lib_id", lib_id), form("at", 0, 0, rotation), form("unit", unit))
             if mirror:
                 sym.append(form("mirror", Atom(mirror)))
             sym.append(form("property", "Reference", "X", form("at", 0, 0, 0),
@@ -324,15 +370,17 @@ class Sheet:
         return self.nets.get(target) if isinstance(target, str) else self.net_at(target)
 
     # ----- placement ------------------------------------------------------
-    def orient(self, ref, facing, order=None):
+    def orient(self, ref, facing, order=None, unit=None):
         """First (rotation, mirror) in which each pin of ``facing`` ({pin: direction}) exits that way.
 
         ``order=(a, b, axis)`` also keeps pin ``a`` before pin ``b`` along x (0) or y (1).
         """
         if ref not in self.components:
             raise ValueError(f"Unknown reference {ref}")
+        if unit is None and len(self.units(ref)) > 1:
+            unit = self.unit_of(ref, next(iter(facing)))
         for rot, mir in ORIENTATIONS:
-            pins, _ = self._shape(ref, rot, mir)
+            pins, _ = self._shape(ref, rot, mir, unit)
             missing = [str(k) for k in facing if str(k) not in pins]
             if missing:
                 raise ValueError(f"{ref} has no pins {missing}")
@@ -341,35 +389,48 @@ class Sheet:
                 return rot, mir
         raise ValueError(f"{ref}: no orientation gives pin exits {facing}; change the requested sides")
 
-    def place(self, ref, at, rotation=0, mirror="", pin=None, facing=None, order=None):
+    def place(self, ref, at, rotation=0, mirror="", pin=None, facing=None, order=None, unit=None):
         """Place an anchor device explicitly (controllers, connectors, magnetics).
 
         ``facing`` ({pin: direction}, optional ``order``) chooses rotation and
         mirror from the required pin exits; see ``orient``. With ``pin``, ``at``
         is where that pin's tip lands instead of the symbol origin.
+        A multi-unit part is placed once per unit: ``unit`` names it, or ``pin``/``facing`` imply it.
         """
+        if ref not in self.components:
+            raise ValueError(f"Unknown reference {ref}")
+        if len(self.units(ref)) > 1 and unit is None:
+            if pin is None and not facing:
+                raise ValueError(f"{ref} has units {self.units(ref)}: place each with unit= (or pin=)")
+            unit = self.unit_of(ref, pin if pin is not None else next(iter(facing)))
         if facing:
-            rotation, mirror = self.orient(ref, facing, order)
+            rotation, mirror = self.orient(ref, facing, order, unit)
         if pin is not None:
-            pins, _ = self._shape(ref, rotation, mirror)
+            pins, _ = self._shape(ref, rotation, mirror, unit)
             if str(pin) not in pins:
                 raise ValueError(f"{ref} has no pin {pin}")
             q = pins[str(pin)][0]
             at = (at[0] - q[0], at[1] - q[1])
         self.decisions.append({"recipe": "place", "parts": [ref]})
-        return self._place(ref, at, rotation, mirror)
+        return self._place(ref, at, rotation, mirror, unit)
 
-    def _place(self, ref, at, rotation=0, mirror=""):
+    def _place(self, ref, at, rotation=0, mirror="", unit=None):
         if ref not in self.components:
             raise ValueError(f"Unknown reference {ref}")
-        if ref in self.placements:
-            raise ValueError(f"{ref} is already placed")
+        unit = self.units(ref)[0] if unit is None else unit
+        key = self._key(ref, unit)
+        if key in self.placements:
+            raise ValueError(f"{key} is already placed")
         at = pt(at)
-        pins, _ = self._shape(ref, rotation, mirror)
-        self.placements[ref] = {"at": list(at), "rotation": rotation, "mirror": mirror}
+        pins, _ = self._shape(ref, rotation, mirror, unit)
+        shared = sorted(n for n in pins if f"{ref}.{n}" in self.pins)
+        if shared:
+            raise ValueError(f"{key}: pins {shared} are already drawn by another unit (common unit-0 pins)")
+        self.placements[key] = {"at": list(at), "rotation": rotation, "mirror": mirror}
         for num, (q, d) in pins.items():
             self.pins[f"{ref}.{num}"] = (pt((at[0] + q[0], at[1] + q[1])), d)
-        return ref
+            self.pin_keys[f"{ref}.{num}"] = (key, unit)
+        return key
 
     def put(self, ref, num, at, toward, orientations=None):
         """Place ``ref`` so pin ``num`` lands on ``at`` and the part extends along ``toward``.
@@ -610,8 +671,9 @@ class Sheet:
             if pd != d:
                 # Leave the pin sideways far enough that the symbol clears the whole body.
                 ref = target.rsplit(".", 1)[0]
-                place = self.placements[ref]
-                _, body = self._shape(ref, place["rotation"], place["mirror"])
+                key, unit = self.pin_keys[target]
+                place = self.placements[key]
+                _, body = self._shape(ref, place["rotation"], place["mirror"], unit)
                 body = Box(body.x_min + place["at"][0], body.y_min + place["at"][1],
                            body.x_max + place["at"][0], body.y_max + place["at"][1])
                 n = next(k for k in range(2, 9) if not body.overlaps(
@@ -862,7 +924,7 @@ class Sheet:
         A draft is never a deliverable.
         """
         failures = []
-        missing = sorted(set(self.components) - set(self.placements))
+        missing = sorted({self._key(r, u) for r in self.components for u in self.units(r)} - set(self.placements))
         if missing:
             raise ValueError(f"Unplaced parts: {missing}")
         layout = {"schema_version": 1, "paper": self.paper, "placements": self.placements,

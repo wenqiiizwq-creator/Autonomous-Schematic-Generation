@@ -95,6 +95,31 @@ def expand_stacked_pins(intent, dirs=()):
     return result, added
 
 
+def library_no_connects(intent, dirs=()):
+    """Pins a library marks no_connect (TPS26630RGE NC 19-24) that the design netlist leaves out: the native writer
+    wants each in ``no_connect``. Returns (new intent, added ids, connected ids); connected ones are not changed
+    (KiCad ERC flags a wired no_connect pin: a datasheet that allows tying it needs a passive project pin)."""
+    result = copy.deepcopy(intent)
+    nets = pin_net_map(result)
+    nc = result.setdefault("no_connect", [])
+    libraries = Libraries(library_dirs(dirs))
+    added, connected = [], []
+    for comp in result["components"]:
+        lib = libraries.load(comp["lib_id"])
+        for sub in all_nodes(lib, "symbol"):
+            for p in all_nodes(sub, "pin"):
+                if str(p[1]) != "no_connect":
+                    continue
+                for n in physical_numbers(value(p, "number")):
+                    pid = "%s.%s" % (comp["ref"], n)
+                    if pid in nets:
+                        connected.append(pid)
+                    elif pid not in nc:
+                        nc.append(pid)
+                        added.append(pid)
+    return result, added, connected
+
+
 def substitute(obj, parameters):
     if isinstance(obj, dict):
         if set(obj) == {"param"}:

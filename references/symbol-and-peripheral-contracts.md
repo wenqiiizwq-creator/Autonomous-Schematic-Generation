@@ -80,7 +80,8 @@ KiCad 导出 XML 时按物理脚展开成同名同类型的几个节点；ERC �
 叠脚的引脚号从引脚线往上竖排，每多一个号约占一行：符号里在它上方留空行，号不压上面的引脚或 Reference/Value。
 旧写法：隐藏的 `passive` 副本（地、裸焊盘）照旧；隐藏的 `power_in`/`power_out` 副本仍为 `INSUFFICIENT`；几个**可见**引脚
 画在同一点且符号显示引脚号时，号会叠印，记 `overprinted_pin_numbers`（FAIL），改成一个叠脚。
-KiCad 官方库自己的同点多脚是一个可见脚加同点隐藏 `passive` 副本（TPS26630RGE OUT 17/18、TPS62130 SW/VIN/GND、STM32F107VCTx VSS、Crystal_GND24 G 2/4），符号完整性照常通过，不必为此自建符号。两种写法的设计网表都逐物理脚写：只写了其中一个脚时，`Sheet` 报 `Pin coverage mismatch` 并列出与已连脚同点的脚，`scripts/expand_stacked_pins.py 设计网表 [--symbol-dir 项目符号库目录] --write` 把同点的其余脚补进同一网络（同点的脚分在不同网络或标了不连接时报错）（校准板、Matrix 2026-11-07）。
+KiCad 官方库自己的同点多脚是一个可见脚加同点隐藏 `passive` 副本（TPS26630RGE OUT 17/18、TPS62130 SW/VIN/GND、STM32F107VCTx VSS、Crystal_GND24 G 2/4），符号完整性照常通过，不必为此自建符号。两种写法的设计网表都逐物理脚写：只写了其中一个脚时，`Sheet` 报 `Pin coverage mismatch` 并列出与已连脚同点的脚，`scripts/complete_pin_coverage.py 设计网表 [--symbol-dir 项目符号库目录] --write` 把同点的其余脚补进同一网络（同点的脚分在不同网络或标了不连接时报错）（校准板、Matrix 2026-11-07）。
+库里类型为 `no_connect` 的脚（TPS26630RGE NC 19–24）同样逐脚写进设计网表的 `no_connect`，这个脚本一并补上；已接进网络的只列出（`CONNECTED_NC`，退出码 1），手册允许接时在项目符号里改成 `passive`。
 
 有意隔离的端子要保留明确的处置：
 

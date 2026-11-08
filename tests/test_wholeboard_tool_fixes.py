@@ -16,14 +16,14 @@ SCRIPTS = HERE.parent / 'scripts'
 sys.path[:0] = [str(SCRIPTS), str(HERE), str(HERE / 'fixtures' / 'drawing')]
 import audit_component_requirements  # noqa: E402
 import deliver  # noqa: E402
-import expand_stacked_pins  # noqa: E402
+import complete_pin_coverage  # noqa: E402
 import guideline_criteria  # noqa: E402
 import make_symbol  # noqa: E402
 import operating_inputs  # noqa: E402
 import select_guidelines  # noqa: E402
 import test_deliver  # noqa: E402
 from schematic_layout import component_requirements as cr  # noqa: E402
-from schematic_layout.circuit_ir import expand_stacked_pins as expand, stacked_groups  # noqa: E402
+from schematic_layout.circuit_ir import expand_stacked_pins as expand, library_no_connects, stacked_groups  # noqa: E402
 from schematic_layout.generate import Libraries, library_dirs  # noqa: E402
 from schematic_layout.native import find_cli  # noqa: E402
 from schematic_layout.part_classes import spec_text  # noqa: E402
@@ -195,11 +195,11 @@ class StackedPadsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'intent.json'
             path.write_text(json.dumps(self.INTENT))
-            code, out, _ = output(expand_stacked_pins.main, [str(path)])
+            code, out, _ = output(complete_pin_coverage.main, [str(path)])
             self.assertEqual(0, code)
             self.assertIn('TO ADD', out)
             self.assertEqual(self.INTENT, json.loads(path.read_text()))
-            output(expand_stacked_pins.main, [str(path), '--write'])
+            output(complete_pin_coverage.main, [str(path), '--write'])
             self.assertIn('Y1.4', json.loads(path.read_text())['nets'][2]['pins'])
 
     def test_drawing_error_names_the_stacked_pad(self):
@@ -210,8 +210,123 @@ class StackedPadsTests(unittest.TestCase):
         sheet.place('Y1', (101.6, 101.6))
         for pin in ('Y1.1', 'Y1.3', 'Y1.2'):
             sheet.label(pin, 'global', length=5)
-        with self.assertRaisesRegex(ValueError, r"Y1\.4->G.*expand_stacked_pins"):
+        with self.assertRaisesRegex(ValueError, r"Y1\.4->G.*complete_pin_coverage"):
             sheet.build('s', draft=True)
+
+
+def tps26630(nc=()):
+    """TPS26630RGE wired on every pin but its library-NC pins 19-24."""
+    nets = {'IN': ['U1.1', 'U1.2'], 'GND': ['U1.8', 'U1.25'], 'OUT': ['U1.17', 'U1.18']}
+    for n in (3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16):
+        nets['N%d' % n] = ['U1.%d' % n]
+    return {'schema_version': 1, 'design_id': 'nc', 'no_connect': list(nc),
+            'components': [{'ref': 'U1', 'lib_id': 'Power_Management:TPS26630RGE', 'value': 'TPS26630', 'footprint': ''}],
+            'nets': [{'name': k, 'pins': v} for k, v in nets.items()]}
+
+
+@unittest.skipUnless(kicad_libraries(), 'KiCad symbol libraries are not installed')
+class LibraryNoConnectTests(unittest.TestCase):
+    """Matrix #7 (TPS26630RGE NC 19-24): the error only said NC pins needed an assignment; nothing wrote them."""
+    NC = ['U1.%d' % n for n in range(19, 25)]
+
+    def test_error_names_the_pins_and_the_tool(self):
+        sheet = Sheet(tps26630(), rails={}, external=[])
+        sheet.place('U1', (127, 101.6))
+        with self.assertRaisesRegex(ValueError, r"U1\.19.*U1\.24.*complete_pin_coverage"):
+            sheet.build('nc', draft=True)
+
+    def test_tool_writes_unwired_nc_pins_and_lists_wired_ones(self):
+        result, added, connected = library_no_connects(tps26630())
+        self.assertEqual((self.NC, self.NC, []), (result['no_connect'], added, connected))
+        self.assertEqual([], library_no_connects(result)[1])
+        wired = tps26630(self.NC[1:])
+        wired['nets'].append({'name': 'GND2', 'pins': ['U1.19']})
+        self.assertEqual(([], ['U1.19']), library_no_connects(wired)[1:])
+
+    def test_cli_writes_and_fails_on_a_wired_nc_pin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'intent.json'
+            path.write_text(json.dumps(tps26630()))
+            self.assertEqual(0, output(complete_pin_coverage.main, [str(path), '--write'])[0])
+            self.assertEqual(self.NC, json.loads(path.read_text())['no_connect'])
+            wired = tps26630(self.NC[1:])
+            wired['nets'].append({'name': 'GND2', 'pins': ['U1.19']})
+            path.write_text(json.dumps(wired))
+            code, out, _ = output(complete_pin_coverage.main, [str(path)])
+            self.assertEqual(1, code)
+            self.assertIn('CONNECTED_NC U1.19', out)
+
+    def test_written_nc_pins_draw(self):
+        from schematic_layout.generate import make_root
+        result = library_no_connects(tps26630())[0]
+        layout = {'schema_version': 1, 'paper': 'A4', 'placements': {'U1': {'at': [127, 101.6], 'rotation': 0}},
+                  'defer_fields': True}
+        root = make_root(result, layout, 'nc')[0]       # raised the NC error before the pins were written
+        self.assertEqual(1, len([s for s in all_nodes(root, 'symbol') if s[1][1] == 'Power_Management:TPS26630RGE']))
+        with self.assertRaisesRegex(ValueError, 'no_connect'):
+            make_root(tps26630(), layout, 'nc')
+
+
+GATE_NETS = {'A1': 'U1.1', 'Y1': 'U1.7', 'A2': 'U1.6', 'Y2': 'U1.2', 'A3': 'U1.3', 'Y3': 'U1.5', 'GND': 'U1.4', '+3V3': 'U1.8'}
+
+
+def gate_intent(**extra):
+    return {'schema_version': 1, 'design_id': 'mu', 'no_connect': [],
+            'components': [dict({'ref': 'U1', 'lib_id': '74xGxx:74LVC3G17', 'value': '74LVC3G17', 'footprint': ''}, **extra)],
+            'nets': [{'name': n, 'pins': [p]} for n, p in GATE_NETS.items()]}
+
+
+@unittest.skipUnless(kicad_libraries(), 'KiCad symbol libraries are not installed')
+class MultiUnitTests(unittest.TestCase):
+    """Matrix #7: 74LVC3G17 is a multi-unit symbol and recipes only drew single-unit parts."""
+
+    def sheet(self, intent=None):
+        return Sheet(intent or gate_intent(), rails={'GND': 'power:GND', '+3V3': 'power:+3V3'},
+                     external=[n for n in GATE_NETS if n not in ('GND', '+3V3')])
+
+    def draw(self, sheet):
+        for unit, y in ((1, 50.8), (2, 76.2), (3, 101.6)):
+            sheet.place('U1', (101.6, y), unit=unit)
+        self.assertEqual('U1:4', sheet.place('U1', (160.02, 76.2), pin='8'))     # the supply unit, implied by its pin
+        for pid, net in sheet.nets.items():
+            sheet.power(pid) if net in sheet.rails else sheet.label(pid, 'global', length=4)
+        return sheet.build('mu')
+
+    def test_every_unit_is_placed_and_drawn(self):
+        sheet = self.sheet()
+        self.assertEqual([1, 2, 3, 4], sheet.units('U1'))
+        self.assertEqual(2, sheet.unit_of('U1', '6'))
+        root, report = self.draw(sheet)
+        self.assertEqual('PASS', report['readability']['gate']['status'])
+        units = sorted(int(next(n for n in s if isinstance(n, list) and n[0] == 'unit')[1]) for s in all_nodes(root, 'symbol')
+                       if any(isinstance(n, list) and n[0] == 'lib_id' and n[1] == '74xGxx:74LVC3G17' for n in s))
+        self.assertEqual([1, 2, 3, 4], units)
+        cli = find_cli()
+        if cli is None:
+            self.skipTest('kicad-cli not installed: native netlist not checked')
+        from schematic_layout.native import compare_netlist
+        with tempfile.TemporaryDirectory() as tmp:
+            sch, xml = Path(tmp) / 'mu.kicad_sch', Path(tmp) / 'mu.xml'
+            sch.write_text(dump(root) + '\n')
+            subprocess.run([cli, 'sch', 'export', 'netlist', '--format', 'kicadxml', '-o', str(xml), str(sch)],
+                           check=True, capture_output=True)
+            result = compare_netlist(xml, gate_intent(units=[1, 2, 3, 4]), report['layout'])
+            self.assertEqual('PASS', result['status'], result['errors'])
+            self.assertEqual('PASS', audit_symbols(sch, xml)['status'])
+
+    def test_unit_is_required_and_every_unit_must_be_placed(self):
+        sheet = self.sheet()
+        with self.assertRaisesRegex(ValueError, 'unit='):
+            sheet.place('U1', (101.6, 50.8))
+        sheet.place('U1', (101.6, 50.8), unit=1)
+        with self.assertRaisesRegex(ValueError, 'already placed'):
+            sheet.place('U1', (101.6, 76.2), unit=1)
+        with self.assertRaisesRegex(ValueError, r"Unplaced parts: \['U1:2', 'U1:3', 'U1:4'\]"):
+            sheet.build('mu')
+
+    def test_declared_units_must_match_the_library(self):
+        with self.assertRaisesRegex(ValueError, 'do not match'):
+            self.sheet(gate_intent(units=[1, 2]))
 
 
 PINS = {'name': 'DEMO_PHY', 'reference': 'U', 'pins': [

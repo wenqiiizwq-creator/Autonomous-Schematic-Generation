@@ -347,8 +347,15 @@ def make_root(intent, layout, name, dirs=()):
     nc = intent.get("no_connect", [])
     if len(set(nc)) != len(nc) or set(nc) & set(mapping):
         raise ValueError("Duplicate NC or connected pin also marked NC")
-    if any(p.kind == "no_connect" and p.id not in nc for p in pins):
-        raise ValueError("Library no_connect pins require explicit NC assignment")
+    lib_nc = sorted((p.id for p in pins if p.kind == "no_connect" and p.id not in nc), key=lambda i: (len(i), i))
+    if lib_nc:
+        # Name the pins and the two ways out (Matrix 2026-11-07: TPS26630RGE NC 19-24 only said "require").
+        loose = [i for i in lib_nc if i not in mapping]
+        tied = [i for i in lib_nc if i in mapping]
+        raise ValueError("Library no_connect pins require explicit NC assignment: "
+                         + (f"write {loose} into no_connect (scripts/complete_pin_coverage.py --write does it)" if loose else "")
+                         + ("; " if loose and tied else "")
+                         + (f"{tied} are connected: if the datasheet allows it, make them passive in a project symbol" if tied else ""))
     actual = {p.id for p in pins}
     if actual != set(mapping) | set(nc):
         unassigned = actual - set(mapping) - set(nc)
@@ -358,7 +365,7 @@ def make_root(intent, layout, name, dirs=()):
         stacked = sorted(f"{p.id}->{mapping[at[key]]}" for p in pins if p.id in unassigned
                          for key in [(p.id.rsplit(".", 1)[0], tuple(p.point))] if key in at)
         hint = (f"; stacked pads on a connected pin's point: {stacked} (KiCad joins them; write each pad into that net, "
-                f"or run scripts/expand_stacked_pins.py)") if stacked else ""
+                f"or run scripts/complete_pin_coverage.py)") if stacked else ""
         raise ValueError(
             f"Pin coverage mismatch: unassigned={sorted(unassigned)}; unknown={sorted((set(mapping) | set(nc)) - actual)}{hint}"
         )

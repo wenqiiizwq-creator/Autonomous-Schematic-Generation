@@ -178,10 +178,11 @@ fb = s.stub('U1.4', 2); s.connect(fb, tap, y=fb[1] - 10.16)   # FB over the top
 ## 限制
 
 - 结构由 agent 选择；这里没有任何东西识别拓扑。
-- 只支持单单元符号。按功能分组引脚的表示用符号需要自己的、经核实的物理引脚映射（见 symbol-and-peripheral-contracts.md）。
+- 多单元符号（74LVC3G17 三个门加电源单元、LM358 两个运放加电源单元）逐单元放置：`place(ref, at, unit=2)`，或给 `pin=`/`facing=` 由引脚推出单元；`Sheet` 从库里读出全部单元写进本页设计网表副本的 `units`（已写的要与库一致），每个单元都要放，未放的单元在 `build` 时报 `Unplaced parts: ['U1:4']`；`units(ref)`、`unit_of(ref, pin)` 查单元。各单元共用的单元 0 引脚不支持（重复放置时报错）（Matrix 2026-11-07）。按功能分组引脚的表示用符号需要自己的、经核实的物理引脚映射（见 symbol-and-peripheral-contracts.md）。
 - 同网同功能多脚用 KiCad 叠脚编号（`[17,18]`）画成一个引脚：场景把它展开成同一点上的各物理脚，`Sheet` 用任一物理引脚号（`U1.17`）引用，
   连一次即全连；不要再把几个可见引脚叠在同一点（引脚号叠印，符号完整性记 `overprinted_pin_numbers`），电源脚也不要做成隐藏副本。
-  设计网表仍逐物理脚写，漏写的同点脚用 `scripts/expand_stacked_pins.py --write` 补（KiCad 官方库的“可见脚 + 同点隐藏 passive 副本”同样适用）。
+  设计网表仍逐物理脚写，漏写的同点脚用 `scripts/complete_pin_coverage.py --write` 补（KiCad 官方库的“可见脚 + 同点隐藏 passive 副本”同样适用）。
+- 库里类型为 `no_connect` 的脚（TPS26630RGE NC 19–24）要写进设计网表的 `no_connect`；漏写时 `build` 报错并列出这些脚，`complete_pin_coverage.py --write` 一并补上。已接进网络的 NC 脚只列出不改：手册允许接时在项目符号里把它改成 `passive`，否则从网络里去掉。
 - 每页一个 `Sheet`。层次工程从基线页复制每个符号的工程实例路径和 UUID，因为重画必须保留它们。
 - `check_scene` 接受引脚自身笔直向外、穿过伸出其端点的图形的出线（LED 箭头、磁件圆弧、热敏电阻标记）；其他穿过本体框的导线仍会报告。
 - 文字宽度是估计；KiCad 渲染审阅仍是必需的。
