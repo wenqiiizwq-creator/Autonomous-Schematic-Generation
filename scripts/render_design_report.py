@@ -1000,6 +1000,29 @@ def render_batch_guidelines(guidelines, cards):
     return out
 
 
+def render_group_guidelines(guidelines, cards):
+    """The rules an audit check or one design document covers (references/guideline-evidence-groups.md, user 2026-11-07):
+    the check and its result, or the document, its rules and what its check found missing."""
+    groups = guidelines.get('by_group') or {}
+    out = []
+    if groups.get('check'):
+        out += ['## 由自动检查覆盖的设计准则', '', '这些设计准则由设计完成核对里的检查完整证明，检查没有报错。', '',
+                '| 设计准则 | 内容 | 检查 |', '|---|---|---|']
+        for gid, name in groups['check'].items():
+            out.append('| %s | %s | %s |' % (gid, cell(cards.get(gid, {}).get('title', '')), cell(name)))
+        out.append('')
+    carriers = {n: g for n, g in (groups.get('carrier') or {}).items() if g['rules']}
+    if carriers:
+        out += ['## 由设计文档整组覆盖的设计准则', '',
+                '每组由所列证据文件承担；审计核对文件里必备章节齐全、非空，该写的对象都写到。核对只证明写全，不证明写对。', '',
+                '| 文档组 | 证据 | 设计准则 | 核对结果 |', '|---|---|---|---|']
+        for name, g in carriers.items():
+            out.append('| %s | %s | %s | %s |' % (name, '、'.join(g['evidence']), '、'.join(g['rules']),
+                                                  cell('；'.join(g['problems'])) if g['problems'] else '齐全'))
+        out.append('')
+    return out
+
+
 def render_guidelines(guidelines):
     """共用设计准则覆盖与下游约束（references/shared/guideline-criteria.md）：适用准则、出处、在哪里落实；关闭阶段在原理图之后的单列。"""
     if not (guidelines and guidelines.get('applicable')):
@@ -1008,10 +1031,13 @@ def render_guidelines(guidelines):
     where = lambda gid: ('、'.join(guidelines['covered'].get(gid) or [])
                          or ('不适用：' + guidelines['not_applicable'][gid] if gid in guidelines['not_applicable'] else '未覆盖'))
     out = ['## 共用设计准则覆盖', '',
-           '本设计按设计准则库 %s 适用的共用设计准则；“落实处”是引用它的计算（calc）、待办（work）或器件性能要求（component）。' % guidelines['library_version'], '',
+           '本设计按设计准则库 %s 适用的共用设计准则；“落实处”是引用它的计算（calc）、待办（work）、器件性能要求（component）或证据条目（evidence）；由自动检查或设计文档整组覆盖的另列在后面。' % guidelines['library_version'], '',
            '| 设计准则 | 内容 | 出处 | 落实处 | 关闭阶段 |', '|---|---|---|---|---|']
     classes = guidelines.get('by_coverage') or {}
     batch = set(classes.get('project_input') or ()) | set(classes.get('handoff') or ())
+    grouped = guidelines.get('by_group') or {}
+    batch |= set(grouped.get('check') or ()) | {g for c in (grouped.get('carrier') or {}).values() if not c['problems']
+                                                for g in c['rules']}
     for gid in guidelines['applicable']:
         if gid in batch:
             continue
@@ -1021,6 +1047,7 @@ def render_guidelines(guidelines):
                                                     STAGE_WORDS.get(c['closing_stage'], '')))
     out.append('')
     out += render_batch_guidelines(guidelines, cards)
+    out += render_group_guidelines(guidelines, cards)
     down = [gid for gid in guidelines['downstream'] if gid not in guidelines['not_applicable'] and gid not in batch]
     if down:
         out += ['## 下游约束（共用规范）', '',

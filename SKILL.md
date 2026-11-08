@@ -224,7 +224,9 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 - **工况输入有来源**：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆这些板外工况，参数写 `input_role`，来源只能是需求、负载器件手册或由它们推导；
   需求没给、取值又会改变选型的，按[需求澄清](references/requirement-clarifications.md)问用户，不自定。启动计算必须声明启动期负载。
   判法见[设计待办记录](references/design-closure.md)“工况输入的来源”，`audit_design_closure.py` 核对。
-- **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作；落实它的计算在 `guidelines` 里写准则编号，
+- **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作。准则按证据分三组（[准则证据分组](references/guideline-evidence-groups.md)）：
+  自动检查能完整证明的，检查通过即由审计记为覆盖，不手写；全板的方法与文档类准则，由分组表指定的设计文档整组覆盖，
+  该文档登记为证据并写 `carrier`，审计核对必备章节与对象齐全；其余由落实它的计算在 `guidelines` 里写准则编号。
   关闭阶段在原理图之后的规则用一件技术转交待办引用；确实不适用的写进 `guideline_scope.not_applicable` 并写理由。
 
 **把计算落实为可采购的器件性能要求**：将实际需要核算的器件记入 `record/component-requirements.json`，由它统一生成设计网表属性、BOM规格和图面标注。字段及执行接口见 [器件性能要求](references/component-requirements.md)；新设计采用 `component_requirements_version: 1`，按用途分组筛选位号，不给每颗普通件增加全参数计算。
@@ -394,7 +396,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 同时核对性能定义与选型状态：可独立完成的性能要求计算须完成；仅有料号但关键性能未核实的，不能写“已核准”。有条件性能要求和真实外部依赖继续按现有计算依据分类，不因图纸已输出而转成保证。
 
-做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；矩阵与状态表没有缺结论或不满足的格；审计列出的可执行设计动作都已完成；适用的共用设计准则都已在计算或待办里引用，或写明不适用的理由；已关闭的待办引用的每条准则指到落实它的证据位置；文档类准则可直接挂在接口表、工况矩阵、FMEA 等证据条目的 `guidelines` 上，不以一件待办批量引用代替。
+做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；矩阵与状态表没有缺结论或不满足的格；审计列出的可执行设计动作都已完成；适用的共用设计准则都已覆盖或写明不适用的理由：自动检查组的检查已通过，文档组的指定文档章节与对象齐全，其余在计算或待办里逐条引用；已关闭的待办引用的每条准则指到落实它的证据位置；不以一件待办批量引用代替。
 
 #### 5.2 经验总结
 
@@ -481,6 +483,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | KiCad 导出几何的范围 | [native-geometry.md](references/native-geometry.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
 | 共用设计准则（G01–G09，运行包版本以根目录 `shared-release.json` 为准）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
+| 准则证据分组：哪些准则由自动检查或指定设计文档覆盖，文档的必备章节与对象 | [guideline-evidence-groups.md](references/guideline-evidence-groups.md)、`references/guideline-evidence-groups.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
 | 共用规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
