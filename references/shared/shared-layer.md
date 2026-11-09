@@ -63,7 +63,7 @@
 
 ## 五、同名不共用
 
-`calculation-preflight.md`、`workflow-handoff.md`、`requirement-clarifications.md`、`docs/improvement-ledger.md` 两边都有，但内容各自独立：
+`calculation-preflight.md`、`workflow-handoff.md`、`requirement-clarifications.md` 两边都有，但内容各自独立：
 ASG 的写设计方怎么做，SR 的写审查方怎么做；交接页的角色名与 `task.json` 字段两边一致。SR 的 `references/commodity-floors.md` 是 `commodity-floors.json` 的人读表加审查方法，三张表由 SR 测试与本包逐项核对。它们不在 `references/shared/`，不比对字节。
 
 ## 六、跨技能状态词对照（只读，不约束各自用词）
