@@ -43,7 +43,7 @@
 ```
 
 - 路径相对于 result.json 的父目录；禁止绝对路径、`..`、符号链接和重复路径。角色引用的文件都必须在 files 中。
-- 交付内容就是 SKILL 任务 5.3 的交付目录（`设计报告.md`、`原理图/`、`设计资料/`、`record/`），先用
+- 交付内容就是 SKILL 任务 5.2 的交付目录（`设计报告.md`、`原理图/`、`设计资料/`、`record/`），先用
   `pack_design.py` 检查通过，再用流程提供的 `pack-result --roles roles.json --open-items open-items.json`
   生成 result.json；不手填哈希。
 - 无人当场答复需求澄清时，ASG 用 `task.json` 的 `clarification_answers` 填 `answer`（`source` 写

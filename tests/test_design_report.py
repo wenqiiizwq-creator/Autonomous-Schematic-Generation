@@ -91,9 +91,6 @@ class Delivery:
         self.write('page-plan.json', {'schema_version': 1, 'pages': [
             {'file': 'board.kicad_sch', 'reader_tasks': ['跟随 VIN 到 VOUT 的能量流'], 'blocks': {'稳压': ['U1', 'R1']},
              'circuits': {'稳压': 'output-filter-storage#电解/聚合物 + MLCC 并联'}}]})
-        self.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
-            {'source': 'datasheet:raw/Datasheet/08_电源管理/X - XYZ100.pdf#p3', 'cause': 'none',
-             'why_none': 'p.3 的输出电容要求与 part-roles.md 降压转换器行一致'}]})
         self.write('delivery-evidence.json', {'schema_version': 1})
 
     def cleanup(self):
@@ -253,11 +250,11 @@ class DesignReportTests(unittest.TestCase):
         self.ask_user()
         self.d.write('review-responses.json', {'schema_version': 1,
             'sources': [{'id': 'S1', 'path': '/x', 'sha256': '0' * 64}],
-            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'ASK_USER',
+            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'response': 'ASK_USER',
                        'detail': '待机功耗上限要产品定', 'clarifications': ['CL-STBY']},
-                      {'id': 'RC2', 'source': 'S1', 'locator': '2', 'comment': 'c', 'cause': 'none', 'response': 'ASK_USER',
+                      {'id': 'RC2', 'source': 'S1', 'locator': '2', 'comment': 'c', 'response': 'ASK_USER',
                        'detail': 'd', 'clarifications': ['CL-LOAD']},
-                      {'id': 'RC3', 'source': 'S1', 'locator': '3', 'comment': 'c', 'cause': 'none', 'response': 'ASK_USER',
+                      {'id': 'RC3', 'source': 'S1', 'locator': '3', 'comment': 'c', 'response': 'ASK_USER',
                        'detail': 'e', 'work_items': ['W-STBY']}]})
         _, problems = self.d.report()
         self.assertEqual(problems, ['RC2：引用的需求澄清 CL-LOAD 不在 design-closure.json 里',
@@ -477,12 +474,8 @@ class DesignReportTests(unittest.TestCase):
         role['candidates'][0]['values']['输出电流'] = {'value': 3.8, 'page': 1}    # not what page 1 shows
         role['candidates'][1]['values']['输出电流'] = {'value': 2, 'page': 4}      # the PDF has one page
         self.d.write('selection.json', self.d.selection)
-        lessons = json.loads((self.d.record / 'lessons.json').read_text())
-        lessons['events'][0]['source'] = 'datasheet:raw/Datasheet/08_电源管理/X - XYZ100.pdf#p7'
-        self.d.write('lessons.json', lessons)
         text, problems = self.d.report()
-        self.assertEqual(['候选 ABC200 的“输出电流”：手册引用不对，设计资料/Y - ABC200.pdf 只有 1 页，引用了第 4 页',
-                          'lessons.json 第 1 条：手册引用不对，raw/Datasheet/08_电源管理/X - XYZ100.pdf 只有 3 页，引用了第 7 页'],
+        self.assertEqual(['候选 ABC200 的“输出电流”：手册引用不对，设计资料/Y - ABC200.pdf 只有 1 页，引用了第 4 页'],
                          problems)
         self.assertIn('## 引用待人工核对', text)
         self.assertIn('| 候选 XYZ100 的“输出电流” | 设计资料/X - XYZ100.pdf#p1 | 3.8 |', text)
@@ -681,80 +674,6 @@ class DesignReportTests(unittest.TestCase):
         intent = {'components': [{'ref': 'U1', 'value': 'XYZ100'}]}
         self.assertIn('选型角色“稳压器”的位号 U9 不在设计网表里', check_selection(sel, intent, self.d.root))
 
-    def test_lessons_are_required_and_checked(self):
-        (self.d.record / 'lessons.json').unlink()
-        _, problems = self.d.report()
-        self.assertIn('缺少 record/lessons.json', problems)
-        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': []})
-        _, problems = self.d.report()
-        self.assertTrue(any('没有 events' in p for p in problems), problems)
-        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
-            {'source': 'SR-R3/W-1', 'cause': 'rule_missing', 'change': 'scripts/x.py'},
-            {'source': 'review:SR-R3/W-2', 'cause': 'knowledge_missing', 'change': 'scripts/x.py'},
-            {'source': 'review:SR-R3/W-3', 'cause': 'judgment', 'change': 'SKILL.md 任务 2.1'},
-            {'source': 'review:SR-R3/W-4', 'cause': 'none', 'why_none': '看过了'},
-            {'source': 'review:SR-R3/W-5', 'cause': 'oops'}]})
-        text, problems = self.d.report()
-        self.assertIn('lessons.json 第 1 条的 source 要写成 review:<审查目录>/<待办编号>、datasheet:<库内路径>#p<页>、test:<记录> 或 user:<日期>', problems)
-        self.assertIn('lessons.json 第 2 条归因 knowledge_missing，change 要指向 references//wiki//raw/ 下的具体文件', problems)
-        self.assertIn('lessons.json 第 3 条归因 judgment 要写 why_not_rule：为什么规则和知识都拦不住', problems)
-        self.assertFalse(any(p.startswith('lessons.json 第 4 条') for p in problems), problems)
-        self.assertIn('lessons.json 第 5 条的 cause 必须是 rule_missing/rule_not_enforced/knowledge_missing/knowledge_wrong/judgment 或 none', problems)
-        self.assertIn('## 改进记录', text)
-        self.assertIn('| review:SR-R3/W-2 | 缺知识 | scripts/x.py |', text)
-
-    def test_a_lesson_changed_in_the_delivery_is_not_a_skill_change(self):
-        # R8 wrote its new circuit patterns into 设计资料/references/typical-circuits/, so the skill learned nothing.
-        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
-            {'source': 'user:2026-10-27', 'cause': 'knowledge_missing',
-             'change': '设计资料/references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法', 'knowledge_kind': 'approach', 'impact': 'uncertain', 'problem': '缺一次侧 VCC 供电 LED 做法', 'uncertainty': '尚无复核', 'pending': '核对典型电路'},
-            {'source': 'user:2026-10-27', 'cause': 'knowledge_missing',
-             'change': 'references/typical-circuits/ac-indicator.md：补一次侧 VCC 供电 LED 做法', 'knowledge_kind': 'approach', 'impact': 'uncertain', 'problem': '缺一次侧 VCC 供电 LED 做法', 'uncertainty': '尚无复核', 'pending': '核对典型电路'}]})
-        _, problems = self.d.report()
-        self.assertTrue(any(p.startswith('lessons.json 第 1 条的 change 写在交付目录里') for p in problems), problems)
-        self.assertFalse(any(p.startswith('lessons.json 第 2 条') for p in problems), problems)
-
-    def test_a_deferred_comment_is_still_attributed(self):
-        # R6 marked nine deferred review comments cause=none "下一轮处理时再归因", among them the P1 F-SR-TONMIN.
-        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
-            {'source': 'review:SR-R5/F-SR-TONMIN', 'cause': 'none',
-             'why_none': '本版范围外暂缓，未做根因归类；已读该意见原文，下一轮处理时再归因。'},
-            {'source': 'review:SR-R5/W-REQ', 'cause': 'none', 'why_none': '需求取舍，用户决定本版暂缓；不反映技能缺口。'}]})
-        _, problems = self.d.report()
-        self.assertTrue(any(p.startswith('lessons.json 第 1 条 cause=none 只用于') for p in problems), problems)
-        self.assertFalse(any(p.startswith('lessons.json 第 2 条') for p in problems), problems)
-
-    def test_review_comments_must_be_attributed_to_a_cause(self):
-        self.d.write('review-responses.json', {'schema_version': 1, 'sources': [
-            {'id': 'SR', 'path': 'r.md', 'sha256': 'x'}], 'items': [
-            {'id': 'W-A', 'source': 'SR', 'locator': 'W-A', 'comment': 'a', 'response': 'DECLINE', 'detail': '不采纳 a', 'evidence': ['E1']},
-            {'id': 'W-B', 'source': 'SR', 'locator': 'W-B', 'comment': 'b', 'response': 'DECLINE', 'detail': '不采纳 b', 'evidence': ['E1'], 'cause': 'rule_missing'},
-            {'id': 'W-C', 'source': 'SR', 'locator': 'W-C', 'comment': 'c', 'response': 'DECLINE', 'detail': '不采纳 c', 'evidence': ['E1'], 'cause': 'knowledge_wrong'},
-            {'id': 'W-D', 'source': 'SR', 'locator': 'W-D', 'comment': 'd', 'response': 'DECLINE', 'detail': '不采纳 d', 'evidence': ['E1'], 'cause': 'none'}]})
-        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
-            {'source': 'review:SR-R3/W-C', 'cause': 'knowledge_missing', 'change': 'references/part-roles.md 光耦行'}]})
-        _, problems = self.d.report()
-        self.assertIn('W-A：要归因（cause）：rule_missing/rule_not_enforced/knowledge_missing/knowledge_wrong/judgment 或 none', problems)
-        self.assertIn('W-B：归因 rule_missing，lessons.json 里要有 source 以 /W-B 结尾的事件写明改了什么', problems)
-        self.assertIn('W-C：review-responses 归因 knowledge_wrong，lessons.json 同一事件归因 knowledge_missing，要一致', problems)
-        self.assertFalse(any(p.startswith('W-D') for p in problems), problems)
-
-    def test_a_recurring_comment_is_not_a_judgment_slip(self):
-        item = {'id': 'W-A', 'source': 'SR', 'locator': 'W-A', 'comment': 'a', 'response': 'DECLINE', 'detail': '不采纳 a',
-                'evidence': ['E1'], 'cause': 'judgment', 'recurs_from': 'review:SR-R4/W-7'}
-        self.d.write('lessons.json', {'schema_version': 2, 'library_gaps': [], 'events': [
-            {'source': 'review:SR-R5/W-A', 'cause': 'judgment', 'change': 'SKILL.md 任务 2.3', 'why_not_rule': 'x'}]})
-        self.d.write('review-responses.json', {'schema_version': 1, 'sources': [{'id': 'SR', 'path': 'r.md', 'sha256': 'x'}],
-                                               'items': [item]})
-        text, problems = self.d.report()
-        self.assertIn('W-A：意见复发自 review:SR-R4/W-7，不能归因为判断失误（judgment）：复发说明规则或知识没有拦住', problems)
-        self.assertIn('| W-A | a | 不采纳 | 不采纳 a（复发自 review:SR-R4/W-7） |', text)
-        item['recurs_from'] = 'R4 第 7 条'
-        self.d.write('review-responses.json', {'schema_version': 1, 'sources': [{'id': 'SR', 'path': 'r.md', 'sha256': 'x'}],
-                                               'items': [item]})
-        _, problems = self.d.report()
-        self.assertIn('W-A：recurs_from 要写成 review:<上一轮审查目录>/<意见编号>', problems)
-
     def test_decisive_conditions_are_judged_from_recorded_values(self):
         sel = json.loads(json.dumps(self.d.selection))
         role = sel['roles'][0]
@@ -784,14 +703,14 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('选型角色“稳压器”候选 GHI400 不满足条件“输入电压范围”（10–12 覆盖 9–14 V）却被列为备选', problems)
         self.assertIn('DEF300：资料不足', text)
 
-    def test_blocks_name_a_pattern_approach_or_register_the_gap(self):
+    def test_blocks_name_a_pattern_approach_or_none(self):
         plan = json.loads((self.d.record / 'page-plan.json').read_text())
         page = plan['pages'][0]
         page['circuits'] = {}
         page['key_blocks'] = ['稳压']
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertIn('board.kicad_sch：功能块“稳压”没有典型电路或有效的 library_gaps 逐块覆盖待办', problems)
+        self.assertIn('board.kicad_sch：关键功能块“稳压”要标注典型电路与实现方案，库里没有适用的写 none', problems)
         self.assertTrue(any('scheme-criteria.json' in p for p in problems), problems)
         page['circuits'] = {'稳压': 'no-such#做法'}
         self.d.write('page-plan.json', plan)
@@ -893,9 +812,9 @@ class DesignReportTests(unittest.TestCase):
         self.d.write('review-responses.json', {'schema_version': 1,
             'sources': [{'id': 'S1', 'path': '/x/审查报告.md', 'sha256': '0' * 64, 'from': '审查方 v0'}],
             'items': [{'id': 'RC1', 'source': 'S1', 'locator': '待办 1', 'comment': '过压保护配置没依据',
-                       'cause': 'none', 'response': 'OBTAIN_DATA', 'detail': '向固件供应方要配置表', 'work_items': ['W-FW']},
+                       'response': 'OBTAIN_DATA', 'detail': '向固件供应方要配置表', 'work_items': ['W-FW']},
                       {'id': 'RC2', 'source': 'S1', 'locator': '待办 2', 'comment': '缺满载温升',
-                       'cause': 'none', 'response': 'DECLINE', 'detail': '只能样机测'}]})
+                       'response': 'DECLINE', 'detail': '只能样机测'}]})
         text, problems = self.d.report()
         self.assertIn('RC2：处理方式为“不采纳”时必须填 evidence', problems)
         self.assertIn('- **收到的审查意见**：2 条。补资料 1 条，不采纳 1 条。', text)
@@ -911,12 +830,12 @@ class DesignReportTests(unittest.TestCase):
     def test_same_detail_on_several_comments_is_a_problem(self):
         same = '本次未宣称关闭；已复核现有条件计算并保留原任务。'
         problems = self.responses([
-            {'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'a', 'cause': 'none', 'response': 'OBTAIN_DATA', 'detail': same, 'work_items': ['W-FW']},
-            {'id': 'RC2', 'source': 'S1', 'locator': '2', 'comment': 'b', 'cause': 'none', 'response': 'OBTAIN_DATA', 'detail': same, 'work_items': ['W-FW']}])
+            {'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'a', 'response': 'OBTAIN_DATA', 'detail': same, 'work_items': ['W-FW']},
+            {'id': 'RC2', 'source': 'S1', 'locator': '2', 'comment': 'b', 'response': 'OBTAIN_DATA', 'detail': same, 'work_items': ['W-FW']}])
         self.assertTrue(any(p.startswith('处理说明“本次未宣称关闭') and '2 条意见里重复' in p for p in problems), problems)
 
     def test_design_response_needs_this_versions_progress(self):
-        item = {'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'DESIGN',
+        item = {'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'response': 'DESIGN',
                 'detail': '自己算完', 'work_items': ['W-CALC']}
         problems = self.responses([item])
         self.assertIn('RC1：“补设计”引用的待办 W-CALC 没有写本版进展（progress）', problems)
@@ -954,7 +873,7 @@ class DesignReportTests(unittest.TestCase):
     def test_review_source_is_hashed_when_readable_and_marked_unverified_otherwise(self):
         source = self.d.root / '审查报告.md'
         source.write_text('意见原文')
-        item = {'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'ASK_USER', 'detail': 'd',
+        item = {'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'response': 'ASK_USER', 'detail': 'd',
                 'work_items': ['W-FW']}
         def write(path, digest):
             self.d.write('review-responses.json', {'schema_version': 1, 'sources': [{'id': 'S1', 'path': path, 'sha256': digest}],
@@ -972,10 +891,10 @@ class DesignReportTests(unittest.TestCase):
     def test_redesign_names_a_part_or_page_and_calc_doc_names_its_target(self):
         base = {'source': 'S1', 'locator': '1', 'comment': 'c', 'detail': 'd'}
         problems = self.responses([
-            {'id': 'RC1', 'cause': 'none', 'response': 'REDESIGN', 'changes': ['三只旁路升为2.2uF'], **base},
-            {'id': 'RC2', 'cause': 'none', 'response': 'REDESIGN', 'changes': ['R1 改 470Ω'], **{**base, 'detail': 'e'}},
-            {'id': 'RC3', 'cause': 'none', 'response': 'REDESIGN', 'changes': ['System_block 流向标名'], **{**base, 'detail': 'f'}},
-            {'id': 'RC4', 'cause': 'none', 'response': 'CALC_DOC', 'changes': ['C1', '方案与选型依据.md', '不存在.md'], **{**base, 'detail': 'g'}}])
+            {'id': 'RC1', 'response': 'REDESIGN', 'changes': ['三只旁路升为2.2uF'], **base},
+            {'id': 'RC2', 'response': 'REDESIGN', 'changes': ['R1 改 470Ω'], **{**base, 'detail': 'e'}},
+            {'id': 'RC3', 'response': 'REDESIGN', 'changes': ['System_block 流向标名'], **{**base, 'detail': 'f'}},
+            {'id': 'RC4', 'response': 'CALC_DOC', 'changes': ['C1', '方案与选型依据.md', '不存在.md'], **{**base, 'detail': 'g'}}])
         self.assertIn('RC1：“改图”的 changes 没有点名改了哪个位号或哪一页', problems)
         self.assertFalse(any(p.startswith('RC2') or p.startswith('RC3') for p in problems), problems)
         self.assertIn('RC4：“补计算/补文档”的 changes 项“不存在.md”既不是计算编号也不是设计资料文件', problems)
@@ -986,9 +905,9 @@ class DesignReportTests(unittest.TestCase):
         self.assertFalse(any('关键设计依据' in p for p in problems), problems)
         self.d.write('review-responses.json', {'schema_version': 1,
             'sources': [{'id': 'S1', 'path': '/x', 'sha256': '0' * 64}],
-            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'OBTAIN_DATA',
+            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'response': 'OBTAIN_DATA',
                        'detail': 'x', 'work_items': ['W-FW']},
-                      {'id': 'RC2', 'source': 'S1', 'locator': '2', 'comment': 'c', 'cause': 'none', 'response': 'REDESIGN',
+                      {'id': 'RC2', 'source': 'S1', 'locator': '2', 'comment': 'c', 'response': 'REDESIGN',
                        'detail': 'y', 'changes': ['R1 改值']}]})
         text, _ = self.d.report()
         self.assertIn('本版共收到 2 条审查意见：改图或补计算/补文档 1 条，其余 1 条登记为待办、技术转交或不采纳。', text)
@@ -1001,7 +920,7 @@ class DesignReportTests(unittest.TestCase):
     def test_response_stage_must_match_work_item(self):
         self.d.write('review-responses.json', {'schema_version': 1,
             'sources': [{'id': 'S1', 'path': '/x', 'sha256': '0' * 64}],
-            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'HANDOFF',
+            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'response': 'HANDOFF',
                        'detail': 'd', 'work_items': ['W-CALC']}]})
         _, problems = self.d.report()
         self.assertIn('RC1：待办 W-CALC 的阶段与处理方式“技术转交”不符', problems)
@@ -1066,7 +985,7 @@ class PackDesignTests(unittest.TestCase):
         prev = self.previous(intent={'components': [{'ref': 'U1'}, {'ref': 'R1', 'value': '10k'}]})
         self.d.write('review-responses.json', {'schema_version': 1,
             'sources': [{'id': 'S1', 'path': '/x', 'sha256': '0' * 64}],
-            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'cause': 'none', 'response': 'REDESIGN',
+            'items': [{'id': 'RC1', 'source': 'S1', 'locator': '1', 'comment': 'c', 'response': 'REDESIGN',
                        'detail': 'R1 改 470Ω', 'changes': ['R1 改 470Ω']}]})
         errors, _ = pack(self.d.root, {'requirements': str(self.inputs), 'previous': str(prev)})
         self.assertIn('previous: RC1 标为“改图”，但 R1 在设计网表里与上一版相同', errors)

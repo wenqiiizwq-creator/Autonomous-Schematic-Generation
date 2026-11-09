@@ -146,13 +146,11 @@ pdftoppm -scale-to 2200 -png -singlefile \
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 tests/probe_upstream.py --output output/upstream-probe.json
 ```
 
 第一条命令只用标准库；KiCad/库不可用时，KiCad 相关测试会明确跳过。跳过的测试不是执行证据。
 有 `pdftotext` 时，变换测试还核对 KiCad PDF 中 Value 的实际外框，检查竖排文字和镜像后侵入本体。
-可选的第二条命令需要下载的两个 `upstream/` 仓库和支持 TypeScript 剥离的 Node；它只执行选定的纯源码模块。
-运行时生成既不需要上游仓库也不需要 Node。每个新的真实失败都加一个最小测试样例，然后测试预期的可观察不变量和 KiCad 输出。
+运行时生成不需要上游仓库。每个新的真实失败都加一个最小测试样例，然后测试预期的可观察不变量和 KiCad 输出。
 复用更多代码前先钉住改动的上游提交。
 
 ## 显式的图面字段与网络组

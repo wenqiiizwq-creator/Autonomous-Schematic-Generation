@@ -14,7 +14,6 @@
 | SKiDL `generate_schematic` | 按功能分块、放置布线、有限重试 | 按块选模板，测量占用，拼入允许纸张；3 次有限扩距重排并保留失败记录 |
 | circuit-synth 连接感知放置 | 使用已知连接组织器件 | `functional` 按连接遍历，高扇出网络不支配顺序；外加本体/字段/出线区硬占用 |
 
-精确源文件及 commit 见 [upstream-sources.json](../docs/upstream-sources.json)。
 没有移植 SKiDL 的自动标签降级/ERC 修正循环，也没有采用隐式重新编号。
 
 ## 电气输入

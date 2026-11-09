@@ -59,8 +59,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 先弄清自己在哪一步、产出什么，再按“主流程”逐项任务做，每项任务做到“做完的标志”为止。
 
 - **输入**：需求、器件知识库、典型电路库、已有工程/审查意见
-- **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）、
-  持续改进（lessons → 归因 → 修改 → 合成测试）
+- **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
 
 共用工程判据由硬件设计规范发布，ASG 使用本技能中已安装并固定版本的发布包；准则版本与共用层指纹由发布包读取。运行和本地测试不读取 SR 源码。
 计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
@@ -71,7 +70,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 | ② 详细设计 | 2.1 数据手册核对与外围电路 · 2.2 设计计算与性能要求 · 2.3 器件选型与性能符合性 · 2.4 设计网表 | 按核心器件手册确定外围约束，从工况计算器件性能要求，核对采购来源或候选器件的符合性，再写出设计网表 | `reference-input.json`、计算记录、`component-requirements.json`、`electrical-intent.json` |
 | ③ 原理图绘制 | 3.1 分页方案 · 3.2 图页脚本 · 3.3 组装工程 | 按绘图纲要 O1–O8 把设计网表画成可读的 KiCad 工程 | `page-plan.json`、图页脚本、KiCad 工程 |
 | ④ 设计检查 | 4.1 自动检查 · 4.2 图面审阅 | 用 KiCad 导出核对电气与图面，再按 PDF 逐页审阅 | `summary.json`、`visual-review.json` |
-| ⑤ 设计输出 | 5.1 设计完成核对 · 5.2 经验总结 · 5.3 报告与打包 | 设计做完才交付，记下学到的东西，生成报告并打包 | 交付目录、`lessons.json` |
+| ⑤ 设计输出 | 5.1 设计完成核对 · 5.2 报告与打包 | 设计做完才交付，生成报告并打包 | 交付目录 |
 
 独立审查（schematic-review 技能或其他审查方）在设计输出之后，不属于 ASG。
 
@@ -83,14 +82,12 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 - **P4 可读**：页面结构按绘图纲要 O1–O8 决定，坐标从引脚几何推出；可读性是交付标准。
 - **P5 失败改结构，不改计数**：不靠 PWR_FLAG、豁免、改引脚类型或标签来掩盖问题。
 - **P6 责任边界**：设计完成由 ASG 负责，只做自检；独立审查交给独立审查方（schematic-review 技能）。
-- **P7 进步**：每版必须记下学到的东西；技能只因有来源的事件而改；每处改动附复现该事件的合成测试，全部测试通过后才提交。
 
 ### 纲要的修改
 
-本节（架构、P1–P7）、主流程的步骤、任务与做完的标志，以及绘图纲要 O1–O8，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
-持续改进中归因到纲要的事件，只在 `lessons.json` 和台账里登记为提案，不直接修改。
-`scripts/` 和 `references/` 中的实现细节可以按事件修改，但一旦与纲要冲突，就转为纲要提案。
-经确认的改动在 `docs/improvement-ledger.md` 的条目里写 `Approved: user:<日期>` 和 `Outline: <哈希>`
+本节（架构、P1–P6）、主流程的步骤、任务与做完的标志，以及绘图纲要 O1–O8，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
+`scripts/` 和 `references/` 中的实现细节可以直接修改，但一旦与纲要冲突，就先写纲要草案交人确认。
+经确认的改动在 `docs/outline-approvals.md` 加一条，写确认日期、用户原话和改后纲要哈希
 （`python3 scripts/check_ledger.py --outline-hash` 输出当前哈希）；纲要文字与最新确认的哈希不一致时 `check_ledger.py` 报 FAIL。
 
 ## 选择工作流
@@ -138,7 +135,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 #### 1.3 功能块实现方案
 
-关键功能块先在 [典型电路库](references/typical-circuits.md) 里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。库内没有适用文件的关键功能块在 `lessons.json.library_gaps` 登记。
+关键功能块先在 [典型电路库](references/typical-circuits.md) 里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。
 
 关键功能块（功率变换拓扑、保护架构、隔离方式、信号链架构、对外接口）定方案前，先用 `guideline_criteria.py select` 按该块的电路类型和器件类别列出按类型触发的规则，有对外端口的块再加上端口矩阵对应的 G07 规则；从中找出会淘汰某个候选方案的规则，逐条写明它排除了哪个候选、选定方案怎样满足、哪些数值留给任务 2.2 核算，记入 `record/scheme-criteria.json`。没有规则能淘汰候选的块写明查过的规则范围。不要求逐条列出全部适用规则，不能淘汰候选、不改变选型也不进入计算的规则不要求逐条落实。
 
@@ -286,7 +283,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 为每页写一张简短的分页方案，内容包括：读者任务（跟随能量流、看懂反馈、追一个受保护接口……）、
 功能块及每块的位号、主路径、电源轨、出页网络及目的功能/页码、标签边界。先保证一条功能路径易读，再决定拆页或加大纸张。
 分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`key_blocks`、`circuits`），本页每个器件都要属于一个功能块，
-每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有典型电路的关键块要在 `lessons.json` 登记）；
+每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有适用典型电路的关键块写 `none`）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](references/human-readable-routing.md) 第 1 节。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
@@ -295,7 +292,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 - 按绘图纲要 O1–O8 决定页面流向、锚点、器件归属、画法、出线、标签、间距和修复顺序，见
   [drawing-recipes.md](references/drawing-recipes.md)。
 
-做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与关键块的典型电路或资料覆盖待办齐全，每个器件属于一个功能块。
+做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与关键块的典型电路标注（库里没有适用的写 none）齐全，每个器件属于一个功能块。
 
 #### 3.2 图页脚本
 
@@ -406,22 +403,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；矩阵与状态表没有缺结论或不满足的格；审计列出的可执行设计动作都已完成；淘汰候选方案、改变选型和进入计算的准则都已落实在方案比较、性能记录或计算里，任务 1.3 留给 2.2 的数值都已由计算关闭；有对外连接器的板 FMEA 与 EMC 端口矩阵章节与连接器齐全。
 
-#### 5.2 经验总结
-
-**写本版学到的东西** `record/lessons.json`：每条审查意见、每份改变了认识的手册页、每次用户纠正都是一个事件，
-写来源（`review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:…`、`user:<日期>`）、归因
-（`rule_missing`/`rule_not_enforced` 改 `scripts/`，`knowledge_missing`/`knowledge_wrong` 改 `references/` 或知识库，
-`judgment` 写 `why_not_rule`）和改了哪个文件的哪一行；确实没学到的写 `cause: none` 并引用核对过的页码。
-泛泛的总结不算，报告会拒绝。收到独立审查意见后按本节归因；落在某个典型电路上的坑可以写进该典型电路的已知坑，来源写 `review:calibration/<板>/<编号>`。审查意见的归因同时写进 `review-responses.json` 的 `cause`，见 [处理审查意见](references/review-comments.md)。
-技能或知识库改完后，在 `docs/improvement-ledger.md` 加条目（Event/Changed 两行，`scripts/check_ledger.py` 检查），
-再跑全部合成测试。
-
-资料覆盖待办写入 `library_gaps`，真实事件写入 `events`；字段、`knowledge_missing` 的写法和两者均空时的处理见
-[delivery-report.md](references/delivery-report.md) 的 lessons schema 2 一节。不为凑事件数虚报知识缺陷。
-
-做完的标志：报告不拒绝 `lessons.json`；技能有改动时 `check_ledger.py` 为 PASS，全部合成测试通过。
-
-#### 5.3 报告与打包
+#### 5.2 报告与打包
 
 交付增加 `record/component-requirements.json`，报告分别给出性能定义完整程度、选型核实状态和未关闭项；BOM及图面的可见规格由该记录生成。打包检查性能记录和图纸/BOM是否同源、最新、一致；完整规格采购、候选待核与型号已核准各自表述，不能统一写成选型完成。
 
@@ -455,11 +437,11 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 
 由外部流程派发任务时，读 [任务输入输出格式](references/workflow-handoff.md)。
 以 `task.json` 的需求、版本、前版设计和审查意见为输入；架构生成、查资料、计算与改图仍由 ASG 完成。
-交付仍按任务 5.3 的目录；用流程提供的 `pack-result` 生成 `result.json`。独立使用本技能不依赖外部流程。
+交付仍按任务 5.2 的目录；用流程提供的 `pack-result` 生成 `result.json`。独立使用本技能不依赖外部流程。
 
 ## 硬性规则
 
-原则见「ASG 纲要」P1–P7；这里只列具体操作约束。
+原则见「ASG 纲要」P1–P6；这里只列具体操作约束。
 
 - P2：位号、值、MPN、引脚号、装配状态和网络归属不因摆放改变；不为布图方便改符号的引脚映射。
 - P4/P5：不手写辅助器件坐标；不把可读页面交给 MST/A* 自动路由；不用标签掩盖失败的连线。
@@ -482,7 +464,6 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 需求没说清：问什么、什么时候问、答复怎样写回需求清单 | [requirement-clarifications.md](references/requirement-clarifications.md) |
 | 架构页、参考设计外围、学习工程师图面 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
-| 技能怎样持续改进：原则、事件、归因、台账、合成测试与每版的固定动作 | [docs/operating-cadence.md](docs/operating-cadence.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
 | 一个功能通常怎么实现、有几种实现方案、各自的必算项与已知坑 | [typical-circuits.md](references/typical-circuits.md) 与 `references/typical-circuits/` |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |

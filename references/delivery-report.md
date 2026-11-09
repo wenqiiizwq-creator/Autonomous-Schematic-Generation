@@ -21,10 +21,9 @@
 | `summary.json` | `verify_schematic.py` 的自动检查结果，原样复制 |
 | `component-requirements.json` | 新性能流程的唯一源记录：用途筛选、计算得到的性能要求、采购方式、候选核实状态；格式与准备/出图接口见 [器件性能要求](component-requirements.md) |
 | `component-requirements-check.json` | 从本次原生图纸、PDF、XML与BOM复核的结果；不与源记录重名，不用历史PASS代替本次核对 |
-| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注 `references/typical-circuits/` 里的典型电路与实现方案，或登记资料覆盖待办，常规块可不标；显式标注均检查（第一页架构页免标） |
+| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注 `references/typical-circuits/` 里的典型电路与实现方案，库里没有适用的写 `none`，常规块可不标；显式标注均检查（第一页架构页免标） |
 | `selection.json` | 核心器件选型：每个角色的位号、决定性条件、≥2 个候选（选中/淘汰理由、相对知识库的手册路径）；每个 U/Q/T 器件都要属于一个角色；选定候选写外部依赖，依赖未公开资料时附 2–3 个方案、建议和用户的决定，格式见 [核心器件选型](core-part-selection.md) |
 | `scheme-criteria.json` | 任务 1.3 关键功能块的候选比较；何时必须有、字段与格式示例见 [典型电路库](typical-circuits.md) 的规则一节 |
-| `lessons.json` | 本版资料覆盖待办与事件：`{"schema_version": 2, "library_gaps": [], "events": [{"source", "cause", "change" 或 "why_none", "why_not_rule"}]}`；来源只能是 `review:<审查目录>/<待办编号>`、`datasheet:<库内路径>#p<页>`、`test:<记录>`、`user:<日期>`；`datasheet:` 来源核对文件和页码；schema 2 字段与事件非空例外见下节；归因与改动位置的要求见 [处理审查意见](review-comments.md) |
 | `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要在对应页有非空处置，写出在本版 PDF 上看到了什么；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `原理图/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 原理图/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
 | `delivery-evidence.json` | 导出后有没有再改过的核对记录 |
 | `review-responses.json` | 收到审查意见时必有，格式见 [处理审查意见](review-comments.md) |
@@ -148,22 +147,3 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 通过后写 `record/manifest.json`。`datasheets` 目录里还不在知识库 `~/Documents/知识库/HardwareWiki/raw/` 的 PDF
 （同哈希或同文件名都算在库，`find_parts.py --file <pdf>` 可查）不挡打包，列进 manifest 的 `datasheets_to_file` 并打印出来，
 设计完成后提示用户复制进知识库（SKILL.md 任务 2.1 的资料规则）。
-
-### lessons schema 2
-
-只读 `schema_version: 2`，同时写 `library_gaps` 和 `events` 列表。覆盖待办不带 cause、不进入事件索引；有有效覆盖待办时 events 可空，两者均空时写 `cause: none` 核对记录。schema 1、缺版本或其他版本的记录都算记录问题，按本节格式重写（用户 2026-11-08）。
-
-```json
-{"schema_version": 2, "library_gaps": [
-  {"id": "LG-1", "page": "channel.kicad_sch", "block": "通道保护",
-   "reason": "检索 channel protection；查过方案甲，其输入范围不适用",
-   "source": "test:本版检索记录", "design_basis": "record/reference-input.json#/components/0",
-   "target": "references/typical-circuits/channel-protection.md", "status": "open"}
-], "events": []}
-```
-
-每项 id 唯一，page 精确匹配页计划的 file，block 属于该页 blocks，页/块不能重复。任务 1.3 可先记功能块，3.1 后必须绑定；交付检查拒绝孤立项。reason 写检索词、查过的方案及不适用理由，需人工评估其内容。design_basis 是本版目录内 `文件#条目`：JSON 支持 JSON Pointer 或条目 id/键，文字文件支持正文定位文字或标题锚点；脚本只核定位，不证明设计依据充分。target 限于 `references/typical-circuits/<功能>.md`，open 可不存在；closed 须写 `resolution: <target>#补写位置`，文件/条目存在，页计划标注该文件已存在的实现方案。显式错误标注不能由待办豁免。
-
-schema 2 的 knowledge_missing 要写 knowledge_kind（approach/criterion/pitfall）、problem（缺少的知识、触发条件及其如何造成具体问题）、impact（observed/uncertain）。observed 必须有 consequence 和非空 evidence 来源列表；uncertain 必须有 uncertainty（不确定原因）和 pending（待核内容），有 evidence 时仍核其来源格式与手册页。只有 observed 且字段完整的事件计入有证据后果，uncertain 单列，覆盖待办独立展示；按事件计数，同一事件的多个来源不重复计数。跨事件同一问题的合并需人工说明。来源存在不等于因果已证实。
-
-引用延用已有语法及检查边界：datasheet 核文件/页码，review/test/user 的来源语义仍需人工核对。覆盖待办不能代替真实审查意见所需的 lessons 事件。

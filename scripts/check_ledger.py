@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""The newest entry of docs/improvement-ledger.md names its event and the files it changed.
+"""The ASG outline changes only with a person's approval.
 
-A skill change happens because of an event (a review comment, a datasheet
-page, a test result, a user correction). A cited datasheet must exist in the
-library and have the cited page. Older entries are history and are not checked.
-
-The ASG 纲要 and 主流程 (SKILL.md) and the 绘图纲要 O1-O8 (drawing-recipes.md) change only
-with a person's approval: the newest entry that carries `Outline:` must name
-the current outline hash and an `Approved: user:<date>`.
+The 纲要 (SKILL.md 「ASG 纲要（核心标准）」 and 「主流程」, references/drawing-recipes.md 「绘图纲要」) is
+hashed; the newest row of docs/outline-approvals.md must carry the current hash and a `user:<date>`.
 """
 
 import hashlib
@@ -15,15 +10,13 @@ import re
 import sys
 from pathlib import Path
 
-from schematic_layout.citations import check_source
-
 ROOT = Path(__file__).resolve().parent.parent
-LEDGER = ROOT / 'docs' / 'improvement-ledger.md'
-SOURCE = re.compile(r'(review:[^\s/,;]+/[^\s,;]+|datasheet:[^\s,;]+#p\d+|test:[^\s,;]+|user:\d{4}-\d{2}-\d{2})')
+RECORD = ROOT / 'docs' / 'outline-approvals.md'
 # (file, heading) of each outline section; a section runs to the next level-2 heading.
 OUTLINE = (('SKILL.md', '## ASG 纲要（核心标准）'), ('SKILL.md', '## 主流程'),
            ('references/drawing-recipes.md', '## 绘图纲要（怎样决定结构）'))
-APPROVED = re.compile(r'user:\d{4}-\d{2}-\d{2}')
+APPROVED = re.compile(r'^user:\d{4}-\d{2}-\d{2}$')
+HASH = re.compile(r'^[0-9a-f]{16}$')
 
 
 def outline_hash(root=ROOT):
@@ -38,46 +31,29 @@ def outline_hash(root=ROOT):
     return digest.hexdigest()[:16]
 
 
-def check_outline(text, root=ROOT):
-    """The newest entry with an Outline: field approves the outline as it is now."""
-    for entry in re.split(r'^## ', text, flags=re.M)[1:]:
-        recorded = field(entry, 'Outline')
-        if not recorded:
-            continue
-        title = entry.splitlines()[0].strip()
-        problems = []
-        if recorded != outline_hash(root):
-            problems.append('%s: Outline: %s is not the current outline %s; 纲要改动须先经人确认并写新的台账条目'
-                            % (title, recorded, outline_hash(root)))
-        if not APPROVED.search(field(entry, 'Approved')):
-            problems.append('%s: Approved: must cite user:<date>' % title)
-        return problems
-    return ['no ledger entry records an approved Outline: hash']
+def rows(text):
+    """Data rows of the approval table: [approved, what, hash, quote]."""
+    out = []
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.strip().strip('|').split('|')] if line.startswith('|') else []
+        if len(cells) == 4 and cells[0] != '确认' and not set(cells[0]) <= set('-: '):
+            out.append(cells)
+    return out
 
 
-def latest_entry(text):
-    parts = re.split(r'^## ', text, flags=re.M)
-    return parts[1] if len(parts) > 1 else ''
-
-
-def field(entry, name):
-    m = re.search(r'^[-*\s]*%s:\s*(.+?)(?=^\S|^[-*]\s+\w+:|\Z)' % name, entry, flags=re.M | re.S)
-    return ' '.join(m.group(1).split()) if m else ''
-
-
-def check_entry(entry, root=ROOT):
+def check(text, root=ROOT):
+    table = rows(text)
+    if not table:
+        return ['docs/outline-approvals.md 没有纲要确认记录']
+    approved, what, recorded, _ = table[0]
     problems = []
-    title = entry.splitlines()[0].strip() if entry.strip() else ''
-    event, changed = field(entry, 'Event'), field(entry, 'Changed')
-    if not SOURCE.search(event):
-        problems.append('%s: Event: must cite review:<dir>/<item>, datasheet:<path>#p<n>, test:<record> or user:<date>' % title)
-    for source in SOURCE.findall(event):
-        result = check_source(source)
-        if result and result['status'] == 'FAIL':
-            problems.append('%s: Event: %s' % (title, result['reason']))
-    paths = [p.strip('`') for p in re.split(r'[\s,;]+', changed) if p.strip('`')]
-    if not paths:
-        problems.append('%s: Changed: must list the files changed' % title)
+    if not APPROVED.match(approved):
+        problems.append('第一行的确认要写 user:<日期>（现在是 %r）' % approved)
+    if not what:
+        problems.append('第一行要写改了什么')
+    current = outline_hash(root)
+    if recorded != current:
+        problems.append('第一行的纲要哈希 %s 不是当前纲要 %s：纲要改动须先经人确认，再在最上面加一行' % (recorded, current))
     return problems
 
 
@@ -86,9 +62,8 @@ def main(argv=None):
     if argv[:1] == ['--outline-hash']:
         print(outline_hash())
         return 0
-    path = Path(argv[0]) if argv else LEDGER
-    text = path.read_text(encoding='utf-8')
-    problems = check_entry(latest_entry(text)) + check_outline(text)
+    path = Path(argv[0]) if argv else RECORD
+    problems = check(path.read_text(encoding='utf-8'))
     for p in problems:
         print('PROBLEM:', p)
     print('FAIL' if problems else 'PASS')

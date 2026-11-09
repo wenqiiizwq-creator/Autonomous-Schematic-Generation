@@ -21,7 +21,7 @@ ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 其他工作流：改版与多页核对用 `verify_design_change.py`、`audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
 保持图面的 Value 修改用 `patch_schematic_values.py`（见 [value-patch.md](references/value-patch.md)）；夹具与草稿用的低层生成器
 `build_circuit.py` / `generate_schematic.py` 见 [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md)，
-它们不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [采纳清单](docs/upstream-integration.md)。
+它们不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [上游来源](references/upstream-licenses/README.md)。
 
 ## 运行一个样例
 
@@ -51,7 +51,12 @@ PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（
 
 ## 设计约定
 
-以 SKILL.md 的「ASG 纲要」为核心标准（原则 P1–P7 与绘图纲要 O1–O8），修改纲要须先经人确认。
+以 SKILL.md 的「ASG 纲要」为核心标准（原则 P1–P6 与绘图纲要 O1–O8），修改纲要须先经人确认。
+
+维护约定：
+
+- 纲要改动先写草案交人确认，确认后在 [纲要确认记录](docs/outline-approvals.md) 最上面加一行，`python3 scripts/check_ledger.py` 核对。
+- 每处改动附复现问题的合成测试，`python3 -m unittest discover -s tests` 全部通过才提交。
 
 ## 免责声明
 
@@ -65,7 +70,7 @@ MIT License
 Copyright (c) 2026 wenqiii.zwq
 
 改编部分另保留 tscircuit Inc. 和 Osman Aslan 的 MIT 声明，见
-[上游许可证](references/upstream-licenses/)及[来源记录](docs/upstream-sources.json)。
+[上游许可证](references/upstream-licenses/)。
 
 ## 共用层
 

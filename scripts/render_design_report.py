@@ -20,7 +20,7 @@ import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
 import operating_inputs  # noqa: E402
-from schematic_layout.citations import check as check_citation, check_source  # noqa: E402
+from schematic_layout.citations import check as check_citation  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
 from schematic_layout.component_requirements import package_audit, DEFINITIONS, SELECTIONS  # noqa: E402
@@ -74,7 +74,7 @@ REF_PATTERN = re.compile(r'(?<![A-Za-z0-9])[A-Z]{1,3}\d{1,4}(?![A-Za-z0-9])')
 PAGE_PATTERN = re.compile(r'(?<![A-Za-z0-9])\d{2}_[A-Za-z][A-Za-z0-9_]*|System_block')
 # Words that describe the review process, not a design basis.
 REQUIRED = ('electrical-intent.json', 'design-closure.json', 'design-closure-audit.json',
-            'summary.json', 'visual-review.json', 'page-plan.json', 'selection.json', 'lessons.json')
+            'summary.json', 'visual-review.json', 'page-plan.json', 'selection.json')
 # Task 1.3: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json).
 # Circuit types of the five key-block families: power conversion, protection, isolation, signal chain, external interface.
 KEY_CIRCUIT_TYPES = ('POWER_CONVERTER', 'HOLD_UP', 'POWER_PROTECTION', 'SIGNAL_PROTECTION', 'ISOLATION', 'ANALOG',
@@ -83,17 +83,6 @@ KEY_CIRCUIT_TYPES = ('POWER_CONVERTER', 'HOLD_UP', 'POWER_PROTECTION', 'SIGNAL_P
 # inference is recorded as one and never as a hard exclusion (user 2026-11-05).
 EXCLUSION_BASES = OrderedDict([('requirement', '需求'), ('standard', '标准原文'), ('datasheet_abs_max', '手册绝对额定'),
                                ('inference', '工程推论，不作硬排除')])
-CAUSES = ('rule_missing', 'rule_not_enforced', 'knowledge_missing', 'knowledge_wrong', 'judgment')
-# A comment left unfixed this version still says why the skill missed it (R6: nine deferrals marked none).
-ATTRIBUTION_DEFERRED = re.compile(r'再归因|未归因|暂不归因|未做根因|没做根因|之后归因')
-CAUSE_WORDS = {'rule_missing': '缺规则', 'rule_not_enforced': '规则没执行', 'knowledge_missing': '缺知识',
-               'knowledge_wrong': '知识有错', 'judgment': '判断失误', 'none': '无需改'}
-# Where a change for each cause class must land: rules become gates, knowledge goes to references or the library.
-CAUSE_TARGETS = {'rule_missing': ('scripts/',), 'rule_not_enforced': ('scripts/',),
-                 'knowledge_missing': ('references/', 'wiki/', 'raw/'), 'knowledge_wrong': ('references/', 'wiki/', 'raw/'),
-                 'judgment': ('SKILL.md', 'references/')}
-# A lesson's change made in the delivery folder is not a change to the skill (R8 wrote its new patterns there).
-DELIVERY_PATH = re.compile(r'(?:^|[\s:：，,；;（(])(?:设计资料|record|原理图)/')
 SOURCE_PATTERN = re.compile(r'^(review:[^/\s]+/\S+|datasheet:.+#p\d+|test:\S+|user:\d{4}-\d{2}-\d{2})$')
 SELECTION_STATUS = ('selected', 'rejected', 'alternate')
 OPS = ('<=', '>=', 'covers', 'equals', 'has')
@@ -236,153 +225,31 @@ def circuit_implementations(circuits_dir=CIRCUITS_DIR):
     return {pid: set(info['implementations']) for pid, info in typical_circuits.load(circuits_dir).items()}
 
 
-def check_knowledge_event(event, where):
+def library_hits(block, circuits_dir=CIRCUITS_DIR):
+    """Typical circuits a key block marked none must say why it does not use (whole-board baseline 2026-11-07, A5:
+    Matrix marked its reset block as having no typical circuit while multi-domain-reset covers it). The search
+    find_parts.py --circuits runs for the block name."""
+    return [h['id'] for h in find_parts.search_circuits([block], Path(circuits_dir))['results']] if text(block) else []
+
+
+def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(), scheme=None, circuits_dir=CIRCUITS_DIR):
+    """Each key functional block names an existing pattern approach, or none; a none block's scheme comparison
+    names every typical circuit the library search finds for it."""
     errors = []
-    if event.get('knowledge_kind') not in ('approach', 'criterion', 'pitfall'):
-        errors.append(where + ' knowledge_kind 必须是 approach/criterion/pitfall')
-    if event.get('impact') not in ('observed', 'uncertain'):
-        errors.append(where + ' impact 必须是 observed/uncertain')
-    if not text(event.get('problem')):
-        errors.append(where + ' 要写 problem：缺少的知识及其如何造成具体问题')
-    if event.get('impact') == 'observed':
-        evidence = event.get('evidence')
-        if not text(event.get('consequence')) or not isinstance(evidence, list) or not evidence:
-            errors.append(where + ' observed 要写 consequence 和非空 evidence')
-    if event.get('impact') == 'uncertain':
-        for field in ('uncertainty', 'pending'):
-            if not text(event.get(field)):
-                errors.append(where + ' uncertain 要写 ' + field)
-    if 'evidence' in event and (not isinstance(event['evidence'], list) or any(
-            not text(v) or not SOURCE_PATTERN.fullmatch(v) for v in event['evidence'])):
-        errors.append(where + ' evidence 必须是现有来源格式的列表')
-    return errors
-
-
-def check_record_locator(value, base):
-    """Resolve a delivery file and entry; never treat a planned library target as evidence."""
-    if not text(value):
-        return False
-    file, sep, entry = value.partition('#')
-    path = (Path(base) / file).resolve()
-    if not sep or not entry.strip() or not path.is_relative_to(Path(base).resolve()) or not path.is_file():
-        return False
-    try:
-        content = path.read_text(encoding='utf-8')
-        if path.suffix == '.json':
-            data = json.loads(content)
-            if entry.startswith('/'):
-                for key in entry[1:].split('/'):
-                    key = key.replace('~1', '/').replace('~0', '~')
-                    data = data[int(key)] if isinstance(data, list) else data[key]
-                return True
-            def has_id(node):
-                if isinstance(node, dict):
-                    return node.get('id') == entry or entry in node or any(has_id(v) for v in node.values())
-                return isinstance(node, list) and any(has_id(v) for v in node)
-            return has_id(data)
-        return entry in content or any(
-            entry == re.sub(r'[^\w\- ]', '', h.strip().lower()).replace(' ', '-')
-            for h in re.findall(r'^#+ (.+)$', content, re.M))
-    except (OSError, ValueError, KeyError, IndexError, TypeError):
-        return False
-
-
-def library_hits(gap, circuits_dir=CIRCUITS_DIR):
-    """Typical circuits an open library gap must say why it does not use (whole-board baseline 2026-11-07, A5: Matrix
-    registered its reset block U702 as missing while multi-domain-reset covers MCU reset split from network reset).
-    The search find_parts.py --circuits runs for the block name, plus each word of the target file name (mcu, reset,
-    supervisor) that is a word of a typical circuit's file name; block names are often refs, the target names the
-    function."""
-    hits = [h['id'] for h in find_parts.search_circuits([gap['block']], Path(circuits_dir))['results']] if text(gap.get('block')) else []
-    words = {w for w in re.split(r'[-_]', Path(str(gap.get('target') or '')).stem.lower()) if len(w) >= 3} - {'and', 'the', 'with', 'for'}
-    hits += [pid for pid in find_parts.circuit_index(Path(circuits_dir)) if words & set(pid.lower().split('-'))]
-    return list(OrderedDict.fromkeys(hits))
-
-
-def check_library_gaps(lessons, plan=None, root=None, circuits_dir=CIRCUITS_DIR):
-    """Schema 2 structure and cross-record bindings; return only valid open (page, block) pairs."""
-    if not isinstance(lessons, dict) or lessons.get('schema_version') != 2:
-        return [], set()
-    gaps = lessons.get('library_gaps')
-    if not isinstance(gaps, list):
-        return ['lessons.json schema 2 要写 library_gaps 列表（没有缺口写空列表）'], set()
-    errors, valid, ids, pairs = [], set(), Counter(), Counter()
-    for gap in gaps:
-        if isinstance(gap, dict):
-            if text(gap.get('id')):
-                ids[gap['id']] += 1
-            if text(gap.get('page')) and text(gap.get('block')):
-                pairs[(gap['page'], gap['block'])] += 1
-    pages = {p.get('file'): p for p in plan.get('pages', []) if isinstance(p, dict) and text(p.get('file'))} if isinstance(plan, dict) else {}
-    for i, gap in enumerate(gaps, 1):
-        where = 'library_gaps 第 %d 项' % i
-        bad = []
-        if not isinstance(gap, dict):
-            errors.append(where + ' 必须是对象')
-            continue
-        for field in ('id', 'page', 'block', 'reason', 'source', 'design_basis', 'target', 'status'):
-            if not text(gap.get(field)):
-                bad.append(where + ' 要写 ' + field)
-        if 'cause' in gap:
-            bad.append(where + ' 是资料覆盖待办，不能带 cause')
-        if text(gap.get('id')) and ids[gap['id']] > 1:
-            bad.append(where + ' id 重复')
-        pair = (gap.get('page'), gap.get('block'))
-        if all(text(v) for v in pair) and pairs[pair] > 1:
-            bad.append(where + ' page/block 重复')
-        if not text(gap.get('source')) or not SOURCE_PATTERN.fullmatch(gap['source']):
-            bad.append(where + ' source 格式不对')
-        if gap.get('status') not in ('open', 'closed'):
-            bad.append(where + ' status 必须是 open/closed')
-        target = gap.get('target')
-        if not text(target) or not re.fullmatch(r'references/typical-circuits/[^/\\#]+\.md', target) or '..' in target:
-            bad.append(where + ' target 必须是 references/typical-circuits/<功能>.md')
-        if root is not None and not check_record_locator(gap.get('design_basis'), root):
-            bad.append(where + ' design_basis 文件/条目不存在或超出本版目录')
-        if plan is not None:
-            page = pages.get(gap.get('page')) if text(gap.get('page')) else None
-            blocks = page.get('blocks') if page else None
-            if not isinstance(blocks, dict) or not text(gap.get('block')) or gap['block'] not in blocks:
-                bad.append(where + ' 没有对应 page/block')
-        if gap.get('status') == 'closed':
-            if not text(gap.get('resolution')):
-                bad.append(where + ' closed 要写 resolution')
-            elif not check_record_locator(gap['resolution'], Path(circuits_dir).parent.parent):
-                bad.append(where + ' resolution 文件/条目不存在')
-            if text(target):
-                pid = Path(target).stem
-                implementations = circuit_implementations(circuits_dir)
-                if pid not in implementations:
-                    bad.append(where + ' closed 的典型电路不存在')
-                if plan is not None and page:
-                    circuits = page.get('circuits')
-                    ref = circuits.get(gap['block']) if isinstance(circuits, dict) and text(gap.get('block')) else None
-                    if not text(ref) or ref.partition('#')[0] != pid or ref.partition('#')[2] not in implementations.get(pid, set()):
-                        bad.append(where + ' closed 页计划没有标注目标文件的有效实现方案')
-                if text(gap.get('resolution')) and gap['resolution'].partition('#')[0] != target:
-                    bad.append(where + ' resolution 必须指向 target 的补写位置')
-        if gap.get('status') == 'open':
-            unexplained = [pid for pid in library_hits(gap, circuits_dir) if pid not in str(gap.get('reason') or '')]
-            if unexplained:
-                bad.append(where + ' 登记库内没有，但按块名和 target 检索典型电路命中 %s；在 reason 里逐个写明它为什么不适用'
-                           % '、'.join(unexplained))
-        if not bad and gap.get('status') == 'open':
-            valid.add(pair)
-        errors += bad
-    return errors, valid
-
-
-def check_block_circuits(name, blocks, patterns, implementations, lessons, root=None, key_blocks=()):
-    """Each key functional block names an existing pattern approach, or lessons.json registers the gap."""
-    errors = []
-    lessons = lessons if isinstance(lessons, dict) else {}
-    _, valid_gaps = check_library_gaps(lessons, root=root)
     patterns = patterns if isinstance(patterns, dict) else {}
+    compared = {b['block']: json.dumps(b.get('candidates') or [], ensure_ascii=False)
+                for b in ((scheme or {}).get('blocks') or []) if isinstance(b, dict) and text(b.get('block'))}
     for block in blocks:
         ref = patterns.get(block)
         if not text(ref):
-            if block in key_blocks and (name, block) not in valid_gaps:
-                errors.append('%s：功能块“%s”没有典型电路或有效的 library_gaps 逐块覆盖待办' % (name, block))
+            if block in key_blocks:
+                errors.append('%s：关键功能块“%s”要标注典型电路与实现方案，库里没有适用的写 none' % (name, block))
+            continue
+        if ref == 'none':
+            unexplained = [pid for pid in library_hits(block, circuits_dir) if pid not in compared.get(block, '')]
+            if unexplained:
+                errors.append('%s：功能块“%s”标 none，但按块名检索典型电路命中 %s；在 scheme-criteria.json 该块的候选里写明它为什么不适用'
+                              % (name, block, '、'.join(unexplained)))
             continue
         pid, _, approach = ref.partition('#')
         if pid not in implementations:
@@ -392,11 +259,11 @@ def check_block_circuits(name, blocks, patterns, implementations, lessons, root=
     return errors
 
 
-def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DIR, root=None, scheme=None):
+def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, scheme=None):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
-    errors, _ = check_library_gaps(lessons, plan=plan, root=root, circuits_dir=circuits_dir)
+    errors = []
     implementations = circuit_implementations(circuits_dir)
     known = {c.get('ref') for c in intent.get('components') or [] if isinstance(c, dict)}
     on_page = {}
@@ -432,7 +299,7 @@ def check_page_plan(plan, intent, visual, lessons=None, circuits_dir=CIRCUITS_DI
                 placed[ref] = block
         cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task 3.3)
         if not cover and 'system_block' not in name.lower():
-            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, lessons, root=root, key_blocks=key_blocks)
+            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, key_blocks=key_blocks, scheme=scheme, circuits_dir=circuits_dir)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))
         if missing:
             errors.append('%s：这些器件不属于任何功能块：%s' % (name, '、'.join(missing[:6])))
@@ -697,53 +564,8 @@ def check_selection(data, intent, root, evidence=None):
     return problems
 
 
-def check_lessons(data):
-    """What this version taught the skill: each event has a source, a cause class and a concrete change."""
-    version = data.get('schema_version') if isinstance(data, dict) else None
-    if type(version) is not int or version != 2:
-        return ['lessons.json 只读现行 schema_version 2（现在是 %s）：按 delivery-report.md 的现行格式重写' % version], {}
-    gap_problems, _ = check_library_gaps(data)
-    events = data.get('events')
-    if isinstance(events, list) and not events and data.get('library_gaps') and not gap_problems:
-        return [], {}
-    if not isinstance(events, list) or not events:
-        return gap_problems + ['lessons.json 没有 events：每次设计至少登记一条学到的东西，没有就登记 cause=none 并写明核对了什么'], {}
-    problems, by_source = gap_problems, {}
-    for i, e in enumerate(events, 1):
-        if not isinstance(e, dict):
-            problems.append('lessons.json 第 %d 条不是对象' % i)
-            continue
-        source = e.get('source') if text(e.get('source')) else ''
-        if not SOURCE_PATTERN.match(source):
-            problems.append('lessons.json 第 %d 条的 source 要写成 review:<审查目录>/<待办编号>、datasheet:<库内路径>#p<页>、test:<记录> 或 user:<日期>' % i)
-        else:
-            by_source[source] = e
-        cause = e.get('cause')
-        if cause not in CAUSES and cause != 'none':
-            problems.append('lessons.json 第 %d 条的 cause 必须是 %s 或 none' % (i, '/'.join(CAUSES)))
-            continue
-        if cause == 'knowledge_missing':
-            problems += check_knowledge_event(e, 'lessons.json 第 %d 条' % i)
-        if cause == 'none':
-            if not text(e.get('why_none')):
-                problems.append('lessons.json 第 %d 条 cause=none 要在 why_none 里写明核对了什么' % i)
-            elif ATTRIBUTION_DEFERRED.search(e['why_none']):
-                problems.append('lessons.json 第 %d 条 cause=none 只用于不反映技能缺口的意见；'
-                                '本版暂缓修改的意见也要按“技能为什么没拦住”归因，不留到下一轮' % i)
-            continue
-        change = e.get('change') if text(e.get('change')) else ''
-        if not any(t in change for t in CAUSE_TARGETS[cause]):
-            problems.append('lessons.json 第 %d 条归因 %s，change 要指向 %s 下的具体文件' % (i, cause, '/'.join(CAUSE_TARGETS[cause])))
-        elif DELIVERY_PATH.search(change):
-            problems.append('lessons.json 第 %d 条的 change 写在交付目录里：学到的东西要改技能的 references/、scripts/ 或知识库，'
-                            '交付目录里的文件不算技能改动' % i)
-        if cause == 'judgment' and not text(e.get('why_not_rule')):
-            problems.append('lessons.json 第 %d 条归因 judgment 要写 why_not_rule：为什么规则和知识都拦不住' % i)
-    return problems, by_source
-
-
-def check_citations(selection, lessons, root):
-    """Selection values are on the datasheet pages they cite; lesson sources name a real file and page.
+def check_citations(selection, root):
+    """Selection values are on the datasheet pages they cite.
 
     Returns (problems, review, not_checked): a wrong file or page is a problem, a value the page
     text does not show is listed for a person to check.
@@ -766,22 +588,6 @@ def check_citations(selection, lessons, root):
                     page = int(page.group())
                     note(check_citation(sheet, page, [entry.get('value')], [library, root]),
                          '候选 %s 的“%s”' % (c.get('mpn', '?'), param), '%s#p%d' % (sheet, page))
-    lesson_events = (lessons or {}).get('events')
-    for i, e in enumerate(lesson_events if isinstance(lesson_events, list) else [], 1):
-        result = check_source(e.get('source'), (), [root]) if isinstance(e, dict) else None
-        if result:
-            note(result, 'lessons.json 第 %d 条' % i, e['source'])
-        if isinstance(e, dict) and (lessons or {}).get('schema_version') == 2:
-            for source in e.get('evidence') if isinstance(e.get('evidence'), list) else []:
-                result = check_source(source, (), [root])
-                if result:
-                    note(result, 'lessons.json 第 %d 条 evidence' % i, source)
-    if isinstance(lessons, dict) and lessons.get('schema_version') == 2:
-        for gap in lessons.get('library_gaps') if isinstance(lessons.get('library_gaps'), list) else []:
-            if isinstance(gap, dict):
-                result = check_source(gap.get('source'), (), [root])
-                if result:
-                    note(result, 'library_gaps %s' % gap.get('id'), gap.get('source'))
     return problems, review, unchecked
 
 
@@ -835,7 +641,7 @@ def review_sources(data, root=None):
     return changed, unread
 
 
-def check_responses(data, work, intent=None, closure=None, root=None, lessons=None):
+def check_responses(data, work, intent=None, closure=None, root=None):
     """Each review comment has one allowed response and what that response requires.
 
     A response is work done this version, not a transcription of the comment:
@@ -875,22 +681,6 @@ def check_responses(data, work, intent=None, closure=None, root=None, lessons=No
             errors.append('%s：要写明来源、在原文中的位置和意见内容' % key)
         if not text(item.get('detail')):
             errors.append('%s：要说明怎么处理、为什么' % key)
-        # A comment raised again was not stopped by a rule or by knowledge the first time: not a judgment slip.
-        if 'recurs_from' in item:
-            if not (text(item['recurs_from']) and SOURCE_PATTERN.match(item['recurs_from']) and item['recurs_from'].startswith('review:')):
-                errors.append('%s：recurs_from 要写成 review:<上一轮审查目录>/<意见编号>' % key)
-            elif item.get('cause') == 'judgment':
-                errors.append('%s：意见复发自 %s，不能归因为判断失误（judgment）：复发说明规则或知识没有拦住' % (key, item['recurs_from']))
-        if lessons is not None:
-            cause = item.get('cause')
-            if cause not in CAUSES and cause != 'none':
-                errors.append('%s：要归因（cause）：%s 或 none' % (key, '/'.join(CAUSES)))
-            elif cause != 'none':
-                event = next((e for src, e in lessons.items() if src.startswith('review:') and src.endswith('/' + key)), None)
-                if event is None:
-                    errors.append('%s：归因 %s，lessons.json 里要有 source 以 /%s 结尾的事件写明改了什么' % (key, cause, key))
-                elif event.get('cause') != cause:
-                    errors.append('%s：review-responses 归因 %s，lessons.json 同一事件归因 %s，要一致' % (key, cause, event.get('cause')))
         field = RESPONSES[response][1]
         if field != 'detail' and not (isinstance(item.get(field), list) and item[field]):
             errors.append('%s：处理方式为“%s”时必须填 %s' % (key, RESPONSES[response][0], field))
@@ -1214,18 +1004,13 @@ def render(root, notes=None, title=None):
     tier = {cid: rests or conclusion for cid, (conclusion, rests, _) in basis.items()}
     if visual and visual.get('status') not in VISUAL:
         problems.append('visual-review.json 的 status 必须是 %s 之一' % '/'.join(VISUAL))
-    lessons, events = {}, None
-    if data['lessons.json'] is not None:
-        lesson_problems, events = check_lessons(data['lessons.json'])
-        problems += lesson_problems
-        lessons = data['lessons.json']
     problems += check_visual_items(root, visual, summary)
     scheme, problem = None, None
     if (record / 'scheme-criteria.json').exists():
         scheme, problem = load(record / 'scheme-criteria.json')
     problems += [problem] if problem else check_scheme_criteria(scheme, closure, plan=data['page-plan.json'])
     if data['page-plan.json'] is not None:
-        problems += check_page_plan(data['page-plan.json'], intent, visual, lessons, root=root, scheme=scheme if isinstance(scheme, dict) else None)
+        problems += check_page_plan(data['page-plan.json'], intent, visual, root=root, scheme=scheme if isinstance(scheme, dict) else None)
     selection = data['selection.json'] or {}
     if data['selection.json'] is not None:
         evidence = {e.get('id'): e for e in closure.get('evidence') or [] if isinstance(e, dict)}
@@ -1252,12 +1037,12 @@ def render(root, notes=None, title=None):
         problems.append('保护器件与安全防护位置（见 part-roles.md 第 1 节）：' + '；'.join(safety[:6])
                         + ('；等共 %d 项' % len(safety) if len(safety) > 6 else ''))
     problems += part_classes.audit_citations(intent, closure, bases)
-    cite_problems, cite_review, cite_unchecked = check_citations(selection, data['lessons.json'], root)
+    cite_problems, cite_review, cite_unchecked = check_citations(selection, root)
     problems += cite_problems
     cite_review = list((audit.get('citations') or {}).get('review') or []) + cite_review
     cite_unchecked = list((audit.get('citations') or {}).get('not_checked') or []) + cite_unchecked
     if responses is not None:
-        problems += check_responses(responses, work, intent, closure, root, events)
+        problems += check_responses(responses, work, intent, closure, root)
     texts = prose(closure, notes, responses)
     problems += check_language(texts) + check_terms(texts)
     problems += check_counts(texts, {
@@ -1497,44 +1282,11 @@ def render(root, notes=None, title=None):
         for i in items:
             label = RESPONSES.get(i.get('response'), ('?',))[0]
             out.append('| %s | %s | %s | %s |' % (cell(i.get('id', '')), cell(i.get('comment', '')), label,
-                                                   cell(i.get('detail', '') + ('（复发自 %s）' % i['recurs_from']
-                                                                              if text(i.get('recurs_from')) else ''))))
+                                                   cell(i.get('detail', ''))))
         out.append('')
         _, unread = review_sources(responses, root)
         if unread:
             out += ['意见来源 %s 的原文读不到，来源未核对：上面的意见内容按登记照录。' % '、'.join(unread), '']
-
-    lesson_events = lessons.get('events')
-    events_list = [e for e in lesson_events if isinstance(e, dict)] if isinstance(lesson_events, list) else []
-    if events_list:
-        out += ['## 改进记录', '', '| 来源 | 归因 | 改了什么 |', '|---|---|---|']
-        for e in events_list:
-            out.append('| %s | %s | %s |' % (cell(e.get('source', '')), CAUSE_WORDS.get(e.get('cause'), cell(e.get('cause', ''))),
-                                            cell(e.get('change') or e.get('why_none') or '')))
-        out.append('')
-
-    if lessons.get('schema_version') == 2:
-        unique_events = list({json.dumps(e, sort_keys=True, ensure_ascii=False): e for e in events_list}.values())
-        observed = [e for e in unique_events if e.get('cause') == 'knowledge_missing'
-                    and e.get('impact') == 'observed' and not check_knowledge_event(e, '')]
-        uncertain = [e for e in unique_events if e.get('cause') == 'knowledge_missing' and e.get('impact') == 'uncertain']
-        out += ['缺知识归因（按事件计数，来源不另计）：有证据后果 %d；待核归因 %d。来源可定位不证明因果成立。' % (len(observed), len(uncertain)), '']
-        for label, group in (('有证据后果', observed), ('待核归因', uncertain)):
-            for e in group:
-                out += ['- %s：%s；问题：%s；后果/不确定原因：%s；证据：%s；待核：%s' % (
-                    label, cell(e.get('source', '')), cell(e.get('problem', '')),
-                    cell(e.get('consequence') if label == '有证据后果' else e.get('uncertainty', '')),
-                    cell('、'.join(str(v) for v in e.get('evidence', []) if text(v))) if isinstance(e.get('evidence', []), list) else '', cell(e.get('pending', ''))), '']
-        gaps = lessons.get('library_gaps') if isinstance(lessons.get('library_gaps'), list) else []
-        out += ['## 资料覆盖待办', '', '共 %d 项，独立于问题事件。' % len(gaps), '',
-                '| 编号 | 图页/功能块 | 状态 | 检索与不适用理由 | 来源 | 本版依据 | 拟补文件/补写位置 |',
-                '|---|---|---|---|---|---|---|']
-        for g in gaps:
-            if isinstance(g, dict):
-                fields = [cell(g.get(k, '')) for k in ('id', 'page', 'block', 'status', 'reason', 'source', 'design_basis')]
-                fields.append(cell(g.get('target', '')) + ' / ' + cell(g.get('resolution', '')))
-                out.append('| %s | %s / %s | %s | %s | %s | %s | %s |' % tuple(fields))
-        out.append('')
 
     if open_work:
         out += ['## 未关闭项', '', SEVERITY_LEGEND, '']
