@@ -40,34 +40,42 @@ def _kind(name, *args, **kwargs):
     return name, Kind(title, *args, **kwargs)
 
 KINDS = OrderedDict([
-    _kind('relay', ('K',), (r'RELAY|继电器',), ('relay',)),
-    _kind('varistor', (), (r'VARISTOR|\bMOV\b|压敏',), ('varistor', 'siov', 'mov')),
+    _kind('relay', ('K',), (r'RELAY|继电器',), ('relay', '继电器')),
+    _kind('varistor', (), (r'VARISTOR|\bMOV\b|压敏',), ('varistor', 'siov', 'mov', '压敏电阻')),
     _kind('ntc', ('TH', 'RT', 'NTC'), (r'NTC|THERMISTOR',),
-                 ('ntcthermistor', 'thermistor', 'inrushcurrentlimiter')),
+                 ('ntcthermistor', 'thermistor', 'inrushcurrentlimiter', '热敏电阻')),
     _kind('opto', (), (r'OPTO|' + B + r'(?:PC81[07]|LTV-?\d|TLP\d|6N13[57]|HCPL|ACPL|FOD\d|CNY17|VO6\d|SFH6\d{2,3}|EL8\d\d|'
                              r'PS2[5-9]\d\d|TCMT\d|KPC\d|H11[A-Z]\d)|光耦',),
-                  ('optocoupler', 'photocoupler', 'optoisolator', 'opticallycoupled', 'opticalisolator', 'opticalcoupler')),
+                  ('optocoupler', 'photocoupler', 'optoisolator', 'opticallycoupled', 'opticalisolator', 'opticalcoupler',
+                   '光耦', '光电耦合')),
     _kind('tvs', ('TVS',), (r'TVS|POWER_PROTECTION:|' + B + r'(?:SMAJ|SMBJ|SMCJ|SMF\d|P6KE|1\.5KE|ESD\d|PESD|SM712)',),
                  # surgeprotectiondevice: TI TVS3300 page 1 calls itself only a "Surge Protection Device" (calibration board #18)
-                 ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress', 'surgeprotectiondevice')),
-    _kind('zener', ('ZD',), (r'ZENER|' + B + r'(?:BZX|BZT5\d|MMSZ|1N47\d)|稳压二极管',), ('zener',)),
+                 ('tvs', 'esdprotection', 'transientvoltagesuppress', 'transientsuppress', 'surgeprotectiondevice',
+                  # esdsuppressor: Littelfuse AXGD1 (polymer) page 1 says only "ESD Suppressors"
+                  'esdsuppressor', 'electrostaticdischargesuppressor', '瞬态抑制', '静电保护')),
+    _kind('zener', ('ZD',), (r'ZENER|' + B + r'(?:BZX|BZT5\d|MMSZ|1N47\d)|稳压二极管',), ('zener', '稳压二极管', '稳压管')),
     _kind('bjt', (), (r'TRANSISTOR_BJT:|Q_NPN|Q_PNP|\bNPN\b|\bPNP\b|' + B + r'(?:BC[PXW]?\d{2,3}|2N\d{4}|MMBT|PBSS|S8050|S8550)|三极管',),
-                 ('npn', 'pnp', 'bipolar')),
+                 ('npn', 'pnp', 'bipolar', '三极管')),
     _kind('mosfet', ('Q',), (r'TRANSISTOR_FET:|TRANSISTOR_IGBT:|Q_NMOS|Q_PMOS|MOSFET|\bFET\b|NMOS|PMOS|IGBT|'
                                        + B + r'(?:IRF|IRLML|AO\d{4}|SI\d{4}|BSS\d|2N7002)',),
-                   ('mosfet', 'nchannel', 'pchannel', 'superjunction', 'igbt')),
-    _kind('bridge_rectifier', ('BR',), (r'BRIDGE|' + B + r'(?:GBU\d|KBP\d|DB10\d)',), ('bridgerectifier', 'bridge')),
+                   ('mosfet', 'nchannel', 'pchannel', 'superjunction', 'igbt', '场效应', 'mos管')),
+    _kind('bridge_rectifier', ('BR',), (r'BRIDGE|' + B + r'(?:GBU\d|KBP\d|DB10\d)',), ('bridgerectifier', 'bridge',
+                                                                                            '整流桥', '桥式整流')),
     _kind('diode', ('D', 'LED', 'CR'), (r':D(?:_|\s|$)|:LED|SCHOTTKY|DIODE|' + B + r'(?:SS\d{2}|BAT\d|1N4\d{3}|1N58\d)|二极管',),
-                   ('rectifier', 'diode', 'schottky', 'led')),
+                   ('rectifier', 'diode', 'schottky', 'led', '二极管')),
     # Multi-winding magnetics by what they do, above the CHOKE and ferrite words (schematic-review 2026-10-27 A1b).
     _kind('common_mode_choke', (), (r'COMMON[-_ ]?MODE|共模',),
-                               ('commonmodechoke', 'commonmodefilter', 'commonmodeinductor', 'commonmodecoil')),
-    _kind('coupled_inductor', (), (r'COUPLED[-_ ]?INDUCTOR|耦合电感',), ('coupledinductor',)),
-    _kind('ferrite', ('FB',), (r'FERRITE|BEAD|' + B + r'(?:BLM\d|MPZ\d)|磁珠',), ('ferrite', 'bead')),
-    _kind('inductor', ('L', 'FL'), (r':L(?:_|\s|$)|:CMC|INDUCTOR|CHOKE|电感',), ('inductor', 'choke')),
-    _kind('crystal', ('Y', 'X'), (r'CRYSTAL|XTAL|\bOSC(?:ILLATOR)?\b|晶振|晶体',), ('crystal', 'oscillator', 'resonator')),
-    _kind('transformer', ('T', 'TR'), (r'TRANSFORMER|变压器',), ('transformer',)),
-    _kind('fuse', ('F',), (r'FUSE|PTC|保险',), ('fuse', 'pptc', 'ptc', 'resettable', 'polyswitch')),
+                               ('commonmodechoke', 'commonmodefilter', 'commonmodeinductor', 'commonmodecoil',
+                                # Bourns SRF "Common Mode Chip Inductors", Würth WE-CNSW "Common Mode Line Filter"
+                                'commonmodechipinductor', 'commonmodelinefilter', '共模')),
+    _kind('coupled_inductor', (), (r'COUPLED[-_ ]?INDUCTOR|耦合电感',), ('coupledinductor', '耦合电感')),
+    _kind('ferrite', ('FB',), (r'FERRITE|BEAD|' + B + r'(?:BLM\d|MPZ\d)|磁珠',), ('ferrite', 'bead', '磁珠')),
+    _kind('inductor', ('L', 'FL'), (r':L(?:_|\s|$)|:CMC|INDUCTOR|CHOKE|电感',), ('inductor', 'choke', '电感')),
+    _kind('crystal', ('Y', 'X'), (r'CRYSTAL|XTAL|\bOSC(?:ILLATOR)?\b|晶振|晶体',), ('crystal', 'oscillator', 'resonator',
+                                                                       '晶振', '晶体谐振器', '石英晶体')),
+    # magneticmodule: Pulse HX5164NL page 1 calls its LAN transformer only "1Gigabit Magnetic Modules" (Matrix wb2)
+    _kind('transformer', ('T', 'TR'), (r'TRANSFORMER|变压器',), ('transformer', 'magneticmodule', '变压器')),
+    _kind('fuse', ('F',), (r'FUSE|PTC|保险',), ('fuse', 'pptc', 'ptc', 'resettable', 'polyswitch', '保险丝', '熔断器')),
     _kind('battery', ('BT', 'BAT'), (r'(?:^|[\s:_])BATTERY|电池',), ('battery',)),
     _kind('testpoint', ('TP',), (r'TEST_?POINT|TEST-?PAD',), ('testpoint',)),
     _kind('connector', ('J', 'P', 'CN'), (r'CONNECTOR[A-Z_]*:|CONN_\d|USB_C_|RECEPTACLE|BARREL_?JACK|PINHEADER|'
@@ -358,6 +366,19 @@ def squash(value):
     return re.sub(r'[^0-9a-z]', '', str(value or '').lower())
 
 
+CJK = re.compile(r'[\u4e00-\u9fff]')
+
+
+def squash_text(value):
+    """As squash, for datasheet text and quotes: full-width letters and digits folded to ASCII and Chinese characters
+    kept, so a Chinese title can name its kind and a Chinese quote is looked for as written (as schematic-review's
+    squash)."""
+    return re.sub(r'[^0-9a-z\u4e00-\u9fff]', '', str(value or '').translate(FULL_WIDTH).lower())
+
+
+FULL_WIDTH = {code: code - 0xFEE0 for code in range(0xFF01, 0xFF5F)}   # ＣＲＹＳＴＡＬ, ＣＯ．，ＬＴＤ (YXC)
+
+
 SPECIFIC_DIODES = ('tvs', 'zener', 'bridge_rectifier')     # a quote naming these is not evidence for a plain diode
 # Cues of schematic-review's integrated-circuit roles (catalog.DEVICE_ROLES). ASG declares no IC role; a text naming one
 # describes an IC, and the discretes, fuses and relays it names are its load or its function ("Industrial eFuse" is a
@@ -400,7 +421,7 @@ def named_by(cue, value, flat):
     """As schematic-review's datasheet_kinds.named_by: a long cue anywhere in the squashed text, a cue of three letters
     or fewer (or a word cue) as a word of its own; a lowercase-to-capital join counts as a space and a plural s is
     allowed."""
-    if len(cue) > 3 and cue not in WORD_CUES:
+    if CJK.search(cue) or len(cue) > 3 and cue not in WORD_CUES:
         return cue in flat
     spaced = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', str(value or ''))
     return re.search(r'(?<![A-Za-z0-9])(?:%s(?![0-9])|(?i:%s)s?(?![a-z0-9]))' % (cue.upper(), cue), spaced) is not None
@@ -409,7 +430,7 @@ def named_by(cue, value, flat):
 def cues(value, specific=True):
     """Kinds a datasheet text names, as schematic-review's datasheet_kinds.cues (extraction drops spaces, so long cues
     are looked for in the squashed text)."""
-    flat = squash(value)
+    flat = squash_text(value)
     found = {kind for kind, k in KINDS.items() for cue in k.cues if named_by(cue, value, flat)}
     if specific and found & set(SPECIFIC_DIODES):
         found.discard('diode')
@@ -448,9 +469,9 @@ def verify_declaration(comp, kind, bases, check_files):
             return 'NO_DOCUMENT', result['reason']
         pdf = locate(cited[0], bases)
         page = page_text(pdf, cited[1]) if pdf else None
-        if pdf is None or result['status'] == 'NOT_CHECKED' or len(squash(page)) < 20:
+        if pdf is None or result['status'] == 'NOT_CHECKED' or len(squash_text(page)) < 20:
             return 'NO_TEXT', '%s 第 %d 页取不出文字（%s）' % (cited[0], cited[1], result['reason'] or '扫描版或没有 pdftotext')
-        if squash(quote) not in squash(page):
+        if not squash_text(quote) or squash_text(quote) not in squash_text(page):
             return 'QUOTE_NOT_FOUND', 'KindQuote 不在 %s 第 %d 页' % (cited[0], cited[1])
     else:
         return 'NO_TEXT', '找不到知识库，%s 没核对' % cited[0]

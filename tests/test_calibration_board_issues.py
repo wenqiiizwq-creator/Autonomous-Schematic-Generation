@@ -199,6 +199,25 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual({'tvs'}, pc.cues('TVS3300 33-V Flat-Clamp Surge Protection Device'))
         self.assertEqual({'varistor'}, pc.cues('Metal Oxide Varistor surge protection device'))
 
+    def test_a_lan_magnetic_module_is_a_transformer(self):
+        self.assertEqual({'transformer'}, pc.cues('1Gigabit Magnetic Modules'))
+        self.assertNotIn('transformer', pc.cues('Magnetic shielded power inductor'))
+
+    def test_maker_wordings_name_their_kind(self):
+        # Titles from the library that named no kind before (Bourns SRF, Würth WE-CNSW, Littelfuse AXGD1, NATIONSTAR)
+        self.assertEqual({'common_mode_choke'}, pc.cues('SRF3216 Series - Common Mode Chip Inductors'))
+        self.assertEqual({'common_mode_choke'}, pc.cues('WE-CNSW SMT Common Mode Line Filter'))
+        self.assertEqual({'tvs'}, pc.cues('XTREME-GUARD™ ESD Suppressors'))
+        self.assertEqual({'diode'}, pc.cues('片 式 发 光 二 极 管'))
+        self.assertEqual({'zener'}, pc.cues('稳压二极管'))
+        self.assertEqual({'common_mode_choke'}, pc.cues('共模电感'))
+        self.assertEqual({'varistor'}, pc.cues('贴片压敏电阻'))
+        self.assertEqual({'crystal'}, pc.cues('ＣＲＹＳＴＡＬ ＵＮＩＴ'))
+
+    def test_a_chinese_quote_is_looked_for_as_written(self):
+        self.assertEqual('片式发光二极管', pc.squash_text('片 式 发 光 二 极 管'))
+        self.assertNotIn(pc.squash_text('稳压二极管'), pc.squash_text('片式发光二极管'))
+
     def test_a_project_symbol_named_after_its_part_is_no_placeholder(self):
         from audit_design_closure import audit_placeholders
         found = []
