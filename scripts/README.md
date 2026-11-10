@@ -25,6 +25,9 @@ generator is described in [`schematic-generation.md`](../references/schematic-ge
 existing whole-board netlist by the page plan's blocks and merges it back pin for pin. See
 [`modules.md`](../references/modules.md).
 
+`knowledge_gaps.py <delivery>` extracts `record/knowledge-gaps.json`, the places
+where the design ran short of knowledge, from the module records.
+
 `check_module.py <C1..C6> <design>` runs one capability module's gate on the
 parts it owns (SKILL.md 架构, P7) and records the input/output fingerprints in
 `record/modules.json`; `check_module.py return <design> --from C4.2 --to C2.2 …` records a

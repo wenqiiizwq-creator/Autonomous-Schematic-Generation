@@ -36,12 +36,14 @@ elif name == 'render_design_report':
     if status.get(name):
         print('PROBLEM: 选型角色没有写 external_dependencies')
         sys.exit(1)
+elif name == 'knowledge_gaps':
+    (Path(args[0]) / 'record' / 'knowledge-gaps.json').write_text('{}')
 elif name == 'pack_design':
     sys.exit(int(status.get(name, 0)))
 elif name == 'check_delivery_freshness':
     print(json.dumps({'status': status.get(name, 'FRESH')}))
 '''
-SCRIPTS = ('audit_design_closure', 'verify_schematic', 'render_design_report',
+SCRIPTS = ('audit_design_closure', 'verify_schematic', 'knowledge_gaps', 'render_design_report',
            'pack_design', 'check_delivery_freshness')
 
 
@@ -93,7 +95,7 @@ class DeliverTests(unittest.TestCase):
     def test_full_run_in_order_with_fresh_evidence(self):
         code, steps, failure = self.run_deliver()
         self.assertEqual((0, None), (code, failure))
-        self.assertEqual(['待办审计', '出图', '自动检查', '生成报告', '交付证据', '证据新鲜度', '打包'],
+        self.assertEqual(['待办审计', '出图', '自动检查', '知识缺口清单', '生成报告', '交付证据', '证据新鲜度', '打包'],
                          [s['step'] for s in steps])
         self.assertEqual('new', (self.root / '原理图' / 'board.kicad_sch').read_text())
         self.assertTrue((self.root / '原理图' / 'BOM.csv').is_file())
@@ -103,7 +105,7 @@ class DeliverTests(unittest.TestCase):
         self.assertIn('原理图/board.kicad_sch', evidence['inputs'])
         self.assertIn('设计资料/方案.md', evidence['inputs'])
         self.assertIn('record/deliver.json', evidence['inputs'])
-        for out in ('record/design-closure-audit.json', 'record/summary.json', '原理图/netlist.xml', '设计报告.md',
+        for out in ('record/design-closure-audit.json', 'record/summary.json', 'record/knowledge-gaps.json', '原理图/netlist.xml', '设计报告.md',
                     'record/evidence/geometry-board.json', '原理图/BOM.csv'):
             self.assertIn(out, evidence['outputs'])
             self.assertNotIn(out, evidence['inputs'])

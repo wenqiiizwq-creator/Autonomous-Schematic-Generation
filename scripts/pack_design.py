@@ -29,6 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import audit, load_task, read_requirements  # noqa: E402
 import check_module  # noqa: E402
+import knowledge_gaps  # noqa: E402
 from find_parts import DEFAULT_WIKI, library_index, locate_file  # noqa: E402
 from render_design_report import REPORT, render  # noqa: E402
 from schematic_layout.component_requirements import package_audit  # noqa: E402
@@ -265,6 +266,9 @@ def pack(root, inputs, wiki=DEFAULT_WIKI):
         else:
             declared[name] = fingerprint(path)
     to_file = datasheets_not_in_library(inputs['datasheets'], Path(wiki)) if 'datasheets' in declared else []
+    if not (load_task(root) or {}).get('modules'):      # a whole-board delivery carries its knowledge-gap list
+        problem = knowledge_gaps.stale(root)
+        errors += [problem] if problem else []
     if errors:
         return errors, None
     packed = {p.relative_to(root).as_posix(): sha256(p) for p in sorted(root.rglob('*'))

@@ -6,6 +6,7 @@ ASG 纲要（SKILL.md「ASG 纲要（核心标准）」「主流程」与 refere
 
 | 确认 | 改了什么 | 纲要哈希 | 用户原话 |
 |---|---|---|---|
+| user:2026-11-09 | 能力目标重写：合理性五条（充分、必要、匹配、稳健、有据，不以经济成本为准）、能力七项（第 7 项：知道自己哪里知识不够并据此改进）、评测判定与缺陷修好的条件；报告与打包加知识缺口清单 `knowledge-gaps.json` | 2f8657420f08ad43 | 按草案写入 |
 | user:2026-11-09 | 新增任务 C2.2 接口定稿（`interfaces.json`，排在 C3 之后、C4 之前）；C3.2 写核心器件端口限值；C4.3 的答复回到 C3.2 或 C1，不改上游记录；C6 串联时只读块文件；P7 回到上游重做记入 `modules.json` 的 `returns` | 85a807e5b314273a | 按草案写入 |
 | user:2026-11-09 | 清理主线外工作流（Value 补丁、电气改版、重画已有工程、处理审查意见、Circuit IR），选择工作流改为单独运行 C6 重画、按指纹重跑改设计、审查意见按 P7 回到负责模块；C4 按块产出 blocks/<块>.json（新增 C4.4 块设计），C2.1 流向写 nets 与 params、块写位号编号段、耦合紧就合并，C5.1 改为 blocks.py merge 合并 | 6209cca419f72e71 | 按草案写入 |
 | user:2026-11-09 | 产品拆分：C1 产出 requirements.json，需求追溯移到 C5.1（design-closure.json traceability）；C3 产出每块一个 block-circuits/<块>.json，由 block_circuits.py 从 scheme-criteria.json、selection.json 按 block_id 抽出，C4 只读块文件 | a6c8559b29175505 | 按草案写入; 两处都加 block_id |

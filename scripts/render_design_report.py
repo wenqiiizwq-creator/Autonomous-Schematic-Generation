@@ -20,6 +20,7 @@ from architecture import check_architecture  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
+import knowledge_gaps  # noqa: E402
 import operating_inputs  # noqa: E402
 from schematic_layout.citations import check as check_citation  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
@@ -1347,6 +1348,9 @@ def render(root, notes=None, title=None):
         out.append('')
     out += render_operating_inputs(inputs_found)
     out += render_scheme_criteria(scheme)
+    gaps = knowledge_gaps.load(record / knowledge_gaps.FILE)
+    if gaps is not None:
+        out += knowledge_gaps.render(gaps)
     unspecified = [p for p in closure.get('operating_points') or [] if isinstance(p, dict) and p.get('specified') is False]
     if unspecified:
         out += ['## 手册未规定的工作点', '',

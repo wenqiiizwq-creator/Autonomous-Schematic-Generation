@@ -29,6 +29,7 @@
 | `delivery-evidence.json` | 导出后有没有再改过的核对记录 |
 | `calculations/` | 本版设计还在依赖的计算（不管是哪一版算的），作废的不带 |
 | `interfaces.json` | 任务 C2.2 接口定稿：每条跨块流向源块要保证、负载块能接受的范围（模块 C2，格式见 [能力模块](modules.md)） |
+| `knowledge-gaps.json` | 知识缺口清单：`knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]` 从记录抽出，不手写；`deliver.py` 在生成报告前运行它，报告的“知识缺口”一节照它列出。`{"schema_version": 1, "counts": {信号: 数量}, "gaps": [{"signal", "module", "task", "item", "detail", "source"}]}`。信号有七种：`no_typical_circuit`（块文件里选定方案没有标典型电路）、`unverified_candidate`（方案候选 `unverified`）、`datasheet_not_in_library`（手册不在知识库）、`weak_basis`（计算参数或门槛的依据是 `typical`/`model`/`unspecified`）、`external_item`（未关闭的外部资料待办）、`returned_upstream`（`modules.json` 的 `returns`）、`user_overrode`（用户给定的需求与建议条文不同，或选定方案不是推荐方案）。清单不拦交付；打包只核它是从当前记录抽出的（手册条目取决于知识库，不比对）。能力缺陷的归纳在评测侧做 |
 | `block-circuits/` | 每个功能块一个块文件，由 `block_circuits.py` 从 `scheme-criteria.json`、`selection.json` 抽出（模块 C3，格式见 [能力模块](modules.md)） |
 | `scripts/` | 图页脚本，下一版只重生成有变化的页面 |
 | `evidence/` | 设计结论引用的截图、手册摘页等 |

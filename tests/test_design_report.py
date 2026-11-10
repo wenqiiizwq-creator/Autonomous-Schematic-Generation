@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from audit_design_closure import audit, sha256
 from render_design_report import check_selection, num, render, render_sha256, REPORT
 from pack_design import pack
+import knowledge_gaps
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_citations import pdf
 from current_record import make_current, write_record
@@ -847,8 +848,24 @@ class PackDesignTests(unittest.TestCase):
         self.inputs.mkdir()
         (self.inputs / 'spec.md').write_text('spec')
 
+    def gaps(self):
+        knowledge_gaps.main([str(self.d.root)])
+
     def run_pack(self):
+        self.gaps()
         return pack(self.d.root, {'requirements': str(self.inputs)})
+
+    def test_the_knowledge_gap_list_is_extracted_not_written(self):
+        path = self.d.root / 'record' / knowledge_gaps.FILE
+        path.unlink(missing_ok=True)
+        errors, _ = pack(self.d.root, {'requirements': str(self.inputs)})
+        self.assertTrue(any('knowledge-gaps.json 缺失' in e for e in errors), errors)
+        self.gaps()
+        data = json.loads(path.read_text(encoding='utf-8'))
+        data['gaps'].append({'signal': 'weak_basis', 'module': 'C4', 'task': 'C4.2', 'item': 'x', 'detail': 'y', 'source': 'z'})
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+        errors, _ = pack(self.d.root, {'requirements': str(self.inputs)})
+        self.assertTrue(any('与当前记录不一致' in e for e in errors), errors)
 
     def test_datasheets_not_in_the_library_are_listed_not_rejected(self):
         # 2026-11-04 (user): project datasheets stay in the project; filing them into HardwareWiki is prompted after delivery
@@ -859,6 +876,7 @@ class PackDesignTests(unittest.TestCase):
         sheets.mkdir()
         (sheets / 'X - XYZ100.pdf').write_bytes(b'%PDF-copy')
         (sheets / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
+        self.gaps()
         errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, wiki)
         self.assertEqual([], errors)
         self.assertEqual(['Y - ABC200.pdf'], manifest['datasheets_to_file'])

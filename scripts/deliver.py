@@ -208,6 +208,11 @@ def deliver(root, log=print, for_review=False):
             log('%-12s %s' % ('图面审阅', 'PENDING'))
             return 2, steps, None
 
+        # The knowledge-gap list is extracted from this version's records (SKILL.md 能力目标 7); the report prints it.
+        run(skill('knowledge_gaps.py', root, *declared), root, '知识缺口清单')
+        written.append('record/knowledge-gaps.json')
+        step('知识缺口清单', 'DONE')
+
         notes = record / 'notes.json'
         report = subprocess.run(skill('render_design_report.py', root, *(['--notes', notes] if notes.is_file() else []),
                                       *(['--title', config['title']] if config.get('title') else [])),
