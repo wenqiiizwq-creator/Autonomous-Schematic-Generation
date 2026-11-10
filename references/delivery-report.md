@@ -28,6 +28,7 @@
 | `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要在对应页有非空处置，写出在本版 PDF 上看到了什么；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `原理图/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 原理图/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
 | `delivery-evidence.json` | 导出后有没有再改过的核对记录 |
 | `calculations/` | 本版设计还在依赖的计算（不管是哪一版算的），作废的不带 |
+| `interfaces.json` | 任务 C2.2 接口定稿：每条跨块流向源块要保证、负载块能接受的范围（模块 C2，格式见 [能力模块](modules.md)） |
 | `block-circuits/` | 每个功能块一个块文件，由 `block_circuits.py` 从 `scheme-criteria.json`、`selection.json` 抽出（模块 C3，格式见 [能力模块](modules.md)） |
 | `scripts/` | 图页脚本，下一版只重生成有变化的页面 |
 | `evidence/` | 设计结论引用的截图、手册摘页等 |

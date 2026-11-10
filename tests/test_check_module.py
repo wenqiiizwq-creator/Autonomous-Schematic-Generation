@@ -10,6 +10,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import block_circuits
 import blocks
+import architecture
 import check_module
 from architecture import check_architecture
 from audit_design_closure import audit, sha256
@@ -39,6 +40,10 @@ ARCH = {
     'boundaries': [{'name': '电源隔离', 'sides': ['一次侧', '二次侧']}],
     'interfaces': [{'name': '电源端子', 'block': 'IN'}],
 }
+# Task C2.2: what the source block guarantees and what the load block accepts on each flow.
+FROZEN = {'schema_version': 1, 'flows': [
+    {'name': 'VIN', 'provides': {'voltage': [18, 36], 'current_max': 0.3},
+     'accepts': {'voltage': [16, 38], 'current_max': 0.25, 'source': 'CTRL-A 手册 p.1'}}]}
 
 
 class ArchitectureTests(unittest.TestCase):
@@ -127,6 +132,68 @@ class ModuleAuditTests(unittest.TestCase):
         whole = audit(copy.deepcopy(self.record), self.intent, self.root)
         self.assertEqual('C5', whole['module'])
         self.assertNotEqual('NOT_CHECKED', whole['matrices'])
+
+
+class InterfaceTests(unittest.TestCase):
+    """Task C2.2: record/interfaces.json against architecture.json and the port limits in the block files."""
+    ARCH = dict(ARCH, flows=ARCH['flows'] + [
+        {'name': 'VIN→AUX', 'kind': 'power', 'from': 'IN', 'to': 'AUX', 'nets': ['VIN'], 'params': 'x'},
+        {'name': 'PG', 'kind': 'signal', 'from': 'PSU', 'to': 'AUX', 'nets': ['PG'], 'params': 'x'}])
+    ROWS = FROZEN['flows'] + [
+        {'name': 'VIN→AUX', 'provides': {'voltage': [18, 36], 'current_max': 0.3},
+         'accepts': {'voltage': [9, 40], 'current_max': 0.05, 'source': '任务 C2.1 的预算'}},
+        {'name': 'PG', 'provides': {'voh_min': 2.4, 'vol_max': 0.4, 'voh_max': 3.45, 'drive': 'push-pull'},
+         'accepts': {'vih_min': 2.0, 'vil_max': 0.8, 'abs_max': 3.6, 'source': 'MCU 手册 p.9'}}]
+    FILES = {'PSU': {'core_parts': [{'role': '反激控制器', 'port_limits': [{'net': 'VIN', 'voltage': [9, 40], 'page': 1}]}]}}
+
+    def check(self, change=None):
+        data = copy.deepcopy({'schema_version': 1, 'flows': self.ROWS})
+        if change:
+            change({r['name']: r for r in data['flows']}, data)
+        return architecture.check_interfaces(data, self.ARCH, self.FILES)
+
+    def test_a_complete_freeze_passes(self):
+        self.assertEqual(([], []), self.check())
+
+    def test_each_done_mark_of_task_c2_2_is_checked(self):
+        for change, word in (
+                (lambda r, d: d['flows'].pop(), '缺少流向 PG'),
+                (lambda r, d: r['VIN'].pop('accepts'), '要写 provides'),
+                (lambda r, d: r['VIN']['accepts'].pop('source'), 'source'),
+                (lambda r, d: r['VIN']['accepts'].update(voltage=[20, 38]), '不在负载 PSU 接受的'),
+                (lambda r, d: r['VIN']['accepts'].update(voltage=[8, 38]), '超出核心器件“反激控制器”'),
+                (lambda r, d: r['VIN']['accepts'].update(current_max=0.28), '小于各负载取用之和'),
+                (lambda r, d: r['VIN→AUX']['provides'].update(current_max=1), 'provides 要相同'),
+                (lambda r, d: r['PG']['provides'].update(voh_min=1.8), '低于输入门限'),
+                (lambda r, d: r['PG']['provides'].update(vol_max=0.9), '高于输入门限'),
+                (lambda r, d: r['PG']['provides'].update(voh_max=5), '超过输入耐压'),
+                (lambda r, d: r['PG'].update(provides={'drive': 'x'}), '是信号')):
+            problems, _ = self.check(change)
+            self.assertTrue(any(word in p for p in problems), (word, problems))
+
+    def test_an_analog_signal_is_noted_as_not_checked(self):
+        problems, notes = self.check(lambda r, d: r['PG'].update(provides={'level': '0～2.5 V'},
+                                                                 accepts={'level': '量程 0～3 V', 'source': 'ADC 手册 p.4'}))
+        self.assertEqual([], problems)
+        self.assertTrue(any('没有机械核对' in n for n in notes))
+
+    def test_a_calculation_cites_the_other_end_through_the_interface(self):
+        import audit_design_closure as closure_audit
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'record').mkdir()
+            (Path(tmp) / 'record' / 'interfaces.json').write_text(json.dumps({'schema_version': 1, 'flows': self.ROWS}),
+                                                                 encoding='utf-8')
+            numbers = closure_audit.interface_numbers(tmp)
+        self.assertIsNone(closure_audit.interface_problem('interface:VIN', 38, 'V', numbers))
+        self.assertIsNone(closure_audit.interface_problem('interface:VIN', 250, 'mA', numbers))
+        self.assertIn('不是 interfaces.json 流向 VIN 写的数', closure_audit.interface_problem('interface:VIN', 40, 'V', numbers))
+        self.assertIn('流向要在', closure_audit.interface_problem('interface:+5V', 5, 'V', numbers))
+        self.assertIn('流向要在', closure_audit.interface_problem('calc:C-REG', 5, 'V', numbers))
+
+    def test_a_block_sees_only_its_own_end(self):
+        rows = architecture.block_interfaces({'flows': self.ROWS}, self.ARCH, 'PSU')
+        self.assertEqual([('VIN', 'accepts'), ('PG', 'provides')],
+                         [(r['name'], 'provides' if 'provides' in r else 'accepts') for r in rows])
 
 
 class FingerprintTests(unittest.TestCase):
@@ -257,7 +324,7 @@ SCHEME = {'version': 1, 'blocks': [
 SELECTION = {'schema_version': 1, 'library_root': '~/lib', 'roles': [
     {'role': '反激控制器', 'block_id': 'PSU', 'refs': ['U1'], 'decisive': [{'param': 'VIN', 'op': 'covers', 'limit': [18, 36]}],
      'candidates': [{'mpn': 'CTRL-A', 'status': 'selected', 'datasheet': 'a.pdf', 'values': {'VIN': {'value': [9, 40], 'page': 1}},
-                     'external_dependencies': []},
+                     'port_limits': [{'net': 'VIN', 'voltage': [9, 40], 'page': 1}], 'external_dependencies': []},
                     {'mpn': 'CTRL-B', 'status': 'rejected', 'datasheet': 'b.pdf'}]}]}
 
 
@@ -282,6 +349,7 @@ class BlockCircuitTests(unittest.TestCase):
         self.assertEqual(('反激控制器', 'CTRL-A', ['U1']), (psu['core_parts'][0]['role'], psu['core_parts'][0]['mpn'],
                                                        psu['core_parts'][0]['refs']))
         self.assertNotIn('candidates', psu['core_parts'][0])
+        self.assertEqual([{'net': 'VIN', 'voltage': [9, 40], 'page': 1}], psu['core_parts'][0]['port_limits'])
         empty = json.loads((self.record / 'block-circuits' / 'IN.json').read_text(encoding='utf-8'))
         self.assertEqual(([], []), (empty['schemes'], empty['core_parts']))
 
@@ -292,6 +360,45 @@ class BlockCircuitTests(unittest.TestCase):
         problems = block_circuits.run(self.root)
         self.assertTrue(any('block_id' in p for p in problems), problems)
         self.assertFalse((self.record / 'block-circuits').exists())
+
+    def test_each_core_part_lists_its_port_limits(self):
+        for change, word in ((lambda c: c.pop('port_limits'), '要写 port_limits'),
+                             (lambda c: c.update(port_limits=[{'net': 'VIN', 'voltage': [9, 40]}]), 'page'),
+                             (lambda c: c.update(port_limits=[{'net': '+3V3', 'voltage': [3, 3.6], 'page': 2}]), '不是与块 PSU 相连'),
+                             (lambda c: c.update(port_limits=[{'net': 'VIN', 'page': 2}]), '没有写限值')):
+            selection = copy.deepcopy(SELECTION)
+            change(selection['roles'][0]['candidates'][0])
+            (self.record / 'selection.json').write_text(json.dumps(selection, ensure_ascii=False), encoding='utf-8')
+            problems = block_circuits.run(self.root)
+            self.assertTrue(any(word in p for p in problems), (word, problems))
+
+    def test_c2_gate_needs_the_interface_freeze_once_c3_is_done(self):
+        requirements = {'schema_version': 1, 'requirements': [{'id': 'R1'}]}
+        (self.record / 'requirements.json').write_text(json.dumps(requirements), encoding='utf-8')
+        self.assertEqual(([], []), check_module.gate('C2', self.root))           # before C3: architecture.json alone
+        check_module.record_module(self.root, 'C2', [])
+        block_circuits.run(self.root)
+        check_module.record_module(self.root, 'C3', [])
+        self.assertEqual('STALE', check_module.status(self.root)['C2'])          # the block files are there: do task C2.2
+        problems, _ = check_module.gate('C2', self.root)
+        self.assertTrue(any('任务 C2.2 接口定稿' in p for p in problems), problems)
+        (self.record / 'interfaces.json').write_text(json.dumps(FROZEN, ensure_ascii=False), encoding='utf-8')
+        self.assertEqual(([], []), check_module.gate('C2', self.root))
+        check_module.record_module(self.root, 'C2', [])
+        self.assertEqual({'C2': 'OK', 'C3': 'OK'}, check_module.status(self.root))   # C3 reads architecture.json only
+        arch = copy.deepcopy(ARCH)
+        arch['blocks'][0]['name'] = '隔离电源 3.3 V'
+        (self.record / 'architecture.json').write_text(json.dumps(arch, ensure_ascii=False), encoding='utf-8')
+        self.assertEqual({'C2': 'MODIFIED', 'C3': 'STALE'}, check_module.status(self.root))
+
+    def test_going_back_upstream_is_recorded(self):
+        self.assertEqual(1, check_module.main(['return', str(self.root), '--from', 'C4.2', '--to', 'C2', '--reason', 'x',
+                                               '--evidence', 'y']))
+        self.assertEqual(0, check_module.main(['return', str(self.root), '--from', 'C4.2', '--to', 'C2.2',
+                                               '--reason', '+3V3 电流预算不够', '--evidence', 'calc:C-3V3']))
+        check_module.record_module(self.root, 'C1', [])
+        rows = json.loads((self.record / 'modules.json').read_text(encoding='utf-8'))['returns']
+        self.assertEqual([('C4.2', 'C2.2', 'calc:C-3V3')], [(r['from'], r['to'], r['evidence']) for r in rows])
 
     def test_a_hand_edited_block_file_disagrees_with_the_records(self):
         block_circuits.run(self.root)
@@ -321,6 +428,15 @@ class BlockCircuitTests(unittest.TestCase):
         (self.record / 'scheme-criteria.json').unlink()
         (self.record / 'selection.json').unlink()
         problems, _ = check_module.gate('C4', self.root)
+        self.assertTrue(any('缺少 record/interfaces.json' in p for p in problems), problems)
+        frozen = copy.deepcopy(FROZEN)
+        frozen['flows'][0]['accepts'] = {}
+        (self.record / 'interfaces.json').write_text(json.dumps(frozen, ensure_ascii=False), encoding='utf-8')
+        problems, _ = check_module.gate('C4', self.root)
+        self.assertTrue(any('没有块 PSU 这一头的 accepts' in p for p in problems), problems)
+        (self.record / 'interfaces.json').write_text(json.dumps(FROZEN, ensure_ascii=False), encoding='utf-8')
+        problems, _ = check_module.gate('C4', self.root)
+        self.assertFalse(any('interfaces.json' in p for p in problems), problems)
         self.assertTrue(any('block-circuits/PSU.json' in p and '占空比' in p and '没有闭合' in p for p in problems), problems)
         self.assertFalse(any('scheme-criteria' in p or 'selection' in p for p in problems), problems)
 

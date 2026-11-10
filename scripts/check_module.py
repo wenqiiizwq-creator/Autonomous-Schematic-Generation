@@ -3,26 +3,31 @@
 
   python3 check_module.py C3 <设计目录> [--given 文件 ...]   跑模块关卡；通过后把指纹记进 record/modules.json
   python3 check_module.py C4 <设计目录> --block PSU          只核一个块的块设计（不记指纹）
+  python3 check_module.py return <设计目录> --from C4.2 --to C2.2 --reason … --evidence …
+                                                             回到上游重做时在 record/modules.json 的 returns 记一条（P7）
   python3 check_module.py status <设计目录>                  列出已记模块：OK、STALE（上游变了）、MODIFIED（产出改过未重验）
   python3 check_module.py report <设计目录>                  单独运行（record/task.json 带 modules）时写 模块报告.md
   python3 check_module.py pack <设计目录>                    核对单独运行的交付目录
 
 关卡调用现有检查，按模块只查它拥有的部分：
-C1 requirements.json（audit_design_closure --module C1）；C2 architecture.json；C3 方案记录与核心选型，
+C1 requirements.json（audit_design_closure --module C1）；C2 architecture.json，C3 做完后加接口定稿 interfaces.json；
+C3 方案记录与核心选型，
 抽出并核对块文件 block-circuits/；C4 块设计 blocks/<块>.json 对架构的核对，再对已写的块设计做
 audit_design_closure --module C4、器件性能要求、块文件里留给 C4.2 的数值；C5 先核 electrical-intent.json 是 blocks.py 合并
 的结果，再做整板设计闭合审计；
-C6 分页方案、图面审阅、KiCad 检查结果，以及方案与分页方案一致。
+C6 分页方案、图面审阅、KiCad 检查结果，以及块文件里的选定方案与分页方案一致（只读 C3 的产品，不读它的工作记录）。
 """
 import argparse
 import datetime
 import hashlib
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
 
 import audit_design_closure as closure_audit
+import architecture
 from architecture import check_architecture
 import block_circuits
 import blocks
@@ -35,7 +40,7 @@ MODULES = ('C1', 'C2', 'C3', 'C4', 'C5', 'C6')
 # "dir/" is every JSON file in that folder; blocks/ leaves out BOARD.json, the board-level block module C5 writes.
 OUTPUTS = {
     'C1': ('requirements.json',),
-    'C2': ('architecture.json',),
+    'C2': ('architecture.json', architecture.INTERFACES),
     'C3': ('scheme-criteria.json', 'selection.json', block_circuits.DIR + '/'),
     'C4': ('design-closure.json#calculations,operating_points,pin_dispositions', 'component-requirements.json',
            'reference-input.json', blocks.DIR + '/'),
@@ -43,8 +48,12 @@ OUTPUTS = {
            'design-closure.json#traceability,net_voltages,matrices'),
     'C6': ('page-plan.json', 'summary.json', 'visual-review.json'),
 }
-UPSTREAM = {'C1': (), 'C2': ('C1',), 'C3': ('C1', 'C2'), 'C4': ('C1', 'C2', 'C3'), 'C5': ('C1', 'C2', 'C4'),
+# C2 comes back after C3 for task C2.2 (interface freeze), which reads the block files; C3 reads only architecture.json,
+# so writing interfaces.json does not make C3 stale. READS narrows what a module reads of an upstream one (default: all).
+UPSTREAM = {'C1': (), 'C2': ('C1', 'C3'), 'C3': ('C1', 'C2'), 'C4': ('C1', 'C2', 'C3'), 'C5': ('C1', 'C2', 'C4'),
             'C6': ('C2', 'C3', 'C5')}
+READS = {('C2', 'C3'): (block_circuits.DIR + '/',), ('C3', 'C2'): ('architecture.json',)}
+TASK = re.compile(r'^C[1-6]\.[1-9]$')
 MODULE_REPORT = '模块报告.md'
 # What a module run delivers (workflow-handoff.md 角色): the drawing only when C6 ran.
 MODULE_TOP = (MODULE_REPORT, 'record', '设计资料', '原理图')
@@ -123,7 +132,8 @@ def outputs_of(record, module):
 
 
 def inputs_of(record, module, given=()):
-    found = {'%s:%s' % (up, item): fp for up in UPSTREAM[module] for item, fp in outputs_of(record, up).items()}
+    found = {'%s:%s' % (up, item): fingerprint(record, item) for up in UPSTREAM[module]
+             for item in READS.get((module, up), OUTPUTS[up])}
     for path in given:
         found['given:%s' % path] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
     return found
@@ -253,18 +263,42 @@ def gate(module, root, write=True, block=None):
         ids = {r.get('id') for r in (requirements or {}).get('requirements') or [] if isinstance(r, dict)} \
             if requirements else None
         problems += check_architecture(data, ids)
+        # Task C2.2 comes after C3: once the block files exist the interface freeze is part of the gate.
+        files, _ = block_circuits.read_dir(record)
+        frozen, problem = load(record, architecture.INTERFACES)
+        if problem:
+            problems.append(problem)
+        elif frozen is None and files:
+            problems.append('缺少 record/%s：C3 做完后做任务 C2.2 接口定稿' % architecture.INTERFACES)
+        elif frozen is not None:
+            found, more = architecture.check_interfaces(frozen, data, files)
+            problems += found
+            notes += more
     if module == 'C3':
         scheme, problem = load(record, 'scheme-criteria.json')
         if problem:
             problems.append(problem)
         else:
             problems += report.check_scheme_criteria(scheme, merged(closure, requirements), deferred=False)
+            problems += report.unexplained_none(scheme)
     if module == 'C4':
         # Convention 1: C4 reads the C3 product (block files), not its working records.
         found, read_problems = block_circuits.read_dir(record)
         problems += read_problems
         if block:
             found = {k: v for k, v in found.items() if k == block}
+        arch, _ = load(record, 'architecture.json')
+        frozen, problem = load(record, architecture.INTERFACES)
+        if problem or frozen is None:
+            problems.append(problem or '缺少 record/%s：C4 按任务 C2.2 定稿的接口参数设计' % architecture.INTERFACES)
+        else:
+            keys = [block] if block else sorted(k for k in blocks.read_dir(record)[0] if k != blocks.BOARD)
+            for key in keys:
+                for row in architecture.block_interfaces(frozen, arch, key):
+                    side = 'provides' if 'provides' in row else 'accepts'
+                    if not isinstance(row[side], dict) or not row[side]:
+                        problems.append('%s 的流向 %s 没有块 %s 这一头的 %s：回到任务 C2.2' % (
+                            architecture.INTERFACES, row['name'], key, side))
         view = merged(closure, requirements)
         for name, data in sorted(found.items()):
             for scheme in (data.get('schemes') or []) if isinstance(data, dict) else []:
@@ -303,9 +337,13 @@ def gate(module, root, write=True, block=None):
         if problems:
             return problems, notes
         intent = json.loads(intent_path.read_text(encoding='utf-8')) if intent_path.is_file() else {}
-        scheme, problem = load(record, 'scheme-criteria.json')
-        problems += [problem] if problem else []
-        problems += report.check_page_plan(plan, intent, visual, root=root, scheme=scheme if isinstance(scheme, dict) else None)
+        # Convention 1: C6 reads the C3 product (block files), not its working records.
+        files, read_problems = block_circuits.read_dir(record)
+        problems += read_problems
+        scheme = {'blocks': [{'block': s.get('name'), 'candidates': [dict(s['selected'], status='selected')]}
+                             for _, data in sorted(files.items()) for s in (data.get('schemes') or [])
+                             if isinstance(s, dict) and isinstance(s.get('selected'), dict)]} if files else None
+        problems += report.check_page_plan(plan, intent, visual, root=root, scheme=scheme, explain_none=False)
         problems += report.check_visual_items(root, visual, summary)
         if visual.get('status') != 'REVIEWED':
             problems.append('visual-review.json 的 status 不是 REVIEWED（任务 C6.5）')
@@ -313,8 +351,9 @@ def gate(module, root, write=True, block=None):
                   and k != 'design_closure']
         if failed:
             problems.append('summary.json 有 FAIL 的检查项：%s（任务 C6.4）' % '、'.join(failed))
-        if isinstance(scheme, dict):
-            problems += report.scheme_against_plan(scheme, plan)
+        if scheme:
+            problems += [p.replace('scheme-criteria.json', block_circuits.DIR + '/')
+                         for p in report.scheme_against_plan(scheme, plan)]
     return problems, notes
 
 
@@ -330,6 +369,21 @@ def record_module(root, module, given):
     data['modules'][module] = {'gate': 'PASS', 'checked': datetime.date.today().isoformat(),
                                'inputs': inputs_of(record, module, given), 'outputs': outputs_of(record, module)}
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def record_return(root, source, target, reason, evidence):
+    """P7: going back to an upstream module is recorded in record/modules.json `returns`. Returns the problems."""
+    problems = [] if TASK.match(source or '') and TASK.match(target or '') and source != target else \
+        ['--from、--to 写两项不同的任务编号，例如 C4.2、C2.2']
+    problems += ['--reason、--evidence 都要写'] if not (text(reason) and text(evidence)) else []
+    if problems:
+        return problems
+    path = root / 'record' / 'modules.json'
+    data = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'schema_version': 1, 'modules': {}}
+    data.setdefault('returns', []).append({'date': datetime.date.today().isoformat(), 'from': source, 'to': target,
+                                           'reason': reason, 'evidence': evidence})
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return []
 
 
 def status(root):
@@ -445,13 +499,23 @@ def check_delivery(root):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('module', choices=MODULES + ('status', 'report', 'pack'))
+    ap.add_argument('module', choices=MODULES + ('status', 'report', 'pack', 'return'))
     ap.add_argument('design_root', type=Path, help='设计目录（含 record/）')
     ap.add_argument('--given', action='append', default=[], help='单独运行时任务书给定的输入文件（记入指纹）')
     ap.add_argument('--block', help='C4：只核这个块的块设计（architecture.json 的块 id），不记入 modules.json')
+    ap.add_argument('--from', dest='source', help='return：发现问题的任务，如 C4.2')
+    ap.add_argument('--to', dest='target', help='return：回到的任务，如 C2.2')
+    ap.add_argument('--reason', help='return：原因')
+    ap.add_argument('--evidence', help='return：依据（计算编号、手册页码、检查输出）')
     args = ap.parse_args(argv)
     if args.block and args.module != 'C4':
         ap.error('--block 只用于 C4')
+    if args.module == 'return':
+        problems = record_return(args.design_root, args.source, args.target, args.reason, args.evidence)
+        for problem in problems:
+            print('PROBLEM:', problem)
+        print('FAIL' if problems else 'recorded')
+        return 1 if problems else 0
     if args.module == 'status':
         found = status(args.design_root)
         for module, state in found.items():

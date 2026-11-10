@@ -150,7 +150,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     成本目标写着“在选型记录中估算”却没算）。在版本 2 之上：
     - 每条 `checks` 写门槛的依据 `limit_basis` 和出处：`requirement`（`limit_source` 写 `req:<需求编号>`）、`guaranteed`/`typical`
       （`limit_source` 写 `datasheet:<库内路径>#p<页>`，门槛数值也按引用核对）、`standard`（`limit_source` 写 `standard:<标准号 条款>`）、
-      `derived`（`limit_source` 写手册页或 `calc:<计算 id>`）、`model`（ASG 自己定的筛查值，写 `limit_reason`）。
+      `derived`（`limit_source` 写手册页或 `calc:<计算 id>`）、`interface`（`limit_source` 写 `interface:<流向名>`，门槛是该流向在
+      `interfaces.json` 里写的数）、`model`（ASG 自己定的筛查值，写 `limit_reason`）。
       缺依据记 `check_limit_without_basis`，出处不对记 `check_limit_without_source`。
       `model` 门槛的 `limit_reason` 要写出这个数（`model_limit_not_in_reason`）；检查名在“对”或“vs”之后写了带本检查单位的数（不是 1 W×0.75 这类算式）时，
       它要等于 `limit`（`check_name_contradicts_limit`；工业校准板：名字写 100 kbit/s，门槛填 200 kbit/s，2026-11-02）。门槛是 `model` 的，结论只能是依赖工程估计；
@@ -225,7 +226,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - **`input_role`**：计算参数写 `input_role`（`startup_load`、`load_capacitance`、`load_demand`、`source_impedance`、`input_window`、`ambient_temperature`、
       `external_transient`、`cable_topology`）就声明它是工况，审计核来源，没有来源记 `operating_input_without_source`。接受的来源：
       - `requirement`（`req:<编号>`，用户答复写回的需求同样引 `req:<澄清编号>`），需求文字要写出这个数和单位：同一量纲才换算前缀（1500 µF 对 1.5 mF 算写明，对 1.5 A 不算），范围下端取上端的单位（20.4～28.8 V）；没有单位的参数（比值、个数）只比数。换算出来的写 `derived` 和 `formula`；
-      - `guaranteed`、`typical` 引手册页（负载器件的手册）；
+      - `guaranteed`、`typical` 引手册页（负载器件的手册）；`interface` 引接口定稿的流向（负载在别的块时用它）；
       - `derived`：`source` 指向声明了它的另一条计算，或写 `formula`，算式用到的参数自己有来源；
       - `model`、`design_choice`、`unspecified` 只有两种情况：负载在本板上，写 `load_refs`（位号，不能是开关自身或连接器）；或用户暂缓，写 `clarification: <澄清编号>`，
         答复是 `DEFERRED`，有未关闭的 `requirement` 待办在 `calculations` 里列这条计算。
@@ -335,6 +336,9 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - 保护器件（保险丝、压敏、TVS、稳压管、电源路径上的 NTC）都要进一条 `kind: threshold` 计算的 `refs`，两侧都算；
     X 电容要进放电计算、Y 电容要进接触电流计算的 `refs`（见 [part-roles.md](part-roles.md) 第 1 节“保护器件与安全防护位置”）。`render_design_report.py` 核对，不一致是记录问题。
   - `derived`：由其他值推出，写 `derivation`，`source` 是手册页或 `calc:<计算 id>`。
+  - `interface`：别的块在接口上给本块的数（负载能接受的电压上下限、源端保证的范围和电流），`source` 写 `interface:<流向名>`，
+    数值要是 `record/interfaces.json` 该流向写的数（任务 C2.2，同一量纲按前缀换算）；不对记 `interface_parameter_not_in_flow`。
+    本块的计算不引别的块的器件手册或计算：要用对方的限值，就引接口参数；接口参数不够用时回到任务 C2.2。
   - `design_choice`：本设计选定的值（电阻阻值、容差档、匝数），写 `ref`。
   - `model`：工程假设或折减（CTR 保持系数、效率包络等），写 `reason`。
   - `requirement`：来自需求的输入（额定功率、最低输入电压），`source` 写 `req:<需求编号>`，编号须在 `requirements` 里。

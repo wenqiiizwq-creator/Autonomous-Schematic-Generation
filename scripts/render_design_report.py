@@ -222,7 +222,8 @@ def library_hits(block, circuits_dir=CIRCUITS_DIR):
     return [h['id'] for h in find_parts.search_circuits([block], Path(circuits_dir))['results']] if text(block) else []
 
 
-def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(), scheme=None, circuits_dir=CIRCUITS_DIR):
+def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(), scheme=None, circuits_dir=CIRCUITS_DIR,
+                         explain_none=True):
     """Each key functional block names an existing pattern approach, or none; a none block's scheme comparison
     names every typical circuit the library search finds for it."""
     errors = []
@@ -236,7 +237,8 @@ def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(),
                 errors.append('%s：关键功能块“%s”要标注典型电路与实现方案，库里没有适用的写 none' % (name, block))
             continue
         if ref == 'none':
-            unexplained = [pid for pid in library_hits(block, circuits_dir) if pid not in compared.get(block, '')]
+            unexplained = [pid for pid in library_hits(block, circuits_dir) if pid not in compared.get(block, '')] \
+                if explain_none else []
             if unexplained:
                 errors.append('%s：功能块“%s”标 none，但按块名检索典型电路命中 %s；在 scheme-criteria.json 该块的候选里写明它为什么不适用'
                               % (name, block, '、'.join(unexplained)))
@@ -249,7 +251,25 @@ def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(),
     return errors
 
 
-def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, scheme=None):
+def unexplained_none(scheme, circuits_dir=CIRCUITS_DIR):
+    """Module C3 gate: a block whose selected scheme names no typical circuit says, among its candidates, why each
+    typical circuit the library search finds for it does not apply."""
+    problems = []
+    for block in (scheme or {}).get('blocks') or [] if isinstance(scheme, dict) else []:
+        if not isinstance(block, dict) or not text(block.get('block')):
+            continue
+        chosen = [c for c in block.get('candidates') or [] if isinstance(c, dict) and c.get('status') == 'selected']
+        if len(chosen) != 1 or text(chosen[0].get('circuit')):
+            continue
+        compared = json.dumps(block.get('candidates') or [], ensure_ascii=False)
+        missing = [pid for pid in library_hits(block['block'], circuits_dir) if pid not in compared]
+        if missing:
+            problems.append('scheme-criteria.json“%s”选定的方案没有标典型电路，但按块名检索命中 %s；在候选里写明它为什么不适用'
+                            % (block['block'], '、'.join(missing)))
+    return problems
+
+
+def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, scheme=None, explain_none=True):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
@@ -289,7 +309,8 @@ def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, 
                 placed[ref] = block
         cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task C6.3)
         if not cover and 'system_block' not in name.lower():
-            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, key_blocks=key_blocks, scheme=scheme, circuits_dir=circuits_dir)
+            errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, key_blocks=key_blocks, scheme=scheme, circuits_dir=circuits_dir,
+                                             explain_none=explain_none)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))
         if missing:
             errors.append('%s：这些器件不属于任何功能块：%s' % (name, '、'.join(missing[:6])))

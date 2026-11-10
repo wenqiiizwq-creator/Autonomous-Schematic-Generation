@@ -349,8 +349,8 @@ def source_problem(key, p, calculations, requirements, clarifications, work, com
             return '需求 %s 的文字里没有 %g %s（数和单位一起比，同一量纲才换算前缀）；写需求给的数，换算出来的写 derived 和 formula' % (
                 source[4:], p['value'], p.get('unit') or '')
         return None     # a missing requirement is already requirement_parameter_without_requirement
-    if basis in ('guaranteed', 'typical'):
-        return None     # the datasheet citation is checked with every parameter
+    if basis in ('guaranteed', 'typical', 'interface'):
+        return None     # the datasheet citation, or the interface row (task C2.2), is checked with every parameter
     if basis == 'derived':
         if source.startswith('calc:') and source[5:] != key:
             if any(q.get('input_role') == p.get('input_role') for q in params_of(calculations.get(source[5:]) or {})):

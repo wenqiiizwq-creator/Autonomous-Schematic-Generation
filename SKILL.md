@@ -54,7 +54,7 @@ ASG 的输入是一块板卡的设计需求，输出是设计方案确定后的�
 ### 架构
 
 ASG 由六个能力模块组成。每个模块是主流程中连续的几项任务，有固定的给定输入、产出和关卡，可以单独运行，也可以串联。
-主流程按 C1→C6 排列，串起来就是从需求做新设计的默认编排。先弄清本次从哪个模块进、跑到哪个模块（见“选择工作流”），再按“主流程”逐项任务做，每项任务做到“做完的标志”为止；一个模块各项任务的做完标志合起来就是它的关卡（`check_module.py`）。
+主流程按 C1→C6 排列，串起来就是从需求做新设计的默认编排；其中任务 C2.2 接口定稿排在 C3 之后、C4 之前。先弄清本次从哪个模块进、跑到哪个模块（见“选择工作流”），再按“主流程”逐项任务做，每项任务做到“做完的标志”为止；一个模块各项任务的做完标志合起来就是它的关卡（`check_module.py`）。
 
 - **输入**：需求、器件知识库、典型电路库；单独运行时的给定输入
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
@@ -65,11 +65,11 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
 | 模块 | 任务 | 给定输入 | 产出 |
 |---|---|---|---|
 | C1 需求理解与澄清 | C1.1 | 需求文件；任务书里的澄清答复与代答授权 | `requirements.json`：需求条文与来源、需求澄清、降额等级、准则范围 |
-| C2 板级方案 | C2.1 | C1 的产出 | `architecture.json`：功能块、电压域、电源树、隔离边界、跨块流向、对外接口和各块的块规格 |
+| C2 板级方案 | C2.1 · C2.2 | C1 的产出；C2.2 另读各块的 `block-circuits/<块>.json` | `architecture.json`：功能块、电压域、电源树、隔离边界、跨块流向、对外接口和各块的块规格；`interfaces.json`：每条跨块流向定稿的接口参数 |
 | C3 块电路选择 | C3.1 · C3.2 | 块规格 | 每块一个 `block-circuits/<块>.json`；工作记录 `scheme-criteria.json`、`selection.json` |
-| C4 详细设计与器件选型（每块一次） | C4.1 · C4.2 · C4.3 · C4.4 | 块规格、流向与端口参数、`block-circuits/<块>.json` | 每块一个块设计 `blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json` |
-| C5 全板闭合 | C5.1 · C5.2 | `architecture.json`、各块的块设计 | `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵 |
-| C6 原理图绘制 | C6.1–C6.5 | 设计网表；单独运行时只给网表 | `page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json` |
+| C4 详细设计与器件选型（每块一次） | C4.1 · C4.2 · C4.3 · C4.4 | 块规格、`interfaces.json` 中与本块相连的流向、`block-circuits/<块>.json` | 每块一个块设计 `blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json` |
+| C5 全板闭合 | C5.1 · C5.2 | `architecture.json`、`interfaces.json`、各块的块设计 | `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵 |
+| C6 原理图绘制 | C6.1–C6.5 | 设计网表；串联运行时另读 `architecture.json` 与各块的 `block-circuits/<块>.json`；单独运行时只给网表 | `page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json` |
 
 交付（设计完成核对、报告与打包）是编排的收尾，负责汇总各模块状态并打包，不是能力模块。
 
@@ -83,7 +83,7 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
 - **P4 可读**：页面结构按绘图纲要 O1–O8 决定，坐标从引脚几何推出；可读性是交付标准。
 - **P5 失败改结构，不改计数**：不靠 PWR_FLAG、豁免、改引脚类型或标签来掩盖问题。
 - **P6 责任边界**：设计完成由 ASG 负责，只做自检；独立审查交给独立审查方（schematic-review 技能）。
-- **P7 模块契约**：单独运行时，给定输入只读，并带 SHA-256。产出按契约写；关卡（做完的标志）过了才交下游，并在 `record/modules.json` 记下上游与产出的指纹；上游一变，下游即过期。发现给定输入有问题时，只登记 `INPUT` 待办，不改上游；串联运行时回到上游模块重做，并写明原因。
+- **P7 模块契约**：单独运行时，给定输入只读，并带 SHA-256。产出按契约写；关卡（做完的标志）过了才交下游，并在 `record/modules.json` 记下上游与产出的指纹；上游一变，下游即过期。发现给定输入有问题时，只登记 `INPUT` 待办，不改上游；串联运行时回到上游模块重做，并在 `record/modules.json` 的 `returns` 记一条：哪个模块的哪项任务发现、回到哪个模块的哪项任务、原因和依据。
 
 ### 纲要的修改
 
@@ -130,7 +130,7 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
 
 ### C2 板级方案
 
-给定输入：C1 的产出。产出：`record/architecture.json`（含各块的块规格）。
+给定输入：C1 的产出；任务 C2.2 另读各块的 `record/block-circuits/<块>.json`。产出：`record/architecture.json`（含各块的块规格）、`record/interfaces.json`。
 
 #### C2.1 系统架构
 
@@ -138,10 +138,20 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
 （RECT、BULK、FB/FAULT 光耦……）。它在任务 C6.3 画成第 1 页 `System_block`，只有页面索引不算架构。
 见 [reference-driven-board-design.md](references/reference-driven-board-design.md)。
 架构记入 `record/architecture.json`，并为每个功能块写块规格（输入、输出、功率与指标，只写要什么，不写拓扑）。隔离边界的位置在这里定，块内的隔离实现方式留给任务 C3.1。
-每条跨块流向写它承载的整板网络名（`nets`）和接口参数（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
+每条跨块流向写它承载的整板网络名（`nets`）和接口参数的预算值（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
 块的边界放在少数几个参数就能说清的地方：两块之间要靠控制环、共用一颗芯片或多条模拟连线才能工作的，合成一块。每块给一个位号编号段。
 
 做完的标志：`record/architecture.json` 中每个功能块有输入输出、所在电压域和块规格；每条跨块流向有名字；隔离边界两侧各有哪些功能块已定。每条流向有网络名和接口参数；每块有位号编号段，各段不重叠。
+
+#### C2.2 接口定稿
+
+排在 C3 之后、C4 之前做。任务 C2.1 写的接口参数是预算；核心器件选定后，按各块 `block-circuits/<块>.json` 里核心器件的端口限值，把每条跨块流向的参数定成各块设计时要遵守的数，记入 `record/interfaces.json`。
+每条流向写两头。负载端写它能接受的范围（`accepts`）：电源轨写电压上下限、最大取用电流和上电时序要求，信号写输入门限与耐压；数值取自核心器件的端口限值并注手册页码，没有核心器件的块沿用任务 C2.1 的预算。
+源端写它要保证的范围（`provides`）：电源轨写输出电压上下限与电流能力，信号写输出电平与驱动方式；由各负载的范围推出：电压落在所有负载接受范围的交集内，电流能力不小于各负载取用之和。
+交集为空，或电流之和超出源块的块规格时，改架构或块规格（重做任务 C2.1，C3 按指纹重跑），不在本任务凑数。
+C4 的源块按 `provides` 设计，负载块按 `accepts` 设计，都不读对方的块。
+
+做完的标志：每条跨块流向在 `interfaces.json` 有 `provides` 和每个负载块的 `accepts`，数值写了来源（手册页码或任务 C2.1 的预算）；每条电源轨 `provides` 的电压范围落在各负载 `accepts` 的交集内，电流能力不小于各负载取用之和；每条信号两端的电平相容。
 
 ### C3 块电路选择
 
@@ -173,15 +183,16 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
   一并列出即可，不另问，`decision` 写 `scheme:<证据编号>` 并引原文；无人当场确认时，只能按任务书的代答授权写 `delegate:<代答人>:<日期>`，没有授权就停下来问。
   手册或计算证明某个已确认选择不成立的，列为"建议改动"连同证据一起问，不自行换方案。
 - 核实决定架构的确切型号/固件能力；未证实的依赖保持条件状态，并评估替代实现。
-- **抽出块文件**：选型确认后运行 `block_circuits.py <设计目录>`，按 `scheme-criteria.json` 各块和 `selection.json` 各角色写的 `block_id`（`architecture.json` 的功能块 `id`），每块抽出一个 `record/block-circuits/<块>.json`：选定方案、核心器件与角色、决定条件的本板取值、留给任务 C4.2 核算的数值。块文件由工具抽出，不手写；C4 只读块文件。
+- **端口限值**：每个核心器件写它在本块各端口上的限值（供电电压上下限与最大电流，数字口的输入门限、输出电平与耐压），注手册页码，记在 `selection.json` 该角色下，随块文件抽出，供任务 C2.2 定接口参数。
+- **抽出块文件**：选型确认后运行 `block_circuits.py <设计目录>`，按 `scheme-criteria.json` 各块和 `selection.json` 各角色写的 `block_id`（`architecture.json` 的功能块 `id`），每块抽出一个 `record/block-circuits/<块>.json`：选定方案、核心器件与角色、核心器件的端口限值、决定条件的本板取值、留给任务 C4.2 核算的数值。块文件由工具抽出，不手写；C4 只读块文件。
 
 做完的标志：`render_design_report.py` 的选型检查无问题：每个核心器件角色有候选比较和确认记录 `decision`（`user:`、`scheme:` 或 `delegate:`），
-选定候选写了 `external_dependencies`，不为空的角色有 2–3 个方案、ASG 的建议和所选方案；`block_circuits.py` 抽出的块文件与两份工作记录一致。
+选定候选写了 `external_dependencies`，不为空的角色有 2–3 个方案、ASG 的建议和所选方案；`block_circuits.py` 抽出的块文件与两份工作记录一致。每个核心器件写了端口限值和手册页码。
 
 ### C4 详细设计与器件选型
 
-C4 每块做一次。给定输入：本块的块规格、与本块相连的流向（网络名与接口参数）、`record/block-circuits/<块>.json`（方案与核心器件）。产出：块设计 `record/blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json`。
-本块的设计只依据这些输入，不读别的块；流向参数不够用或不成立时，回到 C2。
+C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中与本块相连的流向（网络名，本块要保证的 `provides` 或可依赖的 `accepts`）、`record/block-circuits/<块>.json`（方案与核心器件）。产出：块设计 `record/blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json`。
+本块的设计只依据这些输入，不读别的块；接口参数不够用或不成立时，回到任务 C2.2。
 
 #### C4.1 数据手册核对与外围电路
 
@@ -264,7 +275,7 @@ C4 每块做一次。给定输入：本块的块规格、与本块相连的流�
 2. **按型号或设计单定义**：电路依赖物理引脚、接口/固件行为、认证、特定曲线或型号特性的器件，继续明确料号/订货变体/设计单，核对手册条件。安全认证与定制磁件要求不得因“按规格”而取消。
 查阅原厂手册以核实候选，不自动意味着电路只能绑定该料号；可转为完整可替代性能约束的，优先保留规格采购方式。
 3. **核对候选**：将要求值、候选保证值及双方适用条件逐项对照，记录资料来源、符合/不符合/尚未核实的结论。需要比较核心器件方案时仍执行任务 C3.2，不给所有普通料新增“两候选”义务。
-4. **处理差距**：算出不满足时换料、调整电路或重新分配性能，并回到受影响计算。厂家保证缺失时保留真实外部依赖；不要先把候选写成已核准，再附一句“关键性能待确认”。处理差距若要改变用户已确认的器件方向、结构或取值（方案文档或 1.4 的 `decision`），停在本任务，把矛盾、证据和 2–3 个改法交用户定（无人当场答复时同 1.4，只接受任务书代答），答复写回 `selection.json` 与需求清单后再继续；不自行改成别的方案。
+4. **处理差距**：算出不满足时换料、调整电路或重新分配性能，并回到受影响计算。厂家保证缺失时保留真实外部依赖；不要先把候选写成已核准，再附一句“关键性能待确认”。处理差距若要改变用户已确认的器件方向、结构或取值（方案文档或任务 C3.2 的 `decision`），停在本任务，把矛盾、证据和 2–3 个改法交用户定（无人当场答复时同任务 C3.2，只接受任务书代答）；答复改选型的回到任务 C3.2（改 `selection.json` 并重新抽出块文件），改需求的回到 C1，本块按指纹重跑后再继续；不自行改成别的方案，也不在本任务改上游的记录。
 5. **不过度设计**：满足性能要求之后，额定、精度、封装和保护级数按需要取，不无理由地取高一档；取高的写明理由（降额、统一物料、可得性等）。
 6. **按准则选型**：设计准则的 `asg_action` 改变了选型或性能要求的，在对应性能记录的 `guidelines` 写准则编号（电源输入器件、接口保护器件等）。
 7. **记录状态**：性能定义是否完整、采购定义方式、候选是否已经核实分别记录。未核准的候选放入候选栏；“型号未定”“候选待核”“已核准”不能混用。按规格采购可以有多个经核准的来源。
@@ -286,7 +297,7 @@ C4 每块做一次。给定输入：本块的块规格、与本块相连的流�
 
 ### C5 全板闭合
 
-给定输入：`architecture.json`、各块的块设计 `record/blocks/`。产出：整板 `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵。
+给定输入：`architecture.json`、`interfaces.json`、各块的块设计 `record/blocks/`。产出：整板 `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵。
 
 #### C5.1 设计网表
 
@@ -305,7 +316,7 @@ C4 每块做一次。给定输入：本块的块规格、与本块相连的流�
 
 ### C6 原理图绘制
 
-给定输入：设计网表；单独运行时只给网表。产出：`page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json`。
+给定输入：设计网表；串联运行时另读 `architecture.json` 与各块的 `block-circuits/<块>.json`（各块选定的典型电路）；单独运行时只给网表。产出：`page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json`。
 
 #### C6.1 分页方案
 
@@ -317,7 +328,7 @@ C4 每块做一次。给定输入：本块的块规格、与本块相连的流�
 分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`key_blocks`、`circuits`），本页每个器件都要属于一个功能块，
 每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有适用典型电路的关键块写 `none`）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](references/human-readable-routing.md) 第 1 节。
-单独运行 C6、没有 `architecture.json` 和方案记录时，功能块划分由本任务从网表定，`circuits` 留空，不做典型电路标注检查。
+单独运行 C6、没有 `architecture.json` 和块文件时，功能块划分由本任务从网表定，`circuits` 留空，不做典型电路标注检查。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
 - 按拓扑选结构（Buck、LDO、隔离反激、滤波、MCU 各不相同），见
@@ -487,7 +498,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 
 | 何时读 | 文件 |
 | --- | --- |
-| 能力模块的关卡、`architecture.json`、块设计与合并（`blocks.py`）、`modules.json` 与过期判定（`check_module.py`）；单独运行模块、只给网表画图（`import_netlist.py`） | [modules.md](references/modules.md) |
+| 能力模块的关卡、`architecture.json`、接口定稿 `interfaces.json`、块设计与合并（`blocks.py`）、`modules.json` 与过期判定（`check_module.py`）；单独运行模块、只给网表画图（`import_netlist.py`） | [modules.md](references/modules.md) |
 | 设计待办记录、依赖与计算结论审计 | [design-closure.md](references/design-closure.md) |
 | 交付目录、设计报告、打包检查 | [delivery-report.md](references/delivery-report.md) |
 | 从需求写设计网表 | [requirements-to-intent.md](references/requirements-to-intent.md) |

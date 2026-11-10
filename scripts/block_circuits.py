@@ -5,7 +5,7 @@
 
 块文件不手写，从 C3 的两份工作记录确定性地抽出：scheme-criteria.json 的每块、selection.json 的每个核心角色都写
 block_id（architecture.json 的 blocks[].id）。每个功能块一个文件，内容是选定方案、核心器件与角色、决定条件的本板取值、
-留给任务 C4.2 核算的数值；不含外围器件和数值。C4 只读块文件，不读这两份工作记录。
+核心器件的端口限值（port_limits，供任务 C2.2 定接口参数）、留给任务 C4.2 核算的数值；不含外围器件和数值。C4 只读块文件，不读这两份工作记录。
 """
 import argparse
 import json
@@ -46,10 +46,37 @@ def part_entry(role):
     pick = selected(role.get('candidates') or [])
     out = {'role': role.get('role'), 'refs': role.get('refs', []),
            'decisive': [d for d in role.get('decisive') or [] if isinstance(d, dict)]}
-    for key in ('mpn', 'vendor', 'datasheet', 'values', 'external_dependencies'):
+    for key in ('mpn', 'vendor', 'datasheet', 'values', 'port_limits', 'external_dependencies'):
         if pick and key in pick:
             out[key] = pick[key]
     return out
+
+
+def port_limit_problems(arch, selection):
+    """Task C3.2: the selected part of every core role lists its limits on the block's ports (`port_limits`: board net
+    and datasheet page, plus the numbers), an empty list when it touches none."""
+    touching = {}
+    for flow in items(arch, 'flows'):
+        for block in (flow.get('from'), flow.get('to')):
+            touching.setdefault(block, set()).update(n for n in flow.get('nets') or [] if text(n))
+    problems = []
+    for role in items(selection, 'roles'):
+        pick = selected(role.get('candidates') or [])
+        if pick is None:
+            continue
+        where = 'selection.json 角色“%s”' % role.get('role')
+        rows = pick.get('port_limits')
+        if not isinstance(rows, list):
+            problems.append(where + ' 的选定候选要写 port_limits：它在本块各端口上的限值和手册页码，不接端口的写空列表（任务 C3.2）')
+            continue
+        for row in rows:
+            if not isinstance(row, dict) or not text(row.get('net')) or not (text(row.get('page')) or isinstance(row.get('page'), int)):
+                problems.append(where + ' 的 port_limits 每项写 net（整板网络名）和 page（手册页码）')
+            elif row['net'] not in touching.get(role.get('block_id'), set()):
+                problems.append('%s 的 port_limits 的 %s 不是与块 %s 相连的流向的网络' % (where, row['net'], role.get('block_id')))
+            elif len(row) < 3:
+                problems.append('%s 的 port_limits 的 %s 没有写限值' % (where, row['net']))
+    return problems
 
 
 def extract(arch, scheme, selection):
@@ -141,6 +168,7 @@ def run(root, write=True):
     files, problems = extract(arch, scheme, selection)
     if problems:
         return problems
+    problems = port_limit_problems(arch, selection)
     rendered = {k: json.dumps(v, ensure_ascii=False, indent=2) + '\n' for k, v in files.items()}
     folder = record / DIR
     if write:

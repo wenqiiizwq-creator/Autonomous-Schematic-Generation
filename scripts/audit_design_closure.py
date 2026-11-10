@@ -65,10 +65,11 @@ TRACE_FIELDS = ('status', 'implementation', 'refs', 'depends_on', 'no_check_reas
 # Where each number in a calculation comes from. A device parameter cites the datasheet page it was read from; one the
 # datasheet does not give is "unspecified" and ties to a recorded operating-point decision; requirement inputs and
 # physical constants are not filed as models.
-PARAMETER_BASES = ('guaranteed', 'typical', 'derived', 'design_choice', 'model', 'unspecified', 'requirement', 'constant')
+PARAMETER_BASES = ('guaranteed', 'typical', 'derived', 'design_choice', 'model', 'unspecified', 'requirement', 'constant',
+                   'interface')
 # Each check says where its limit comes from (R8, user 2026-10-27), so a limit ASG set itself
 # ("20 J 采购资格", "60 V 筛查值") no longer reads like a rating; and every requirement is checked or says why not.
-LIMIT_BASES = ('requirement', 'guaranteed', 'typical', 'standard', 'derived', 'model')
+LIMIT_BASES = ('requirement', 'guaranteed', 'typical', 'standard', 'derived', 'model', 'interface')
 # The conclusion follows from the inputs. A typical or unspecified device value, or an open
 # vendor-data item, leaves it resting on the vendor; an engineering model or a term not calculated
 # leaves it resting on ASG's own estimate; otherwise the design holds.
@@ -393,7 +394,38 @@ def audit_omissions(key, row, work, error):
     return kinds
 
 
-def audit_parameters(key, row, refs, points, calculations, error, requirements=()):
+PREFIXES = {'m': 1e-3, 'µ': 1e-6, 'μ': 1e-6, 'u': 1e-6, 'k': 1e3}
+
+
+def interface_numbers(artifact_root):
+    """{flow name: numbers of its row} of record/interfaces.json (task C2.2): what a block may cite about the other end
+    of a flow without reading the other block."""
+    path = Path(artifact_root) / 'record' / 'interfaces.json'
+    try:
+        data = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+    except ValueError:
+        data = {}
+    out = {}
+    for row in (data.get('flows') or []) if isinstance(data, dict) else []:
+        if isinstance(row, dict) and text(row.get('name')):
+            values = [v for end in ('provides', 'accepts') if isinstance(row.get(end), dict) for v in row[end].values()]
+            out[row['name']] = [n for v in values for n in (v if isinstance(v, list) else [v]) if finite(n)]
+    return out
+
+
+def interface_problem(source, value, unit, interfaces):
+    """Why a number cited as `interface:<流向名>` is not one of that flow's frozen parameters, or None."""
+    name = source[len('interface:'):] if isinstance(source, str) and source.startswith('interface:') else None
+    if name not in interfaces:
+        return 'source 写 interface:<流向名>，流向要在 record/interfaces.json 里'
+    if finite(value):
+        scale = PREFIXES.get(unit[0], 1) if isinstance(unit, str) and len(unit) > 1 else 1
+        if not any(math.isclose(value * scale, n, rel_tol=1e-6, abs_tol=1e-12) for n in interfaces[name]):
+            return '%g %s 不是 interfaces.json 流向 %s 写的数' % (value, unit or '', name)
+    return None
+
+
+def audit_parameters(key, row, refs, points, calculations, error, requirements=(), interfaces=None):
     params = row.get('parameters')
     if not isinstance(params, list) or not params:
         error('missing_parameters', key)
@@ -421,6 +453,10 @@ def audit_parameters(key, row, refs, points, calculations, error, requirements=(
                     (isinstance(source, str) and DATASHEET.match(source)) or
                     (isinstance(source, str) and source.startswith('calc:') and source[5:] in calculations)):
                 error('derived_parameter_without_basis', where)
+        if basis == 'interface':
+            problem = interface_problem(p.get('source'), p.get('value'), p.get('unit'), interfaces or {})
+            if problem:
+                error('interface_parameter_not_in_flow', '%s：%s' % (where, problem))
         if basis in ('model', 'constant') and not text(p.get('reason')):
             error(basis + '_parameter_without_reason', where)
         if basis == 'requirement' and not (isinstance(p.get('source'), str) and p['source'].startswith('req:')
@@ -447,7 +483,7 @@ def named_limits(c):
     return [float(n) for n in re.findall(r'(\d+(?:\.\d+)?)\s*' + re.escape(unit) + r'(?![A-Za-z])', parts[-1])]
 
 
-def audit_limits(key, row, requirements, calculations, error):
+def audit_limits(key, row, requirements, calculations, error, interfaces=None):
     """Each check names where its limit comes from."""
     for i, c in enumerate(row.get('checks') or []):
         if not isinstance(c, dict):
@@ -461,6 +497,7 @@ def audit_limits(key, row, requirements, calculations, error):
                   'requirement': source.startswith('req:') and source[4:] in requirements,
                   'guaranteed': bool(DATASHEET.match(source)), 'typical': bool(DATASHEET.match(source)),
                   'standard': source.startswith('standard:') and text(source[9:]),
+                  'interface': interface_problem(source, c.get('limit'), c.get('unit'), interfaces or {}) is None,
                   'derived': bool(DATASHEET.match(source)) or (source.startswith('calc:') and source[5:] in calculations)}[basis]:
             error('check_limit_without_source', where)
         elif basis == 'model' and finite(c.get('limit')) and not shown(c['limit'], c['limit_reason']):
@@ -1704,15 +1741,16 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
 
     points = audit_operating_points(record, work, refs, error, need)
     vendor_items, deferred_items, derived = vendor_items_of(work), vendor_items_of(work, 'requirement'), {}
+    interfaces = interface_numbers(artifact_root)
     for key, row in calculations.items():
-        audit_parameters(key, row, refs, points, calculations, error, requirements)
+        audit_parameters(key, row, refs, points, calculations, error, requirements, interfaces)
         linked(row, 'requirements', requirements, True)
         linked(row, 'evidence', evidence, True)
         coverage, conclusion = row.get('coverage'), row.get('conclusion')
         if coverage not in ('bounded', 'partial') or conclusion not in ('supported', 'conditional', 'failed'):
             error('schema', key + ':invalid coverage/conclusion')
         audit_calculation_v2(key, row, work, vendor_items.get(key, []), deferred_items.get(key, []), derived, error, need)
-        audit_limits(key, row, requirements, calculations, error)
+        audit_limits(key, row, requirements, calculations, error, interfaces)
     for rid, req in requirements.items() if closure else ():
         weak = [k for k, row in calculations.items() if rid in (row.get('requirements') or [])
                 and derived.get(k, {}).get('conclusion') != 'supported']
