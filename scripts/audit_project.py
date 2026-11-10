@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Audit one delivered native hierarchy; optionally compare an older root."""
+"""Audit one delivered native hierarchy."""
 import argparse
 import json
 from pathlib import Path
-from schematic_layout.project_audit import audit_project, compare_projects
+from schematic_layout.project_audit import audit_project
 
 
 def main():
@@ -13,7 +13,6 @@ def main():
     p.add_argument("--project", help="Native project annotation name; defaults to root filename stem")
     p.add_argument("--expected-pages", type=int)
     p.add_argument("--netlist", type=Path, help="Native XML for independent export inventory diagnostics")
-    p.add_argument("--baseline", help="Older root schematic, used for a descriptive file/instance delta")
     p.add_argument("--out", required=True)
     args = p.parse_args()
     out = Path(args.out)
@@ -21,12 +20,6 @@ def main():
         p.error("Report output already exists; choose a fresh path")
     try:
         result = audit_project(args.root, args.pdf, args.project, args.expected_pages, netlist=args.netlist)
-        if args.baseline:
-            baseline = audit_project(args.baseline, project=args.project)
-            result["baseline_status"] = baseline["status"]
-            result["delta"] = compare_projects(baseline, result)
-            if baseline["status"] != "PASS":
-                result["baseline_issues"] = {k: baseline[k] for k in ["errors", "coverage_gaps"]}
     except (ValueError, OSError, KeyError, IndexError, TypeError) as exc:
         result = {"status": "FAIL", "error": str(exc)}
     out.parent.mkdir(parents=True, exist_ok=True)

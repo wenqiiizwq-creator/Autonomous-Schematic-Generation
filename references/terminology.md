@@ -1,6 +1,6 @@
 # 术语对照
 
-报告、记录（`design-closure.json`、`review-responses.json` 等）和 `notes.json` 用同一套术语，没有另一层口语说明。
+报告、记录（`design-closure.json` 等）和 `notes.json` 用同一套术语，没有另一层口语说明。
 第一张表“不用的词”一列由 `render_design_report.py` 读取：记录或 notes 的文字里出现这些词算记录问题，打包被拒。
 “技能文档用词”一张管 SKILL.md 和 references 本身的叫法，由 `tests/test_terminology.py` 检查。
 
@@ -69,7 +69,6 @@ SKILL.md 和 references 写同一概念只用一个词。“不用的词”一�
 | 共 N 项计算 | `design-closure.json` 的 `calculations` 条数 |
 | 共 N 件未关闭项 | 状态为 `open` 的待办数 |
 | 共 N 条需求 | `requirements` 条数 |
-| 共 N 条审查意见 | `review-responses.json` 的 `items` 条数 |
 | 共 N 个器件 | 设计网表的 `components` 个数 |
 | 共 N 页 | 图纸页数（`summary.json` 的 `sheets`） |
 

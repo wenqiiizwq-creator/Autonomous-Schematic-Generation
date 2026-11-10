@@ -16,11 +16,11 @@
 | `requirements` | 需求版本、目录、逐文件 SHA-256 |
 | `skills` | 技能路径和版本信息，由程序管理 |
 | `design` | 前一版设计交付目录及其哈希；首轮可为 null |
-| `previous_review` | 前次审查意见，首轮可为 null；ASG 接受任何格式（SR 任务里是前次 SR 完整包）；按 [处理审查意见](review-comments.md) 逐条登记 |
 | `open_items` | 前一轮留下的待办 |
 | `clarification_answers` | 可选：对 ASG 上一轮提出的需求澄清的答复，每项 `{id, decision, text, by, date, source, requirement_files}`，按澄清编号对上；`requirement_files` 写是否让 ASG 直接改原始需求文件（见 [需求澄清](requirement-clarifications.md)） |
-| `delegation` | 可选：无人当场答复时的代答授权 `{by, date, scope, rule, text}`。`by` 代答人（不含 `:` 和空格），`date` 为 `YYYY-MM-DD`；`scope` 取 `clarification`（需求澄清）、`selection`（选型确认，含 ② 中改变已确认选型后的重新确认）；`rule` 目前只有 `adopt_recommendation`（只能采纳 ASG 的建议）；`text` 授权原文，报告照录 |
+| `delegation` | 可选：无人当场答复时的代答授权 `{by, date, scope, rule, text}`。`by` 代答人（不含 `:` 和空格），`date` 为 `YYYY-MM-DD`；`scope` 取 `clarification`（需求澄清）、`selection`（选型确认，含 C4 中改变已确认选型后的重新确认）；`rule` 目前只有 `adopt_recommendation`（只能采纳 ASG 的建议）；`text` 授权原文，报告照录 |
 | `output` | 本任务 result.json 的绝对路径 |
+| `modules` | 可选：只运行部分能力模块（SKILL.md「架构」、P7）。`{from, to, given}`：`from`、`to` 取 C1–C6；`given` 键是 `record/` 下的文件名，值 `{path, sha256}`，只能是 `from` 之前模块的产出。没有这个字段就是从需求到交付的整板流程。见 [能力模块](modules.md) |
 
 需求文档保留原文与未决项。设计网表（`electrical-intent.json`）由 ASG 从需求和手册独立写出，
 不从图中回抄，也不拿别人的记录改名代替。
@@ -43,7 +43,7 @@
 ```
 
 - 路径相对于 result.json 的父目录；禁止绝对路径、`..`、符号链接和重复路径。角色引用的文件都必须在 files 中。
-- 交付内容就是 SKILL 任务 5.2 的交付目录（`设计报告.md`、`原理图/`、`设计资料/`、`record/`），先用
+- 交付内容就是 SKILL.md「交付」一节“报告与打包”规定的交付目录（`设计报告.md`、`原理图/`、`设计资料/`、`record/`），先用
   `pack_design.py` 检查通过，再用流程提供的 `pack-result --roles roles.json --open-items open-items.json`
   生成 result.json；不手填哈希。
 - 无人当场答复需求澄清时，ASG 用 `task.json` 的 `clarification_answers` 填 `answer`（`source` 写
@@ -57,12 +57,13 @@
 
 | kind | 用于 |
 |---|---|
-| `DESIGN` | 还能用现有资料完成的设计、计算、选型、改图（含审查意见的 `REDESIGN` / `DESIGN`） |
-| `EVIDENCE` | 需要厂家或别人提供的资料（含 `OBTAIN_DATA`） |
-| `REQUIREMENT` | 没答复的需求澄清（含 `ASK_USER`），或用户暂缓的需求（待办阶段 `requirement`） |
+| `DESIGN` | 还能用现有资料完成的设计、计算、选型、改图 |
+| `EVIDENCE` | 需要厂家或别人提供的资料 |
+| `REQUIREMENT` | 没答复的需求澄清，或用户暂缓的需求（待办阶段 `requirement`） |
 | `REVIEW` | ASG 自检或图面审阅没通过、没做完 |
 | `DOWNSTREAM` | 交给 PCB、结构、样机测试的要求（含 `HANDOFF`） |
 | `TOOL` | 工具没跑完 |
+| `INPUT` | 单独运行模块时给定输入本身有问题（待办阶段 `input`）；`summary` 写问题与证据，`next_action` 写建议改法，不改给定输入 |
 
 ## 角色
 
@@ -80,12 +81,17 @@
 |---|---|
 | `report` | `设计报告.md` |
 | `electrical_intent` | `record/electrical-intent.json`（设计网表） |
+| `requirement_list` | `record/requirements.json`（需求清单） |
 | `design_closure` | `record/design-closure.json`（需求追溯、计算、待办与技术转交） |
 | `native_summary` | `record/summary.json`（verify_schematic.py 原样输出） |
 | `visual_review` | `record/visual-review.json`（图面审阅） |
 | `delivery_evidence` | `record/delivery-evidence.json` |
 | `manifest` | `record/manifest.json` |
-| `review_responses` | `record/review-responses.json`；有审查意见时必填 |
 
-除 `requirements` 外每个角色恰好一个文件。改版还应带上改动核对、动手前检查和复验记录（`record/` 内）。
+单独运行模块（任务书带 `modules`）时，交付目录是 `模块报告.md`、`record/`，需要时加 `设计资料/`；跑到 C6 才有 `原理图/`。
+必需角色随之变化：`module_report`（`模块报告.md`）、`modules`（`record/modules.json`）总是必需；
+`schematic`、`netlist`、`render`、`bom` 只在跑了 C6 时必需；`requirements` 只在任务书给了需求文件时必需。
+打包前用 `check_module.py pack <交付目录>` 核对（`pack_design.py` 见到 `modules` 时自动改用它）。
+
+除 `requirements` 外每个角色恰好一个文件。
 临时文件放在技能目录以外的任意临时位置（默认 `$ASG_WORK_DIR`，未设置时用系统临时目录），不放进交付目录。

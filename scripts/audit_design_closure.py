@@ -54,7 +54,14 @@ WINDOW_SIDES = ('no_false_trip', 'protection')
 # The record versions this audit reads (user 2026-11-08: 记账和留档的都从 ASG 里面清理掉). An older record is not read
 # version by version any more: it fails as outdated and is rewritten in the current format (design-closure.md).
 CURRENT_VERSIONS = {'parameter_version': 3, 'gap_version': 2, 'derating_version': 1, 'uncertainty_version': 1,
-                    'binding_version': 1, 'matrix_version': 1}
+                    'binding_version': 1, 'matrix_version': 1, 'trace_version': 1}
+# trace_version 1 (user 2026-11-09: 按草案写入): module C1's product is record/requirements.json (requirement text and
+# source, clarifications, derating level, guideline scope); design-closure.json keeps each requirement's traceability
+# (module C5), keyed by the requirement id. The audit merges the two into one view of the record.
+REQUIREMENTS_FILE = 'requirements.json'
+C1_SECTIONS = ('clarifications', 'derating', 'guideline_version', 'guideline_scope')
+REQUIREMENT_FIELDS = ('id', 'text', 'evidence', 'clarifications')
+TRACE_FIELDS = ('status', 'implementation', 'refs', 'depends_on', 'no_check_reason')
 # Where each number in a calculation comes from. A device parameter cites the datasheet page it was read from; one the
 # datasheet does not give is "unspecified" and ties to a recorded operating-point decision; requirement inputs and
 # physical constants are not filed as models.
@@ -356,8 +363,8 @@ def audit_clarifications(record, requirements, work, error, root=None):
                     isinstance(files.get('files'), list) and files['files'] and all(text(f) for f in files['files'])):
                 error('requirement_files_without_files', key)
             continue
-        if not any(w.get('stage') == 'requirement' and w.get('status') == 'open' and w.get('clarification') == key
-                   for w in work.values()):
+        if work is not None and not any(w.get('stage') == 'requirement' and w.get('status') == 'open'
+                                        and w.get('clarification') == key for w in work.values()):
             error('deferred_without_requirement_item', key)
         for rid in ids:
             if requirements.get(rid, {}).get('status') == 'design_supported':
@@ -637,12 +644,8 @@ def audit_severe_stress(where, c, risk, rule, rating, level, work, error):
             where, c['work_item'], level or '未定', required))
 
 
-def audit_derating(record, intent, calculations, requirements, clarifications, error, loaded=None, work=None):
-    """derating_version 1, judged by stress-spec.md (user 2026-10-27): the level and where it was decided; each check that
-    names a rule uses that rule's limit for the level; over the derated value but within the rating is a stress risk with
-    an improvement; only the stresses written are checked, and a stress compared with a rating that names no rule while
-    the spec has rules for that kind is a hint."""
-    rules, spec = loaded or load_derating()
+def derating_level(record, requirements, clarifications, error):
+    """The derating level and where it was decided (task C1.1, module C1); None when missing."""
     info = record.get('derating') if isinstance(record.get('derating'), dict) else {}
     level = info.get('level')
     if level not in stress_check.LEVELS:
@@ -652,6 +655,16 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
     if not m or (m.group(1) == 'req:' and m.group(2) not in requirements) or (
             m.group(1) == 'clarification:' and ((clarifications.get(m.group(2)) or {}).get('answer') or {}).get('decision') != 'DEFERRED'):
         error('derating_level_without_source', 'derating.source: req:<需求编号>，或 clarification:<用户暂缓的需求澄清>')
+    return level
+
+
+def audit_derating(record, intent, calculations, requirements, clarifications, error, loaded=None, work=None):
+    """derating_version 1, judged by stress-spec.md (user 2026-10-27): the level and where it was decided; each check that
+    names a rule uses that rule's limit for the level; over the derated value but within the rating is a stress risk with
+    an improvement; only the stresses written are checked, and a stress compared with a rating that names no rule while
+    the spec has rules for that kind is a hint."""
+    rules, spec = loaded or load_derating()
+    level = derating_level(record, requirements, clarifications, error)
     comps = {c['ref']: c for c in intent.get('components') or []}
     ruled = {k for r in rules.values() for k in r['kinds']}
     share_level = level or guideline_criteria.engineering_value('unset_level')
@@ -706,6 +719,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                 audit_severe_stress(where, c, risks[-1], rule, c.get('rating'), level, work or {}, error)
                 if not text(c.get('improvement')):
                     error('stress_risk_without_improvement', where + '：写 improvement（换额定更高的件或降低应力）')
+    info = record.get('derating') if isinstance(record.get('derating'), dict) else {}
     return {'level': level, 'source': info.get('source'), 'stress_risks': risks, 'hints': hints,
             'severe_thresholds': {'loosest_level': stress_check.LEVELS[-1], 'junction_margin_c': JUNCTION_MARGIN,
                                   'other_margin': 'uncertainty'}}
@@ -886,7 +900,7 @@ def audit_estimate_margins(calculations, error):
 
 
 def component_guidelines(artifact_root, error):
-    """{ref: guidelines} of record/component-requirements.json: task 2.3's selection requirements may cite rules too
+    """{ref: guidelines} of record/component-requirements.json: task C4.3's selection requirements may cite rules too
     (user 2026-11-01: 开工). The file's own audit checks the field's shape."""
     path = Path(artifact_root) / 'record' / 'component-requirements.json'
     if not path.is_file():
@@ -1002,7 +1016,7 @@ def audit_carrier(spec, files, objects):
 
 
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None,
-                     requirements=None, groups=None, intent=None, read=None):
+                     requirements=None, groups=None, intent=None, read=None, documents=True):
     """guideline_version 1: the shared guideline rules this design triggers (references/shared/guideline-criteria.md).
     Only the rules that rule out a scheme candidate, change a selection or enter a calculation are implemented one by one
     (user 2026-11-08: 按草案实施); the others are design actions followed without a citation each. The audit lists the
@@ -1036,7 +1050,9 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
             if kind == 'work' and row.get('status') == 'closed' and items:
                 audit_guideline_evidence(key, row, items, error)
     applicable = guideline_criteria.select(library, scope['baseline'], scope['circuit_types'], scope['device_kinds'])
-    documents = audit_documents(record, evidence or {}, error, need, groups, intent, calculations, requirements, read)
+    # FMEA and the EMC port matrix close the whole board (task C5.2, module C5).
+    documents = audit_documents(record, evidence or {}, error, need, groups, intent, calculations, requirements, read) \
+        if documents else 'NOT_CHECKED'
     found = guideline_criteria.coverage(library, applicable, cited,
                                         {i['id']: i['reason'] for i in scope.get('not_applicable', [])}, {})
     for gid in found['unknown_cited']:
@@ -1210,7 +1226,7 @@ def audit_pin_maps(intent, root, bases, error, need):
     same (DEV-D02)."""
     path = Path(root) / 'record' / 'reference-input.json'
     if not path.is_file():
-        need('reference_input_missing', 'record/reference-input.json：核心器件的引脚表与外围核对（任务 2.1）')
+        need('reference_input_missing', 'record/reference-input.json：核心器件的引脚表与外围核对（任务 C4.1）')
         return
     try:
         contract = json.loads(path.read_text(encoding='utf-8'))
@@ -1380,18 +1396,96 @@ def audit_net_voltages(record, intent, requirements, calculations, error):
     return maxima
 
 
-def audit_binding(record, intent, artifact_root, requirements, calculations, error, need, boundary=()):
-    """binding_version 1 (user 2026-11-02): the generation-side guard for the defect classes of the 86 boards."""
+def audit_binding(record, intent, artifact_root, requirements, calculations, error, need, boundary=(), closure=True):
+    """binding_version 1 (user 2026-11-02): the generation-side guard for the defect classes of the 86 boards. Identity,
+    pin maps and pin dispositions belong to module C4 (tasks C4.1, C4.4); net voltages to task C5.1 (module C5, `closure`)."""
     root = Path(artifact_root)
     bases = [root, root / 'record']
     audit_identity_binding(intent, bases, error)
     audit_pin_maps(intent, root, bases, error, need)
     audit_pin_dispositions(record, intent, error, boundary)
+    if not closure:
+        return {'net_voltages': 'NOT_CHECKED', 'pin_dispositions': len(record.get('pin_dispositions') or [])}
     maxima = audit_net_voltages(record, intent, requirements, calculations, error)
     return {'net_voltages': maxima, 'pin_dispositions': len(record.get('pin_dispositions') or [])}
 
 
-def audit(record, intent_path, artifact_root, inputs=None):
+MODULES = ('C1', 'C4', 'C5')
+
+
+def requirement_row_problems(row):
+    """(code, item) for a requirements.json row: id, acceptance text and source; traceability is not module C1's."""
+    key = row.get('id') if isinstance(row, dict) else None
+    if not isinstance(row, dict) or not text(key):
+        return [('schema', 'requirements entry requires a nonempty string id')]
+    found = []
+    if not text(row.get('text')):
+        found.append(('missing_text', key))
+    stray = sorted(set(row) - set(REQUIREMENT_FIELDS))
+    if stray:
+        found.append(('trace_in_requirements', '%s：%s 是需求追溯，写在 design-closure.json 的 traceability（任务 C5.1）'
+                      % (key, '、'.join(stray))))
+    return found
+
+
+def merge_requirements(closure, requirements):
+    """One view of the record from design-closure.json and requirements.json (trace_version 1): each requirement row is
+    its requirements.json row plus its traceability row; the module C1 sections and evidence come along. Returns the
+    view and the (code, item) problems of the split itself."""
+    problems = []
+    closure = closure if isinstance(closure, dict) else {}
+    if not isinstance(requirements, dict) or requirements.get('schema_version') != 1:
+        problems.append(('requirements_file', 'record/requirements.json 缺失或不是 schema_version 1（模块 C1 的产品）'))
+        requirements = {}
+    left = [k for k in ('requirements',) + C1_SECTIONS if k in closure]
+    if left:
+        problems.append(('outdated_record', 'design-closure.json 还有 %s：这些归模块 C1，写在 requirements.json；'
+                         '需求追溯写 traceability（trace_version 1）' % '、'.join(left)))
+    rows = requirements.get('requirements') if isinstance(requirements.get('requirements'), list) else []
+    ids = {r.get('id') for r in rows if isinstance(r, dict)}
+    trace = {}
+    entries = closure.get('traceability', [])
+    if not isinstance(entries, list):
+        problems.append(('schema', 'traceability must be a list'))
+        entries = []
+    for row in entries:
+        rid = row.get('requirement') if isinstance(row, dict) else None
+        if not text(rid):
+            problems.append(('schema', 'traceability entry requires requirement（需求编号）'))
+            continue
+        if rid not in ids:
+            problems.append(('unknown_requirement', 'traceability:' + rid))
+        if rid in trace:
+            problems.append(('duplicate_id', 'traceability:' + rid))
+        stray = sorted(set(row) - {'requirement'} - set(TRACE_FIELDS))
+        if stray:
+            problems.append(('trace_field', '%s：traceability 只写 requirement、%s；%s 归 requirements.json'
+                             % (rid, '、'.join(TRACE_FIELDS), '、'.join(stray))))
+        trace[rid] = {k: v for k, v in row.items() if k in TRACE_FIELDS}
+    merged = {k: v for k, v in closure.items() if k != 'traceability' and k not in C1_SECTIONS}
+    merged.update({k: requirements[k] for k in C1_SECTIONS if k in requirements})
+    for row in rows:
+        # The text and source are module C1's gate; here only a traceability field written in the wrong file.
+        problems += [p for p in requirement_row_problems(row) if p[0] == 'trace_in_requirements']
+    merged['requirements'] = [dict(r, **trace.get(r.get('id'), {})) if isinstance(r, dict) else r for r in rows]
+    evidence = closure.get('evidence', [])
+    own = requirements.get('evidence', [])
+    merged['evidence'] = (evidence if isinstance(evidence, list) else []) + (own if isinstance(own, list) else [])
+    return merged, problems
+
+
+def read_requirements(closure_path):
+    """requirements.json next to design-closure.json; {} when missing or unreadable (the audit reports it)."""
+    path = Path(closure_path).parent / REQUIREMENTS_FILE
+    try:
+        return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+    except ValueError:
+        return {}
+
+
+def audit_requirements(record, artifact_root, inputs=None):
+    """Module C1 (task C1.1): record/requirements.json alone — each requirement has an id, acceptance text and a
+    source; every clarification is answered and written back; the derating level and the guideline scope are set."""
     errors, pending = [], []
     def error(code, item):
         errors.append({'code': code, 'item': str(item)})
@@ -1400,15 +1494,105 @@ def audit(record, intent_path, artifact_root, inputs=None):
     if not isinstance(record, dict):
         return {'status': 'FAIL', 'errors': [{'code': 'schema', 'item': 'record must be an object'}], 'pending': []}
     if record.get('schema_version') != 1:
+        error('schema', 'requirements.json schema_version must be 1')
+    root = artifact_root.resolve()
+    tables = {}
+    for key in ('evidence', 'requirements'):
+        entries = record.get(key)
+        if not isinstance(entries, list):
+            error('schema', key + ' must be a list')
+            entries = []
+        table = {}
+        for row in entries:
+            if key == 'requirements':
+                for code, item in requirement_row_problems(row):
+                    error(code, item)
+            if not isinstance(row, dict) or not text(row.get('id')):
+                if key == 'evidence':
+                    error('schema', 'evidence entry requires a nonempty string id')
+                continue
+            if row['id'] in table:
+                error('duplicate_id', key + ':' + row['id'])
+            table[row['id']] = row
+        tables[key] = table
+    evidence, requirements = tables['evidence'], tables['requirements']
+    audit_evidence(evidence, root, inputs, error)
+    for key, row in requirements.items():
+        values = row.get('evidence')
+        if not isinstance(values, list) or any(not isinstance(x, str) for x in values):
+            error('schema', key + ':evidence must be a string list')
+            continue
+        if not values:
+            error('missing_evidence', key)
+        for ev in values:
+            if ev not in evidence:
+                error('unknown_evidence', key + ':' + ev)
+    if not requirements:
+        need('missing_requirements', 'No requirements reviewed')
+    clarifications = audit_clarifications(record, requirements, None, error, artifact_root)
+    derating_level(record, requirements, clarifications, error)
+    guideline_scope = 'NOT_CHECKED'
+    if record.get('guideline_version') == 1:
+        for problem in guideline_criteria.scope_errors(record.get('guideline_scope'), guideline_criteria.load()):
+            error('guideline_scope', problem)
+        guideline_scope = 'CHECKED'
+    elif guideline_criteria.load()['criteria']:
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
+    status = 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS'
+    return {'status': status, 'module': 'C1', 'scope': 'Requirements, clarifications, derating level and guideline scope',
+            'errors': errors, 'pending': pending, 'counts': {k: len(v) for k, v in tables.items()},
+            'guideline_scope': guideline_scope}
+
+
+def audit_evidence(evidence, root, inputs, error):
+    for key, row in evidence.items():
+        p = row.get('path')
+        if not isinstance(p, str) or not p or Path(p).is_absolute():
+            error('evidence_path', key)
+            continue
+        path = resolve(p, root, inputs)
+        if path is None:
+            error('evidence_missing_or_outside_root', key)
+        elif row.get('sha256') != sha256(path):
+            error('stale_evidence', key)
+
+
+def audit(record, intent_path, artifact_root, inputs=None, module=None, requirements=None, open_ports=()):
+    """`module` scopes the audit to the sections a module owns (SKILL.md 架构, P7): C1 record/requirements.json alone
+    (`record` is that file), without a design netlist; C4 adds the calculations, pin maps, pin dispositions and guidelines
+    of the block designs (`intent_path` is their merge so far; `open_ports` are ports whose other blocks are not written
+    yet); C5 (or None) the whole board, with the traceability, net voltages, matrices, interface contracts and the
+    FMEA/EMC documents. `requirements` is record/requirements.json, merged with design-closure.json
+    (merge_requirements); None when `record` is already the merged view."""
+    if module not in (None,) + MODULES:
+        raise ValueError('module must be one of %s' % '/'.join(MODULES))
+    if module == 'C1':
+        return audit_requirements(record, artifact_root, inputs)
+    closure = module in (None, 'C5')
+    errors, pending = [], []
+    def error(code, item):
+        errors.append({'code': code, 'item': str(item)})
+    def need(code, item):
+        pending.append({'code': code, 'item': str(item)})
+    if not isinstance(record, dict):
+        return {'status': 'FAIL', 'errors': [{'code': 'schema', 'item': 'record must be an object'}], 'pending': []}
+    if requirements is not None:
+        record, split = merge_requirements(record, requirements)
+        for code, item in split:
+            error(code, item)
+    if record.get('schema_version') != 1:
         error('schema', 'schema_version must be 1')
     for key, current in CURRENT_VERSIONS.items():
         if record.get(key) != current:
             error('outdated_record', '%s 是 %s，只读现行版本 %d：按 design-closure.md 的现行格式重写记录' % (
                 key, record.get(key, '缺'), current))
-    if record.get('intent_sha256') != sha256(intent_path):
+    if intent_path is None:
+        raise ValueError('--intent is required except for module C1')
+    # The record binds the whole-board netlist (task C5.1); module C4 audits the block designs before it exists.
+    if closure and record.get('intent_sha256') != sha256(intent_path):
         error('stale_intent', intent_path.name)
-    intent = json.loads(intent_path.read_text(encoding='utf-8'))
-    refs = {c['ref'] for c in intent['components']}
+    intent = json.loads(intent_path.read_text(encoding='utf-8')) if intent_path is not None else {'components': [], 'nets': []}
+    refs = {c['ref'] for c in intent['components']} if intent_path is not None else None
     threshold_parts = sorted(c['ref'] for c in intent['components'] if threshold_part(c))
     root = artifact_root.resolve()
     tables = {}
@@ -1430,16 +1614,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
     clarifications = audit_clarifications(record, requirements, work, error, artifact_root)
     if not requirements:
         need('missing_requirements', 'No requirements reviewed')
-    for key, row in evidence.items():
-        p = row.get('path')
-        if not isinstance(p, str) or not p or Path(p).is_absolute():
-            error('evidence_path', key)
-            continue
-        path = resolve(p, root, inputs)
-        if path is None:
-            error('evidence_missing_or_outside_root', key)
-        elif row.get('sha256') != sha256(path):
-            error('stale_evidence', key)
+    audit_evidence(evidence, root, inputs, error)
 
     def linked(row, field, table, required=False):
         values = row.get(field)
@@ -1449,7 +1624,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
         if required and not values:
             error('missing_' + field, row['id'])
         for key in values:
-            if key not in table:
+            if table is not None and key not in table:
                 error('unknown_' + field, row['id'] + ':' + key)
         return values
 
@@ -1457,8 +1632,15 @@ def audit(record, intent_path, artifact_root, inputs=None):
         affected = linked(row, 'requirements', requirements, True)
         linked(row, 'evidence', evidence, row.get('status') == 'closed')
         stage, state = row.get('stage'), row.get('status')
-        if stage not in ('requirement', 'design', 'external', 'validation', 'pcb') or state not in ('open', 'closed', 'handoff'):
+        if stage not in ('requirement', 'design', 'external', 'validation', 'pcb', 'input') or state not in ('open', 'closed', 'handoff'):
             error('schema', key + ':invalid stage/status')
+        # P7: a module run that finds its given input wrong reports it and leaves the input alone; the whole flow
+        # goes back to the upstream module instead (references/modules.md).
+        if stage == 'input':
+            if not (load_task(artifact_root) or {}).get('modules'):
+                error('input_item_in_whole_flow', key + '：串联运行时回到上游模块重做，不登记 input 待办')
+            if row.get('upstream') not in ('C1', 'C2', 'C3', 'C4', 'C5') or not text(row.get('given')):
+                error('input_item_schema', key + '：写 upstream（出问题的上游模块 C1–C5）和 given（给定的文件）')
         if state == 'handoff' and stage not in ('validation', 'pcb'):
             error('unfinished_design_handoff', key)
         if state != 'closed':
@@ -1494,11 +1676,16 @@ def audit(record, intent_path, artifact_root, inputs=None):
                 error('assumption_differs_from_proposal', key)
             if 'calculations' in row:
                 linked(row, 'calculations', calculations)
-        for rid in affected:
+        for rid in affected if closure else ():
             if rid in requirements and key not in requirements[rid].get('depends_on', []):
                 error('unlinked_dependency', rid + ':' + key)
 
-    for key, row in requirements.items():
+    # Traceability and requirement coverage are module C5's (task C5.1): a block design (C4) is audited before they are
+    # written, and one block's calculations check only some requirements.
+    for key, row in requirements.items() if closure else ():
+        if not any(f in row for f in TRACE_FIELDS):
+            error('requirement_untraced', key + '：在 design-closure.json 的 traceability 写功能路径、承担器件和状态')
+            continue
         state = row.get('status')
         if state not in ('design_supported', 'conditional', 'open'):
             error('schema', key + ':invalid requirement status')
@@ -1526,14 +1713,14 @@ def audit(record, intent_path, artifact_root, inputs=None):
             error('schema', key + ':invalid coverage/conclusion')
         audit_calculation_v2(key, row, work, vendor_items.get(key, []), deferred_items.get(key, []), derived, error, need)
         audit_limits(key, row, requirements, calculations, error)
-    for rid, req in requirements.items():
+    for rid, req in requirements.items() if closure else ():
         weak = [k for k, row in calculations.items() if rid in (row.get('requirements') or [])
                 and derived.get(k, {}).get('conclusion') != 'supported']
         if req.get('status') == 'design_supported' and weak:
             error('requirement_status_not_derived', rid + ': rests on ' + '、'.join(weak))
     # R8: the cost target was "estimated in the selection record" and never was; every requirement is checked.
     checked = {r for row in calculations.values() for r in row.get('requirements') or [] if isinstance(r, str)}
-    for rid, req in requirements.items():
+    for rid, req in requirements.items() if closure else ():
         if rid not in checked and not text(req.get('no_check_reason')):
             error('requirement_without_check', rid)
     derating = audit_derating(record, intent, calculations, requirements, clarifications, error, work=work)
@@ -1545,13 +1732,15 @@ def audit(record, intent_path, artifact_root, inputs=None):
     audit_placeholders(intent, error)
     # Nets declared to leave the design to another board each have a row in their interface contract (Matrix R2).
     verified = set()
-    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error, verified)
-    binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need, verified)
+    boundary = boundary_nets.audit_contracts(intent, lambda p: resolve(p, root, inputs) if isinstance(p, str) and not Path(p).is_absolute() else None, error, verified) \
+        if closure else 'NOT_CHECKED'
+    binding = audit_binding(record, intent, artifact_root, requirements, calculations, error, need,
+                            verified if closure else set(open_ports), closure)
     # Every object a criterion applies to has its own cell (whole-board baseline 2026-11-07: a reset threshold checked against
     # the MCU only, storage temperature left to "device ratings", reverse polarity checked on the power path only).
     passes = lambda c: holds(c) is not None and not failing_checks({'checks': [c]})   # noqa: E731  stress risk passes
     matrices = object_matrices.audit(record, intent, calculations, evidence, requirements, passes, error, need,
-                                     [root, *(inputs or ())])
+                                     [root, *(inputs or ())]) if closure else 'NOT_CHECKED'
     audit_gaps(work, calculations, error)
     citations = audit_citations(record, calculations, work, [root, *(inputs or ())], error)
     covered = {r for row in calculations.values() if isinstance(row.get('refs'), list) for r in row['refs']}
@@ -1572,7 +1761,7 @@ def audit(record, intent_path, artifact_root, inputs=None):
             guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
                                           requirements=requirements,
                                           intent=intent, read=lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
-                                          and not Path(p).is_absolute() else None)
+                                          and not Path(p).is_absolute() else None, documents=closure)
     elif guideline_criteria.load()['criteria']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
     convergence = {'status': 'NOT_ASSESSED'}
@@ -1583,7 +1772,8 @@ def audit(record, intent_path, artifact_root, inputs=None):
             convergence = frontier(work, evidence)
             errors.extend(convergence['errors'])
     status = 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS'
-    return {'status': status, 'scope': 'Declared design evidence and dependency consistency; not physics, native ERC or visual approval',
+    return {'status': status, 'module': module or 'C5',
+            'scope': 'Declared design evidence and dependency consistency; not physics, native ERC or visual approval',
             'intent_sha256': sha256(intent_path), 'errors': errors, 'pending': pending,
             'severities': {k: severity_of(v) for k, v in work.items() if v.get('status') == 'open' and severity_of(v)},
             'pcb_handoffs': [k for k, v in work.items() if v.get('stage') == 'pcb' and v.get('status') == 'handoff'],
@@ -1599,16 +1789,21 @@ def audit(record, intent_path, artifact_root, inputs=None):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('record', type=Path)
-    ap.add_argument('--intent', type=Path, required=True)
+    ap.add_argument('record', type=Path, help='design-closure.json; with --module C1, requirements.json')
+    ap.add_argument('--requirements', type=Path, help='requirements.json (module C1); default next to the record')
+    ap.add_argument('--intent', type=Path, help='design netlist; required except for --module C1')
     ap.add_argument('--artifact-root', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--input', action='append', default=[], metavar='NAME=PATH',
                     help='declared input (requirements, datasheets) where cited evidence may live, as pack_design takes it')
+    ap.add_argument('--module', choices=MODULES, help='audit only the sections this module owns (SKILL.md 架构); default the whole board')
     args = ap.parse_args()
     inputs = [v.split('=', 1)[-1] for v in args.input]
     try:
-        result = audit(json.loads(args.record.read_text(encoding='utf-8')), args.intent, args.artifact_root, inputs)
+        requirements = None if args.module == 'C1' else (
+            json.loads(args.requirements.read_text(encoding='utf-8')) if args.requirements else read_requirements(args.record))
+        result = audit(json.loads(args.record.read_text(encoding='utf-8')), args.intent, args.artifact_root, inputs, args.module,
+                       requirements)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         result = {'status': 'FAIL', 'errors': [{'code': 'invalid_input', 'item': str(exc)}], 'pending': []}
     args.out.parent.mkdir(parents=True, exist_ok=True)

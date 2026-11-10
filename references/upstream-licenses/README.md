@@ -10,4 +10,4 @@
 | devbisme/skidl（`4372de5`） | 器件/引脚/网络对象图、子电路与稳定标签、分块布局 | `circuit_ir.py`、`placement.py` |
 | circuit-synth/circuit-synth（`3aaff18`） | 精确引脚名查找、按连接安排邻近器件 | `circuit_ir.py`、`placement.py` |
 
-这些机制只属于低层后端，交付页一律按 SKILL.md 任务 3.2 用 recipes 画。
+这些机制只属于低层后端，交付页一律按 SKILL.md 任务 C6.2 用 recipes 画。

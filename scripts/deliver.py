@@ -10,7 +10,7 @@ each version:
                             "--output-root", "{out}"], "schematic": "schematic"},
    "root":     "原理图/board.kicad_sch",
    "verify":   ["--expected-pages", "8", "--reference-contract", "record/reference-input.json"],
-   "inputs":   {"requirements": "/path/需求", "datasheets": "/path/资料", "previous": "/path/上一版"},
+   "inputs":   {"requirements": "/path/需求", "datasheets": "/path/资料"},
    "check_inputs": ["python3", "record/scripts/replay.py", "--artifact-root", "{root}",
                     "--output-root", "{out}", "--check-inputs"],             # optional
    "title": "报告标题"}                                                        # optional
@@ -181,19 +181,6 @@ def deliver(root, log=print, for_review=False):
         step('待办审计', status_of(audit))
         written = ['record/design-closure-audit.json']
 
-        preflight = record / 'design-preflight.json'
-        contract = record / 'change-contract.json'
-        def preflight_check(label, out, *extra):
-            out.unlink(missing_ok=True)
-            subprocess.run(skill('verify_design_preflight.py', preflight, '--contract', contract, '--root', root,
-                                 *extra, '--out', out), cwd=root, capture_output=True)
-            step(label, status_of(out))
-            return 'record/' + out.name
-        if preflight.is_file() != contract.is_file():
-            step('生成前预检', 'FAIL')     # one of the two alone is an unfinished record, not a design without a revision
-        if preflight.is_file() and contract.is_file():
-            written.append(preflight_check('生成前预检', record / 'preflight-before.json', '--before-generation'))
-
         out = work / 'generate'
         run(fill(config['generate']['command'], root, out), root, '出图')
         copy_schematic(out / config['generate']['schematic'], root / '原理图')
@@ -220,9 +207,6 @@ def deliver(root, log=print, for_review=False):
             steps.append({'step': '图面审阅', 'status': 'PENDING'})
             log('%-12s %s' % ('图面审阅', 'PENDING'))
             return 2, steps, None
-
-        if preflight.is_file() and contract.is_file():
-            written.append(preflight_check('交付预检', record / 'preflight-delivery.json'))
 
         notes = record / 'notes.json'
         report = subprocess.run(skill('render_design_report.py', root, *(['--notes', notes] if notes.is_file() else []),

@@ -6,9 +6,9 @@
       原理图/         KiCad project, schematic.pdf, netlist.xml, BOM.csv
       设计资料/       design documents that stay valid across versions
       record/         intent, design closure (+ audit), summary.json, visual review,
-                      review responses, cited calculations and page scripts, manifest.json
+                      cited calculations and page scripts, manifest.json
 
-Requirements, datasheets and the previous version are referenced by path + SHA-256, never
+Requirements and datasheets are referenced by path + SHA-256, never
 copied. Anything else at the top level, history snapshots and design
 evidence that the closure record cites but the folder does not contain all fail the pack.
 Design documents must also agree with the design: every part a 设计资料/ table or assembly file
@@ -27,7 +27,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import audit  # noqa: E402
+from audit_design_closure import audit, load_task, read_requirements  # noqa: E402
+import check_module  # noqa: E402
 from find_parts import DEFAULT_WIKI, library_index, locate_file  # noqa: E402
 from render_design_report import REPORT, render  # noqa: E402
 from schematic_layout.component_requirements import package_audit  # noqa: E402
@@ -36,7 +37,7 @@ TOP = (REPORT, '原理图', '设计资料', 'record')
 SCHEMATIC = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
 # sr-review: an independent schematic-review run of this version kept with the records it reviewed
 # (industrial I/O calibration board 2026-11-03: the SR report lives in record/sr-review/ and packing refused it).
-RECORD_DIRS = ('calculations', 'scripts', 'evidence', 'sr-review')
+RECORD_DIRS = ('calculations', 'scripts', 'evidence', 'sr-review', 'block-circuits')
 
 
 def sha256(path):
@@ -180,50 +181,12 @@ def document_refs(root, intent):
     return errors
 
 
-def nets_of(intent):
-    touched = {}
-    nets = intent.get('nets') or []
-    for n in (nets if isinstance(nets, list) else [{'name': k, 'pins': v} for k, v in nets.items()]):
-        for pin in n.get('pins') or []:
-            touched.setdefault(str(pin).rsplit('.', 1)[0], set()).add(n.get('name'))
-    return touched
-
-
-def check_against_previous(root, previous):
-    """A 改图 response must have changed something in the intent since the previous
-    delivery. The open work itself is not compared: each version lists only what
-    its own design process confirmed is still to do."""
-    root, previous = Path(root), Path(previous)
-    errors = []
-    responses = root / 'record' / 'review-responses.json'
-    if responses.is_file():
-        try:
-            items = json.loads(responses.read_text(encoding='utf-8')).get('items') or []
-            prev_intent = json.loads((previous / 'record' / 'electrical-intent.json').read_text(encoding='utf-8'))
-            cur_intent = json.loads((root / 'record' / 'electrical-intent.json').read_text(encoding='utf-8'))
-        except (OSError, ValueError) as error:
-            return errors + ['previous: cannot compare intents: %s' % error]
-        before = {c.get('ref'): c for c in prev_intent.get('components') or [] if isinstance(c, dict)}
-        after = {c.get('ref'): c for c in cur_intent.get('components') or [] if isinstance(c, dict)}
-        nets_before, nets_after = nets_of(prev_intent), nets_of(cur_intent)
-        changed = {r for r in set(before) | set(after)
-                   if before.get(r) != after.get(r) or nets_before.get(r, set()) != nets_after.get(r, set())}
-        for item in items:
-            if not isinstance(item, dict) or item.get('response') != 'REDESIGN':
-                continue
-            named = set()
-            for c in item.get('changes') or []:
-                named |= set(re.findall(r'(?<![A-Za-z0-9])[A-Z]{1,3}\d{1,4}(?![A-Za-z0-9])', str(c)))
-            if named and not named & changed:
-                errors.append('previous: %s 标为“改图”，但 %s 在设计网表里与上一版相同' % (item.get('id'), '、'.join(sorted(named))))
-    return errors
-
-
-def check(root, inputs=(), previous=None):
+def check(root, inputs=()):
     root = Path(root)
+    # A module run (task.json `modules`, SKILL.md 架构) delivers a module report and its records, not a whole board.
+    if (load_task(root) or {}).get('modules'):
+        return check_module.check_delivery(root)
     errors = []
-    if previous:
-        errors += check_against_previous(root, previous)
     present = {p.name for p in root.iterdir() if not p.name.startswith('.')} if root.is_dir() else set()
     extra = sorted(present - set(TOP))
     if extra:
@@ -259,7 +222,8 @@ def check(root, inputs=(), previous=None):
             errors.append('electrical-intent.json cannot be read: %s' % error)
     if intent.is_file() and closure.is_file():
         try:
-            result = audit(json.loads(closure.read_text(encoding='utf-8')), intent, root, inputs)
+            result = audit(json.loads(closure.read_text(encoding='utf-8')), intent, root, inputs,
+                           requirements=read_requirements(closure))
         except (OSError, ValueError, KeyError, TypeError) as error:
             errors.append('design-closure.json cannot be audited: %s' % error)
         else:
@@ -267,12 +231,12 @@ def check(root, inputs=(), previous=None):
                 errors.append('design-closure.json fails inside the delivery (cited evidence must be in this folder, '
                               'paths relative to it, or in an --input): ' + '; '.join('%s %s' % (e['code'], e['item'])
                                                                     for e in result['errors'][:5]))
-            # SKILL.md 5.1 (user 2026-11-08: 按草案实施): an uncited rule no longer blocks; a board with external connectors
+            # SKILL.md C5.2 (user 2026-11-08: 按草案实施): an uncited rule no longer blocks; a board with external connectors
             # carries its FMEA and EMC port matrix with every section and connector.
             docs = [p['item'] for p in result.get('pending', []) if p.get('code') == 'design_document_incomplete']
             if docs:
                 errors.append('design-closure.json: 必写的设计文档不齐（%s）；见 references/guideline-evidence-groups.md' % '；'.join(docs))
-            # SKILL.md 5.1: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
+            # SKILL.md C5.2: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
             cells = [p['item'] for p in result.get('pending', []) if p.get('code') in ('matrix_cell_missing', 'matrix_cell_failed')]
             if cells:
                 errors.append('design-closure.json: 矩阵与状态表有 %d 格缺结论或不满足（%s%s）；按 object_matrices.py 列出的格逐格写结论，'
@@ -293,7 +257,7 @@ def datasheets_not_in_library(folder, wiki):
 
 def pack(root, inputs, wiki=DEFAULT_WIKI):
     root = Path(root)
-    errors = check(root, list(inputs.values()), inputs.get('previous'))
+    errors = check(root, list(inputs.values()))
     declared = {}
     for name, path in inputs.items():
         if not Path(path).exists():
@@ -316,14 +280,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('delivery')
     parser.add_argument('--input', action='append', default=[], metavar='NAME=PATH',
-                        help='requirements, datasheets, previous version ... (referenced, not copied)')
+                        help='requirements, datasheets ... (referenced, not copied)')
     parser.add_argument('--wiki', type=Path, default=DEFAULT_WIKI, help='HardwareWiki root (env HARDWARE_WIKI)')
     args = parser.parse_args(argv)
     errors, manifest = pack(args.delivery, dict(item.split('=', 1) for item in args.input), args.wiki)
     for e in errors:
         print('ERROR:', e)
     for pdf in (manifest or {}).get('datasheets_to_file') or []:
-        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, SKILL.md task 2.1)' % args.wiki)
+        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, SKILL.md task C4.1)' % args.wiki)
     print('FAIL' if errors else 'PASS')
     return 1 if errors else 0
 

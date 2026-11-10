@@ -15,7 +15,8 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import CURRENT_VERSIONS, calculation_basis, check_delegate, failing_checks, holds, load_task, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import CURRENT_VERSIONS, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from architecture import check_architecture  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
@@ -45,7 +46,6 @@ GATES = OrderedDict([
     ('geometry', '图面几何（重叠、穿线）'),
     ('external_supply', '外部供电声明'),
     ('reference_contract', '外围电路按手册核对'),
-    ('design_change', '改动与预期一致'),
     ('component_requirements', '器件性能要求、选型状态及图面/BOM一致性'),
     ('design_closure', '设计记录闭合审计'),
 ])
@@ -55,7 +55,8 @@ GATE_RESULTS = OrderedDict([('PASS', '通过（PASS）'), ('FAIL', '没通过（
 # Shown in the conclusion count only when some gate has them.
 OPTIONAL_RESULTS = ('CONDITIONAL', 'INCOMPLETE')
 VISUAL = {'REVIEWED': '已完成', 'REVIEW_PENDING': '未完成', 'REWORK_REQUIRED': '发现需返工的问题'}
-STAGES = {'requirement': '用户暂缓的需求', 'design': '设计未完成', 'external': '外部资料缺口', 'validation': '样机或试验验证', 'pcb': 'PCB 实现'}
+STAGES = {'requirement': '用户暂缓的需求', 'design': '设计未完成', 'external': '外部资料缺口', 'validation': '样机或试验验证', 'pcb': 'PCB 实现',
+          'input': '给定输入有问题'}
 REQUIREMENTS = OrderedDict([('design_supported', '有设计依据'), ('conditional', '有条件成立'), ('open', '还没有设计')])
 # What a calculation rests on, derived from its inputs.
 TIERS = OrderedDict([('supported', '设计成立'), ('estimate', '依赖工程估计'), ('vendor_data', '依赖厂家资料'),
@@ -64,18 +65,10 @@ TIERS = OrderedDict([('supported', '设计成立'), ('estimate', '依赖工程�
 OPTIONAL_TIERS = ('user_deferred',)
 LEVEL_NAMES = {'I': 'I 级', 'II': 'II 级', 'III': 'III 级'}
 DECISIONS = {'DECIDED': '用户给定', 'ADOPTED_PROPOSAL': '采纳建议', 'DEFERRED': '用户暂缓'}
-RESPONSES = OrderedDict([
-    ('REDESIGN', ('改图', 'changes')), ('CALC_DOC', ('补计算/补文档', 'changes')), ('DESIGN', ('补设计', 'work_items')),
-    ('OBTAIN_DATA', ('补资料', 'work_items')), ('ASK_USER', ('请用户定需求', 'clarifications')),
-    ('HANDOFF', ('技术转交', 'work_items')), ('DECLINE', ('不采纳', 'evidence')),
-    ('DEFERRED', ('已暂缓', 'detail'))])
-RESPONSE_STAGE = {'DESIGN': ('design',), 'OBTAIN_DATA': ('external',), 'HANDOFF': ('validation', 'pcb')}
-REF_PATTERN = re.compile(r'(?<![A-Za-z0-9])[A-Z]{1,3}\d{1,4}(?![A-Za-z0-9])')
-PAGE_PATTERN = re.compile(r'(?<![A-Za-z0-9])\d{2}_[A-Za-z][A-Za-z0-9_]*|System_block')
 # Words that describe the review process, not a design basis.
-REQUIRED = ('electrical-intent.json', 'design-closure.json', 'design-closure-audit.json',
+REQUIRED = ('electrical-intent.json', 'requirements.json', 'design-closure.json', 'design-closure-audit.json',
             'summary.json', 'visual-review.json', 'page-plan.json', 'selection.json')
-# Task 1.3: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json).
+# Task C3.1: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json).
 # Circuit types of the five key-block families: power conversion, protection, isolation, signal chain, external interface.
 KEY_CIRCUIT_TYPES = ('POWER_CONVERTER', 'HOLD_UP', 'POWER_PROTECTION', 'SIGNAL_PROTECTION', 'ISOLATION', 'ANALOG',
                      'DC_48V', 'DC_24V', 'AC_MAINS', 'INDUSTRIAL_DI', 'POE_PD', 'VEHICLE_28V', 'SHIP_AC')
@@ -97,9 +90,9 @@ CARRIED_OVER = ('沿用', '同上一版', '同上版', '与上一版相同', '�
 PDF_DATES = re.compile(rb'/(CreationDate|ModDate) \([^)]*\)')
 TERMINOLOGY = Path(__file__).resolve().parent.parent / 'references' / 'terminology.md'
 # A written total and what it is counted against (references/terminology.md).
-COUNT_PATTERN = re.compile(r'(?:共|全部)\s*(\d+)\s*(项计算|件未关闭项|条需求|条审查意见|个器件|页)')
+COUNT_PATTERN = re.compile(r'(?:共|全部)\s*(\d+)\s*(项计算|件未关闭项|条需求|个器件|页)')
 USER_SOURCE = re.compile(r'^user:\d{4}-\d{2}-\d{2}$')
-# A confirmation already given in the requirement or scheme documents (SKILL 1.4): scheme:<evidence id>, with locator and quote.
+# A confirmation already given in the requirement or scheme documents (SKILL C3.2): scheme:<evidence id>, with locator and quote.
 SCHEME_SOURCE = re.compile(r'^scheme:(\S+)$')
 # Files ASG writes itself; a scheme confirmation must cite the user's documents, not ASG's own basis.
 OWN_WRITING = ('设计资料/', 'record/')
@@ -123,7 +116,7 @@ def english_sentence(value):
     return len(words) >= 4 and cjk < 2 * len(words)
 
 
-def prose(closure, notes, responses=None):
+def prose(closure, notes):
     """(where, text) for every piece of record and notes text the report shows to engineers."""
     found = []
     for c in closure.get('calculations') or []:
@@ -147,9 +140,6 @@ def prose(closure, notes, responses=None):
             for field in ('question', 'requirement_text', 'proposed_requirement'):
                 found.append(('需求澄清 %s %s' % (q.get('id'), field), q.get(field)))
             found.append(('需求澄清 %s 答复' % q.get('id'), (q.get('answer') or {}).get('text')))
-    for i in (responses or {}).get('items') or []:
-        if isinstance(i, dict):
-            found.append(('审查意见 %s 处置说明' % i.get('id'), i.get('detail')))
     for field in ('summary', 'changes'):
         found.append(('notes %s' % field, notes.get(field)))
     for key, v in (notes.get('items') or {}).items():
@@ -297,7 +287,7 @@ def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, 
                 elif ref in placed:
                     errors.append('%s：%s 同时在功能块“%s”和“%s”里' % (name, ref, placed[ref], block))
                 placed[ref] = block
-        cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task 3.3)
+        cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task C6.3)
         if not cover and 'system_block' not in name.lower():
             errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, key_blocks=key_blocks, scheme=scheme, circuits_dir=circuits_dir)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))
@@ -471,7 +461,7 @@ def check_confirmation(name, role, selected, evidence, root):
     if not m:
         return ['选型角色“%s”还没有确认记录：decision.source 写 user:<日期>（用户确认，另写 locator）、scheme:<证据编号>'
                 '（需求或方案文档已写明用户确认，另写 locator 与原文 quote），或 delegate:<代答人>:<日期>（任务书代答）；'
-                '确认前不进入步骤 ②' % name]
+                '确认前不进入 C4' % name]
     row = (evidence or {}).get(m.group(1))
     path = row.get('path') if isinstance(row, dict) and text(row.get('path')) else ''
     quote = decision.get('quote') if text(decision.get('quote')) else ''
@@ -495,7 +485,7 @@ def check_confirmation(name, role, selected, evidence, root):
 
 def check_selection(data, intent, root, evidence=None):
     """Every core part was chosen from compared candidates whose datasheets are in the library. The refs and part
-    numbers are bound to the design netlist only once it exists: task 1.4 runs before task 2.4 writes it (Matrix R3 S06)."""
+    numbers are bound to the design netlist only once it exists: task C3.2 runs before task C5.1 writes it (Matrix R3 S06)."""
     roles = data.get('roles') if isinstance(data, dict) else None
     if not isinstance(roles, list) or not roles:
         return ['selection.json 没有 roles：每个核心器件角色都要有候选比较（见 core-part-selection.md）']
@@ -625,89 +615,6 @@ def load(path):
         return None, 'record/%s 读不出来：%s' % (path.name, error)
 
 
-def review_sources(data, root=None):
-    """Registered review sources whose file no longer matches its sha256, and those that could not be read."""
-    changed, unread = [], []
-    for s in (data or {}).get('sources') or []:
-        if not (isinstance(s, dict) and text(s.get('id')) and text(s.get('path'))):
-            continue
-        path = Path(os.path.expanduser(s['path']))
-        if not path.is_absolute() and root is not None:
-            path = Path(root) / path
-        if not path.is_file():
-            unread.append(s['id'])
-        elif hashlib.sha256(path.read_bytes()).hexdigest() != s.get('sha256'):
-            changed.append(s['id'])
-    return changed, unread
-
-
-def check_responses(data, work, intent=None, closure=None, root=None):
-    """Each review comment has one allowed response and what that response requires.
-
-    A response is work done this version, not a transcription of the comment:
-    the same explanation may not serve several comments, 补设计 points at a
-    work item that records this version's progress, 改图 names the parts it
-    changed, and 补计算/补文档 names the calculation or design document.
-    """
-    errors = []
-    if not isinstance(data, dict) or data.get('schema_version') != 1:
-        return ['review-responses.json 必须是 schema_version 1 的对象']
-    known_refs = {c.get('ref') for c in (intent or {}).get('components') or [] if isinstance(c, dict)}
-    calc_ids = {c.get('id') for c in (closure or {}).get('calculations') or [] if isinstance(c, dict)}
-    asked = {q.get('id') for q in (closure or {}).get('clarifications') or [] if isinstance(q, dict)}
-    details = Counter(i.get('detail') for i in data.get('items') or [] if isinstance(i, dict) and text(i.get('detail')))
-    for detail, n in details.items():
-        if n > 1:
-            errors.append('处理说明“%s”在 %d 条意见里重复：每条意见要写它自己怎么处理' % (detail[:30] + ('…' if len(detail) > 30 else ''), n))
-    sources = {s.get('id') for s in data.get('sources') or [] if isinstance(s, dict)
-               and text(s.get('id')) and text(s.get('path')) and text(s.get('sha256'))}
-    if not sources:
-        errors.append('review-responses.json 没有登记意见来源（id、path、sha256）')
-    changed, _ = review_sources(data, root)
-    for sid in changed:
-        errors.append('审查意见来源 %s 的文件与登记的 sha256 不一致：意见原文改过，要按现在的原文重新登记' % sid)
-    seen = set()
-    for item in data.get('items') or []:
-        key = item.get('id') if isinstance(item, dict) else None
-        if not text(key) or key in seen:
-            errors.append('审查意见编号缺失或重复：%s' % key)
-            continue
-        seen.add(key)
-        response = item.get('response')
-        if response not in RESPONSES:
-            errors.append('%s：处理方式必须是 %s 之一' % (key, '/'.join(RESPONSES)))
-            continue
-        if item.get('source') not in sources or not text(item.get('locator')) or not text(item.get('comment')):
-            errors.append('%s：要写明来源、在原文中的位置和意见内容' % key)
-        if not text(item.get('detail')):
-            errors.append('%s：要说明怎么处理、为什么' % key)
-        field = RESPONSES[response][1]
-        if field != 'detail' and not (isinstance(item.get(field), list) and item[field]):
-            errors.append('%s：处理方式为“%s”时必须填 %s' % (key, RESPONSES[response][0], field))
-        changes = [c for c in item.get('changes') or [] if text(c)]
-        if response == 'REDESIGN' and changes and not any(
-                (known_refs & set(REF_PATTERN.findall(c))) or PAGE_PATTERN.search(c) for c in changes):
-            errors.append('%s：“改图”的 changes 没有点名改了哪个位号或哪一页' % key)
-        if response == 'CALC_DOC':
-            for c in changes:
-                if c not in calc_ids and not (root is not None and (Path(root) / '设计资料' / c).is_file()):
-                    errors.append('%s：“补计算/补文档”的 changes 项“%s”既不是计算编号也不是设计资料文件' % (key, c[:30]))
-        for cid in item.get('clarifications') or [] if response == 'ASK_USER' else ():
-            if cid not in asked:
-                errors.append('%s：引用的需求澄清 %s 不在 design-closure.json 里' % (key, cid))
-        for wid in item.get('work_items') or []:
-            row = work.get(wid)
-            if row is None:
-                errors.append('%s：引用的待办 %s 不在 design-closure.json 里' % (key, wid))
-            elif response in RESPONSE_STAGE and row.get('stage') not in RESPONSE_STAGE[response]:
-                errors.append('%s：待办 %s 的阶段与处理方式“%s”不符' % (key, wid, RESPONSES[response][0]))
-            elif response == 'DESIGN' and row.get('status') != 'closed' and not text(row.get('progress')):
-                errors.append('%s：“补设计”引用的待办 %s 没有写本版进展（progress）' % (key, wid))
-    if not seen:
-        errors.append('review-responses.json 没有登记任何意见')
-    return errors
-
-
 def worst(levels):
     found = [s for s in SEVERITIES if s in levels]
     return found[0] if found else None
@@ -792,20 +699,46 @@ def check_scheme_candidates(block, where, plan=None):
     if len(chosen) != 1:
         problems.append(where + ' 必须有且只有一个 selected 候选')
     if plan is not None and len(chosen) == 1:
-        pages = plan.get('pages') if isinstance(plan, dict) else []
-        pages = pages if isinstance(pages, list) else []
-        matches = [p for p in pages if isinstance(p, dict) and isinstance(p.get('blocks'), dict)
-                   and block['block'] in p['blocks']]
-        selected = chosen[0]
-        expected = selected.get('circuit') or selected['name']
-        if 'circuit' in selected and (not text(selected['circuit']) or '#' not in selected['circuit']):
-            problems.append(where + ' circuit 要写 文件名#方案名')
-        if not matches:
-            problems.append(where + ' 在 page-plan.json 中没有对应功能块')
-        for page in matches:
-            ref = (page.get('circuits') or {}).get(block['block']) if isinstance(page.get('circuits'), dict) else None
-            if not text(expected) or not text(ref) or expected not in ((ref,) if 'circuit' in selected else (ref, ref.partition('#')[2])):
-                problems.append(where + ' selected 方案与 page-plan.json 的 circuits 不一致')
+        problems += block_against_plan(block, where, chosen[0], plan)
+    return problems
+
+
+def block_against_plan(block, where, selected, plan):
+    """The selected scheme of a block (task C3.1, module C3) is the circuit its page names (task C6.1, module C6)."""
+    problems = []
+    pages = plan.get('pages') if isinstance(plan, dict) else []
+    pages = pages if isinstance(pages, list) else []
+    matches = [p for p in pages if isinstance(p, dict) and isinstance(p.get('blocks'), dict)
+               and block['block'] in p['blocks']]
+    expected = selected.get('circuit') or selected['name']
+    if 'circuit' in selected and (not text(selected['circuit']) or '#' not in selected['circuit']):
+        problems.append(where + ' circuit 要写 文件名#方案名')
+    if not matches:
+        problems.append(where + ' 在 page-plan.json 中没有对应功能块')
+    for page in matches:
+        ref = (page.get('circuits') or {}).get(block['block']) if isinstance(page.get('circuits'), dict) else None
+        if not text(expected) or not text(ref) or expected not in ((ref,) if 'circuit' in selected else (ref, ref.partition('#')[2])):
+            problems.append(where + ' selected 方案与 page-plan.json 的 circuits 不一致')
+    return problems
+
+
+def scheme_against_plan(data, plan):
+    """Module C6 gate: every block compared in scheme-criteria.json is drawn with its selected circuit, and every key
+    block of the page plan was compared."""
+    blocks = [b for b in (data.get('blocks') or []) if isinstance(b, dict) and text(b.get('block'))] \
+        if isinstance(data, dict) and isinstance(data.get('blocks'), list) else []
+    problems = []
+    for block in blocks:
+        chosen = [c for c in block.get('candidates') or [] if isinstance(c, dict) and c.get('status') == 'selected'
+                  and text(c.get('name'))]
+        if len(chosen) == 1:
+            problems += block_against_plan(block, 'scheme-criteria.json“%s”' % block['block'], chosen[0], plan)
+    pages = plan.get('pages') if isinstance(plan, dict) and isinstance(plan.get('pages'), list) else []
+    page_keys = {b for p in pages if isinstance(p, dict) and isinstance(p.get('key_blocks'), list)
+                 for b in p['key_blocks'] if isinstance(b, str)}
+    missing = page_keys - {b['block'] for b in blocks}
+    if missing:
+        problems.append('scheme-criteria.json 没有比较关键功能块：' + '、'.join(sorted(missing)))
     return problems
 
 
@@ -818,7 +751,7 @@ def closes(check, name):
 
 
 def check_deferred(where, gid, defer, closure):
-    """Each value task 1.3 left to task 2.2 is closed there: a calculation that cites the rule in its guidelines has a
+    """Each value task C3.1 left to task C4.2 is closed there: a calculation that cites the rule in its guidelines has a
     check that closes it (closes). A rule cited by a calculation that computes none of it is covered in form only
     (whole-board baseline 2026-11-07, A4: the calibration board deferred "SM712 钳位对收发器总线额定", CALC-RS485 cited
     G05-033 and G04-005 but compared no clamp voltage with the transceiver's bus rating)."""
@@ -835,11 +768,12 @@ def check_deferred(where, gid, defer, closure):
     return problems
 
 
-def check_scheme_criteria(data, closure, bundle=None, plan=None):
-    """record/scheme-criteria.json (SKILL.md task 1.3): required when guideline_scope names a key-block circuit type.
+def check_scheme_criteria(data, closure, bundle=None, plan=None, deferred=True):
+    """record/scheme-criteria.json (SKILL.md task C3.1): required when guideline_scope names a key-block circuit type.
     Each key circuit type of the scope is in some block; each listed rule exists, is active and is triggered by that
     block's types and kinds (with the G07 port rules when the block has external ports); a block with no rule says
-    what it searched. Returns the problems."""
+    what it searched. `plan` adds the page-plan cross-check (module C6); `deferred` checks that the values left to task
+    C4.2 are closed by its calculations (module C4) — the task C3.1 gate itself passes neither. Returns the problems."""
     closure = closure if isinstance(closure, dict) else {}
     scope = closure.get('guideline_scope') if isinstance(closure.get('guideline_scope'), dict) else {}
     key = [t for t in scope.get('circuit_types') or [] if t in KEY_CIRCUIT_TYPES]
@@ -848,7 +782,7 @@ def check_scheme_criteria(data, closure, bundle=None, plan=None):
     page_keys = {b for p in pages if isinstance(p, dict) and isinstance(p.get('key_blocks'), list)
                  for b in p['key_blocks'] if isinstance(b, str)}
     if data is None:
-        return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见 SKILL.md 任务 1.3）'
+        return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见 SKILL.md 任务 C3.1）'
                 % '、'.join(key or sorted(page_keys))] if key or page_keys else []
     if not isinstance(data, dict) or data.get('version') != 1 or not isinstance(data.get('blocks'), list) or not data['blocks']:
         return ['scheme-criteria.json 要写 version 1 和非空的 blocks 列表（见 delivery-report.md）']
@@ -901,8 +835,8 @@ def check_scheme_criteria(data, closure, bundle=None, plan=None):
                                 % (where, gid, cards[gid].get('nature')))
             defer = item.get('defer', [])
             if not (isinstance(defer, list) and all(text(d) for d in defer)):
-                problems.append('%s 的 %s 的 defer 是留给任务 2.2 核算的数值名列表' % (where, gid))
-            else:
+                problems.append('%s 的 %s 的 defer 是留给任务 C4.2 核算的数值名列表' % (where, gid))
+            elif deferred:
                 problems += check_deferred(where, gid, defer, closure)
     recorded_blocks = {b.get('block') for b in data['blocks'] if isinstance(b, dict) and text(b.get('block'))}
     if page_keys - recorded_blocks:
@@ -934,7 +868,7 @@ def render_scheme_criteria(data):
         if text(b.get('only_viable')):
             out += ['', '%s：只有一种可行方案，%s' % (cell(b.get('block')), cell(b['only_viable'])), '']
     out += ['', '## 方案阶段对照的规则', '',
-           '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 1.3）。这里的结论不代替任务 2.2 的核算，'
+           '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 C3.1）。这里的结论不代替任务 C4.2 的核算，'
            '留给 2.2 的数值由引用该规则的计算关闭；依据为工程推论的不作硬排除。', '',
            '| 功能块 | 设计准则 | 排除的候选 | 依据 | 选定方案怎样满足 | 留给 2.2 核算 |', '|---|---|---|---|---|---|']
     for b in blocks:
@@ -965,20 +899,23 @@ def render(root, notes=None, title=None):
     if performance['status'] == 'FAIL':
         problems += ['器件性能要求：' + e for e in performance['errors']]
     closure = data['design-closure.json'] or {}
+    if closure:
+        # trace_version 1: the requirements are module C1's requirements.json, the traceability stays in design-closure.json.
+        closure, split = merge_requirements(closure, data['requirements.json'] or {})
+        problems += ['需求记录 %s：%s' % kv for kv in split]
     audit = data['design-closure-audit.json'] or {}
+    # SKILL.md task C2.1 (module C2, user 2026-11-09): the architecture and block specifications are a record.
+    arch, problem = load(record / 'architecture.json') if (record / 'architecture.json').exists() else (None, None)
+    if problem:
+        problems.append(problem)
+    elif arch is None:
+        problems.append('缺少 record/architecture.json：任务 C2.1 把系统架构与各块的块规格写成机读记录（见 references/modules.md）')
+    else:
+        problems += check_architecture(arch, {r.get('id') for r in closure.get('requirements') or [] if isinstance(r, dict)})
     if isinstance(audit.get('guidelines'), dict):
         problems += ['共用层身份：' + e for e in guideline_criteria.identity_errors(audit['guidelines'])]
     summary = data['summary.json'] or {}
     visual = data['visual-review.json'] or {}
-    responses, change = None, None
-    if (record / 'review-responses.json').exists():
-        responses, problem = load(record / 'review-responses.json')
-        if problem:
-            problems.append(problem)
-    if (record / 'design-change.json').exists():
-        change, problem = load(record / 'design-change.json')
-        if problem:
-            problems.append(problem)
 
     work = {w['id']: w for w in closure.get('work_items') or [] if isinstance(w, dict) and text(w.get('id'))}
     requirements = [r for r in closure.get('requirements') or [] if isinstance(r, dict)]
@@ -1021,15 +958,9 @@ def render(root, notes=None, title=None):
             problems.append('位号 %s 的料号 %s 在手册 %s 里列在“%s”下（停产或不推荐新设计）：换在售料号，'
                             '或在设计网表该器件写 lifecycle_reason 说明为什么保留' % (f['ref'], f['mpn'], f['datasheet'], f['marker']))
     # Parts whose parameters only a datasheet guarantees are named exactly (part-roles.md section 1).
-    contract = None
-    if (record / 'change-contract.json').exists():
-        contract, problem = load(record / 'change-contract.json')
-        if problem:
-            problems.append(problem)
     bases = [root, record]
-    touched = part_classes.touched_refs(contract)
-    identity, inherited, kinds_unchecked = part_classes.audit_identity(intent, bases, touched)
-    safety, safety_inherited = part_classes.audit_safety(intent, closure, touched)
+    identity, kinds_unchecked = part_classes.audit_identity(intent, bases)
+    safety = part_classes.audit_safety(intent, closure)
     if identity:
         problems.append('关键器件和特殊器件要写确切料号、数据手册和类型声明，常规件要写规格（见 part-roles.md 第 1 节）：' + '；'.join(identity[:6])
                         + ('；等共 %d 个' % len(identity) if len(identity) > 6 else ''))
@@ -1041,13 +972,11 @@ def render(root, notes=None, title=None):
     problems += cite_problems
     cite_review = list((audit.get('citations') or {}).get('review') or []) + cite_review
     cite_unchecked = list((audit.get('citations') or {}).get('not_checked') or []) + cite_unchecked
-    if responses is not None:
-        problems += check_responses(responses, work, intent, closure, root)
-    texts = prose(closure, notes, responses)
+    texts = prose(closure, notes)
     problems += check_language(texts) + check_terms(texts)
     problems += check_counts(texts, {
         '项计算': len(calculations), '件未关闭项': sum(1 for w in work.values() if w.get('status') == 'open'),
-        '条需求': len(requirements), '条审查意见': len((responses or {}).get('items') or []) if responses else None,
+        '条需求': len(requirements),
         '个器件': len(intent.get('components') or []), '页': len(summary.get('sheets') or []) if summary else None})
 
     gates = summary.get('gates') or {}
@@ -1064,8 +993,6 @@ def render(root, notes=None, title=None):
     open_work = [w for w in work.values() if w.get('status') == 'open']
     handoffs = [w for w in work.values() if w.get('status') == 'handoff']
     req_counts = Counter(r.get('status') for r in requirements)
-    items = (responses or {}).get('items') or []
-    reply_counts = Counter(i.get('response') for i in items if isinstance(i, dict))
 
     out = ['# %s' % (title or '原理图设计报告'), '']
     if problems:
@@ -1149,9 +1076,6 @@ def render(root, notes=None, title=None):
         asked = Counter((q.get('answer') or {}).get('decision') for q in clarifications)
         out.append('- **需求澄清**：问过用户 %d 个问题。%s。' % (len(clarifications), '，'.join(
             '%s %d 个' % (label, asked[key]) for key, label in list(DECISIONS.items()) + [(None, '还没有答复')] if asked.get(key))))
-    if items:
-        out.append('- **收到的审查意见**：%d 条。%s。' % (len(items), '，'.join(
-            '%s %d 条' % (label, reply_counts[key]) for key, (label, _) in RESPONSES.items() if reply_counts.get(key))))
     missing = []
     if performance['status'] not in ('PASS', 'NOT_CHECKED'):
         missing.append('器件性能定义、选型或原生图面核对尚未完成：%s' % performance['status'])
@@ -1161,17 +1085,12 @@ def render(root, notes=None, title=None):
         missing.append('%d 项图纸自动检查没通过：%s' % (len(failed), '、'.join(failed)))
     if short:
         missing.append('%d 项图纸自动检查资料不足或未执行：%s' % (len(short), '、'.join(short)))
-    # Task 2.1 checks every core part's peripherals against its datasheet; not doing it leaves the design unfinished.
+    # Task C4.1 checks every core part's peripherals against its datasheet; not doing it leaves the design unfinished.
     reference_skipped = summary.get('reference_contract') == 'NOT_CHECKED'
     if reference_skipped:
         missing.append('外围电路按手册核对：未执行')
     if visual.get('status') != 'REVIEWED':
         missing.append('图面审阅%s' % VISUAL.get(visual.get('status'), '没有记录'))
-    if inherited:
-        missing.append('%d 个沿用基线的器件缺确切料号、数据手册、类型声明或规格：%s' % (len(inherited), '、'.join(
-            line.split('（')[0].split(' ')[-1] for line in inherited)))
-    if safety_inherited:
-        missing.append('沿用基线的保护器件与安全防护位置有 %d 项未补：%s' % (len(safety_inherited), '；'.join(safety_inherited[:6])))
     by_stage = Counter(w.get('stage') for w in open_work)
     if open_work:
         missing.append('%d 件未关闭项（%s）' % (len(open_work), '，'.join(
@@ -1215,10 +1134,6 @@ def render(root, notes=None, title=None):
     out.append('')
     if notes.get('summary'):
         out += [notes['summary'], '']
-    if items:
-        redrawn = reply_counts.get('REDESIGN', 0) + reply_counts.get('CALC_DOC', 0)
-        out += ['本版共收到 %d 条审查意见：改图或补计算/补文档 %d 条，其余 %d 条登记为待办、技术转交或不采纳。'
-                % (len(items), redrawn, len(items) - redrawn), '']
 
     if clarifications:
         out += ['## 需求澄清记录', '',
@@ -1270,23 +1185,8 @@ def render(root, notes=None, title=None):
                         '- **用户决定**：%s' % ('%s（%s）' % (decision['option'], decision.get('source', ''))
                                               if text(decision.get('option')) else '未决定'), '']
 
-    if notes.get('changes') or change:
-        out += ['## 本版变更', '']
-        if change:
-            out += ['器件数：%s → %s。' % (change.get('old_components', '?'), change.get('new_components', '?')), '']
-        if notes.get('changes'):
-            out += [notes['changes'], '']
-
-    if items:
-        out += ['## 审查意见处置', '', '| 编号 | 意见 | 处理 | 说明 |', '|---|---|---|---|']
-        for i in items:
-            label = RESPONSES.get(i.get('response'), ('?',))[0]
-            out.append('| %s | %s | %s | %s |' % (cell(i.get('id', '')), cell(i.get('comment', '')), label,
-                                                   cell(i.get('detail', ''))))
-        out.append('')
-        _, unread = review_sources(responses, root)
-        if unread:
-            out += ['意见来源 %s 的原文读不到，来源未核对：上面的意见内容按登记照录。' % '、'.join(unread), '']
+    if notes.get('changes'):
+        out += ['## 本版变更', '', notes['changes'], '']
 
     if open_work:
         out += ['## 未关闭项', '', SEVERITY_LEGEND, '']
@@ -1498,7 +1398,7 @@ def render(root, notes=None, title=None):
             '| 已关闭的待办 | %d |' % sum(v for (s, st), v in stage_status.items() if st == 'closed'), '']
     out += ['## 详细记录', '',
             '原理图在 `原理图/`（KiCad 工程、PDF、网表、BOM）。`record/` 里是生成这份报告用的记录：'
-            '`electrical-intent.json` 是设计网表，`design-closure.json` 是需求、待办和计算的处理情况，'
+            '`electrical-intent.json` 是设计网表，`requirements.json` 是需求清单，`design-closure.json` 是需求追溯、待办和计算的处理情况，'
             '`summary.json` 是自动检查结果，`visual-review.json` 是图面审阅记录，`manifest.json` 记录用到的需求、'
             '原厂资料和前一版设计的位置与校验码。', '']
     return '\n'.join(out), problems

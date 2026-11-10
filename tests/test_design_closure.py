@@ -10,7 +10,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import guideline_criteria
 from audit_design_closure import audit, sha256
-from current_record import make_current
+from current_record import make_current, write_record
 
 # Citations here name no real PDF; without a library they are NOT_CHECKED and leave these checks alone
 # (test_citations covers the citation check itself). The CLI subprocesses inherit the setting.
@@ -355,7 +355,7 @@ class DesignClosureTests(unittest.TestCase):
         self.source.rename(library / 'design.txt')
         record, out = self.root / 'record.json', self.root / 'result.json'
         make_current(self.record, self.intent, self.root)
-        record.write_text(json.dumps(self.record))
+        write_record(self.record, record)
         cli = [sys.executable, '-B', str(Path(__file__).resolve().parents[1] / 'scripts/audit_design_closure.py'),
                str(record), '--intent', str(self.intent), '--artifact-root', str(self.root), '--out', str(out)]
         subprocess.run(cli, capture_output=True)

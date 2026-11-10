@@ -150,18 +150,3 @@ def audit_project(root, pdf=None, project=None, expected_pages=None, *, context=
             "component_count_domain": "Unique references in exact selected-project annotation contexts, including virtual refs",
             "native_inventory": inventory, "native_inventory_reconciliation": reconciliation,
             "errors": errors, "coverage_gaps": sorted(set(gaps))}
-
-
-def compare_projects(before, after):
-    old, new = before["file_sha256"], after["file_sha256"]
-    def instances(report):
-        return {(p["instance"], p["path"]) for p in report["pages"]}
-    pins_old, pins_new = before["pin_signature_sha256"], after["pin_signature_sha256"]
-    return {"removed_files": sorted(old.keys() - new.keys()),
-            "added_files": sorted(new.keys() - old.keys()),
-            "changed_files": sorted(p for p in old.keys() & new.keys() if old[p] != new[p]),
-            "removed_instances": sorted(instances(before) - instances(after)),
-            "added_instances": sorted(instances(after) - instances(before)),
-            "removed_references": sorted(pins_old.keys() - pins_new.keys()),
-            "added_references": sorted(pins_new.keys() - pins_old.keys()),
-            "changed_pin_or_unit_signatures": sorted(r for r in pins_old.keys() & pins_new.keys() if pins_old[r] != pins_new[r])}

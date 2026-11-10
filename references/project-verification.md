@@ -1,4 +1,4 @@
-# 检查多页交付与有意的电气改动
+# 检查多页交付
 
 这些工具都只读、输出 JSON，遇 `FAIL` 或 `INSUFFICIENT` 以非零退出。它们不生成层次，也不认证硬件。
 每次运行用一个新的 `--out` 路径。已存在的文件、符号链接和硬链接别名在处理前就被拒绝，报告以独占方式创建。
@@ -25,14 +25,14 @@ KiCad SVG 一致性比较在比较有限的 `fill-opacity` 前先解析继承，
 自有的环、框、引脚端帽和因果归属的导线仍要求实线；格式错误/未知的虚线着色保留原发现。
 
 引脚到本体的图形、物理引脚/类型/来源证据和外围电路/级间要求，还要运行
-[symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md) 中的工具。下面的层次和改动检查不代替那些独立检查项。
+[symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md) 中的工具。下面的层次检查不代替那些独立检查项。
 
 ## 层次与完整 PDF
 
 ```sh
 python3 scripts/audit_project.py candidate/board.kicad_sch \
   --pdf candidate/board-complete.pdf --expected-pages 12 \
-  --baseline baseline/board.kicad_sch --out output/project-audit.json
+  --out output/project-audit.json
 ```
 
 用实际的预期页数，或省略 `--expected-pages`；12 只是例子。可选的 Poppler `pdfinfo` 读取 PDF 真实页数。
@@ -46,64 +46,7 @@ python3 scripts/audit_project.py candidate/board.kicad_sch \
 签名覆盖单元/样式、编号/名称/类型/形状/隐藏状态，与图形无关。未解析的符号继承算不足。这还核对活动单元的引脚
 以及与实例标注是否一致。它不解析 `sym-lib-table`，不核对封装焊盘，也不评估图形布局。
 
-带 `--baseline` 时报告文件/实例/位号和引脚签名的变化。这个增量是描述性的，不是对删除或任意改动的批准。
 把预期页清单和受保护文件绑定到授权的范围。
-
-## 电气改动核对表
-
-把两份根图网表导出为 `kicadxml`，然后运行：
-
-```sh
-python3 scripts/verify_design_change.py baseline.xml candidate.xml \
-  change.json --out output/design-change.json
-```
-
-电阻改值的一份完整最小核对表：
-
-```json
-{
-  "schema_version": 1,
-  "component_changes": {
-    "R1": {"value": {"before": "1k", "after": "2k"}}
-  }
-}
-```
-
-只允许这一处身份改动；所有物理分区和其他器件属性必须不变。保存/复用的核对表把 `baseline_sha256` 设为冻结 XML 的哈希。
-报告绑定两份实际 XML 的哈希。
-
-| 可选字段 | 含义 |
-| --- | --- |
-| `remove_components` | 基线位号的唯一列表；受影响的网络还需要显式的替换。 |
-| `add_components` | 新位号 → `{ "identity": ..., "pins": ["1", "2"] }`；列出所有物理引脚号。同时列在 `remove_components` 中的位号是替换（符号/封装更换，引脚重新编号或增加）：它的旧引脚被丢弃，每个新引脚都必须出现在 `replace_partitions` 中。 |
-| `component_changes` | 已有位号 → 身份字段 → 确切的 `before` / `after`；核对基线前提。 |
-| `replace_partitions` | `{ "before": [["J1.1", "R1.1"]], "after": [["J1.1"], ["R1.1"]] }` 的列表；每个内层列表是一个完整的物理网络。外层空列表表示没有网络，不是空网络。 |
-| `named_nets` | 要求的确切候选名 → 完整的引脚集合；声明名字对下游有意义的接口。 |
-| `same_net` | 至少两个已知物理引脚的列表，它们必须在同一网络。 |
-| `distinct_net` | 必须各在不同网络的引脚列表；这不证明电气隔离。 |
-
-身份恰好有 `value`、`footprint`、`datasheet`、`lib_id`、`dnp` 和 `fields`。文字值是字符串，`dnp` 是布尔值，`fields` 是字符串映射。
-例：`{ "value": "10k", "footprint": "", "datasheet": "", "lib_id": "Device:R", "dnp": true, "fields": {} }`。
-测试样例里的空字段不能使真实 BOM 合格。为图面而改库 ID 要显式复核。
-
-每个被替换的 `before` 分区必须恰好存在一次。最终的预期连接图必须恰好保留每个剩余的基线引脚和所有声明的新引脚各一次。
-未知、重复、缺失和编造的引脚 FAIL。`#` 位号是虚拟的，一致地排除；物理 NC 的单脚网络仍然有意义。
-局部网络名可以在分区不变时改变；重要的名字用 `named_nets`。`verify_schematic.py` 仍要求画出的名字与设计网表一致，
-所以在同一版本里更新设计网表的名字。预期分区必须来自独立的设计网表，不能来自候选图。
-
-KiCad 导出的引脚不是独立的数据手册证据。这个工具不核对封装映射、未导出的隐藏引脚、装配后 DNP 的工作或模拟性能。
-源表、封装/装配和性能检查另外保留。
-
-```sh
-python3 -m unittest discover -s tests -p 'test_project_audit.py' -v
-python3 -m unittest discover -s tests -p 'test_design_change.py' -v
-```
-
-
-## 电气改版预检
-
-电气改版还要在写出候选图之前和最终交付时运行 [生成前预检](change-preflight.md)。把它的状态和未解决的假设与
-KiCad/ERC/可读性结果一起写出。只看产物是否最新发现不了新生成的过期说明；事实绑定核对声明的当前值。
 
 ## ERC 摘要对应到对象
 

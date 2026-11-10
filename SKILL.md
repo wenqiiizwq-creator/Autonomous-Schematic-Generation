@@ -3,14 +3,13 @@ name: autonomous-schematic-generation
 description: >-
   Autonomous-Schematic-Generation (ASG): starting from requirement documents,
   draw readable, electrically correct KiCad schematics verified by KiCad's own
-  exports. Five steps: requirements and solution → detailed design (pin maps,
-  calculations, component performance requirements, selection, design netlist) →
-  schematic drawing (page plan, pin-geometry recipes, project assembly) → design
-  checks (ERC, netlist, hierarchy, symbol integrity, readability, geometry, visual
-  review) → design output (generated report and fixed delivery folder).
-  Also redraws existing KiCad projects without
-  electrical change, applies authorized electrical revisions and works through
-  review comments. Self-checks only; owns
+  exports. Six capability modules, run in sequence or one at a time with given
+  inputs: C1 requirements and clarification → C2 board architecture → C3 block
+  circuit and core-part selection → C4 detailed design, calculations and part
+  selection → C5 whole-board closure and design netlist → C6 schematic drawing
+  and checks (ERC, netlist, readability, geometry, visual review); then the
+  generated report and fixed delivery folder.
+  C6 alone redraws a given KiCad netlist. Self-checks only; owns
   design feasibility, selection, calculations and functional completion. Use for .kicad_sch
   generation or redraw, 原理图自动生成、从需求画原理图、画原理图、重画原理图、原理图排版.
 ---
@@ -27,15 +26,14 @@ ASG 从需求文档出发，让 Agent 在 KiCad 中画出**可读、电气正确
 - **经 KiCad 验证**：以 KiCad 导出的 ERC、XML 网表和 PDF 为准；JSON、脚本成功或 solver 的 `solved` 都不算证据。
 
 ASG 负责需求到电路的方案可行性、选型依据、设计计算和功能实现，不能把未做完的设计留给别人。
-新设计和电气改版同时遵循
-[设计待办记录](references/design-closure.md)，区分工程可完成、真实外部依赖和后续环节验证。
-电气改版按其中从审查缺口回到电路的做法执行；审计列出的可执行设计动作须继续完成，不能把缺口清单当成结束条件。
+设计遵循 [设计待办记录](references/design-closure.md)，区分工程可完成、真实外部依赖和后续环节验证；
+审计列出的可执行设计动作须继续完成，不能把缺口清单当成结束条件。
 
 以下验收与独立复核不由 ASG 负责：
 
 | 事项 | 交给 |
 | --- | --- |
-| 独立的电气审查和设计定型结论 | 由审查方给出；ASG 只做自检，并处理收到的审查意见 |
+| 独立的电气审查和设计定型结论 | 由审查方给出；ASG 只做自检，收到的审查意见按 P7 回到负责的模块重做 |
 | PCB封装库、焊盘/孔/钢网、布局布线、DFM与散热实现 | `pcb` 阶段技术转交待办；需求要求时另写《PCB与结构要求》 |
 | 生产放行、PCB、SI/PI、EMC | 后续环节 |
 
@@ -47,30 +45,33 @@ ASG 负责需求到电路的方案可行性、选型依据、设计计算和功�
 
 ASG 的输入是一块板卡的设计需求，输出是设计方案确定后的电路原理图。ASG 的能力体现在三项，架构、核心原则和主流程都为它们服务：
 
-1. **选对功能电路**：为每项设计需求和系统规格选择合适的功能电路。主要在 ① 1.2–1.4 完成。
-2. **设计合理，不过度设计**：电路在全部工况下满足需求和器件的保证条件；以满足需求为限，不欠设计，也不过度设计。在 ① 1.3–1.4 定方向，在 ② 落实。
-3. **图面清晰易读**：模块清晰，图形连接明确，方便人阅读。按 P4 和绘图纲要 O1–O8，在 ③ 画出，在 ④ 4.2 审阅。
+1. **选对功能电路**：为每项设计需求和系统规格选择合适的功能电路。整板层由 C2 定跨块的决定，功能电路层由 C3 在块规格内选方案和核心器件。
+2. **设计合理，不过度设计**：电路在全部工况下满足需求和器件的保证条件；以满足需求为限，不欠设计，也不过度设计。C3 定方向，C4 落实到外围、计算和器件，C5 闭合跨块配合。
+3. **图面清晰易读**：模块清晰，图形连接明确，方便人阅读。由 C6 按 P4 和绘图纲要 O1–O8 画出并审阅。
 
-评测 ASG 按这三项衡量。
+评测 ASG 按能力模块分别进行：每个模块用标准上游作给定输入单独评测；从需求串联到交付的整板运行作集成测试。
 
 ### 架构
 
-ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …），按实际原理图设计流程排列；
-先弄清自己在哪一步、产出什么，再按“主流程”逐项任务做，每项任务做到“做完的标志”为止。
+ASG 由六个能力模块组成。每个模块是主流程中连续的几项任务，有固定的给定输入、产出和关卡，可以单独运行，也可以串联。
+主流程按 C1→C6 排列，串起来就是从需求做新设计的默认编排。先弄清本次从哪个模块进、跑到哪个模块（见“选择工作流”），再按“主流程”逐项任务做，每项任务做到“做完的标志”为止；一个模块各项任务的做完标志合起来就是它的关卡（`check_module.py`）。
 
-- **输入**：需求、器件知识库、典型电路库、已有工程/审查意见
+- **输入**：需求、器件知识库、典型电路库；单独运行时的给定输入
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
 
 共用工程判据由硬件设计规范发布，ASG 使用本技能中已安装并固定版本的发布包；准则版本与共用层指纹由发布包读取。运行和本地测试不读取 SR 源码。
 计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
 
-| 步骤 | 任务 | 这一步的目的 | 产出 |
+| 模块 | 任务 | 给定输入 | 产出 |
 |---|---|---|---|
-| ① 需求与方案 | 1.1 需求追溯 · 1.2 系统架构 · 1.3 功能块实现方案 · 1.4 核心器件选型与方案确认 | 把需求落到功能块和核心器件；需求缺口当场问用户，答复写回需求清单，会改变方案的取舍由用户定下 | 需求追溯、需求澄清、系统架构、`scheme-criteria.json`、`selection.json` |
-| ② 详细设计 | 2.1 数据手册核对与外围电路 · 2.2 设计计算与性能要求 · 2.3 器件选型与性能符合性 · 2.4 设计网表 | 按核心器件手册确定外围约束，从工况计算器件性能要求，核对采购来源或候选器件的符合性，再写出设计网表 | `reference-input.json`、计算记录、`component-requirements.json`、`electrical-intent.json` |
-| ③ 原理图绘制 | 3.1 分页方案 · 3.2 图页脚本 · 3.3 组装工程 | 按绘图纲要 O1–O8 把设计网表画成可读的 KiCad 工程 | `page-plan.json`、图页脚本、KiCad 工程 |
-| ④ 设计检查 | 4.1 自动检查 · 4.2 图面审阅 | 用 KiCad 导出核对电气与图面，再按 PDF 逐页审阅 | `summary.json`、`visual-review.json` |
-| ⑤ 设计输出 | 5.1 设计完成核对 · 5.2 报告与打包 | 设计做完才交付，生成报告并打包 | 交付目录 |
+| C1 需求理解与澄清 | C1.1 | 需求文件；任务书里的澄清答复与代答授权 | `requirements.json`：需求条文与来源、需求澄清、降额等级、准则范围 |
+| C2 板级方案 | C2.1 | C1 的产出 | `architecture.json`：功能块、电压域、电源树、隔离边界、跨块流向、对外接口和各块的块规格 |
+| C3 块电路选择 | C3.1 · C3.2 | 块规格 | 每块一个 `block-circuits/<块>.json`；工作记录 `scheme-criteria.json`、`selection.json` |
+| C4 详细设计与器件选型（每块一次） | C4.1 · C4.2 · C4.3 · C4.4 | 块规格、流向与端口参数、`block-circuits/<块>.json` | 每块一个块设计 `blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json` |
+| C5 全板闭合 | C5.1 · C5.2 | `architecture.json`、各块的块设计 | `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵 |
+| C6 原理图绘制 | C6.1–C6.5 | 设计网表；单独运行时只给网表 | `page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json` |
+
+交付（设计完成核对、报告与打包）是编排的收尾，负责汇总各模块状态并打包，不是能力模块。
 
 独立审查（schematic-review 技能或其他审查方）在设计输出之后，不属于 ASG。
 
@@ -82,34 +83,36 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 - **P4 可读**：页面结构按绘图纲要 O1–O8 决定，坐标从引脚几何推出；可读性是交付标准。
 - **P5 失败改结构，不改计数**：不靠 PWR_FLAG、豁免、改引脚类型或标签来掩盖问题。
 - **P6 责任边界**：设计完成由 ASG 负责，只做自检；独立审查交给独立审查方（schematic-review 技能）。
+- **P7 模块契约**：单独运行时，给定输入只读，并带 SHA-256。产出按契约写；关卡（做完的标志）过了才交下游，并在 `record/modules.json` 记下上游与产出的指纹；上游一变，下游即过期。发现给定输入有问题时，只登记 `INPUT` 待办，不改上游；串联运行时回到上游模块重做，并写明原因。
 
 ### 纲要的修改
 
-本节（架构、P1–P6）、主流程的步骤、任务与做完的标志，以及绘图纲要 O1–O8，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
+本节（架构、P1–P7）、主流程的步骤、任务与做完的标志，以及绘图纲要 O1–O8，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
 `scripts/` 和 `references/` 中的实现细节可以直接修改，但一旦与纲要冲突，就先写纲要草案交人确认。
 经确认的改动在 `docs/outline-approvals.md` 加一条，写确认日期、用户原话和改后纲要哈希
 （`python3 scripts/check_ledger.py --outline-hash` 输出当前哈希）；纲要文字与最新确认的哈希不一致时 `check_ledger.py` 报 FAIL。
 
 ## 选择工作流
 
-| 任务 | 做法 |
+| 任务 | 编排 |
 | --- | --- |
-| 从需求做新设计 | 主流程步骤 ①–⑤ |
-| 给已有工程新增模块或页面 | 任务 1.1 只读相关需求，再从任务 1.3 做起；改动已有网络时按“电气改版” |
-| 重画已有工程，电气不变 | [existing-project-redraw.md](references/existing-project-redraw.md) 锁定基线，再走步骤 ③–⑤ |
-| 已授权、保持连线与图面的 Value 参数修改 | [value-patch.md](references/value-patch.md) 生成 KiCad 验证的草稿图，再更新设计网表/脚本与计算，走步骤 ④–⑤ |
-| 授权的电气改版 | 先读 [electrical-redesign.md](references/electrical-redesign.md) 和 [change-preflight.md](references/change-preflight.md)，再走主流程 |
-| 收到审查意见后继续设计 | 按 [处理审查意见](references/review-comments.md) 逐条登记处理方式，再按电气改版处理需要改图的项；每条意见写本版做了什么，补设计的待办写 `progress`，没改电路的叫“补计算/补文档”不叫“改图” |
-| 模块化数据、锁定基线 | [circuit-ir.md](references/circuit-ir.md)。人读的页面仍按任务 3.2 用 recipes 画 |
+| 从需求做新设计 | C1 → C6，再交付 |
+| 单独运行某个模块（评测或分工） | 按 [任务输入输出格式](references/workflow-handoff.md) 的 `modules` 给定上游，只跑指定模块，交模块报告 |
+| 重画已有工程，电气不变 | 单独运行 C6：用 `import_netlist.py` 把工程网表导成设计网表（见 [modules.md](references/modules.md)） |
+| 修改本技能做出的设计（含改值） | 从受影响的最上游模块重做，下游按 `modules.json` 指纹重跑 |
+| 收到审查意见 | 每条意见找到负责的模块，按 P7 从该模块重做并写明原因，重过关卡，下游按指纹重跑 |
 
 ## 主流程
 
-### ① 需求与方案
+主流程按六个能力模块排列。每个模块先写给定输入和产出，下面逐项任务做到“做完的标志”为止；最后一节“交付”是编排的收尾。
 
-#### 1.1 需求追溯
+### C1 需求理解与澄清
 
-按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单和
-功能追溯表。每项映射具体功能路径、器件/固件责任和验收；不能批量挂整板位号代替追溯。
+给定输入：需求文件；任务书里的澄清答复与代答授权。产出：`record/requirements.json`（需求条文与来源、需求澄清、降额等级、准则范围）。
+
+#### C1.1 需求追溯
+
+按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单：每条需求写编号、可验收的条文和来源，记入 `record/requirements.json`。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
 需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**：录完需求后一次汇总提问，每问附一条可验收的建议条文，
 答复后马上写回需求清单再往下设计；问什么、不问什么、中途发现缺口和用户暂缓怎么处理见[需求澄清](references/requirement-clarifications.md)。
 **无人当场答复时**，只接受任务书里写明的答复或代答授权（[任务输入输出格式](references/workflow-handoff.md) 的 `clarification_answers`、`delegation`）；
@@ -120,54 +123,69 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、正 24 V 工业直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
-做完的标志：`design-closure.json` 的每条需求有功能路径和承担器件（或写明理由的空列表）；每个需求澄清都有答复
-（用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求，或并入已有需求并在该需求里引用这条澄清。有未答复的需求澄清不进入步骤 ②。
-降额等级已定（需求给定、用户答复或写明的假设），记入 `design-closure.json`。
-设计准则库有准则时，产品基线、功能电路类型与器件类别记入 `design-closure.json` 的 `guideline_scope`（`guideline_version: 1`）。
+做完的标志：`record/requirements.json` 的每条需求有编号、条文和来源；每个需求澄清都有答复
+（用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求，或并入已有需求并在该需求里引用这条澄清。有未答复的需求澄清不进入 C4。
+降额等级已定（需求给定、用户答复或写明的假设），记入 `requirements.json`。
+设计准则库有准则时，产品基线、功能电路类型与器件类别记入 `requirements.json` 的 `guideline_scope`（`guideline_version: 1`）。
 
-#### 1.2 系统架构
+### C2 板级方案
+
+给定输入：C1 的产出。产出：`record/architecture.json`（含各块的块规格）。
+
+#### C2.1 系统架构
 
 定出真实的系统架构：功能块及其电压域、电源与信号流向、板与隔离边界、接口，以及每条跨块流向代表的电源轨或信号
-（RECT、BULK、FB/FAULT 光耦……）。它在任务 3.3 画成第 1 页 `System_block`，只有页面索引不算架构。
+（RECT、BULK、FB/FAULT 光耦……）。它在任务 C6.3 画成第 1 页 `System_block`，只有页面索引不算架构。
 见 [reference-driven-board-design.md](references/reference-driven-board-design.md)。
+架构记入 `record/architecture.json`，并为每个功能块写块规格（输入、输出、功率与指标，只写要什么，不写拓扑）。隔离边界的位置在这里定，块内的隔离实现方式留给任务 C3.1。
+每条跨块流向写它承载的整板网络名（`nets`）和接口参数（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
+块的边界放在少数几个参数就能说清的地方：两块之间要靠控制环、共用一颗芯片或多条模拟连线才能工作的，合成一块。每块给一个位号编号段。
 
-做完的标志：每个功能块有输入输出和所在电压域；每条跨块流向有名字；隔离边界两侧各有哪些功能块已定。
+做完的标志：`record/architecture.json` 中每个功能块有输入输出、所在电压域和块规格；每条跨块流向有名字；隔离边界两侧各有哪些功能块已定。每条流向有网络名和接口参数；每块有位号编号段，各段不重叠。
 
-#### 1.3 功能块实现方案
+### C3 块电路选择
+
+给定输入：块规格。产出：每块一个 `record/block-circuits/<块>.json`。工作记录：`scheme-criteria.json`、核心角色的 `selection.json`。
+
+#### C3.1 功能块实现方案
 
 关键功能块先在 [典型电路库](references/typical-circuits.md) 里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。
 
-关键功能块（功率变换拓扑、保护架构、隔离方式、信号链架构、对外接口）定方案前，先用 `guideline_criteria.py select` 按该块的电路类型和器件类别列出按类型触发的规则，有对外端口的块再加上端口矩阵对应的 G07 规则；从中找出会淘汰某个候选方案的规则，逐条写明它排除了哪个候选、选定方案怎样满足、哪些数值留给任务 2.2 核算，记入 `record/scheme-criteria.json`。没有规则能淘汰候选的块写明查过的规则范围。不要求逐条列出全部适用规则，不能淘汰候选、不改变选型也不进入计算的规则不要求逐条落实。
+关键功能块（功率变换拓扑、保护架构、块内隔离实现方式、信号链架构、对外接口）定方案前，先用 `guideline_criteria.py select` 按该块的电路类型和器件类别列出按类型触发的规则，有对外端口的块再加上端口矩阵对应的 G07 规则；从中找出会淘汰某个候选方案的规则，逐条写明它排除了哪个候选、选定方案怎样满足、哪些数值留给任务 C4.2 核算，记入 `record/scheme-criteria.json`。没有规则能淘汰候选的块写明查过的规则范围。不要求逐条列出全部适用规则，不能淘汰候选、不改变选型也不进入计算的规则不要求逐条落实。
 
 实现方案同时指出器件的设计用途、工作状态和需要核算的性能。放电、吸收、检流、限流、滤波等用途触发相应核算；“脉冲/浪涌”等关键词触发性能要求核验，不自动推出某个具体料号。普通器件可复用受控标准物料规范，仍须确认本设计工况在其适用范围内。
 
-做完的标志：每个关键功能块在 `record/scheme-criteria.json` 写明了决定条件、候选及来源、选中和淘汰的理由，以及会淘汰候选的规则或查过的范围；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 2.2。
-写完运行 `check_scheme_criteria.py <设计目录>`，无问题再结束任务 1.3。
+做完的标志：每个关键功能块在 `record/scheme-criteria.json` 写明了决定条件、候选及来源、选中和淘汰的理由，以及会淘汰候选的规则或查过的范围；影响选型、替代或功能的器件用途与性能核算项已列明，交任务 C4.2。
+写完运行 `check_scheme_criteria.py <设计目录>`，无问题再结束任务 C3.1。
 
-#### 1.4 核心器件选型与方案确认
+#### C3.2 核心器件选型与方案确认
 
 - **先选型再核数据手册**：每个核心器件角色（控制器、协议 IC、功率开关、磁件、隔离/反馈器件、MCU）按
   [core-part-selection.md](references/core-part-selection.md) 找候选、比较并记录到 `record/selection.json`：
   至少两个候选、写明决定性条件和每个候选选中/淘汰的理由（唯一可选时写 `single_candidate_reason`，见 core-part-selection.md）。原厂资料在本机知识库
   `~/Documents/知识库/HardwareWiki/raw/`（数据手册、参考设计、应用笔记），用 `scripts/find_parts.py` 检索；
   每类器件干什么、选它看什么参数见 [part-roles.md](references/part-roles.md)，从"按功能找类"定二级类再找候选。
-  库里没有合适候选才外部检索，下载的手册按任务 2.1 的资料规则存入工程资料目录。
+  库里没有合适候选才外部检索，下载的手册按任务 C4.1 的资料规则存入工程资料目录。
 - **外部条件不确定时给出方案**：推荐候选依赖未公开的资料或行为（会产生外部资料待办）时，按 [core-part-selection.md](references/core-part-selection.md)
-  列出 2–3 个选型方案并给出 ASG 的建议，交用户决定；用户定下来之前不进入步骤 ②。
+  列出 2–3 个选型方案并给出 ASG 的建议，交用户决定；用户定下来之前不进入 C4。
 - **选型确认（固定暂停点）**：核心器件选型做完后，把选型清单（角色、选定候选、主要依据、与方案文档已确认决定的异同、新增的关键料号）
-  汇总成一次确认交给用户；**每个核心角色**都要有确认记录（`decision`）才进入步骤 ②：用户确认的写 `user:<日期>`；方案文档已写明"用户已确认"且选型与之一致的器件
+  汇总成一次确认交给用户；**每个核心角色**都要有确认记录（`decision`）才进入 C4：用户确认的写 `user:<日期>`；方案文档已写明"用户已确认"且选型与之一致的器件
   一并列出即可，不另问，`decision` 写 `scheme:<证据编号>` 并引原文；无人当场确认时，只能按任务书的代答授权写 `delegate:<代答人>:<日期>`，没有授权就停下来问。
   手册或计算证明某个已确认选择不成立的，列为"建议改动"连同证据一起问，不自行换方案。
 - 核实决定架构的确切型号/固件能力；未证实的依赖保持条件状态，并评估替代实现。
+- **抽出块文件**：选型确认后运行 `block_circuits.py <设计目录>`，按 `scheme-criteria.json` 各块和 `selection.json` 各角色写的 `block_id`（`architecture.json` 的功能块 `id`），每块抽出一个 `record/block-circuits/<块>.json`：选定方案、核心器件与角色、决定条件的本板取值、留给任务 C4.2 核算的数值。块文件由工具抽出，不手写；C4 只读块文件。
 
 做完的标志：`render_design_report.py` 的选型检查无问题：每个核心器件角色有候选比较和确认记录 `decision`（`user:`、`scheme:` 或 `delegate:`），
-选定候选写了 `external_dependencies`，不为空的角色有 2–3 个方案、ASG 的建议和所选方案。
+选定候选写了 `external_dependencies`，不为空的角色有 2–3 个方案、ASG 的建议和所选方案；`block_circuits.py` 抽出的块文件与两份工作记录一致。
 
-### ② 详细设计
+### C4 详细设计与器件选型
 
-#### 2.1 数据手册核对与外围电路
+C4 每块做一次。给定输入：本块的块规格、与本块相连的流向（网络名与接口参数）、`record/block-circuits/<块>.json`（方案与核心器件）。产出：块设计 `record/blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json`。
+本块的设计只依据这些输入，不读别的块；流向参数不够用或不成立时，回到 C2。
 
-本任务先从已确定的核心器件取得外围约束，记录参数的数值、条件、保证性质和出处，作为任务2.2的输入。外部电阻、电容等尚未选具体料号时，不填入未经核实的型号；后续依次完成性能要求和候选符合性。核心器件、物理引脚、固件身份及认证依赖的型号要求仍在本任务保留。
+#### C4.1 数据手册核对与外围电路
+
+本任务先从已确定的核心器件取得外围约束，记录参数的数值、条件、保证性质和出处，作为任务 C4.2的输入。外部电阻、电容等尚未选具体料号时，不填入未经核实的型号；后续依次完成性能要求和候选符合性。核心器件、物理引脚、固件身份及认证依赖的型号要求仍在本任务保留。
 
 - 每个核心器件对应确切 MPN/封装的物理引脚表、典型应用、必需外围和装配状态，记录实际阅读的手册页码。
   分立器件的**符号含义**也按确切料号选：TVS 单向/双向、MOS N/P 沟道、NPN/PNP，引脚名按手册（单向二极管用 K/A）。
@@ -193,7 +211,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 引脚表读的是所选订货变体的手册（与设计网表的 `datasheet` 同一份），每个脚照手册写了引脚名和引脚类型（不从符号回抄），符号引脚名与手册不同的写明原因，符号脚类型与手册相符；
 分立器件的符号含义与料号一致；新数据手册已存入工程资料目录（打包输入 `datasheets`）。
 
-#### 2.2 设计计算与性能要求
+#### C4.2 设计计算与性能要求
 
 - 数值计算按 [calculation-preflight.md](references/calculation-preflight.md) 写明保证条件；按
   [requirements-to-intent.md](references/requirements-to-intent.md) 第 4 节清单逐项核这些工况：上电/热插拔、关断/掉电、
@@ -230,22 +248,22 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
   需求没给、取值又会改变选型的，按[需求澄清](references/requirement-clarifications.md)问用户，不自定。启动计算必须声明启动期负载。
   判法见[设计待办记录](references/design-closure.md)“工况输入的来源”，`audit_design_closure.py` 核对。
 - **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作。只有进入计算的准则逐条落实：落实它的计算在 `guidelines` 里写准则编号，
-  任务 1.3 留给本任务的数值由引用该准则的计算关闭。其余准则按设计动作照做，不要求逐条引用；审计列出适用与已引用的准则供审查对照。
+  任务 C3.1 留给本任务的数值由引用该准则的计算关闭。其余准则按设计动作照做，不要求逐条引用；审计列出适用与已引用的准则供审查对照。
   有对外连接器的板写 FMEA 和 EMC 端口矩阵，登记为证据并写 `carrier`，审计核对必备章节与连接器齐全。
 
 **把计算落实为可采购的器件性能要求**：将实际需要核算的器件记入 `record/component-requirements.json`，由它统一生成设计网表属性、BOM规格和图面标注。字段及执行接口见 [器件性能要求](references/component-requirements.md)；新设计采用 `component_requirements_version: 1`，按用途分组筛选位号，不给每颗普通件增加全参数计算。
 - 每项要求的字段、各类器件按用途核哪些性能（放电电阻的能量与波形、电容的有效容量、电感的饱和电流等）、受控标准料的引用和数据不足时的暂定要求，
   见 [器件性能要求](references/component-requirements.md)。本可计算却尚未计算的，仍是设计未完成，不能用“待采购确认”代替。
 
-做完的标志：`audit_design_closure.py` 无错误；没有 `failed` 的计算；每条计算的结论、`rests_on` 与 `coverage` 与参数依据推出的一致。与额定比较的应力都点名适用降额规则；超降额未超额定按原规范列风险。每个已识别的性能核算项都有数值、条件和出处，或有明确的有条件要求与假设；仍缺可独立完成的计算时不得标记本任务完成。
+做完的标志：`audit_design_closure.py` 无错误；没有 `failed` 的计算；每条计算的结论、`rests_on` 与 `coverage` 与参数依据推出的一致。与额定比较的应力都点名适用降额规则；超降额未超额定按原规范列风险。每个已识别的性能核算项都有数值、条件和出处，或有明确的有条件要求与假设；仍缺可独立完成的计算时不得标记本任务完成。任务 C3.1 留给 C4.2 的数值都已由计算关闭。
 
-#### 2.3 器件选型与性能符合性
+#### C4.3 器件选型与性能符合性
 
-输入为任务2.2的性能要求。逐项决定采购定义方式并核对来源：
+输入为任务 C4.2的性能要求。逐项决定采购定义方式并核对来源：
 1. **按规格采购**：性能可用完整规格定义的器件，采用受控标准物料或寻找符合要求的来源；未锁定料号时允许保留可采购性能规格，说明可行性依据，不把假设中的器件能力当成现成保证。
 2. **按型号或设计单定义**：电路依赖物理引脚、接口/固件行为、认证、特定曲线或型号特性的器件，继续明确料号/订货变体/设计单，核对手册条件。安全认证与定制磁件要求不得因“按规格”而取消。
 查阅原厂手册以核实候选，不自动意味着电路只能绑定该料号；可转为完整可替代性能约束的，优先保留规格采购方式。
-3. **核对候选**：将要求值、候选保证值及双方适用条件逐项对照，记录资料来源、符合/不符合/尚未核实的结论。需要比较核心器件方案时仍执行任务1.4，不给所有普通料新增“两候选”义务。
+3. **核对候选**：将要求值、候选保证值及双方适用条件逐项对照，记录资料来源、符合/不符合/尚未核实的结论。需要比较核心器件方案时仍执行任务 C3.2，不给所有普通料新增“两候选”义务。
 4. **处理差距**：算出不满足时换料、调整电路或重新分配性能，并回到受影响计算。厂家保证缺失时保留真实外部依赖；不要先把候选写成已核准，再附一句“关键性能待确认”。处理差距若要改变用户已确认的器件方向、结构或取值（方案文档或 1.4 的 `decision`），停在本任务，把矛盾、证据和 2–3 个改法交用户定（无人当场答复时同 1.4，只接受任务书代答），答复写回 `selection.json` 与需求清单后再继续；不自行改成别的方案。
 5. **不过度设计**：满足性能要求之后，额定、精度、封装和保护级数按需要取，不无理由地取高一档；取高的写明理由（降额、统一物料、可得性等）。
 6. **按准则选型**：设计准则的 `asg_action` 改变了选型或性能要求的，在对应性能记录的 `guidelines` 写准则编号（电源输入器件、接口保护器件等）。
@@ -255,27 +273,41 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 按型号采购的器件，值、料号与数据手册指同一订货变体，料号写全订货码；电容额定电压与 TVS 工作电压不低于所在电源轨的最坏最高电压。
 尚缺外部数据的可有条件进入出图，但报告不能宣布其型号核实或设计定型已完成。
 
-#### 2.4 设计网表
+#### C4.4 块设计
 
-将任务2.2的性能记录按位号关联到设计网表，生成基本值、性能规格、采购定义方式及选型状态（接口见 [器件性能要求](references/component-requirements.md)）；
-不在绘图/BOM脚本另写一套默认值，记录不完整或候选未核准的保留真实状态，不补默认料号。
-
-写一份整板设计网表 `electrical-intent.json`：器件、网络 `{name: [ref.pin]}`、`no_connect`，以及每个器件的页面
-`fields.Circuit`。格式和规则见 [requirements-to-intent.md](references/requirements-to-intent.md) 第 5 节。
+把本块写成块设计 `record/blocks/<块>.json`（格式见 [modules.md](references/modules.md)）：器件、块内网络 `{name: [ref.pin]}`、端口、`no_connect`，以及本块网络的 `net_roles`、`net_voltages`、`external_supply`、`filtered_supply`。
+器件的值、性能规格、采购定义方式与选型状态由任务 C4.2 的性能记录按位号生成，不另写默认值；记录不完整或候选未核准的保留真实状态。
+位号在 C2 给本块的编号段内。端口用流向给的整板网络名，块内网络不与端口重名。
 每个物理引脚要么接入网络，要么有依据地标 NC；不接的脚和按手册接地、上下拉的未用脚，逐脚写手册规定的处置和页码。
-每条电源轨写最坏最高电压和来源。设计网表从需求和手册写出，不从草稿图回抄；值写设计值，不留库默认名或占位。
-用 `net_roles` 区分 power/return/signal，至少覆盖电源轨与阈值/反馈等易混淆网络；声明 signal 后 recipes 禁止给它放电源符号。
-只由连接器引入的电源或地、经一颗串联件从已有电源派生的供电网，在本任务逐网声明 `external_supply`、`filtered_supply`（任务 4.1 核对）。
-电气改版先按 [change-preflight.md](references/change-preflight.md) 写生成前预检。
+本块输出的电源轨写最坏最高电压和来源。值写设计值，不留库默认名或占位。用 `net_roles` 区分 power/return/signal，至少覆盖电源轨与阈值/反馈等易混淆网络。
+只由连接器引入的电源或地、经一颗串联件从已有电源派生的供电网，逐网声明 `external_supply`、`filtered_supply`。
 
-做完的标志：每个物理引脚接入网络或有依据地标 NC，NC 与未用脚的处置有手册页；`net_roles` 覆盖电源轨与阈值/反馈网络，
-每条电源轨写了最高电压；没有占位值和未编号位号（`audit_design_closure.py` 的 `binding_version 1` 无错误；引脚表的手册引脚名与类型先用 `scripts/fill_pin_maps.py` 从符号库和手册引脚表批量填入，填不上的再逐脚补）；
-`object_matrices.py` 按本版设计网表列出的矩阵与状态表逐格有结论（`matrix_version 1` 的审计没有 `matrix_cell_missing`、`matrix_cell_failed` 和 `matrix_*` 错误）；
-电气改版的生成前预检为 PASS 或 CONDITIONAL。
+做完的标志：本块每个物理引脚接入网络或有依据地标 NC，处置有手册页；端口都是流向给的网络名；位号都在本块编号段内；本块输出的电源轨写了最高电压；没有占位值和未编号位号。
 
-### ③ 原理图绘制
+### C5 全板闭合
 
-#### 3.1 分页方案
+给定输入：`architecture.json`、各块的块设计 `record/blocks/`。产出：整板 `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵。
+
+#### C5.1 设计网表
+
+用 `scripts/blocks.py merge` 把各块的块设计按网络名合成整板设计网表 `electrical-intent.json`：同名端口接成一个网络，每个器件的 `fields.Circuit` 写所属块。合并报错（块内网络重名、端口没有对端、位号重复、同一网络各块的角色或电压不一致）时，按原因回到 C4 或 C2，不在 C5 改块设计。
+各块之间只差接口件（上拉、电平转换、隔直）的，C5 写进整板层块 `blocks/BOARD.json` 再合并；要改块内设计的回到该块的 C4，根因在电压域或流向划分的回到 C2。
+在 `design-closure.json` 的 `traceability` 为 `requirements.json` 的每条需求写追溯：功能路径、承担器件、状态和依赖的待办，用需求编号引用；不能批量挂整板位号代替追溯。
+
+做完的标志：`blocks.py merge` 无错误，`electrical-intent.json` 由它生成；每条需求在 `traceability` 有功能路径和承担器件（或写明理由的空列表）；每条电源轨写了最高电压；
+`object_matrices.py` 按本版设计网表列出的矩阵与状态表逐格有结论（`matrix_version 1` 的审计没有 `matrix_cell_missing`、`matrix_cell_failed` 和 `matrix_*` 错误）。
+
+#### C5.2 全板闭合核对
+
+整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）。不满足的格改设计，不以列出缺口代替完成。
+
+做完的标志：`audit_design_closure.py`（不带 `--module`）无错误；矩阵与状态表没有缺结论或不满足的格；有对外连接器的板 FMEA 与 EMC 端口矩阵章节与连接器齐全。
+
+### C6 原理图绘制
+
+给定输入：设计网表；单独运行时只给网表。产出：`page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json`。
+
+#### C6.1 分页方案
 
 分页时给需要展示的性能要求分配位置：基本数值放元件旁，较长的条件放同页技术要求表或注释，用位号/注号对应。只显示设计与替代需要的信息，不把整段计算或数据手册搬到图上。表格和说明必须进入正常的布局与几何检查。
 
@@ -285,6 +317,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`key_blocks`、`circuits`），本页每个器件都要属于一个功能块，
 每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有适用典型电路的关键块写 `none`）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](references/human-readable-routing.md) 第 1 节。
+单独运行 C6、没有 `architecture.json` 和方案记录时，功能块划分由本任务从网表定，`circuits` 留空，不做典型电路标注检查。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
 - 按拓扑选结构（Buck、LDO、隔离反激、滤波、MCU 各不相同），见
@@ -294,7 +327,7 @@ ASG 是五个步骤的流程，每个步骤下有几项任务（1.1、1.2 …）
 
 做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与关键块的典型电路标注（库里没有适用的写 none）齐全，每个器件属于一个功能块。
 
-#### 3.2 图页脚本
+#### C6.2 图页脚本
 
 ```python
 from schematic_layout.pages import page_intents
@@ -325,25 +358,22 @@ for n, (key, page) in enumerate(page_intents(board, rails=RAILS).items(), 1):
 
 做完的标志：每页 `Sheet.build()` 不报错，`report["structure"]` 与 `report["readability"]["gate"]` 为 PASS；每页间距豁免不超过 3 处。
 
-#### 3.3 组装工程
+#### C6.3 组装工程
 
 多页工程用 `schematic_layout.root.Root` 组装根图：`page()` 放各页的层次图框，`flow()` 画带名字、两端落在图框上的流向线
 （`kind="power"` 能量流、`"signal"` 控制链，线宽不同），`isolation()` 画隔离边界，`write()` 写出根图 `System_block`、
 各页（实例路径改写到根工程）、`.kicad_pro` 和 `sym-lib-table`；文字压线或系统框图审计不通过时直接报错。
 用法见 [drawing-recipes.md](references/drawing-recipes.md) 多页一节。
-第 1 页 `System_block` 按任务 1.2 的架构画，要求见 [reference-driven-board-design.md](references/reference-driven-board-design.md) 的 System_block 一节。
+第 1 页 `System_block` 按任务 C2.1 的架构画，要求见 [reference-driven-board-design.md](references/reference-driven-board-design.md) 的 System_block 一节。
 
 做完的标志：`Root.write()` 不报错，写出根图、各页、`.kicad_pro` 与 `sym-lib-table`。
 
-### ④ 设计检查
-
-#### 4.1 自动检查
+#### C6.4 自动检查
 
 ```bash
 python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical-intent.json \
   --out <新的空目录> [--expected-pages N] [--symbol-exceptions F] [--readability-waivers F] \
-  [--reference-contract F] [--design-closure D --artifact-root R] \
-  [--baseline-xml B --change-contract C --preflight P]
+  [--reference-contract F] [--design-closure D --artifact-root R]
 ```
 
 它一次完成：KiCad ERC / XML 网表 / PDF 导出，网表分区与器件身份逐脚对比设计网表（图上画出的网络名须等于设计网表里同一组引脚的网络名，
@@ -354,15 +384,15 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 可以用 `scripts/deliver.py <交付目录>` 一次跑完出图、自动检查到打包，参数记在 `record/deliver.json`，见 [交付与设计报告](references/delivery-report.md)。
 
 - 器件性能检查核对性能定义、选型符合性状态和设计网表/BOM/图面的一致性：规格绑定以 KiCad 导出的属性/XML 为准，可见内容以实际 PDF 为准，
-  判法见 [器件性能要求](references/component-requirements.md)；检查器覆盖不到的图面对象转任务 4.2，不自动判通过。
+  判法见 [器件性能要求](references/component-requirements.md)；检查器覆盖不到的图面对象转任务 C6.5，不自动判通过。
 - 新设计提供 `--design-closure`，核对需求实现、外部依赖、计算覆盖和证据是否最新；格式与边界见 [设计待办记录](references/design-closure.md)。未提供时明确为 NOT_CHECKED，不能据此声明全流程完成。
-- 新设计要求 ERC 零违规。重画工程时保留基线和最终两份原始 ERC，逐条确认没有新增违规，并披露继承的问题。
+- ERC 要求零违规。
 - ERC 摘要按原始报告的 UUID/object 对应实际层次实例、引脚及 KiCad 网络，再归因到电源轨；
   不凭位号或网络名文字猜问题对象。无法对应时保留原违规与待核边界，见 [project-verification.md](references/project-verification.md#erc-摘要对应到对象)。
 - 几何检查只覆盖本次 KiCad 导出中已合格的对象，范围与未支持对象见 [native-geometry.md](references/native-geometry.md)；
   外部 JSON 回执不能授权放行。`geometry` 为 INSUFFICIENT 时保留缺口并在 KiCad 渲染图上核对，有限 PASS 不等于整案通过。
   库里隐藏的引脚号/引脚名不计；可见但无法由 KiCad 导出核对的引脚文字列在 `geometry.render_review_items`（图面待审对象），
-  不算缺口，任务 4.2 图面审阅必须逐页覆盖这些对象并在 visual-review.json 里写明。
+  不算缺口，任务 C6.5 图面审阅必须逐页覆盖这些对象并在 visual-review.json 里写明。
 - 图面检查只有三种结果：PASS、FAIL（画图问题，如外框间距不足 1.27 mm、导线交叉不打点、注释压线）、
   INSUFFICIENT（检查器覆盖不到的对象）。FAIL 由 ASG 改图关闭，不交给人复核；可读性或几何 FAIL 时
   `pack_design.py` 拒绝打包。只有 INSUFFICIENT 缺口留给图面审阅核对。
@@ -380,9 +410,9 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
   列出的每个器件（不限核心器件）都要在外围电路核对表里按数据手册名字逐脚对应，并在设计报告中列出这些脚；
   否则按引脚名核对时会对不上。
 
-做完的标志：`summary.json` 没有 FAIL 的检查项，INSUFFICIENT 的逐条列出原因；导出网表与设计网表逐脚一致；ERC 零违规（重画工程无新增违规）。
+做完的标志：`summary.json` 没有 FAIL 的检查项，INSUFFICIENT 的逐条列出原因；导出网表与设计网表逐脚一致；ERC 零违规。
 
-#### 4.2 图面审阅
+#### C6.5 图面审阅
 
 在实际 PDF 上逐页核对性能标注（位号/注号对应、参数与单位、“要求/器件保证/待核”含义清楚、表格未压线），按位号记录结果；隐藏属性完整不代替这一步。
 
@@ -393,17 +423,17 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 做完的标志：`visual-review.json` 为 `REVIEWED`，每页路径数不少于读者任务数，每个图面待审对象有本版的处置，`pdf_sha256` 对得上本版 PDF。
 
-### ⑤ 设计输出
+### 交付
 
-#### 5.1 设计完成核对
+#### 设计完成核对
 
 还有可独立完成的设计项就回到对应任务做完，不以列出缺口代替完成。待办只由本版设计过程中确认仍需做的事项决定，不与上一版比较。
 
 同时核对性能定义与选型状态：可独立完成的性能要求计算须完成；仅有料号但关键性能未核实的，不能写“已核准”。有条件性能要求和真实外部依赖继续按现有计算依据分类，不因图纸已输出而转成保证。
 
-做完的标志：未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；矩阵与状态表没有缺结论或不满足的格；审计列出的可执行设计动作都已完成；淘汰候选方案、改变选型和进入计算的准则都已落实在方案比较、性能记录或计算里，任务 1.3 留给 2.2 的数值都已由计算关闭；有对外连接器的板 FMEA 与 EMC 端口矩阵章节与连接器齐全。
+做完的标志：各模块在 `record/modules.json` 都是 OK；未关闭项只剩外部资料待办、技术转交、用户暂缓的需求和已登记理由的设计待办；没有未答复的需求澄清；审计列出的可执行设计动作都已完成；淘汰候选方案、改变选型和进入计算的准则都已落实在方案比较、性能记录或计算里。
 
-#### 5.2 报告与打包
+#### 报告与打包
 
 交付增加 `record/component-requirements.json`，报告分别给出性能定义完整程度、选型核实状态和未关闭项；BOM及图面的可见规格由该记录生成。打包检查性能记录和图纸/BOM是否同源、最新、一致；完整规格采购、候选待核与型号已核准各自表述，不能统一写成选型完成。
 
@@ -416,17 +446,17 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
   设计报告.md     唯一给人看的文件：render_design_report.py 由记录生成，notes.json 的摘要与说明和记录按同一套专业术语写
   原理图/         KiCad 工程（根图、各页、项目符号库与封装库）、schematic.pdf、netlist.xml、BOM.csv
   设计资料/       跨版本有效、每版更新的设计文档（方案与选型依据、FMEA、EMC 端口矩阵、磁件设计单等；其他按需求选做）
-  record/         设计网表、分页方案、待办处理情况、自检结果、图面审阅、审查意见处理、本版用到的计算、
-                  图页脚本、manifest.json（需求、原厂资料、前一版设计按路径+SHA-256 登记，不复制）
+  record/         设计网表、分页方案、待办处理情况、自检结果、图面审阅、本版用到的计算、
+                  图页脚本、manifest.json（需求、原厂资料按路径+SHA-256 登记，不复制）
 ```
 
 ```bash
 python3 <skill>/scripts/render_design_report.py <交付目录> [--notes notes.json] [--title 标题]
 python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需求目录> \
-  --input datasheets=<资料目录> [--input previous=<前一版交付目录>]
+  --input datasheets=<资料目录>
 ```
 
-也可以用 `deliver.py <交付目录>` 按固定顺序一次跑完生成报告、写交付证据、新鲜度检查和打包，见任务 4.1。
+也可以用 `deliver.py <交付目录>` 按固定顺序一次跑完生成报告、写交付证据、新鲜度检查和打包，见任务 C6.4。
 报告如实写出各项自检的 PASS/FAIL/INSUFFICIENT 及数量（含零）。历史版本快照、日志、仿真中间文件、
 审查方的其他文件都不放进交付目录；本版独立审查的报告只放 `record/sr-review/`。
 
@@ -436,12 +466,12 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 ## 在任务流程中运行
 
 由外部流程派发任务时，读 [任务输入输出格式](references/workflow-handoff.md)。
-以 `task.json` 的需求、版本、前版设计和审查意见为输入；架构生成、查资料、计算与改图仍由 ASG 完成。
-交付仍按任务 5.2 的目录；用流程提供的 `pack-result` 生成 `result.json`。独立使用本技能不依赖外部流程。
+以 `task.json` 的需求、版本和给定输入为输入；审查意见按 P7 回到负责的模块重做；架构生成、查资料、计算与改图仍由 ASG 完成。
+交付仍按「交付」一节“报告与打包”规定的目录；用流程提供的 `pack-result` 生成 `result.json`。独立使用本技能不依赖外部流程。
 
 ## 硬性规则
 
-原则见「ASG 纲要」P1–P6；这里只列具体操作约束。
+原则见「ASG 纲要」P1–P7；这里只列具体操作约束。
 
 - P2：位号、值、MPN、引脚号、装配状态和网络归属不因摆放改变；不为布图方便改符号的引脚映射。
 - P4/P5：不手写辅助器件坐标；不把可读页面交给 MST/A* 自动路由；不用标签掩盖失败的连线。
@@ -457,12 +487,12 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 
 | 何时读 | 文件 |
 | --- | --- |
-| 新设计/电气改版的设计待办记录、依赖与计算结论审计 | [design-closure.md](references/design-closure.md) |
-| 收到审查意见：逐条处理、采用建议改法、收敛判断 | [review-comments.md](references/review-comments.md) |
+| 能力模块的关卡、`architecture.json`、块设计与合并（`blocks.py`）、`modules.json` 与过期判定（`check_module.py`）；单独运行模块、只给网表画图（`import_netlist.py`） | [modules.md](references/modules.md) |
+| 设计待办记录、依赖与计算结论审计 | [design-closure.md](references/design-closure.md) |
 | 交付目录、设计报告、打包检查 | [delivery-report.md](references/delivery-report.md) |
 | 从需求写设计网表 | [requirements-to-intent.md](references/requirements-to-intent.md) |
 | 需求没说清：问什么、什么时候问、答复怎样写回需求清单 | [requirement-clarifications.md](references/requirement-clarifications.md) |
-| 架构页、参考设计外围、学习工程师图面 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
+| 架构页、参考设计外围 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
 | 一个功能通常怎么实现、有几种实现方案、各自的必算项与已知坑 | [typical-circuits.md](references/typical-circuits.md) 与 `references/typical-circuits/` |
@@ -478,11 +508,9 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR-01–HR-11、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |
-| 重画已有工程 | [existing-project-redraw.md](references/existing-project-redraw.md) |
-| 电气改版与预检 | [electrical-redesign.md](references/electrical-redesign.md)、[change-preflight.md](references/change-preflight.md)、[project-verification.md](references/project-verification.md) |
-| 对照工程师参考图 | [reference-driven-board-design.md](references/reference-driven-board-design.md) 的“对照工程师参考图” |
+| ERC 摘要对应到对象、自动网络名不比对、层次与 PDF | [project-verification.md](references/project-verification.md) |
 | 交付证据与是否最新 | [delivery-report.md](references/delivery-report.md) 的“交付证据（快照检查）” |
 | 用词 | [terminology.md](references/terminology.md) |
-| Circuit IR、低层生成器 | [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md) |
+| 低层生成器 | [schematic-generation.md](references/schematic-generation.md) |
 
 运行不需要上游完整仓库、新的 MCP 服务、Bun 或网络连接。

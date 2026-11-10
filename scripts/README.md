@@ -2,11 +2,6 @@
 
 ## Deterministic generation and geometry
 
-`build_circuit.py` compiles Circuit IR v2, resolves named pins/physical units,
-automatically places and packs functional blocks, retries with bounded spacing,
-and supports baseline diffs plus locked-block regeneration. See
-[`circuit-ir.md`](../references/circuit-ir.md).
-
 `generate_schematic.py` consumes separate electrical intent and layout JSON,
 writes a new single-sheet project, and runs native ERC/XML/PDF verification.
 `check_schematic_geometry.py` inspects a serialized native schematic read-only.
@@ -20,12 +15,30 @@ assembles the built pages under a hierarchical root with the System_block
 cover. `verify_schematic.py` runs every
 automated drawing gate on a saved root sheet (ERC, intent partitions and
 identity, hierarchy/PDF, symbol integrity, readability, per-sheet geometry,
-optional reference and change contracts) and writes `summary.json`. Usage, options and
-`AUTOMATED_PASS` semantics are in SKILL.md task 4.1; the low-level single-page
+an optional reference contract) and writes `summary.json`. Usage, options and
+`AUTOMATED_PASS` semantics are in SKILL.md task C6.4; the low-level single-page
 generator is described in [`schematic-generation.md`](../references/schematic-generation.md).
 
+`blocks.py merge <design>` merges the block designs in `record/blocks/` (task C4.4) by board net name into
+`record/electrical-intent.json` (task C5.1), checking each against `record/architecture.json` (ports from the flows'
+`nets`, internal nets off board names, reference numbers in the block's `ref_range`); `blocks.py roundtrip` splits an
+existing whole-board netlist by the page plan's blocks and merges it back pin for pin. See
+[`modules.md`](../references/modules.md).
+
+`check_module.py <C1..C6> <design>` runs one capability module's gate on the
+parts it owns (SKILL.md 架构, P7) and records the input/output fingerprints in
+`record/modules.json`; `check_module.py status <design>` lists the recorded
+modules as OK, STALE or MODIFIED; `report` writes `模块报告.md` and `pack`
+checks the delivery of a module run (task.json `modules`). `import_netlist.py`
+turns a KiCad XML netlist into a design netlist, with the source's embedded
+symbols as project libraries, for a C6-only run. `block_circuits.py <design>`
+extracts module C3's product, one `record/block-circuits/<block>.json` per
+architecture block, from `scheme-criteria.json` and `selection.json` (each
+block and core role names its `block_id`), and checks the files against them. See
+[`modules.md`](../references/modules.md).
+
 `deliver.py <delivery>` runs one delivery end to end in a fixed order (prepare,
-closure audit, preflight, generation, `verify_schematic.py`, report, delivery
+closure audit, generation, `verify_schematic.py`, report, delivery
 evidence, freshness, packing) from the arguments in `record/deliver.json`; it
 reads each step's status from its output and goes on only on PASS, DONE,
 CONDITIONAL, INCOMPLETE, AUTOMATED_PASS or FRESH.

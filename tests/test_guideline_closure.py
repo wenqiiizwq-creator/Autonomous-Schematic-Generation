@@ -1,4 +1,4 @@
-"""Tasks 1.1 and 5.1 (user 2026-10-31: 请开始执行这个方案): the design declares its guideline scope, cites the shared
+"""Tasks C1.1 and C5.2 (user 2026-10-31: 请开始执行这个方案): the design declares its guideline scope, cites the shared
 guideline rules it meets in its calculations and work items, holds the others not applicable with a reason, and hands
 a rule closing after the schematic downstream with a work item. An empty rule library asks nothing."""
 import copy

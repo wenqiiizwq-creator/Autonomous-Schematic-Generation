@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""核对设计目录中任务 1.3 的方案准则记录。"""
+"""核对设计目录中任务 C3.1（模块 C3）的方案准则记录。
+
+只核对方案记录本身：留给任务 C4.2 的数值是否闭合由 C4 的关卡核对，方案与分页方案是否一致由 C6 的关卡核对
+（`check_module.py`），整板报告两项都核对。"""
 import argparse
 from pathlib import Path
 
@@ -11,24 +14,18 @@ def main(argv=None):
     parser.add_argument('design_root', type=Path, help='设计目录（含 record/）')
     args = parser.parse_args(argv)
     record = args.design_root / 'record'
-    closure, problem = load(record / 'design-closure.json')
+    # The guideline scope is module C1's product (requirements.json); C3 does not read design-closure.json.
+    closure, problem = load(record / 'requirements.json')
     problems = [problem] if problem else []
     if not problem and not isinstance(closure, dict):
-        problems.append('record/design-closure.json 要写 JSON 对象')
+        problems.append('record/requirements.json 要写 JSON 对象')
     scheme, problem = None, None
     if (record / 'scheme-criteria.json').exists():
         scheme, problem = load(record / 'scheme-criteria.json')
     if problem:
         problems.append(problem)
-    plan = None
-    if (record / 'page-plan.json').exists():
-        plan, problem = load(record / 'page-plan.json')
-        if problem:
-            problems.append(problem)
-        elif not isinstance(plan, dict) or not isinstance(plan.get('pages'), list):
-            problems.append('record/page-plan.json 要写带 pages 列表的对象')
     if not problems:
-        problems += check_scheme_criteria(scheme, closure, plan=plan)
+        problems += check_scheme_criteria(scheme, closure, deferred=False)
     for problem in problems:
         print('PROBLEM:', problem)
     print('FAIL' if problems else 'PASS')

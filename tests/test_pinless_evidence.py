@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from schematic_layout.design_change import read_native, verify_change
+from schematic_layout.design_change import read_native
 from schematic_layout.native import find_cli
 from schematic_layout.project_audit import audit_project
 from schematic_layout.reference_contract import verify_reference
@@ -63,8 +63,6 @@ class PinlessEvidenceTests(unittest.TestCase):
 
     def test_consumers_take_the_role_from_the_netlist(self):
         self.write()
-        contract = {"schema_version": 1}
-        self.assertEqual("PASS", verify_change(self.xml, self.xml, contract)["status"])
         reference = {"schema_version": 1, "scope": {"feature_ids": ["f"]}, "sources": {}, "pin_maps": {}, "checks": [],
                      "features": [{"id": "f", "boundary": "b", "stages": []}]}
         try:

@@ -15,7 +15,6 @@ import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
-from schematic_layout.circuit_ir import symbol_catalog
 from schematic_layout.generate import Libraries, library_dirs
 from schematic_layout.native import find_cli
 from schematic_layout.recipes import RIGHT, Sheet
@@ -87,12 +86,6 @@ class StackedSceneAndIntegrityTests(unittest.TestCase):
         self.assertEqual(pins["U1.17"].point, pins["U1.18"].point)
         self.assertEqual("[17,18]", pins["U1.18"].number)
         self.assertEqual([], scene.gaps)
-
-    def test_circuit_ir_catalog_lists_every_pad(self):
-        sym = next(x for x in all_nodes(parse(library()), "symbol") if x[1] == "EF")
-        catalog = symbol_catalog(sym)
-        self.assertEqual({"1", "2", "17", "18"}, set(catalog))
-        self.assertEqual(("OUT", "power_out"), (catalog["18"]["name"], catalog["18"]["type"]))
 
     def test_stacked_power_output_passes_integrity_and_native_coverage(self):
         with tempfile.TemporaryDirectory() as tmp:

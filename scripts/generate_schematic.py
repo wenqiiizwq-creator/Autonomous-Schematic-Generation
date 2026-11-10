@@ -17,6 +17,19 @@ from schematic_layout.sexpr import dump, form
 from schematic_layout.native import project_settings, verify
 
 
+def write_project(out, name, root, libraries):
+    """Write the root sheet, a project file and a sym-lib-table bound to the libraries read."""
+    path = out / (name + ".kicad_sch")
+    path.write_text(dump(root) + "\n", encoding="utf-8")
+    (out / (name + ".kicad_pro")).write_text(json.dumps(project_settings(), indent=2) + "\n")
+    table = form("sym_lib_table", form("version", 7))
+    for lib, source in sorted(libraries.items()):
+        table.append(form("lib", form("name", lib), form("type", "KiCad"), form("uri", source["path"]),
+                          form("options", ""), form("descr", "")))
+    (out / "sym-lib-table").write_text(dump(table) + "\n")
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("intent", type=Path)
@@ -44,24 +57,9 @@ def main():
         shutil.copyfile(args.intent, out / "electrical_intent.json")
         shutil.copyfile(args.layout, out / "layout_plan.json")
         root, manifest = generate(intent, layout, args.name, args.symbol_dir)
-        path = out / (args.name + ".kicad_sch")
-        path.write_text(dump(root) + "\n", encoding="utf-8")
         # Bind this project to the exact libraries read, avoiding stale global
         # KiCad path mappings. This changes only the new output project.
-        table = form("sym_lib_table", form("version", 7))
-        for name, source in manifest["library_sources"].items():
-            table.append(
-                form(
-                    "lib",
-                    form("name", name),
-                    form("type", "KiCad"),
-                    form("uri", source["path"]),
-                    form("options", ""),
-                    form("descr", ""),
-                )
-            )
-        (out / "sym-lib-table").write_text(dump(table) + "\n")
-        (out / (args.name + ".kicad_pro")).write_text(json.dumps(project_settings(), indent=2) + "\n")
+        path = write_project(out, args.name, root, manifest["library_sources"])
         (out / "generation.json").write_text(
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
         )

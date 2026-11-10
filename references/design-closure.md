@@ -1,6 +1,6 @@
 # 从需求到设计完成
 
-适用于需求驱动的新设计和电气改版。原样重画不需要重新做已设计定型的电气设计。
+适用于需求驱动的设计（C1–C5）。单独运行 C6 重画已有网表时不做电气设计。
 ASG 对其方案、选型、参数和功能实现负责；审查方只提意见，不代替 ASG 完成这些工作。
 
 ## 先做设计，再记录结论
@@ -9,7 +9,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 2. **器件可行性**：系列宣传或物理引脚存在，不证明确切型号/固件具备所需状态、配置和启动行为。先验证架构依赖的能力，再展开外围。拿不到资料时评估独立硬件或有证据的替代方案，并继续不受影响的计算和电路；不要仅把设计工作搬到“厂家待提供”。核心/安规相关器件要确切料号与证据；通用料可先给可采购的容差、耐压、功率、温度等边界；定制磁件要受控结构/端子、材料与制造指标。不能把所有空 MPN 一律判错，也不能称其为已完成可下单 BOM。
 3. **计算要完整**：损耗/能效预算须列出所有适用的主要项，无法精算的项给有来源的上下界及剩余预算。部分损耗的效率上界只能排除明显不可行方案，不能证明达标。磁件先选候选磁芯/材料/窗口并计算绕组、气隙、磁通和损耗，供应商公差及样机验证另列；不能把自由选择的工程输入无限留待供应商。保护要追触发、供电、执行、保持和恢复整条路径及容差/掉电角点，不止静态分压值。不能为补齐表格编造缺失参数或保证值。
 4. **状态和可追溯性**：逐个追启动、正常工作、限流、过温、传感器故障、输出过压、掉电及恢复中适用的状态。写清触发源→判定→执行→供电/保持→恢复，映射实际位号/网络与固件责任。批量给每个需求挂上整板位号不构成功能追溯。
-5. **工作分类**：`design` 是还能用现有证据完成的方案/计算/选型/连线；`external` 是确实需厂商或其他输入的能力/保证；`validation` 才是已给出设计依据和试验入口的实物/认证验证。系统级 ESD/EMC/安规试验、实物或材料承认、认证和报价都是 `validation`，不是资料缺口；手册里有的额定（IFSM、I²t、分断能力、SOA）拿来比对是 `design`（R8，2026-10-27）。`pcb` 仅指封装库、布局实现、DFM；它与 `validation` 可交给后续环节。工程假设尚未成立时不因“以后实测”而关闭设计项。审查意见的处理方式与这些阶段的对应见 [处理审查意见](review-comments.md#1-逐条登记)。
+5. **工作分类**：`design` 是还能用现有证据完成的方案/计算/选型/连线；`external` 是确实需厂商或其他输入的能力/保证；`validation` 才是已给出设计依据和试验入口的实物/认证验证。系统级 ESD/EMC/安规试验、实物或材料承认、认证和报价都是 `validation`，不是资料缺口；手册里有的额定（IFSM、I²t、分断能力、SOA）拿来比对是 `design`（R8，2026-10-27）。`pcb` 仅指封装库、布局实现、DFM；它与 `validation` 可交给后续环节。工程假设尚未成立时不因“以后实测”而关闭设计项。
 
 ## 从审查缺口回到电路
 
@@ -23,7 +23,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 - **待办每版重新确认。** 本版交付的待办只列这次设计过程中确认仍需做的事项。上一版的待办不能原样搬过来：
   每一条都按本版的电路、计算和资料重新核过，仍然成立才写进来，并按本版的认识重写内容。编号不要求跨版本一致。
 - 还有当前可执行设计动作时继续工作。只有实际依赖尚未取得且替代路径已评估，才报告该分支受阻；同时完成其余分支。PCB阶段才产生的实测可列为后续环节的要求，但决定拓扑、保护有效性、额定和安全间距的设计不得推迟到PCB。
-- **先分类，再动图。** 收到审查意见后先按 [处理审查意见](review-comments.md) 逐条登记处理方式：
+- **先分类，再动图。** 收到审查意见后先找负责的模块（SKILL.md P7），再按下面分类：
   电路错误和没做完的设计是设计工作；缺资料的按意见写明的范围补资料；只能靠样机/试验得到的
   能效、EMC、热、寿命、实际寄生写进交给后续环节的要求，不改图。
   补证或计算时发现保守参数下算不过、路径缺失或额定越限，才是需要改图的设计缺口。
@@ -33,12 +33,12 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   **例外：工作方式本身不在手册规定范围内。** 缺一个保证值，是手册规定了这种用法、只是没给某个参数；
   而手册根本没有对应章节的用法（例如控制器 GPIO 只规定了开路电压和偏置电流档，却拿来灌电流驱动光耦）是设计缺陷，
   不是证据缺口。改用规定范围内的做法（外加小信号管缓冲、规定的电流源档位、参考电路接法）属于设计修正，
-  按 SKILL.md 任务 2.1“优先手册规定的工作方式”处理，记录在 `operating_points`。
+  按 SKILL.md 任务 C4.1“优先手册规定的工作方式”处理，记录在 `operating_points`。
 - **改图前写明代价。** 新增或替换电路前（包括采用审查意见附带的改法），在设计记录里写：预计解决哪些意见、
   新增多少器件和需要新审的状态/规则、新器件自身带来哪些新的证据需求；是否采用按设计判断并写明理由。
   新器件带来的待办按正常设计工作处理，不能以此为理由保留手册未规定的工作方式。
 
-新设计/电气改版在现有设计待办记录增加`convergence_version: 1`；有前置工作时才写`blocked_by`（仅填真实前置工作ID，不含泛泛风险），缺省视为没有。
+设计待办记录增加`convergence_version: 1`；有前置工作时才写`blocked_by`（仅填真实前置工作ID，不含泛泛风险），缺省视为没有。
 外部未关闭项增加`fallback_work: [可执行替代设计ID]`；若无可行替代，可省略或写空列表，并以`fallback_evidence: [证据ID]`记录已完成的评估。
 外部任务与替代设计不是互相阻塞的循环：替代方案能用公开资料推进，就不应依赖正在替代的那份厂家资料。
 
@@ -61,21 +61,29 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 `design-closure.json` 是设计审查记录的索引，不复制计算预检的数值模型。
 
 只读现行版本：`parameter_version: 3`、`gap_version: 2`、`derating_version: 1`、`uncertainty_version: 1`、
-`binding_version: 1`、`matrix_version: 1` 六个都要写。缺一个或版本更旧，审计记 `outdated_record`（FAIL），报告提出问题，
+`binding_version: 1`、`matrix_version: 1`、`trace_version: 1` 七个都要写。缺一个或版本更旧，审计记 `outdated_record`（FAIL），报告提出问题，
 `pack_design.py` 拒绝打包：按本页的现行格式重写记录，不再逐版兼容旧记录（用户 2026-11-08）。
+
+**`trace_version: 1`**（用户 2026-11-09：按草案写入）：需求清单是模块 C1 的产品，单独放在 `record/requirements.json`
+（需求条文与来源、`clarifications`、`derating`、`guideline_version` 与 `guideline_scope`，格式见 [能力模块](modules.md)）。
+`design-closure.json` 不再写这些区段，只在 `traceability` 为每条需求写追溯（任务 C5.1）：`requirement`（需求编号）、`status`、
+`implementation`、`refs`、`depends_on`，需要时 `no_check_reason`。审计把两个文件合起来核对，`--requirements` 默认取同目录的
+`requirements.json`。`design-closure.json` 里还有 `requirements`、`clarifications`、`derating`、`guideline_scope` 的记 `outdated_record`；
+`requirements.json` 缺失或不是 `schema_version: 1` 记 `requirements_file`；需求没有追溯记 `requirement_untraced`（`--module C4` 不查）；
+追溯指向不存在的需求记 `unknown_requirement`，追溯里写了条文或来源记 `trace_field`，需求清单里写了追溯字段记 `trace_in_requirements`。
 
 ```json
 {
   "schema_version": 1, "parameter_version": 3, "gap_version": 2, "derating_version": 1, "uncertainty_version": 1,
-  "binding_version": 1, "matrix_version": 1,
+  "binding_version": 1, "matrix_version": 1, "trace_version": 1,
   "intent_sha256": "<electrical-intent.json 的 SHA256>",
   "coverage": "complete",
   "evidence": [
     {"id": "E1", "path": "design-basis.md", "sha256": "<SHA256>", "locator": "第2节，R1功能路径和计算"}
   ],
-  "requirements": [
-    {"id": "R1", "status": "conditional", "implementation": "U1 输出路径；固件故障态尚待证实",
-     "refs": ["U1"], "evidence": ["E1"], "depends_on": ["W1"]}
+  "traceability": [
+    {"requirement": "R1", "status": "conditional", "implementation": "U1 输出路径；固件故障态尚待证实",
+     "refs": ["U1"], "depends_on": ["W1"]}
   ],
   "work_items": [
     {"id": "W1", "stage": "external", "status": "open", "requirements": ["R1"], "evidence": ["E1"],
@@ -102,12 +110,12 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 ```
 
 - `coverage`：全部适用需求/设计工作均已审查才填 `complete`；抽查或历史回放填 `partial`。这不是工具自动证明的完整性。
-- 需求状态 `design_supported` / `conditional` / `open`；`implementation` 描述功能而非只列料号。
+- 需求追溯的状态 `design_supported` / `conditional` / `open`；`implementation` 描述功能而非只列料号。需求的来源 `evidence` 写在 `requirements.json`。
 - 设计网表声明了 `boundary_nets`（离板网络，见 [requirements-to-intent.md](requirements-to-intent.md)）时，审计核对每条的
   `contract` 文档在交付目录或声明的输入里存在（`boundary_contract_missing`），该网络在文档的表格里有一行
   （`boundary_net_not_in_contract`）；声明本身格式错、网络不存在或重复记 `boundary_schema`。审计结果的 `boundary_nets` 列出声明的网络。
-- `clarifications`：问用户的需求问题和答复，给定或采纳的以同编号、`text` 等于答复写进 `requirements`；字段与核对见 [需求澄清](requirement-clarifications.md)。
-- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb`；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的 `gap_version 2` 写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
+- `clarifications`（在 `requirements.json`）：问用户的需求问题和答复，给定或采纳的以同编号、`text` 等于答复写进 `requirements`；字段与核对见 [需求澄清](requirement-clarifications.md)。
+- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb` / `input`（单独运行模块时给定输入有问题：写 `upstream` 出问题的上游模块 C1–C5 和 `given` 给定的文件，只在任务书带 `modules` 时允许，见 [能力模块](modules.md)）；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的 `gap_version 2` 写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
 - 计算：`coverage` 为 `bounded` / `partial`；`conclusion` 为 `supported` / `conditional` / `failed`。无适用计算时提供 `no_calculations_reason`，不能用空列表绕过。
   - **结论由记录推出**（`parameter_version: 2`）：审计按下表推出结论，写的 `conclusion`/`rests_on` 与推出的不一致记
     `conclusion_not_derived`。报告按三档计数，分“依赖厂家资料的计算”“依赖工程估计的计算”两节列出每条依赖的参数或项。
@@ -154,7 +162,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       估算超过目标，或设计要拿成本换余量时，按[需求澄清](requirement-clarifications.md)停下来问用户。
   - **`derating_version: 1`**（新设计，与 `parameter_version` 2 或 3 一起；用户 2026-10-27）：器件应力按[器件应力规范](shared/stress-spec.md)
     判，降额值取[降额规范](shared/derating-rules.md)中本项目等级那一列，规则数据在 `derating-rules.json`。
-    - `derating`：`{level, source}`。`level` 是 `I`/`II`/`III`（缺记 `derating_level_missing`）；`source` 写 `req:<需求编号>`，
+    - `derating`（在 `requirements.json`）：`{level, source}`。`level` 是 `I`/`II`/`III`（缺记 `derating_level_missing`）；`source` 写 `req:<需求编号>`，
       或用户暂缓时 `clarification:<需求澄清编号>`（该澄清的答复是 `DEFERRED`），否则记 `derating_level_without_source`。
     - **查到什么程度**：只审写出来的应力（用户 2026-10-27：每颗器件都有降额规则过于严苛，统一到余量审核规则上来），
       不要求每颗器件、每条规则都有一条检查。一条检查写了 `ref` 和 `rating`（拿应力与额定比）却没写 `derating_rule`，
@@ -194,10 +202,10 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
       应力超幅是[器件应力规范](shared/stress-spec.md)判定表中的一档，这里是它在 ASG 设计记录里的写法。
   - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用设计准则（G01–G09，见[共用设计准则库](shared/guideline-criteria.md)）。
-    `guideline_scope` 写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
+    `guideline_scope`（在 `requirements.json`）写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
     计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表）。
-    只有能淘汰候选方案（任务 1.3 的 `scheme-criteria.json`）、改变选型（性能记录）或进入计算（计算）的准则逐条落实，其余按设计动作照做，
+    只有能淘汰候选方案（任务 C3.1 的 `scheme-criteria.json`）、改变选型（性能记录）或进入计算（计算）的准则逐条落实，其余按设计动作照做，
     不要求逐条引用（用户 2026-11-08 按草案实施）。审计按范围选出适用准则，在 `guidelines` 列出适用（`applicable`）、已引用（`covered`）、
     不适用（`not_applicable`）、没引用（`uncited`）和下游规则，供审查对照；没引用的不报待办，不挡打包。
     写了的引用照样核：已关闭的待办引用准则时，`guideline_evidence` 逐条写
@@ -389,11 +397,11 @@ python3 <skill>/scripts/verify_schematic.py root.kicad_sch --intent electrical-i
 ```
 
 审计拒绝过期证据、无效位号/依赖、未关闭依赖却声称已实现、部分计算却声称支持结论等矛盾。
-`INCOMPLETE` 表示如实记录的未完成设计；`FAIL` 表示记录/结论有矛盾或输入无效；`PASS` 只表示所声明范围内的证据和依赖闭合，**不证明公式正确、需求无遗漏、固件真实支持、ERC/图面审阅通过或审查通过**。人工必须检查证据正文与分类是否成立。新设计交付使用该记录；旧重画流程可不提供，汇总明确显示 NOT_CHECKED。
+`INCOMPLETE` 表示如实记录的未完成设计；`FAIL` 表示记录/结论有矛盾或输入无效；`PASS` 只表示所声明范围内的证据和依赖闭合，**不证明公式正确、需求无遗漏、固件真实支持、ERC/图面审阅通过或审查通过**。人工必须检查证据正文与分类是否成立。新设计交付使用该记录；单独运行 C6 时不提供，汇总明确显示 NOT_CHECKED。
 
 ## 交付状态
 
-分别报告：图纸是否已生成、ASG 设计工作是否闭合、KiCad 自动检查、图面审阅、审查意见处理、后续环节验证。设计报告由 `render_design_report.py` 按这些记录生成。
+分别报告：图纸是否已生成、ASG 设计工作是否闭合、KiCad 自动检查、图面审阅、后续环节验证。设计报告由 `render_design_report.py` 按这些记录生成。
 待办记录审核 PASS 不能覆盖 ERC FAIL 或图面审阅待返工；AUTOMATED_PASS 不能替代设计结论。
 仍有可独立完成的设计项时继续完成，而不以“缺口已列出”作为工作结束。
 

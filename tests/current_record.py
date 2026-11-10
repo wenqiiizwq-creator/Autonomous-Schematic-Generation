@@ -2,12 +2,14 @@
 CURRENT_VERSIONS). Fills in only what the format asks for and the test does not care about, so the test's own case is
 the only finding: version keys, a derating level, one constant per calculation, limit sources, part values, a
 temperature matrix of not-applicable cells and an empty reference input."""
+import copy
 import json
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from audit_design_closure import CURRENT_VERSIONS, sha256  # noqa: E402
+from audit_design_closure import (C1_SECTIONS, CURRENT_VERSIONS, REQUIREMENT_FIELDS, REQUIREMENTS_FILE,  # noqa: E402
+                                  TRACE_FIELDS, sha256)
 
 NA = {'verdict': 'not_applicable', 'reason': '测试夹具，与本例无关'}
 
@@ -50,3 +52,32 @@ def make_current(record, intent=None, root=None):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps({'sources': {}, 'pin_maps': {}}), encoding='utf-8')
     return record
+
+
+def split(record):
+    """A one-dict test record (the audit's merged view) as the two files of trace_version 1: design-closure.json with
+    the traceability, and requirements.json with the requirement text and source, clarifications, derating level and
+    guideline scope. The evidence the requirement rows cite moves along."""
+    closure = copy.deepcopy(record)
+    rows = [r for r in closure.pop('requirements', None) or [] if isinstance(r, dict)]
+    own = {e for r in rows for e in r.get('evidence') or [] if isinstance(e, str)}
+    evidence = closure.get('evidence') if isinstance(closure.get('evidence'), list) else []
+    requirements = {'schema_version': 1, 'evidence': [e for e in evidence if isinstance(e, dict) and e.get('id') in own],
+                    'requirements': [{k: v for k, v in r.items() if k in REQUIREMENT_FIELDS} for r in rows]}
+    for key in C1_SECTIONS:
+        if key in closure:
+            requirements[key] = closure.pop(key)
+    if 'evidence' in closure:
+        closure['evidence'] = [e for e in evidence if not (isinstance(e, dict) and e.get('id') in own)]
+    closure['traceability'] = [dict({'requirement': r.get('id')}, **{k: v for k, v in r.items() if k in TRACE_FIELDS})
+                               for r in rows if any(k in r for k in TRACE_FIELDS)]
+    return closure, requirements
+
+
+def write_record(record, path):
+    """Write a test record as design-closure.json at `path` and requirements.json next to it (split)."""
+    path = Path(path)
+    closure, requirements = split(record)
+    path.write_text(json.dumps(closure, ensure_ascii=False), encoding='utf-8')
+    (path.parent / REQUIREMENTS_FILE).write_text(json.dumps(requirements, ensure_ascii=False), encoding='utf-8')
+    return closure, requirements

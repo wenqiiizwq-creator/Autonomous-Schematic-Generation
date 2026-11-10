@@ -21,9 +21,6 @@ with open(os.environ['STUB_LOG'], 'a') as log:
     log.write(json.dumps([name] + args) + '\n')
 if name == 'audit_design_closure':
     out.write_text(json.dumps({'status': status.get(name, 'INCOMPLETE')}))
-elif name == 'verify_design_preflight':
-    out.write_text(json.dumps({'status': 'CONDITIONAL'}))
-    sys.exit(1)                                   # CONDITIONAL exits non-zero; the status decides
 elif name == 'verify_schematic':
     if status.get(name) == 'none':
         sys.exit(1)
@@ -44,7 +41,7 @@ elif name == 'pack_design':
 elif name == 'check_delivery_freshness':
     print(json.dumps({'status': status.get(name, 'FRESH')}))
 '''
-SCRIPTS = ('audit_design_closure', 'verify_design_preflight', 'verify_schematic', 'render_design_report',
+SCRIPTS = ('audit_design_closure', 'verify_schematic', 'render_design_report',
            'pack_design', 'check_delivery_freshness')
 
 
@@ -67,7 +64,7 @@ class DeliverTests(unittest.TestCase):
         (self.root / '原理图' / 'BOM.csv').write_text('ref,value')
         (self.root / '设计资料' / '方案.md').write_text('basis')
         (self.root / 'record' / 'evidence' / 'geometry-stale.json').write_text('{}')
-        for name in ('electrical-intent.json', 'design-closure.json', 'design-preflight.json', 'change-contract.json'):
+        for name in ('electrical-intent.json', 'design-closure.json'):
             (self.root / 'record' / name).write_text('{}')
         # A finished review of the PDF the stub verifier exports ('%PDF').
         (self.root / 'record' / 'visual-review.json').write_text(json.dumps(
@@ -96,9 +93,8 @@ class DeliverTests(unittest.TestCase):
     def test_full_run_in_order_with_fresh_evidence(self):
         code, steps, failure = self.run_deliver()
         self.assertEqual((0, None), (code, failure))
-        self.assertEqual(['待办审计', '生成前预检', '出图', '自动检查', '交付预检', '生成报告', '交付证据', '证据新鲜度', '打包'],
+        self.assertEqual(['待办审计', '出图', '自动检查', '生成报告', '交付证据', '证据新鲜度', '打包'],
                          [s['step'] for s in steps])
-        self.assertEqual('CONDITIONAL', steps[1]['status'])          # non-zero exit, but not a failure
         self.assertEqual('new', (self.root / '原理图' / 'board.kicad_sch').read_text())
         self.assertTrue((self.root / '原理图' / 'BOM.csv').is_file())
         self.assertFalse((self.root / 'record' / 'evidence' / 'geometry-stale.json').exists())
@@ -108,7 +104,7 @@ class DeliverTests(unittest.TestCase):
         self.assertIn('设计资料/方案.md', evidence['inputs'])
         self.assertIn('record/deliver.json', evidence['inputs'])
         for out in ('record/design-closure-audit.json', 'record/summary.json', '原理图/netlist.xml', '设计报告.md',
-                    'record/preflight-before.json', 'record/evidence/geometry-board.json', '原理图/BOM.csv'):
+                    'record/evidence/geometry-board.json', '原理图/BOM.csv'):
             self.assertIn(out, evidence['outputs'])
             self.assertNotIn(out, evidence['inputs'])
         self.assertEqual(['record/evidence/geometry-board.json'], evidence['roles']['geometry'])
@@ -151,23 +147,6 @@ class DeliverTests(unittest.TestCase):
     def test_unknown_status_stops(self):
         code, steps, _ = self.run_deliver({'verify_schematic': 'BROKEN'})
         self.assertEqual((1, '自动检查'), (code, steps[-1]['step']))
-
-    def test_lone_preflight_file_fails(self):
-        (self.root / 'record' / 'change-contract.json').unlink()
-        code, steps, _ = self.run_deliver()
-        self.assertEqual((1, '生成前预检', 'FAIL'), (code, steps[-1]['step'], steps[-1]['status']))
-        (self.root / 'record' / 'change-contract.json').write_text('{}')
-        (self.root / 'record' / 'design-preflight.json').unlink()
-        self.log.unlink()
-        code, steps, _ = self.run_deliver()
-        self.assertEqual((1, '生成前预检', 'FAIL'), (code, steps[-1]['step'], steps[-1]['status']))
-
-    def test_no_preflight_files_skips_both_checks(self):
-        for name in ('change-contract.json', 'design-preflight.json'):
-            (self.root / 'record' / name).unlink()
-        code, steps, _ = self.run_deliver()
-        self.assertEqual(0, code)
-        self.assertNotIn('生成前预检', [s['step'] for s in steps])
 
     def test_declared_inputs_reach_audit_verify_and_pack(self):
         self.run_deliver()

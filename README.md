@@ -3,25 +3,26 @@
 > ASG：从需求文档出发，基于 KiCad 自主绘制可读、电气正确、经 KiCad 导出验证的原理图
 
 Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claude 等 Agent 的 Skill。
-从需求文档出发，按五步完成一块板的原理图设计：需求与方案（需求追溯、系统架构、功能块方案、核心器件选型）→ 详细设计
-（数据手册核对、设计计算与器件性能要求、选型符合性、设计网表）→ 原理图绘制（按绘图纲要 O1–O8 用引脚几何画法 recipes）
-→ 设计检查（KiCad ERC、逐脚网表、层次、符号、可读性、几何与图面审阅）→ 设计输出（设计报告与固定交付目录）。
+从需求文档出发，按六个能力模块完成一块板的原理图设计：C1 需求理解与澄清 → C2 板级方案 → C3 块电路选择
+→ C4 详细设计与器件选型（每块一次）→ C5 全板闭合 → C6 原理图绘制与检查，再生成设计报告和固定交付目录。
+模块可以按给定输入单独运行，也可以串联；上游变化后按指纹重跑受影响的模块。
 ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 
-流程与规则见 [SKILL.md](SKILL.md)。各步的主要入口：
+流程与规则见 [SKILL.md](SKILL.md)。各模块及交付的主要入口：
 
-| 步骤 | 入口 |
+| 模块 | 入口 |
 |---|---|
-| ① 需求与方案 | `find_parts.py`（检索本机知识库 `~/Documents/知识库/HardwareWiki/raw/` 与 `--circuits` 典型电路库）、`check_scheme_criteria.py`、`select_guidelines.py`（`guideline_criteria.py select` 的多值包装） |
-| ② 详细设计 | `fill_pin_maps.py`、`make_symbol.py`（从手册引脚表生成符号）、`complete_pin_coverage.py`、`audit_design_closure.py`、`audit_component_requirements.py` |
-| ③ 原理图绘制 | `schematic_layout.recipes.Sheet`、`schematic_layout.root.Root`（见 [drawing-recipes.md](references/drawing-recipes.md)） |
-| ④ 设计检查 | `verify_schematic.py`（一次运行全部自动检查）、`audit_system_block.py` |
-| ⑤ 设计输出 | `deliver.py`（一次跑完出图到打包）、`render_design_report.py`、`pack_design.py`、`check_ledger.py` |
+| C1 需求理解与澄清 | `check_module.py C1`（核对 `requirements.json`） |
+| C2 板级方案 | `check_module.py C2`（核对 `architecture.json`） |
+| C3 块电路选择 | `find_parts.py`（检索本机知识库及典型电路）、`check_scheme_criteria.py`、`select_guidelines.py`、`block_circuits.py` |
+| C4 详细设计与器件选型 | `fill_pin_maps.py`、`make_symbol.py`、`complete_pin_coverage.py`、`audit_design_closure.py`、`audit_component_requirements.py`、`check_module.py C4` |
+| C5 全板闭合 | `blocks.py merge`、`audit_design_closure.py`、`check_module.py C5` |
+| C6 原理图绘制与检查 | `schematic_layout.recipes.Sheet`、`schematic_layout.root.Root`、`verify_schematic.py`、`audit_system_block.py` |
+| 交付 | `deliver.py`（一次跑完出图到打包）、`render_design_report.py`、`pack_design.py`、`check_ledger.py` |
 
-其他工作流：改版与多页核对用 `verify_design_change.py`、`audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
-保持图面的 Value 修改用 `patch_schematic_values.py`（见 [value-patch.md](references/value-patch.md)）；夹具与草稿用的低层生成器
-`build_circuit.py` / `generate_schematic.py` 见 [circuit-ir.md](references/circuit-ir.md)、[schematic-generation.md](references/schematic-generation.md)，
-它们不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [上游来源](references/upstream-licenses/README.md)。
+其他：多页核对用 `audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
+夹具与草稿用的低层生成器 `generate_schematic.py` 见 [schematic-generation.md](references/schematic-generation.md)，
+它不出交付页。上游借鉴（schematic-trace-solver、kicad-mcp-pro、SKiDL、circuit-synth）见 [上游来源](references/upstream-licenses/README.md)。
 
 ## 运行一个样例
 

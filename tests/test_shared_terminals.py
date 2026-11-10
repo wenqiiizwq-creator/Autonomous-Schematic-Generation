@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'scripts'))
 from schematic_layout.generate import generate, make_root, route_root
 from schematic_layout.native import verify, find_cli
 from schematic_layout.scene import read_scene
-from build_circuit import write_project
+from generate_schematic import write_project
 
 class SharedTerminalTests(unittest.TestCase):
     def fixture(self):

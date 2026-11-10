@@ -1,6 +1,6 @@
 interface:
   display_name: "Autonomous-Schematic-Generation (ASG)"
   short_description: "ASG: requirements to verified, readable KiCad schematics"
-  default_prompt: "Use $autonomous-schematic-generation to design a board schematic from requirement documents in five steps: requirements and solution (traceability, architecture, functional-block schemes, core part selection with user confirmation), detailed design (datasheet pin maps, design calculations and component performance requirements, selection compliance, design netlist), drawing readable KiCad pages with pin-geometry recipes and outline rules O1-O8, design checks (KiCad ERC, pin-by-pin netlist against the design netlist, hierarchy, symbols, readability, geometry and page-by-page visual review), and design output (generated design report and fixed delivery folder); hand independent review to schematic-review."
+  default_prompt: "Use $autonomous-schematic-generation to design a board schematic from requirement documents through six capability modules, run in sequence or one at a time with given inputs: C1 requirements and clarification, C2 board architecture, C3 block circuit and core-part selection, C4 detailed design, calculations and part selection, C5 whole-board closure and design netlist, C6 schematic drawing and checks (KiCad ERC, pin-by-pin netlist, readability, geometry, visual review); then the generated report and fixed delivery folder. Hand independent review to schematic-review."
 policy:
   allow_implicit_invocation: true

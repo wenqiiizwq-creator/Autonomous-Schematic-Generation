@@ -101,26 +101,6 @@ class VerifySchematicTests(unittest.TestCase):
         _, s = self.run_gates('good', path, '-board')
         self.assertEqual('PASS', s['gates']['intent_netlist']['status'])
 
-    def test_preflight_bindings_resolve_against_artifact_root(self):
-        # Delivery layout: the root sheet sits in a subfolder, bound artifacts beside it.
-        root = self.dir / 'delivery'
-        (root / 'docs').mkdir(parents=True)
-        (root / 'docs' / 'fact.txt').write_text('x=7\n')
-        contract, preflight = self.dir / 'change.json', self.dir / 'preflight.json'
-        contract.write_text(json.dumps({'schema_version': 1}))
-        preflight.write_text(json.dumps({
-            'schema_version': 1, 'revision': 'T', 'changed_objects': ['R1'], 'calculations': [], 'impacts': [],
-            'facts': {'x': {'value': '7', 'evidence': [{'source': 'test', 'locator': 'x'}]}},
-            'artifact_bindings': [{'fact': 'x', 'path': 'docs/fact.txt', 'format': 'text', 'pattern': r'^x=(\d+)$'}]}))
-        _, s = self.run_gates('good', self.dir / 'intent.json', '-preflight',
-                              ['--baseline-xml', str(self.dir / 'run-good' / 'netlist.xml'),
-                               '--change-contract', str(contract), '--preflight', str(preflight),
-                               '--artifact-root', str(root)])
-        self.assertIn('design_change', s['gates'])
-        report = json.loads((self.dir / 'run-good-preflight' / 'design-change.json').read_text())
-        errors = ' '.join(report['preflight']['errors'])
-        self.assertNotIn('docs/fact.txt', errors)
-
     def test_output_directory_must_be_fresh(self):
         r = subprocess.run([sys.executable, str(RUNNER), str(self.dir / 'good' / 'recipe_board.kicad_sch'),
                             '--intent', str(self.dir / 'intent.json'), '--out', str(self.dir / 'run-good')],

@@ -6,7 +6,7 @@ intent partitions and component identity, hierarchy/PDF audit, symbol
 integrity, discrete symbol semantics (TVS direction, MOSFET channel, BJT type)
 against the part's datasheet or MPN suffix, the readability gate and geometry QA on every active sheet, the
 declared external-supply/PWR_FLAG check when the intent declares one or a flag
-is drawn, and optionally a reference contract and an electrical change contract. All reports
+is drawn, and optionally a reference contract. All reports
 and ``summary.json`` go into a fresh output directory.
 
 ``AUTOMATED_PASS`` covers only these gates. Native render review of every page
@@ -66,13 +66,10 @@ def main():
     ap.add_argument("--symbol-exceptions", type=Path)
     ap.add_argument("--readability-waivers", type=Path)
     ap.add_argument("--reference-contract", type=Path)
-    ap.add_argument("--baseline-xml", type=Path, help="baseline native XML for an electrical change")
-    ap.add_argument("--change-contract", type=Path)
-    ap.add_argument("--preflight", type=Path, help="design-preflight.json for an electrical change")
     ap.add_argument("--design-closure", type=Path, help="Evidence-bound end-to-end design review record")
     ap.add_argument("--input", action="append", default=[], metavar="NAME=PATH",
                     help="declared input for --design-closure evidence, as pack_design takes it")
-    ap.add_argument("--artifact-root", type=Path, help="Evidence base for --design-closure, --preflight artifact bindings and reviewed_circuit_supply; defaults to root parent")
+    ap.add_argument("--artifact-root", type=Path, help="Evidence base for --design-closure and reviewed_circuit_supply; defaults to root parent")
     ap.add_argument("--project", help="native project annotation name; defaults to the root file stem")
     ap.add_argument("--cli", help="kicad-cli path")
     ap.add_argument("--native-geometry", action="store_true", help="Also qualify native pin-name geometry on a standalone page; hierarchy roots enable the finite native channel automatically")
@@ -80,8 +77,6 @@ def main():
     args = ap.parse_args()
     if args.out.exists() and any(args.out.iterdir()):
         ap.error("Output directory is not empty; use a fresh run directory")
-    if bool(args.baseline_xml) != bool(args.change_contract):
-        ap.error("--baseline-xml and --change-contract go together")
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     gates, commands = {}, []
@@ -238,14 +233,6 @@ def main():
         report = out / "reference-contract.json"
         tool("verify_reference_contract.py", xml, args.reference_contract, "--out", report)
         gates["reference_contract"] = {"status": status_of(report)}
-
-    if args.change_contract:
-        report = out / "design-change.json"
-        extra = ["--preflight", args.preflight, "--artifact-root", args.artifact_root or args.root.resolve().parent] if args.preflight else []
-        tool("verify_design_change.py", args.baseline_xml, xml, args.change_contract, *extra, "--out", report)
-        gates["design_change"] = {"status": status_of(report)}
-        if not args.preflight:
-            gates["design_change"]["note"] = "No --preflight: native delta only, not an electrical redesign closure"
 
     if args.design_closure:
         report = out / "design-closure.json"

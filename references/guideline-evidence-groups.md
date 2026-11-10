@@ -2,7 +2,7 @@
 
 > 读者：ASG 运行者与维护者。数据在 [guideline-evidence-groups.json](guideline-evidence-groups.json)，`audit_design_closure.py` 按它核对。
 
-共用设计准则只有能淘汰候选方案、改变选型或进入计算的才逐条落实（SKILL.md 任务 1.3、2.2、2.3；用户 2026-11-08 按草案实施），
+共用设计准则只有能淘汰候选方案、改变选型或进入计算的才逐条落实（SKILL.md 任务 C3.1、C4.2、C4.3；用户 2026-11-08 按草案实施），
 其余按设计动作照做，不要求逐条引用，也不要求为覆盖准则写文档。审计在 `design-closure-audit.json` 的 `guidelines` 里列出适用（`applicable`）、
 已引用（`covered`）和没引用（`uncited`）的准则，供审查对照，不报待办，不挡打包。
 

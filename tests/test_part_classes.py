@@ -140,8 +140,7 @@ class IdentityTests(unittest.TestCase):
         return [line.split('（')[0].split(' ')[-1] for line in lines]
 
     def test_new_design_lists_every_incomplete_part_as_a_problem(self):
-        problems, inherited, unchecked = pc.audit_identity(self.intent(), [self.root])
-        self.assertEqual([], inherited)
+        problems, unchecked = pc.audit_identity(self.intent(), [self.root])
         self.assertEqual([], unchecked)
         self.assertEqual(['C201', 'D712', 'CX101', 'L201', 'BZ1'], self.refs(problems))
         self.assertIn('常规件 C201（120u）缺耐压', problems[0])
@@ -166,7 +165,7 @@ class IdentityTests(unittest.TestCase):
 
     def test_a_page_without_text_is_listed_not_passed_or_blocked(self):
         with mock.patch.object(pc, 'page_text', return_value=''):
-            problems, _, unchecked = pc.audit_identity(
+            problems, unchecked = pc.audit_identity(
                 {'nets': {}, 'components': [declared('D706', 'PD100:D_TVS_Uni', 'tvs', 'Unidirectional TVS')]}, [self.root])
         self.assertEqual([], problems)
         self.assertEqual(1, len(unchecked))
@@ -209,12 +208,6 @@ class IdentityTests(unittest.TestCase):
     def test_a_datasheet_that_is_nowhere_is_not_a_datasheet(self):
         intent = {'components': [declared('D706', 'PD100:D_TVS_Uni', 'tvs', 'Unidirectional TVS', datasheet='gone.pdf')]}
         self.assertIn('不在交付目录或知识库里', pc.audit_identity(intent, [self.root])[0][0])
-
-    def test_revision_blocks_only_parts_it_adds_or_changes(self):
-        touched = pc.touched_refs({'add_components': {'D712': {}}, 'component_changes': {'C201': {}}})
-        problems, inherited, _ = pc.audit_identity(self.intent(), [self.root], touched)
-        self.assertEqual(['C201', 'D712'], self.refs(problems))
-        self.assertEqual(['CX101', 'L201', 'BZ1'], self.refs(inherited))
 
 
 class CitationTests(unittest.TestCase):
@@ -330,7 +323,7 @@ class SafetyTests(unittest.TestCase):
                           'U1': 'isolation'}, pc.safety_positions(safety_intent()))
 
     def test_protection_needs_a_two_sided_threshold_and_safety_positions_an_approval(self):
-        problems, _ = pc.audit_safety(safety_intent(), {'calculations': [{'id': 'FUSE', 'refs': ['F1', 'RV1']}]})
+        problems = pc.audit_safety(safety_intent(), {'calculations': [{'id': 'FUSE', 'refs': ['F1', 'RV1']}]})
         text = '\n'.join(problems)
         for said in ('保护器件 F1', '保护器件 RV1', '跨隔离的器件 T1', '跨隔离的器件 CY1', '跨隔离的器件 U1',
                      '市电/高压侧的安规件 J1', 'X 电容 CX1（220n/X2/310Vac）要进放电', 'Y 电容 CY1（1n/Y1/400Vac）要进接触电流'):
@@ -340,14 +333,13 @@ class SafetyTests(unittest.TestCase):
             c['fields']['Approval'] = 'IEC 60384-14；UL E123456'
         closure = {'calculations': [{'id': 'INPUT', 'kind': 'threshold', 'refs': ['F1', 'RV1', 'CX1']},
                                     {'id': 'TOUCH', 'refs': ['CY1']}]}
-        self.assertEqual(([], []), pc.audit_safety(intent, closure))
+        self.assertEqual([], pc.audit_safety(intent, closure))
 
     def test_a_design_with_safety_parts_declares_its_high_voltage_nets(self):
         intent = safety_intent()
         del intent['high_voltage_nets']
-        problems, inherited = pc.audit_safety(intent, {})
+        problems = pc.audit_safety(intent, {})
         self.assertIn('没写 high_voltage_nets', problems[0])
-        self.assertIn('没写 high_voltage_nets', pc.audit_safety(intent, {}, touched=set())[1][0])
 
 
 def common_ground_intent(hv):
@@ -370,7 +362,7 @@ class CommonGroundSafetyTests(unittest.TestCase):
 
     def test_a_39v_bootstrap_does_not_make_the_pps_connector_an_isolation_part(self):
         self.assertNotIn('J2', pc.safety_positions(common_ground_intent(['BST'])))
-        problems, _ = pc.audit_safety(common_ground_intent(['BST']), {})
+        problems = pc.audit_safety(common_ground_intent(['BST']), {})
         self.assertFalse([p for p in problems if '跨隔离' in p], problems)
 
     def test_signals_between_pins_of_one_connector_are_not_another_domain(self):

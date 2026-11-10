@@ -1,4 +1,4 @@
-"""Task 1.3: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json)."""
+"""Task C3.1: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json)."""
 import json
 import re
 import subprocess
@@ -20,7 +20,7 @@ def closing_check(name):
 
 
 def closure(types=('POWER_PROTECTION', 'DC_24V'), kinds=('tvs', 'mosfet'), calculations=None):
-    # The values the records below leave to task 2.2 are closed by a calculation citing their rules (A4).
+    # The values the records below leave to task C4.2 are closed by a calculation citing their rules (A4).
     if calculations is None:
         calculations = [{'id': 'CALC-CLAMP', 'guidelines': ['G07-022', 'G07-023', 'G07-030'],
                          'checks': [closing_check(n + ' 对 下游绝对最大值') for n in ('负向浪涌残压', '负向残压', '钳位器件脉冲能量')]}]
@@ -124,7 +124,8 @@ def write_records(root, scheme):
     records = root / 'record'
     records.mkdir()
     (records / 'scheme-criteria.json').write_text(json.dumps(scheme), encoding='utf-8')
-    (records / 'design-closure.json').write_text(json.dumps(closure()), encoding='utf-8')
+    (records / 'requirements.json').write_text(json.dumps({'schema_version': 1, 'guideline_scope': closure()['guideline_scope']}),
+                                               encoding='utf-8')
     return records
 
 
@@ -146,7 +147,7 @@ def test_cli_accepts_the_documented_example(tmp_path):
 
 @pytest.mark.parametrize('filename,content', [
     ('scheme-criteria.json', None), ('scheme-criteria.json', '{'),
-    ('design-closure.json', None), ('design-closure.json', '{'), ('design-closure.json', 'null'),
+    ('requirements.json', None), ('requirements.json', '{'), ('requirements.json', 'null'),
 ])
 def test_cli_reports_unreadable_or_missing_records(tmp_path, filename, content):
     records = write_records(tmp_path, document_example())
@@ -244,26 +245,34 @@ def test_exactly_one_selected_candidate(statuses):
     assert any('只有一个 selected' in p for p in check(data))
 
 
-def test_cli_checks_selected_circuit_against_page_plan(tmp_path):
+def test_cli_is_the_c3_gate_and_leaves_the_page_plan_to_c6(tmp_path):
+    # SKILL.md 架构 (user 2026-11-09): the task C3.1 gate reads no page plan; check_module.py C6 compares them.
     data = record(criterion())
     b = data['blocks'][0]
     b['candidates'][0]['circuit'] = 'dc-reverse-protection#甲'
     records = write_records(tmp_path, data)
-    assert run_cli(tmp_path).returncode == 0  # task 1.3 precedes page planning
+    assert run_cli(tmp_path).returncode == 0
     plan = {'schema_version': 1, 'pages': [{'file': 'a.kicad_sch', 'blocks': {b['block']: ['U1']},
                                           'key_blocks': [b['block']], 'circuits': {b['block']: 'dc-reverse-protection#乙'}}]}
-    path = records / 'page-plan.json'
-    path.write_text(json.dumps(plan))
-    result = run_cli(tmp_path)
-    assert result.returncode != 0 and 'circuits 不一致' in result.stdout
-    plan['pages'][0]['circuits'][b['block']] = 'dc-reverse-protection#甲'
-    path.write_text(json.dumps(plan))
+    (records / 'page-plan.json').write_text(json.dumps(plan))
     assert run_cli(tmp_path).returncode == 0
+
+
+def test_scheme_against_plan_is_the_c6_cross_check():
+    data = record(criterion())
+    b = data['blocks'][0]
+    b['candidates'][0]['circuit'] = 'dc-reverse-protection#甲'
+    plan = {'schema_version': 1, 'pages': [{'file': 'a.kicad_sch', 'blocks': {b['block']: ['U1']},
+                                          'key_blocks': [b['block']], 'circuits': {b['block']: 'dc-reverse-protection#乙'}}]}
+    assert any('circuits 不一致' in p for p in report.scheme_against_plan(data, plan))
+    plan['pages'][0]['circuits'][b['block']] = 'dc-reverse-protection#甲'
+    assert report.scheme_against_plan(data, plan) == []
     plan['pages'][0]['blocks'] = {'别的块': ['U1']}
-    path.write_text(json.dumps(plan))
-    assert '没有对应功能块' in run_cli(tmp_path).stdout
-    path.write_text('{')
-    assert run_cli(tmp_path).returncode != 0
+    plan['pages'][0]['key_blocks'] = ['别的块']
+    problems = report.scheme_against_plan(data, plan)
+    assert any('没有对应功能块' in p for p in problems) and any('别的块' in p for p in problems)
+    # The whole-board report still makes the same cross-check.
+    assert any('没有对应功能块' in p for p in report.check_scheme_criteria(data, closure(), plan=plan))
 
 
 def test_key_page_block_requires_comparison_even_without_key_scope_type():
@@ -279,7 +288,7 @@ def test_comparison_is_in_the_report():
         assert value in rendered
 
 
-# A4 (whole-board baseline 2026-11-07): the calibration board left "SM712 钳位对收发器总线额定" to task 2.2; CALC-RS485
+# A4 (whole-board baseline 2026-11-07): the calibration board left "SM712 钳位对收发器总线额定" to task C4.2; CALC-RS485
 # cited G05-033 and G04-005 but compared no clamp voltage with the transceiver's bus rating.
 def test_a_deferred_value_no_calculation_computes_is_not_closed():
     problems = check(record(criterion()), closure(calculations=[]))

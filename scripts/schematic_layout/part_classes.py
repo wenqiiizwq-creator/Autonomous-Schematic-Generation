@@ -355,13 +355,6 @@ def design_sheet(comp):
     return sheet if text(sheet) else None
 
 
-def touched_refs(contract):
-    """Parts this revision adds or changes, per record/change-contract.json; None for a new design."""
-    if not isinstance(contract, dict):
-        return None
-    return set(contract.get('add_components') or {}) | set(contract.get('component_changes') or {})
-
-
 def squash(value):
     return re.sub(r'[^0-9a-z]', '', str(value or '').lower())
 
@@ -487,14 +480,11 @@ def needs_declaration(comp, kind, level):
     return level in (KEY, SPECIAL) and kind not in (None, 'ic') and not design_sheet(comp)
 
 
-def audit_identity(intent, bases, touched=None):
-    """(problems, inherited, unchecked): parts whose kind or subcategory is unknown or contradicted, key and special
+def audit_identity(intent, bases):
+    """(problems, unchecked): parts whose kind or subcategory is unknown or contradicted, key and special
     parts lacking an MPN, a datasheet or a verified kind declaration, and common parts without their ratings;
-    unchecked lists kind declarations whose page text could not be read (NO_TEXT), which do not block.
-
-    With a change contract only parts the revision adds or changes are problems; parts kept from the
-    baseline are listed as inherited."""
-    problems, inherited, unchecked = [], [], []
+    unchecked lists kind declarations whose page text could not be read (NO_TEXT), which do not block."""
+    problems, unchecked = [], []
     check_files = library_present()
     ctx = context(intent)
     for comp in intent.get('components') or []:
@@ -552,8 +542,8 @@ def audit_identity(intent, bases, touched=None):
             why = '设计网表没写 high_voltage_nets，按接高压处理；没有高于 30 V 的网络写空列表'
         line = '%s %s（%s%s）%s' % (CLASS_NAMES.get(kind_cls, '器件'), ref, comp.get('value', ''),
                                   '；升为特殊器件：' + why if why else '', '；'.join(said))
-        (problems if touched is None or ref in touched else inherited).append(line)
-    return problems, inherited, unchecked
+        problems.append(line)
+    return problems, unchecked
 
 
 def audit_citations(intent, closure, bases):
@@ -661,8 +651,8 @@ def protection_part(comp, ctx):
     return kind in PROTECTION_KINDS or (kind == 'ntc' and part_class(comp, ctx) == SPECIAL)
 
 
-def audit_safety(intent, closure, touched=None):
-    """(problems, inherited): protection parts without a two-sided threshold calculation, parts at safety positions
+def audit_safety(intent, closure):
+    """Problems: protection parts without a two-sided threshold calculation, parts at safety positions
     without an approval, safety capacitors without their discharge or touch-current calculation, and a design with
     safety parts but no high_voltage_nets."""
     ctx = context(intent)
@@ -670,15 +660,15 @@ def audit_safety(intent, closure, touched=None):
     in_calc = {r for c in calcs for r in c.get('refs') or []}
     in_threshold = {r for c in calcs if c.get('kind') == 'threshold' for r in c.get('refs') or []}
     positions = safety_positions(intent, ctx)
-    problems, inherited = [], []
+    problems = []
 
     def add(ref, line):
-        (problems if touched is None or ref in touched else inherited).append(line)
+        problems.append(line)
 
     comps = [c for c in intent.get('components') or [] if isinstance(c, dict)]
     if ctx['hv'] is None and any(kind_of(c)[0] in SAFETY_RELEVANT or category(c)[0] == SAFETY_C for c in comps):
         line = '设计网表没写 high_voltage_nets（工作电压高于 30 V 或接市电的网络），判不出安全防护位置'
-        (problems if touched is None else inherited).append(line)
+        problems.append(line)
     for comp in comps:
         ref, value = comp.get('ref'), comp.get('value', '')
         if protection_part(comp, ctx) and ref not in in_threshold:
@@ -690,4 +680,4 @@ def audit_safety(intent, closure, touched=None):
         if category(comp)[0] == SAFETY_C and ref not in in_calc:
             y = where == 'isolation' or prefix(comp) == 'CY' or re.search(r'(?<![A-Za-z0-9])Y[12]', spec_text(comp))
             add(ref, '%s %s（%s）要进%s计算的 refs' % ('Y 电容' if y else 'X 电容', ref, value, '接触电流' if y else '放电'))
-    return problems, inherited
+    return problems

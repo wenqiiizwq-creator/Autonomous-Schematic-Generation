@@ -2,7 +2,7 @@
 
 本文规定 ASG 怎样为每个**核心器件角色**找候选、比较并记录结论。核心器件指决定架构或固件/配置依赖的器件：
 控制器与协议 IC（PFC、反激、SR、PD、MCU）、功率开关、磁件、隔离与反馈器件；两脚通用件（电阻、电容、普通二极管）按计算直接定值，
-不走本流程。选型在任务 1.4 做（任务 1.2 定架构、1.3 定实现方案之后，任务 2.1 核数据手册之前）：先定型号，再按 [symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md) 核对它的手册。
+不走本流程。选型在任务 C3.2 做（任务 C2.1 定架构、C3.1 定实现方案之后，任务 C4.1 核数据手册之前）：先定型号，再按 [symbol-and-peripheral-contracts.md](symbol-and-peripheral-contracts.md) 核对它的手册。
 
 ## 1. 器件库在哪里
 
@@ -26,7 +26,7 @@
 3. 同拓扑参考设计的核心器件：`find_parts.py --designs <拓扑/功率/接口>`，打开板手册的 BOM，把它用的控制器、开关、磁件抄成候选，记下板名。
 4. 库内同类手册：按 part-roles.md 定二级类，`find_parts.py --category "<二级类>"` 列出全部，
    用决定性参数先筛掉明显不合的，剩下的打开手册首页核。
-5. 库里没有合适的类或候选不足两个时才外部检索（Digikey/JLCPCB MCP 工具或网页），下载的手册按 SKILL.md 任务 2.1 的资料规则存入工程资料目录（设计期间不写入知识库），
+5. 库里没有合适的类或候选不足两个时才外部检索（Digikey/JLCPCB MCP 工具或网页），下载的手册按 SKILL.md 任务 C4.1 的资料规则存入工程资料目录（设计期间不写入知识库），
    然后它和第 4 条的候选同等比较，`datasheet` 写交付目录内的路径。记录里写明这一步做过。
 
 ## 3. 怎么比较
@@ -68,7 +68,7 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 
 **外部条件不确定时给出方案，先问再画。** 选定候选的 `external_dependencies` 不为空时，列出 2–3 个选型方案
 （例如“单芯片方案”“通用控制器 + MCU”“换一家资料公开的控制器”），比较各自的外部依赖、代价和优缺点，
-给出 ASG 的建议和理由，在任务 1.4 结束时交用户决定；用户定下来之前不进入步骤 ②。用户的决定记在 `decision` 里，
+给出 ASG 的建议和理由，在任务 C3.2 结束时交用户决定；用户定下来之前不进入 C4。用户的决定记在 `decision` 里，
 选定候选必须属于用户选的方案。
 
 ## 4. 记录：`record/selection.json`
@@ -80,6 +80,7 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
   "roles": [
     {
       "role": "PFC 控制器",
+      "block_id": "PFC",
       "refs": ["U201"],
       "requirements": ["R-IN-01", "R-EFF-02"],
       "decisive": [
@@ -107,7 +108,7 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 
 字段要求（`render_design_report.py` 检查，不满足算记录问题，`pack_design.py` 拒绝打包）：
 
-- 每个角色有 `role`、非空 `refs`、非空 `decisive`（对象列表，见第 3 节）、`candidates`；`sources`（候选从哪里找的）可选。
+- 每个角色有 `role`、`block_id`（所属功能块，`architecture.json` 的 `blocks[].id`；`block_circuits.py` 按它把角色抽进块文件）、非空 `refs`、非空 `decisive`（对象列表，见第 3 节）、`candidates`；`sources`（候选从哪里找的）可选。
 - `selected` 和 `alternate` 候选对每条决定性条件都有 `values[param] = {"value", "page"}` 且判定满足；
   `rejected` 候选至少一条判定不满足，或写 `reject_kind`。
 - 候选 ≥ 2，否则要有 `single_candidate_reason`；`status` 只能是 `selected`/`rejected`/`alternate`，恰好一个 `selected`。
@@ -115,14 +116,14 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
   `values` 的每个 `page` 必须在该手册页数之内，否则算记录问题；数值在那一页的文字里找不到时列入报告“引用待人工核对”，不拦。
 - `selected` 的每个位号都在设计网表里，且该器件的 `value` 或 `mpn` 含选定型号。
 - 设计网表里每个 U/Q/T 开头的器件都属于某个角色；一个角色可以覆盖多个位号（例如两只并联 MOS）。
-- 上两条是位号绑定，设计网表写出（任务 2.4）后才查；任务 1.4 还没有设计网表，`check_selection` 只查候选、资料和用户决定
+- 上两条是位号绑定，设计网表写出（任务 C5.1）后才查；任务 C3.2 还没有设计网表，`check_selection` 只查候选、资料和用户决定
   （Matrix R3：1.4 时设计网表不存在，绑定检查使做完的标志无法达到）。
-- 每个角色都有确认记录 `decision`（任务 1.4 选型确认，整板评测 2026-11-07）：用户确认的写 `{"source": "user:<日期>", "locator": "<对话里哪一处>"}`；
+- 每个角色都有确认记录 `decision`（任务 C3.2 选型确认，整板评测 2026-11-07）：用户确认的写 `{"source": "user:<日期>", "locator": "<对话里哪一处>"}`；
   需求或方案文档已写明用户确认、选型与之一致的写 `{"source": "scheme:<证据编号>", "locator": "<文档里哪一处>", "quote": "<原文>"}`，
   证据编号在 `design-closure.json` 的 `evidence` 里，文件是用户的文档（不是 ASG 写的 `设计资料/`、`record/`），`quote` 原样在文件里且含选定型号。
   无人当场确认、任务书有代答授权（[任务输入输出格式](workflow-handoff.md) 的 `delegation`，`scope` 含 `selection`）时写
   `{"source": "delegate:<代答人>:<日期>"}`，代答人与日期和授权一致；代答只能采纳 ASG 的建议，有 `options` 的角色要选 `recommended` 的方案。
-  ② 中改变已确认的选型后重新确认，同样按这三种来源写。
+  C4 中改变已确认的选型后重新确认，同样按这三种来源写。
   一次汇总确认的清单，各角色写同一个来源。`user:` 来源与用户答复里不得出现运行者自拟的标记（eval-run、auto、无用户、运行者、预先授权、代填）：
   没人确认、也没有代答授权就停下来问，不自填 `user:`。
 - `selected` 候选写 `external_dependencies`（字符串列表，没有写空列表）。不为空时角色还要有：

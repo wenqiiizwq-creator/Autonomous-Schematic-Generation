@@ -155,11 +155,11 @@ KiCad 的引脚名/类型来自器件确切的 `libsource` → 唯一的 `libpar
 ```sh
 python3 scripts/verify_reference_contract.py path/to/native.xml \
   path/to/reference-contract.json --out output/reference-check.json
-python3 scripts/build_circuit.py circuit.json presentation.json \
+python3 scripts/generate_schematic.py intent.json layout.json \
   --reference-contract path/to/reference-contract.json --output-dir output/new-run
 ```
 
-`generate_schematic.py` 也有同样的选项。两个入口和已有的参考生成器都在 KiCad 检查内自动运行符号完整性。
+生成器在 KiCad 检查内自动运行符号完整性。
 提供的核对表必须 PASS 才能自动验收。不提供时不做任何来源/外围电路结论；`datasheet_review: PENDING` 保留。
 板级 IC 设计在称参考电路已核对之前，技能流程要求有工程的外围电路核对表，或明确的未覆盖/不支持发现。
 

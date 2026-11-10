@@ -52,7 +52,7 @@ class CompactPresentationTests(unittest.TestCase):
     def test_native_groups_and_rotated_fields_preserve_physical_circuit(self):
         intent,layout=self.fixture();root,manifest=generate(intent,layout,'compact')
         with tempfile.TemporaryDirectory() as folder:
-            from build_circuit import write_project
+            from generate_schematic import write_project
             path=write_project(Path(folder),'compact',root,manifest['library_sources'])
             report=verify(path,intent,layout,Path(folder)/'native')
             self.assertEqual(report['status'],'PASS',json.dumps(report))

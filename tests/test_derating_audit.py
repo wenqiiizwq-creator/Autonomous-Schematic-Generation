@@ -1,4 +1,4 @@
-"""Task 2.2, judged by stress-spec.md (user 2026-10-27): a check that names a derating rule uses the rule's value at the
+"""Task C4.2, judged by stress-spec.md (user 2026-10-27): a check that names a derating rule uses the rule's value at the
 project's level; a stress over the derated value but within the rating passes with a stress risk and an improvement, one
 over the rating fails; only the stresses written are checked, and a stress against a rating that names no rule is a hint;
 the level is a requirement and says where it was decided."""

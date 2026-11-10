@@ -1,4 +1,4 @@
-"""Task 2.2 (user 2026-10-28: 先改前四条; 判风险): an engineering estimate says how far it may be off, and a check resting
+"""Task C4.2 (user 2026-10-28: 先改前四条; 判风险): an engineering estimate says how far it may be off, and a check resting
 on it whose margin is smaller than that passes with a margin risk and an improvement, like a stress risk; a derating
 check's margin is taken to its rating (R12). A calculation that fails even in its best case carries a design change
 candidate for the user to approve, and may list what the result is the sum of."""

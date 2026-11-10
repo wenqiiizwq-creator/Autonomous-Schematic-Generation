@@ -661,8 +661,9 @@ def write_bom(intent, path):
     Path(path).write_text(stream.getvalue(), encoding='utf-8-sig')
 
 
-def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, project_name=None, inputs=None):
-    """Recompute from source and actual artifacts; missing native evidence is never PASS."""
+def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, project_name=None, inputs=None, digest=None):
+    """Recompute from source and actual artifacts; missing native evidence is never PASS. `digest` is the projection
+    digest of the whole record when `record` is one block's part of it (check_module.py C4 --block)."""
     if record is None:
         required = intent.get('component_requirements_version') or any(
             c.get('performance_contract') or c.get('fields', {}).get('RequirementsSHA256')
@@ -674,7 +675,7 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
         errors.append('IR must opt into component_requirements_version 1')
     if errors:
         return {'status': 'FAIL', 'errors': errors, 'pending': pending, 'native': 'NOT_CHECKED'}
-    sha = projection_digest(record)
+    sha = digest or projection_digest(record)
     entries = {e['ref']: e for e in record['components']}
     comps = {c['ref']: c for c in intent['components']}
     expected = {}

@@ -5,7 +5,7 @@
 这里一个选项可接多个值，逗号或空格分隔都行（zsh 里不分词的 "$TYPES" 也能用），也可直接读设计记录的 guideline_scope。
 
     python3 select_guidelines.py --circuit-type POWER_PROTECTION DC_24V --device-kind tvs,mosfet --typed-only
-    python3 select_guidelines.py --scope DESIGN/record/design-closure.json
+    python3 select_guidelines.py --scope DESIGN/record/requirements.json
 """
 import argparse
 import json
@@ -26,7 +26,7 @@ def split_values(values):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--bundle', default=str(guideline_criteria.BUNDLE_PATH))
-    parser.add_argument('--scope', type=Path, help='design-closure.json：取其 guideline_scope 的基线、电路类型、器件类别')
+    parser.add_argument('--scope', type=Path, help='requirements.json：取其 guideline_scope 的基线、电路类型、器件类别')
     parser.add_argument('--baseline')
     parser.add_argument('--circuit-type', nargs='+', action='extend', default=[])
     parser.add_argument('--device-kind', nargs='+', action='extend', default=[])
