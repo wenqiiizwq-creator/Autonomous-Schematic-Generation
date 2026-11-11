@@ -177,7 +177,7 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 
 ## 单独运行
 
-任务书 `modules` 写 `{from, to, given}`（见 [任务输入输出格式](workflow-handoff.md)）。按以下步骤做：
+任务书 `modules` 写 `{from, to, given}`（见 [任务书](workflow-handoff.md)）。按以下步骤做：
 
 1. 把 `given` 的文件原样复制到 `record/`，同时把 `task.json` 复制成 `record/task.json`。块文件的键写 `block-circuits/<块>.json`。
 2. 从 `from` 做到 `to`，每个模块做完都跑一次 `check_module.py <模块>`。
@@ -199,7 +199,7 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 - `action` 写证据和建议改法，`owner` 写任务书的提供方；
 - 不改上游。
 
-result.json 里这类待办的 kind 是 `INPUT`。整板流程中登记 `input` 待办，审计会报 `input_item_in_whole_flow`。
+整板流程中登记 `input` 待办，审计会报 `input_item_in_whole_flow`。
 
 串联运行时，回到上游模块重做，下游按指纹重跑。每次回到上游都记一条：
 

@@ -114,7 +114,7 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 | 任务 | 编排 |
 | --- | --- |
 | 从需求做新设计 | C1 → C6，再交付 |
-| 单独运行某个模块（评测或分工） | 按 [任务输入输出格式](references/workflow-handoff.md) 的 `modules` 给定上游，只跑指定模块，交模块报告 |
+| 单独运行某个模块（评测或分工） | 按 [任务书](references/workflow-handoff.md) 的 `modules` 给定上游，只跑指定模块，交模块报告 |
 | 重画已有工程，电气不变 | 单独运行 C6：用 `import_netlist.py` 把工程网表导成设计网表（见 [modules.md](references/modules.md)） |
 | 修改本技能做出的设计（含改值） | 从受影响的最上游模块重做，下游按 `modules.json` 指纹重跑 |
 | 收到审查意见 | 每条意见找到负责的模块，按 P7 从该模块重做并写明原因，重过关卡，下游按指纹重跑 |
@@ -133,8 +133,8 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 按板上的对外端口查知识包 `需求要素/` 的对应条目（另有全板条目），逐行核需求有没有给。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
 需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**：录完需求后一次汇总提问，每问附一条可验收的建议条文，
 答复后马上写回需求清单再往下设计；问什么、不问什么、中途发现缺口和用户暂缓怎么处理见[需求澄清](references/requirement-clarifications.md)。
-**无人当场答复时**，只接受任务书里写明的答复或代答授权（[任务输入输出格式](references/workflow-handoff.md) 的 `clarification_answers`、`delegation`）；
-两者都没有就停下来问，或交 `NEEDS_INPUT`，不自拟答复人。
+**无人当场答复时**，只接受任务书里写明的答复或代答授权（[任务书](references/workflow-handoff.md) 的 `clarification_answers`、`delegation`）；
+两者都没有就停下来问，不自拟答复人。
 降额等级（I/II/III 级）是一条需求：需求没写时一并问用户，附建议等级（[降额规范](references/shared/derating-rules.md)“降额等级从哪来”）；
 用户暂缓的按建议等级作为写明的假设设计。等级定下之前，点名降额规则的比较只按 `unset_level` 预判（[器件应力规范](references/shared/stress-spec.md)）。
 共用设计准则（G01–G09，见[共用设计准则库](references/shared/guideline-criteria.md)）按产品基线和本设计的功能电路类型、器件类别适用：
@@ -498,11 +498,10 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 做完的标志：`deliver.py` 各步为 DONE、PASS、CONDITIONAL、INCOMPLETE 或 FRESH 且跑到打包，打包 PASS；
 打包列出的 `datasheets_to_file`（本项目用到、知识库还没有的手册）在汇报里提示用户复制进知识库。
 
-## 在任务流程中运行
+## 带任务书运行
 
-由外部流程派发任务时，读 [任务输入输出格式](references/workflow-handoff.md)。
-以 `task.json` 的需求、版本和给定输入为输入；审查意见按 P7 回到负责的模块重做；架构生成、查资料、计算与改图仍由 ASG 完成。
-交付仍按「交付」一节“报告与打包”规定的目录；`result.json` 由派发任务的外部流程按该页格式生成，本技能不带这个工具。独立使用本技能不依赖外部流程。
+单独运行部分模块、或无人当场答复时，读 [任务书格式](references/workflow-handoff.md)。
+任务书只给定输入、答复和授权；设计、查资料、计算与改图仍由 ASG 完成，交付仍按「交付」一节“报告与打包”规定的目录。
 
 ## 硬性规则
 
