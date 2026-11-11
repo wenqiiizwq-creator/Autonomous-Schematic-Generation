@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_design_closure import audit, load_task, read_requirements  # noqa: E402
 import check_module  # noqa: E402
 import knowledge_gaps  # noqa: E402
+import knowledge_package  # noqa: E402
 from find_parts import DEFAULT_WIKI, library_index, locate_file  # noqa: E402
 from render_design_report import REPORT, render  # noqa: E402
 from schematic_layout.component_requirements import package_audit  # noqa: E402
@@ -273,8 +274,8 @@ def pack(root, inputs, wiki=DEFAULT_WIKI):
         return errors, None
     packed = {p.relative_to(root).as_posix(): sha256(p) for p in sorted(root.rglob('*'))
               if p.is_file() and p.name != 'manifest.json'}
-    manifest = {'schema_version': 1, 'skill_version': skill_version(), 'inputs': declared, 'packed': packed,
-                'datasheets_to_file': to_file}
+    manifest = {'schema_version': 1, 'skill_version': skill_version(), 'knowledge_release': knowledge_package.identity(),
+                'inputs': declared, 'packed': packed, 'datasheets_to_file': to_file}
     (root / 'record' / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
                                                    encoding='utf-8')
     return [], manifest

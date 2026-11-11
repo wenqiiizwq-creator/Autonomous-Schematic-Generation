@@ -71,11 +71,12 @@ ASG 的输入是一块板卡的设计需求，输出是设计方案确定后的�
 ASG 由六个能力模块组成。每个模块是主流程中连续的几项任务，有固定的给定输入、产出和关卡，可以单独运行，也可以串联。
 主流程按 C1→C6 排列，串起来就是从需求做新设计的默认编排；其中任务 C2.2 接口定稿排在 C3 之后、C4 之前。先弄清本次从哪个模块进、跑到哪个模块（见“选择工作流”），再按“主流程”逐项任务做，每项任务做到“做完的标志”为止；一个模块各项任务的做完标志合起来就是它的关卡（`check_module.py`）。
 
-- **输入**：需求、器件知识库、典型电路库；单独运行时的给定输入
+- **输入**：需求、器件知识库、知识包（`references/knowledge/`，含典型电路）；单独运行时的给定输入
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
 
 共用工程判据由硬件设计规范发布，ASG 使用本技能中已安装并固定版本的发布包；准则版本与共用层指纹由发布包读取。运行和本地测试不读取 SR 源码。
 计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
+准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与异常工况）由硬件设计知识框架以固定知识包发布，装在 `references/knowledge/`，版本与指纹由 `knowledge-release.json` 读取；运行不读知识框架目录。各模块查哪部分见[知识包](references/knowledge-package.md)。
 
 | 模块 | 任务 | 给定输入 | 产出 |
 |---|---|---|---|
@@ -127,7 +128,8 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
 
 #### C1.1 需求追溯
 
-按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单：每条需求写编号、可验收的条文和来源，记入 `record/requirements.json`。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
+按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单：每条需求写编号、可验收的条文和来源，记入 `record/requirements.json`。
+按板上的对外端口查知识包 `需求要素/` 的对应条目（另有全板条目），逐行核需求有没有给。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
 需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**：录完需求后一次汇总提问，每问附一条可验收的建议条文，
 答复后马上写回需求清单再往下设计；问什么、不问什么、中途发现缺口和用户暂缓怎么处理见[需求澄清](references/requirement-clarifications.md)。
 **无人当场答复时**，只接受任务书里写明的答复或代答授权（[任务输入输出格式](references/workflow-handoff.md) 的 `clarification_answers`、`delegation`）；
@@ -151,9 +153,9 @@ ASG 由六个能力模块组成。每个模块是主流程中连续的几项任�
 
 定出真实的系统架构：功能块及其电压域、电源与信号流向、板与隔离边界、接口，以及每条跨块流向代表的电源轨或信号
 （RECT、BULK、FB/FAULT 光耦……）。它在任务 C6.3 画成第 1 页 `System_block`，只有页面索引不算架构。
-见 [reference-driven-board-design.md](references/reference-driven-board-design.md)。
+见 [reference-driven-board-design.md](references/reference-driven-board-design.md)；电源树、电压域、隔离、接地、保护分层等结构选择查知识包 `板级架构模式/`。
 架构记入 `record/architecture.json`，并为每个功能块写块规格（输入、输出、功率与指标，只写要什么，不写拓扑）。隔离边界的位置在这里定，块内的隔离实现方式留给任务 C3.1。
-每条跨块流向写它承载的整板网络名（`nets`）和接口参数的预算值（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
+每条跨块流向写它承载的整板网络名（`nets`）和接口参数的预算值（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗，按知识包 `接口约定/参数模板/` 写，总线按 `接口约定/总线与电平/`）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
 块的边界放在少数几个参数就能说清的地方：两块之间要靠控制环、共用一颗芯片或多条模拟连线才能工作的，合成一块。每块给一个位号编号段。
 
 做完的标志：`record/architecture.json` 中每个功能块有输入输出、所在电压域和块规格；每条跨块流向有名字；隔离边界两侧各有哪些功能块已定。每条流向有网络名和接口参数；每块有位号编号段，各段不重叠。
@@ -174,7 +176,7 @@ C4 的源块按 `provides` 设计，负载块按 `accepts` 设计，都不读对
 
 #### C3.1 功能块实现方案
 
-关键功能块先在 [典型电路库](references/typical-circuits.md) 里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。
+关键功能块先在知识包的[典型电路](references/knowledge-package.md)（`references/knowledge/典型电路/`）里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。
 
 关键功能块（功率变换拓扑、保护架构、块内隔离实现方式、信号链架构、对外接口）定方案前，先用 `guideline_criteria.py select` 按该块的电路类型和器件类别列出按类型触发的规则，有对外端口的块再加上端口矩阵对应的 G07 规则；从中找出会淘汰某个候选方案的规则，逐条写明它排除了哪个候选、选定方案怎样满足、哪些数值留给任务 C4.2 核算，记入 `record/scheme-criteria.json`。没有规则能淘汰候选的块写明查过的规则范围。不要求逐条列出全部适用规则，不能淘汰候选、不改变选型也不进入计算的规则不要求逐条落实。
 
@@ -239,7 +241,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 
 #### C4.2 设计计算与性能要求
 
-- 数值计算按 [calculation-preflight.md](references/calculation-preflight.md) 写明保证条件；按
+- 取值按知识包 `计算方法/` 对应条目的取值步骤（每步写了输入取哪一端、算完要满足哪条准则）；数值计算按 [calculation-preflight.md](references/calculation-preflight.md) 写明保证条件；按
   [requirements-to-intent.md](references/requirements-to-intent.md) 第 4 节清单逐项核这些工况：上电/热插拔、关断/掉电、
   全温角点、引脚应力、工作包络角点（最低/最高输入 × 空载/轻载/满载 × 每个输出档位的组合）和单点故障
   （反馈开路、光耦失效、检测电阻开路等：保护要在被保护对象越限前动作）。
@@ -270,6 +272,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
   位号和手册定位（`datasheet:<库内路径>#p<页>` 加表名/符号）。依据另有 `requirement`（来自需求，`source` 写 `req:<需求编号>`）
   和 `constant`（物理常数），不再归入 `model`。手册没给的器件参数标 `unspecified`，不能写成保证值，
   也不能支撑 `supported`。格式见 [设计待办记录](references/design-closure.md)，`audit_design_closure.py` 核对。
+  器件保证值先查知识包 `器件参数/`（保证值与手册页码），没有的再读手册；用 onsemi 等原件时，`原件勘误.md` 名单里文字层单位有问题的原件看页面图像核单位。
 - **工况输入有来源**：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆这些板外工况，参数写 `input_role`，来源只能是需求、负载器件手册或由它们推导；
   需求没给、取值又会改变选型的，按[需求澄清](references/requirement-clarifications.md)问用户，不自定。启动计算必须声明启动期负载。
   判法见[设计待办记录](references/design-closure.md)“工况输入的来源”，`audit_design_closure.py` 核对。
@@ -325,7 +328,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 
 #### C5.2 全板闭合核对
 
-整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）。不满足的格改设计，不以列出缺口代替完成。
+整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）；器件失效方式与分析步骤查知识包 `失效与异常工况/`，从准则编号反查条目用 `准则支撑表.md`。不满足的格改设计，不以列出缺口代替完成。
 
 做完的标志：`audit_design_closure.py`（不带 `--module`）无错误；矩阵与状态表没有缺结论或不满足的格；有对外连接器的板 FMEA 与 EMC 端口矩阵章节与连接器齐全。
 
@@ -473,7 +476,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
   原理图/         KiCad 工程（根图、各页、项目符号库与封装库）、schematic.pdf、netlist.xml、BOM.csv
   设计资料/       跨版本有效、每版更新的设计文档（方案与选型依据、FMEA、EMC 端口矩阵、磁件设计单等；其他按需求选做）
   record/         设计网表、分页方案、待办处理情况、自检结果、图面审阅、本版用到的计算、知识缺口清单、
-                  图页脚本、manifest.json（需求、原厂资料按路径+SHA-256 登记，不复制）
+                  图页脚本、manifest.json（需求、原厂资料按路径+SHA-256 登记，不复制；记知识包版本与指纹）
 ```
 
 ```bash
@@ -482,7 +485,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
   --input datasheets=<资料目录>
 ```
 
-`knowledge_gaps.py <交付目录>` 从各模块的产品里抽出知识缺口清单 `record/knowledge-gaps.json`，不手写：典型电路库或知识库检索落空、候选来源未证实、计算依据是典型值或估计、回到上游重做、用户否定了 ASG 的建议。清单只如实列出，不拦交付；它是评测侧归纳能力缺陷的输入。
+`knowledge_gaps.py <交付目录>` 从各模块的产品里抽出知识缺口清单 `record/knowledge-gaps.json`，不手写：知识包哪个组件查不到什么（典型电路没有适用方案、`modules.json` 的 `knowledge_misses`）、候选来源未证实、计算依据是典型值或估计、回到上游重做、用户否定了 ASG 的建议。清单只如实列出，不拦交付；它是评测侧归纳能力缺陷的输入。
 也可以用 `deliver.py <交付目录>` 按固定顺序一次跑完生成报告、写交付证据、新鲜度检查和打包，见任务 C6.4。
 报告如实写出各项自检的 PASS/FAIL/INSUFFICIENT 及数量（含零）。历史版本快照、日志、仿真中间文件、
 审查方的其他文件都不放进交付目录；本版独立审查的报告只放 `record/sr-review/`。
@@ -522,7 +525,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 架构页、参考设计外围 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
-| 一个功能通常怎么实现、有几种实现方案、各自的必算项与已知坑 | [typical-circuits.md](references/typical-circuits.md) 与 `references/typical-circuits/` |
+| 知识包：需求要素、板级架构模式、接口约定、典型电路（一个功能有几种实现方案、各自的必算项与已知坑）、计算方法、器件参数、失效与异常工况；各模块查哪部分、典型电路标注与 `scheme-criteria.json` 格式、本地校验（版本以根目录 `knowledge-release.json` 为准） | [knowledge-package.md](references/knowledge-package.md) 与 `references/knowledge/` |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 器件性能要求、BOM 与图面标注 | [component-requirements.md](references/component-requirements.md) |

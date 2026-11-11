@@ -209,7 +209,7 @@ def symbol_refs(sch_path):
     return refs
 
 
-CIRCUITS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'typical-circuits'
+CIRCUITS_DIR = typical_circuits.CIRCUITS_DIR
 
 
 def circuit_implementations(circuits_dir=CIRCUITS_DIR):
@@ -220,7 +220,8 @@ def library_hits(block, circuits_dir=CIRCUITS_DIR):
     """Typical circuits a key block marked none must say why it does not use (whole-board baseline 2026-11-07, A5:
     Matrix marked its reset block as having no typical circuit while multi-domain-reset covers it). The search
     find_parts.py --circuits runs for the block name."""
-    return [h['id'] for h in find_parts.search_circuits([block], Path(circuits_dir))['results']] if text(block) else []
+    return [h['id'] for h in find_parts.search_circuits([block], Path(circuits_dir))['results']
+            if h['implementations']] if text(block) else []   # a pointer entry has no approach to use
 
 
 def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(), scheme=None, circuits_dir=CIRCUITS_DIR,
@@ -246,7 +247,7 @@ def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(),
             continue
         pid, _, approach = ref.partition('#')
         if pid not in implementations:
-            errors.append('%s：功能块“%s”标注的典型电路 %s 在 references/typical-circuits/ 里不存在' % (name, block, pid))
+            errors.append('%s：功能块“%s”标注的典型电路 %s 在 references/knowledge/典型电路/ 里不存在' % (name, block, pid))
         elif approach not in implementations[pid]:
             errors.append('%s：功能块“%s”标注的实现方案“%s”不在典型电路 %s 里（有：%s）' % (name, block, approach, pid, '、'.join(sorted(implementations[pid]))))
     return errors

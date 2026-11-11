@@ -208,4 +208,4 @@ result.json 里这类待办的 kind 是 `INPUT`。整板流程中登记 `input` 
 python3 scripts/check_module.py return <设计目录> --from C4.2 --to C2.2 --reason "+3V3 的电流预算不够" --evidence "calc:C-3V3"
 ```
 
-它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）。
+它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）；知识包查不到的记在同一文件的 `knowledge_misses`（见 [知识包](knowledge-package.md)）。

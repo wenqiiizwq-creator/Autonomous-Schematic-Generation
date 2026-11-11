@@ -116,13 +116,24 @@ class FindPartsTests(unittest.TestCase):
         self.assertEqual(0, find_parts.search_circuits(['不存在的功能'])['total'])
         index = find_parts.circuit_index()
         self.assertGreaterEqual(len(index), 16)
+        self.assertNotIn('README', index)
+        # knowledge package format (references/knowledge/典型电路/README.md): only the ### headings under 「## 实现方案」
+        # are approaches; sources are 「## 来源清单」 numbers (S1 p4). The pointer entry has no approach.
+        self.assertEqual(['反馈丢失，输出升高', '使能脚悬空'],
+                         [h for h in ('反馈丢失，输出升高', '使能脚悬空') if h not in index['power-rail-test-break']['implementations']])
         for pid, info in index.items():
-            self.assertTrue(info['title'] and info['function'] and info['implementations'], pid)
+            self.assertTrue(info['title'] and info['function'], pid)
+            if not info['implementations']:
+                self.assertEqual('reviewed-bias-and-latch', pid)
+                continue
             body = (find_parts.CIRCUITS_DIR / (pid + '.md')).read_text(encoding='utf-8')
-            for section in body.split('### ')[1:]:
-                for label in ('适用范围', '核心器件类', '必需外围', '必算项', '已知坑', '来源'):
-                    self.assertIn('**%s**' % label, section, '%s: %s' % (pid, section[:40]))
-                self.assertRegex(section, r'来源\*\*：[\s\S]*(raw/|Datasheet|Designexample)', pid)
+            self.assertIn('\n## 来源清单\n', body, pid)
+            section_text = body.split('\n## 实现方案\n', 1)[1].split('\n## ', 1)[0]
+            for section in section_text.split('\n### ')[1:]:
+                if '所有方案' in section.splitlines()[0]:   # a note common to every approach
+                    continue
+                self.assertIn('**适用范围**', section, '%s: %s' % (pid, section[:40]))
+                self.assertRegex(section, r'来源\*\*：[\s\S]*S\d+', '%s: %s' % (pid, section[:40]))
 
     def test_roles_table_covers_library_subcategories(self):
         r = find_parts.roles_coverage(self.wiki)

@@ -14,7 +14,7 @@ ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 |---|---|
 | C1 需求理解与澄清 | `check_module.py C1`（核对 `requirements.json`） |
 | C2 板级方案 | `check_module.py C2`（核对 `architecture.json`，C3 做完后加 `interfaces.json`） |
-| C3 块电路选择 | `find_parts.py`（检索本机知识库及典型电路）、`check_scheme_criteria.py`、`select_guidelines.py`、`block_circuits.py` |
+| C3 块电路选择 | `find_parts.py`（检索本机知识库及知识包里的典型电路）、`check_scheme_criteria.py`、`select_guidelines.py`、`block_circuits.py` |
 | C4 详细设计与器件选型 | `fill_pin_maps.py`、`make_symbol.py`、`complete_pin_coverage.py`、`audit_design_closure.py`、`audit_component_requirements.py`、`check_module.py C4` |
 | C5 全板闭合 | `blocks.py merge`、`audit_design_closure.py`、`check_module.py C5` |
 | C6 原理图绘制与检查 | `schematic_layout.recipes.Sheet`、`schematic_layout.root.Root`、`verify_schematic.py`、`audit_system_block.py` |

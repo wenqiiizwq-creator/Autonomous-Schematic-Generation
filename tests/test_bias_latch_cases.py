@@ -21,6 +21,10 @@ class ReviewedCases(unittest.TestCase):
   identity=lambda r:'varistor' if r.startswith('RV') else 'resistor'
   self.assertEqual(identity('RV101'),'varistor')
  def test_published_implementations_and_origins(self):
-  text=(ROOT/'references/typical-circuits/reviewed-bias-and-latch.md').read_text()
-  for key in ['F-001','F-002','F-004','F-005','F-006']:self.assertIn('/'+key,text)
-  self.assertEqual(sum(l.startswith('### ') for l in text.splitlines()),4)
+  # 知识包 1.0.0：原条目拆分成指路条目，四种方案并入别的典型电路，原审查案例写在“内容去向”。
+  folder=ROOT/'references/knowledge/典型电路'
+  text=(folder/'reviewed-bias-and-latch.md').read_text()
+  for key in ['F-001','F-005','F-006']:self.assertIn(key,text)
+  self.assertEqual(sum(l.startswith('### ') for l in text.splitlines()),0)
+  for target in ['aux-bias-supply','ac-indicator','aux-overvoltage-latch','ldo']:
+   self.assertIn('](%s.md)'%target,text); self.assertTrue((folder/(target+'.md')).is_file())

@@ -27,7 +27,9 @@ def pattern(word):
 
 
 def skill_docs():
-    return [ROOT / 'SKILL.md'] + sorted(p for p in (ROOT / 'references').rglob('*.md') if p != TERMS)
+    # The knowledge package (references/knowledge/) is installed read-only from the knowledge framework, not skill docs.
+    package = ROOT / 'references' / 'knowledge'
+    return [ROOT / 'SKILL.md'] + sorted(p for p in (ROOT / 'references').rglob('*.md') if p != TERMS and package not in p.parents)
 
 
 class TerminologyTests(unittest.TestCase):

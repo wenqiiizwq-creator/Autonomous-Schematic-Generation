@@ -3,15 +3,16 @@
 import re
 from pathlib import Path
 
-CIRCUITS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'typical-circuits'
+CIRCUITS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'knowledge' / '典型电路'
 CIRCUIT_TYPES_LINE = '电路类型：'
+IMPLEMENTATIONS = '## 实现方案'   # only the ### headings of this section are implementations
 RULES_BULLET = re.compile(r'^- \*\*落实规则\*\*：(.*)$')
 RULE_ID = re.compile(r'G0[1-9]-\d{3}')
 NONE = '无'
 
 
 def _names(rest):
-    rest = rest.strip()
+    rest = re.sub(r'（[^）]*）', '', rest).strip()   # a note such as POWER_CONVERTER（电阻限流为 无） is not a name
     return [] if not rest or rest.startswith(NONE) else [n.strip() for n in re.split(r'[、,，]', rest) if n.strip()]
 
 
@@ -21,8 +22,10 @@ def load(circuits_dir=None):
     circuits_dir = Path(CIRCUITS_DIR if circuits_dir is None else circuits_dir)   # resolved per call so tests can point elsewhere
     index = {}
     for md in sorted(circuits_dir.glob('*.md')) if circuits_dir.is_dir() else []:
+        if md.name == 'README.md':
+            continue
         info = {'title': '', 'function': '', 'circuit_types': None, 'implementations': {}}
-        current = None
+        current, in_implementations = None, False
         for line in md.read_text(encoding='utf-8').splitlines():
             if line.startswith('# ') and not info['title']:
                 info['title'] = line[2:].strip()
@@ -30,7 +33,9 @@ def load(circuits_dir=None):
                 info['function'] = line[3:].strip()
             elif line.startswith(CIRCUIT_TYPES_LINE) and current is None:
                 info['circuit_types'] = _names(line[len(CIRCUIT_TYPES_LINE):])
-            elif line.startswith('### '):
+            elif line.startswith('## '):
+                current, in_implementations = None, line.strip() == IMPLEMENTATIONS
+            elif line.startswith('### ') and in_implementations:
                 current = line[4:].strip()
                 info['implementations'][current] = {'criteria': None}
             elif current is not None and RULES_BULLET.match(line):

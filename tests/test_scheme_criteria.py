@@ -106,12 +106,12 @@ def test_report_marks_inference_as_not_a_hard_exclusion():
     assert report.render_scheme_criteria(None) == []
 
 
-def test_the_example_in_typical_circuits_passes_the_check():
+def test_the_example_in_knowledge_package_passes_the_check():
     assert check(document_example()) == []
 
 
 def document_example():
-    doc = (ROOT / 'references' / 'typical-circuits.md').read_text(encoding='utf-8')
+    doc = (ROOT / 'references' / 'knowledge-package.md').read_text(encoding='utf-8')
     return json.loads(re.search(r'```json\n(.*?)```', doc, re.S).group(1))
 
 
@@ -189,7 +189,7 @@ def test_cli_rejects_a_method_rule_marked_as_standard(tmp_path):
 
 
 def test_scheme_format_explains_basis_limits_and_nonexcluding_rules():
-    doc = (ROOT / 'references' / 'typical-circuits.md').read_text(encoding='utf-8')
+    doc = (ROOT / 'references' / 'knowledge-package.md').read_text(encoding='utf-8')
     assert '`standard` 只用于 `nature` 为 `shall`/`should` 的规则' in doc
     assert '`datasheet_abs_max` 只指器件手册 Absolute Maximum Ratings 表里的值，推荐工作条件不算' in doc
     assert '没有排除候选的规则不写进 `criteria`，放 `searched`' in doc

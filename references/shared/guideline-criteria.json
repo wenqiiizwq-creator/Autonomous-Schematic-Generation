@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "library_version": "1.9.9",
+  "library_version": "1.9.10",
   "default_baseline": "industrial_telecom",
   "vocabulary": {
     "baselines": [
@@ -68,17 +68,17 @@
     ]
   },
   "specs": {
-    "G01": "1.13",
+    "G01": "1.14",
     "G02": "1.7",
-    "G03": "1.10",
-    "G04": "1.9",
+    "G03": "1.11",
+    "G04": "1.10",
     "G05": "1.6",
     "G06": "1.2",
     "G07": "1.2",
     "G08": "1.3",
     "G09": "1.0"
   },
-  "content_sha256": "a59c6774a0293cc692b17bcdfbfa676f7c7fa89db8fbca105da70dfcf6218be2",
+  "content_sha256": "08c9b88aff6f2a2889476353882bac294a89ac9b5719e908c87cdb9da1893bb9",
   "criteria": [
     {
       "id": "G01-001",
@@ -1588,7 +1588,7 @@
       "id": "G01-039",
       "title": "舰船交流输入稳态偏离范围按 MIL-STD-1399 表 II",
       "spec": "G01",
-      "version": "1.1",
+      "version": "1.2",
       "status": "active",
       "nature": "project",
       "applies_when": {
@@ -1600,14 +1600,20 @@
         ]
       },
       "inputs": [],
-      "asg_action": "舰船交流输入（Type I 60 Hz 440/115 V 等）：稳态 ±5%（单线 ±7%），最大稳态偏离 ±8%。",
-      "sr_check": "核对输入级与转换器覆盖表 II 的稳态范围。",
+      "asg_action": "舰船交流输入（Type I 60 Hz 440/115 V 等）：稳态 ±5%（单线 ±7%），最大稳态偏离 ±8%（CVN 78 级 ±10%）。输入级的稳态工作范围按合格试验的电压覆盖：Type I 为 115 V 系统 104～127 V、440 V 系统 396～484 V；Type II 为 106～124 V、405～475 V；Type III 为 110～120 V、422～458 V（表 III，不分舰种取最宽范围）。",
+      "sr_check": "核对输入级与转换器覆盖表 III 的试验电压范围；只覆盖表 II 的 ±8% 而不到表 III 范围的，判不成立。",
       "source": [
         {
           "document": "MIL-STD-1399-300-1 舰船低压交流电源",
           "edition": "2018",
           "clause": "表 II",
           "page": "26（印刷 17）"
+        },
+        {
+          "document": "MIL-STD-1399-300-1 舰船低压交流电源",
+          "edition": "2018",
+          "clause": "5.3.3 与表 III（最大偏离容差试验）",
+          "page": "58"
         }
       ],
       "closing_stage": "schematic",
@@ -1699,7 +1705,7 @@
       "id": "G01-042",
       "title": "舰船交流输入应急条件 −100%～+35% 不损坏",
       "spec": "G01",
-      "version": "1.1",
+      "version": "1.2",
       "status": "active",
       "nature": "project",
       "applies_when": {
@@ -1711,14 +1717,20 @@
         ]
       },
       "inputs": [],
-      "asg_action": "应急条件 −100%～+35%。",
-      "sr_check": "核对输入级在应急过压下不损坏、失压后能自恢复。",
+      "asg_action": "应急条件 −100%～+35%。+35% 的持续时间：Type I 为 2 min，Type II、III 为 0.17 s；失压（−100%）最长 2 min。Type I 的输入级按 1.35 倍额定电压持续 2 min 定耐压，输入钳位器件的最大连续工作电压不低于这个电压的峰值；失压后自恢复。",
+      "sr_check": "核对输入级在应急过压及其持续时间下不损坏（Type I 的钳位器件在 1.35 倍额定电压下不持续导通）、失压后能自恢复。",
       "source": [
         {
           "document": "MIL-STD-1399-300-1 舰船低压交流电源",
           "edition": "2018",
           "clause": "表 II",
           "page": "26（印刷 17）"
+        },
+        {
+          "document": "MIL-STD-1399-300-1 舰船低压交流电源",
+          "edition": "2018",
+          "clause": "表 VII（应急条件试验：最大偏离与各型持续时间）",
+          "page": "69"
         }
       ],
       "closing_stage": "schematic",
@@ -5056,7 +5068,7 @@
       "id": "G03-007",
       "title": "外补偿穿越频率低于开关频率限值与最低 RHP 零点",
       "spec": "G03",
-      "version": "1.1",
+      "version": "1.2",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -5072,7 +5084,7 @@
         "功率级参数：L、输出电容有效值与 ESR、负载范围、输入电压范围（G01 电源输入工况）",
         "开关频率；误差放大器类型（运放 / OTA）"
       ],
-      "asg_action": "穿越频率远低于开关频率；升压、反激的电压环穿越低于最低 RHP 零点（ωRHPZ = R_LOAD(1−D)²/L，最低出现在最大负载、最低输入）。证据：穿越频率与 RHP 零点计算，注明工况点。",
+      "asg_action": "穿越频率远低于开关频率；连续导通的升压、升降压、反激的电压环穿越低于最低 RHP 零点，最低出现在最大负载、最低输入。零点按拓扑取：升压 ωRHPZ = R_LOAD(1−D)²/L；升降压 ωRHPZ = R_LOAD(1−D)²/(D·L)；反激 ωRHPZ = R_LOAD(1−D)²/(D·Lm·(Ns/Np)²)，Lm 为初级励磁电感。断续导通和准谐振没有 RHP 零点，但可能短时进入连续导通的工况仍要核。证据：穿越频率与 RHP 零点计算，注明拓扑与工况点。",
       "sr_check": "独立复算补偿零极点与穿越频率；在最大负载、最低输入下穿越频率不低于最低 RHP 零点的判不成立。关闭条件：最坏工况下满足。",
       "source": [
         {
@@ -5084,8 +5096,20 @@
         {
           "document": "TI SLUP113 Control Loop Cookbook（Dixon，Unitrode SEM1100 Topic 5）",
           "edition": "1996（2011 TI 重印）",
-          "clause": "RHP 零点式 (13) 与电压环穿越低于最低 RHP 零点",
+          "clause": "RHP 零点式 (13)（升降压与反激的形式，含 1/D）与电压环穿越低于最低 RHP 零点",
           "page": "22"
+        },
+        {
+          "document": "TI SLVA636 电流模式升压变换器反馈环路分析",
+          "edition": "应用笔记",
+          "clause": "式 (9) 与算例（升压的形式）",
+          "page": "5、10"
+        },
+        {
+          "document": "onsemi AN-4137 Design Guidelines for Off-line Flyback Converters",
+          "edition": "Rev.1.3.0（Fairchild 2003）",
+          "clause": "式 (33) 的零极点定义（反激的形式，含匝比）",
+          "page": "11"
         }
       ],
       "relations": {
@@ -7220,9 +7244,9 @@
     },
     {
       "id": "G03-057",
-      "title": "LCL 负载：源—负载阻抗相位差大于 150°、增益差大于 5 dB",
+      "title": "LCL 负载：源—负载阻抗等幅处相位差在 ±150° 之内、反相处限流器阻抗高出至少 5 dB",
       "spec": "G03",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "project",
       "applies_when": {
@@ -7235,11 +7259,11 @@
         "text": "负载由航天主母线 LCL/RLCL 供电时"
       },
       "not_applicable": "熔断器保护的母线（如多数 GEO 通信卫星）不适用（原文范围）。",
-      "tailoring": "",
+      "tailoring": "原文 5.5.3.1.1 a 字面是“相位差大于 abs(±150°±n×360°)”，5.5.3.2.1 a 字面是“负载阻抗增益减 LCL 阻抗增益大于 5 dB”，两句方向都写反；本条按配套手册的解释（相位裕量 30°、增益裕量 5 dB）和 ECSS-E-ST-20C 对同类级联的写法（相位差在 ±130° 之内）执行。",
       "inputs": [
         "负载阻抗与 LCL 源阻抗"
       ],
-      "asg_action": "幅值相等处负载与源阻抗相位差 > 150°；相位差为 −180° 处负载与 LCL 阻抗增益差 > 5 dB。",
+      "asg_action": "限流状态下，负载阻抗与 LCL 源阻抗幅值相等的频率上，两者相位差在 ±150° 之内（相位裕量不小于 30°）；相位差为 −180°（±n×360°）的频率上，LCL 源阻抗比负载阻抗高至少 5 dB（增益裕量不小于 5 dB）。",
       "sr_check": "核阻抗数据来源与两项判据；不满足判不成立。",
       "source": [
         {
@@ -7247,6 +7271,18 @@
           "edition": "2016-04-15",
           "clause": "5.5.3 Source-load characteristic",
           "page": "45"
+        },
+        {
+          "document": "ECSS-E-HB-20-20A Electrical design and interface requirements for power supply（handbook）",
+          "edition": "2016-04-15",
+          "clause": "5.5.3 的说明（最小相位裕量 30°、增益裕量 5 dB）",
+          "page": "40"
+        },
+        {
+          "document": "ECSS-E-ST-20C Rev.2 Electrical and electronic",
+          "edition": "2022",
+          "clause": "源—负载级联的稳定判据（电流源型：相位差在 [−130°，+130°] 之内，反相处负载阻抗与源阻抗幅值之比小于 0.5）",
+          "page": "70"
         }
       ],
       "relations": {
@@ -8288,7 +8324,7 @@
       "id": "G04-022",
       "title": "I²C 串联电阻不使下降时间和低电平超限",
       "spec": "G04",
-      "version": "1.0",
+      "version": "1.1",
       "status": "active",
       "nature": "should",
       "applies_when": {
@@ -8300,9 +8336,9 @@
       "not_applicable": "无串联电阻的不适用。",
       "tailoring": "",
       "inputs": [
-        "Rs；IOL；VIL"
+        "Rs；IOL；VIL；VDD；Rp；总线电容"
       ],
-      "asg_action": "算 Rs 压降后接收端低电平仍低于 VIL；增强快速模式的 tf 要把 Rs 算入。证据：计算行。",
+      "asg_action": "算 Rs 压降后接收端低电平不高于 VIL 减 0.1×VDD（低电平留 0.1×VDD 噪声容限，Rs 的上限由此决定）；上拉电阻和允许总线电容的计算要把 Rs 计入；增强快速模式的 tf 要把 Rs 算入。证据：计算行。",
       "sr_check": "独立复算；超过判不成立。关闭条件：比较通过。",
       "source": [
         {
@@ -8310,6 +8346,12 @@
           "edition": "Rev.7.0，2021-10-01",
           "clause": "表 10 注 5、7；表 11 注 6、7",
           "page": "43–45"
+        },
+        {
+          "document": "NXP UM10204 I2C-bus specification and user manual",
+          "edition": "Rev.7.0，2021-10-01",
+          "clause": "7.3 Series protection resistors（低电平噪声容限 0.1VDD 限定 Rs 最大值；Rs 计入 Rp 与总线电容的计算）",
+          "page": "53"
         }
       ],
       "relations": {
@@ -8554,7 +8596,7 @@
       "id": "G04-028",
       "title": "RS-485 总线空闲、开路、短路时接收输出确定",
       "spec": "G04",
-      "version": "1.1",
+      "version": "1.2",
       "status": "active",
       "nature": "method",
       "applies_when": {
@@ -8569,8 +8611,8 @@
         "收发器失效保护门限（如 ±200 mV 内输出高）",
         "偏置电阻、终端总阻、供电最低值"
       ],
-      "asg_action": "器件自带开路、短路、空闲失效保护的写明；没有的按外部偏置算：总线空闲差分电压 = VCC,min · R_term∥ /(2·R_bias + R_term∥)，两端都端接时用 60 Ω，要高于接收门限上限。证据：计算行。偏置目标取 200 mV 门限加最大差分噪声。",
-      "sr_check": "独立复算；用单端接算而实际两端都接的判方法错误；差分电压低于门限判不成立；手册未说明失效保护的记资料不足。关闭条件：比较通过。并联电阻要计入总线负载（32 UL 约 375 Ω）。AN960 的 R = 1440 Ω 例子只接一个 120 Ω，两端都端接时不能直接用。",
+      "asg_action": "器件自带开路、短路、空闲失效保护的写明；没有的按外部偏置算：总线空闲差分电压 = VCC,min · R_diff /(2·R_bias + R_diff)，R_diff 是两线之间的总负载：两端都端接时的 60 Ω 并上全部接收器的差分输入电阻（满 32 个单位负载时为 750 Ω，即每线对地 375 Ω；节点少的按实际单位负载数折算），要高于接收门限上限。证据：计算行，写明单位负载数。偏置目标取 200 mV 门限加最大差分噪声。",
+      "sr_check": "独立复算；用单端接算而实际两端都接的判方法错误；差分电压低于门限判不成立；手册未说明失效保护的记资料不足。关闭条件：比较通过。偏置电阻本身也是总线负载，要计入驱动器的负载预算（32 UL 相当于每线对地约 375 Ω）；没有把接收器输入负载并进 R_diff 的判方法错误。AN960 的 R = 1440 Ω 例子只接一个 120 Ω，两端都端接时不能直接用。",
       "source": [
         {
           "document": "TI SN65HVD308xE 数据手册（RS-485，转引 TIA/EIA-485-A，非标准原文）",

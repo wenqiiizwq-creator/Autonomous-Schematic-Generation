@@ -716,7 +716,7 @@ class DesignReportTests(unittest.TestCase):
         page['circuits'] = {'稳压': 'no-such#做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertIn('board.kicad_sch：功能块“稳压”标注的典型电路 no-such 在 references/typical-circuits/ 里不存在', problems)
+        self.assertIn('board.kicad_sch：功能块“稳压”标注的典型电路 no-such 在 references/knowledge/典型电路/ 里不存在', problems)
         page['circuits'] = {'稳压': 'output-filter-storage#不存在的做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
@@ -945,6 +945,9 @@ class PackDesignTests(unittest.TestCase):
         self.assertEqual(manifest['inputs']['requirements']['kind'], 'directory')
         self.assertIn('原理图/schematic.pdf', manifest['packed'])
         self.assertTrue((self.d.record / 'manifest.json').is_file())
+        release = json.loads((Path(__file__).resolve().parents[1] / 'knowledge-release.json').read_text(encoding='utf-8'))
+        self.assertEqual({'knowledge_version': release['knowledge_version'], 'fingerprint': release['fingerprint']},
+                         manifest['knowledge_release'])
 
     def test_extra_files_and_history_fail_but_a_log_does_not(self):
         (self.d.root / 'README.md').write_text('x')

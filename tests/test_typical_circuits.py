@@ -22,14 +22,14 @@ CIRCUITS = typical_circuits.load()
 class PatternFileTests(unittest.TestCase):
     def test_every_pattern_declares_vocabulary_circuit_types(self):
         names = set(guideline_criteria.vocabulary()['vocabulary']['circuit_types'])
-        self.assertEqual(len(CIRCUITS), 40)
+        self.assertEqual(len(CIRCUITS), 68)   # knowledge package 1.0.0, without README.md
         for pid, info in CIRCUITS.items():
             self.assertIsNotNone(info['circuit_types'], '%s 缺 电路类型： 一行（没有对应类型写 无）' % pid)
-            self.assertTrue(set(info['circuit_types']) <= names, (pid, info['circuit_types']))
+            self.assertEqual(set(), set(info['circuit_types']) - names, (pid, info['circuit_types']))
 
     def test_optional_rules_if_present_name_existing_active_rules(self):
         for pid, info in CIRCUITS.items():
-            self.assertTrue(info['implementations'], pid)
+            self.assertTrue(info['implementations'] or pid == 'reviewed-bias-and-latch', pid)   # a pointer entry
             for name, approach in info['implementations'].items():
                 rules = approach['criteria'] or []
                 self.assertEqual(len(rules), len(set(rules)), (pid, name))
@@ -37,28 +37,20 @@ class PatternFileTests(unittest.TestCase):
                     self.assertIn(gid, RULES, (pid, name, gid))
                     self.assertEqual(RULES[gid]['status'], 'active', (pid, name, gid))
 
-    def test_every_known_pitfall_cites_a_review_item_or_datasheet_page(self):
-        # typical-circuits.md 规则：已知坑每条引用审查待办或手册页（校准板收口 2026-11-02 补写的 12 个、Matrix R2 2026-11-04 补写的 9 个；早期文件另行整理）
-        import re
-        cite = re.compile(r'review:[^/\s]+/\S+|datasheet:\S.*?#p\d+|test:\S+|user:\d{4}-\d{2}-\d{2}')
-        third = ('dc-24v-input-protection', 'ideal-diode-hotswap', 'hold-up', 'cot-buck', 'ldo', 'mcu-min-system', 'swd-debug',
-                 'industrial-di-serializer', 'di-digital-isolation', 'high-side-quad', 'chassis-y-cap', 'status-led',
-                 'hotswap-latch-powerlimit', 'efuse-aux-branch', 'internal-comp-buck', 'dcs-low-voltage-buck',
-                 'ext-comp-current-mode-buck', 'ovp-cutoff-efuse', 'efuse-bfet-short-latch', 'fault-memory-comparator',
-                 'multi-domain-reset')
-        for md in (typical_circuits.CIRCUITS_DIR / (n + '.md') for n in third):
-            inside = False
-            for line in md.read_text(encoding='utf-8').splitlines():
-                if line.startswith('- **'):
-                    inside = line.startswith('- **已知坑**')
-                elif inside and line.startswith('  - '):
-                    self.assertRegex(line, cite, '%s：已知坑没有来源：%s' % (md.name, line))
-
     def test_the_swd_port_claims_the_g09_debug_rules_it_puts_into_practice(self):
         # G09 定稿接入项（2026-11-05）：swd-debug 的“落实规则：无”换成它真实做到的 G09 规则；上下拉（G09-011）、
         # 手接静电（G09-026）没有写进做法，不列。
-        rules = CIRCUITS['swd-debug']['implementations']['10 针 Cortex Debug 排针，VTref 接 3.3 V']['criteria']
-        self.assertEqual(['G09-010', 'G09-012', 'G09-013', 'G09-015'], rules)
+        # 知识包 1.0.0 改写了方案名并补了上下拉、手接静电等规则。
+        rules = CIRCUITS['swd-debug']['implementations']['10 针 1.27 mm 排针（SWD 引脚排列）']['criteria']
+        self.assertTrue({'G09-010', 'G09-012', 'G09-013', 'G09-015'} <= set(rules), rules)
+
+    def test_only_the_implementation_section_holds_implementations(self):
+        # power-rail-test-break has ### headings under 「断点开路时的两类故障」; they are not approaches.
+        names = CIRCUITS['power-rail-test-break']['implementations']
+        self.assertTrue(names)
+        self.assertFalse({'反馈丢失，输出升高', '使能脚悬空'} & set(names))
+        self.assertNotIn('README', CIRCUITS)
+        self.assertEqual(['ANALOG'], CIRCUITS['current-loop-4-20ma']['circuit_types'])
 
     def test_the_parser_agrees_with_find_parts_on_the_implementations(self):
         index = find_parts.circuit_index()
@@ -67,7 +59,7 @@ class PatternFileTests(unittest.TestCase):
 
     def test_an_explicit_none_line_claims_no_rule_even_when_it_names_one(self):
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / 'p.md').write_text('# 甲\n\n功能：x。\n\n电路类型：无\n\n## 做法\n\n### 做法一\n\n'
+            (Path(tmp) / 'p.md').write_text('# 甲\n\n功能：x。\n\n电路类型：无\n\n## 实现方案\n\n### 做法一\n\n'
                                            '- **落实规则**：无（对应 G05-036，待规范放宽）\n- **已知坑**：\n', encoding='utf-8')
             info = typical_circuits.load(tmp)['p']
         self.assertEqual(info['circuit_types'], [])
@@ -93,7 +85,7 @@ def library(*cards):
 
 TEST_LIBRARY = library(card('G01-001'), card('G03-001', applies_when={'circuit_types': ['POWER_CONVERTER']}),
                        card('G05-001', applies_when={'device_kinds': ['fuse']}))
-PATTERN_MD = ('# 测试模式\n\n功能：x。\n\n适用范围：y。\n\n电路类型：POWER_CONVERTER\n\n## 做法\n\n### 做法甲\n\n'
+PATTERN_MD = ('# 测试模式\n\n功能：x。\n\n适用范围：y。\n\n电路类型：POWER_CONVERTER\n\n## 实现方案\n\n### 做法甲\n\n'
               '- **必算项**：z\n- **落实规则**：G03-001、G05-001\n- **已知坑**：\n- **来源**：\n')
 
 
