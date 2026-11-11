@@ -671,7 +671,7 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
                                               and not intent.get('source_netlist'))
             for c in intent.get('components', []))
         return {'status': 'FAIL' if required else 'NOT_CHECKED',
-                'errors': ['component-requirements.json missing'], 'pending': [], 'native': 'NOT_CHECKED'}
+                'errors': ['component-requirements.json missing'] if required else [], 'pending': [], 'native': 'NOT_CHECKED'}
     errors, pending = record_errors(record, intent, root, inputs)
     if intent.get('component_requirements_version') != VERSION:
         errors.append('IR must opt into component_requirements_version 1')

@@ -186,7 +186,7 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 4. `check_module.py pack <交付目录>` 核对交付目录。
 
 **只给网表时（单独运行 C6）**：用 `import_netlist.py <netlist.xml> --out record/electrical-intent.json --source-schematic <根图> --library-dir 设计资料/symbols` 把 KiCad XML 网表转成设计网表。
-- 源工程里内嵌的符号会抽成项目符号库，画图时用 `--symbol-dir` 指向这个目录。
+- 源工程里内嵌的符号会抽成项目符号库，画图时用 `Sheet(dirs=[...])` 指向这个目录（`generate_schematic.py` 是 `--symbol-dir`）。
 - 引脚号里带“.”的网表无法用“位号.引脚”表达，导入时会报 FAIL。
 - 子页局部标签的网络名去掉页路径（`/09_CH12/IN_D1` 写成 `IN_D1`；两页同名时写成 `页_名字`），原名记在 `source_netlist.net_names`。重画可以自由分页，画图时按这些名字标注。
 - 源工程的器件字段原样带入，包括器件性能字段。性能记录不是给定输入，自动总检查对导入的网表不要求它，这一项记 NOT_CHECKED。

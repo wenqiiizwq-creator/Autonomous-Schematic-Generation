@@ -162,6 +162,25 @@ class RecipeBoardTests(unittest.TestCase):
         self.assertTrue(0 < span[0] <= 1 and 0 < span[1] <= 1, span)
         self.assertEqual([['D3.2', 'R3.2', 2.33]], self.bad_report['readability']['detours'])
 
+    def test_a_named_wire_is_still_a_two_pin_connection(self):
+        # Third redraw 2026-11-11: once a wire carried a local name it had three terminals and was no longer counted.
+        from schematic_layout import readability
+        x, y = pins(parse(dump(self.bad)))['D3.2'].point
+        named = dump(self.bad).rstrip()[:-1] + '(label "LONG_WAY" (at %s %s 0) (effects (font (size 1 1)))))' % (x, y)
+        got = readability.measure(parse(named))
+        self.assertEqual(1, got['labels_local'] - self.bad_report['readability']['labels_local'])
+        self.assertEqual([['D3.2', 'R3.2']], got['tortuous'])
+        self.assertEqual([['D3.2', 'R3.2', 2.33]], got['detours'])
+
+    def test_a_wire_end_that_meets_nothing_fails_the_gate(self):
+        from schematic_layout import readability
+        self.assertEqual([], self.report['readability']['dangling_ends'])
+        x, y = self.pins['J1.1'].point
+        stub = dump(self.good).rstrip()[:-1] + '(wire (pts (xy %s %s) (xy %s %s))))' % (x, y, x, y - 200)
+        got = readability.measure(parse(stub))
+        self.assertEqual([[x, y - 200]], got['dangling_ends'])
+        self.assertEqual('FAIL', readability.gate(got)['status'])
+
     def test_good_and_bad_are_electrically_identical(self):
         cli = find_cli()
         if not cli:

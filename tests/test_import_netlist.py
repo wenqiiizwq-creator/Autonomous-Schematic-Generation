@@ -45,6 +45,7 @@ class ImportNetlistTests(unittest.TestCase):
         self.assertEqual('my_lib_v2:R', parts['R1']['lib_id'])           # nickname the layout library accepts
         self.assertEqual('local:OPA_1', parts['U1']['lib_id'])           # a symbol edited inside the project
         self.assertEqual('RC0603FR-0710KL', parts['R1']['mpn'])
+        self.assertNotIn('MPN', parts['R1'].get('fields', {}))            # one copy: the drawing refuses a second
         self.assertEqual({'GND': ['R1.2', 'U1.2'], 'IN': ['R1.1', 'U1.1']}, intent['nets'])
         self.assertEqual(['U1.3'], intent['no_connect'])
         libraries = Libraries([self.dir / 'sym'])

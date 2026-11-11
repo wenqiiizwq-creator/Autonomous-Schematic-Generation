@@ -423,7 +423,7 @@ class PerformanceTests(unittest.TestCase):
         self.assertEqual(3, adc.written_power(projected['components'][0]))
 
     def test_missing_new_record_fails_old_record_is_unchecked(self):
-        self.assertEqual('NOT_CHECKED', cr.audit(self.intent, None, self.root)['status'])
+        self.assertEqual(('NOT_CHECKED', []), tuple(cr.audit(self.intent, None, self.root)[k] for k in ('status', 'errors')))
         self.intent['component_requirements_version'] = 1
         self.assertEqual('FAIL', cr.audit(self.intent, None, self.root)['status'])
 

@@ -10,7 +10,7 @@
   原名记在 `source_netlist.net_names`；KiCad 给单脚未接网络起的 `unconnected-…` 名字归入 no_connect。
 - 符号：给了源原理图时，把根图和各子页里内嵌的 lib_symbols 抽成项目符号库（每个库一个 .kicad_sym），
   库名里 KiCad 允许而布图库不收的字符换成 `_`，lib_id 一并改写；工程内改过的符号（没有库名）放进 `local` 库。
-  画图时用 `--symbol-dir` 指向这个目录。
+  画图时用 `Sheet(dirs=[...])` 指向这个目录（`generate_schematic.py` 是 `--symbol-dir`）。
 - 电源轨角色（net_roles）、网络电压等不在网表里的信息不猜，导入后由任务 C6.1 按需要补写。
 """
 import argparse
@@ -56,6 +56,9 @@ def components(root):
         mpn = next((fields[k] for k in ('MPN', 'Manufacturer_Part_Number', 'MFR_PN', 'PartNumber', 'Part Number') if fields.get(k)), '')
         if mpn:
             item['mpn'] = mpn
+            item.get('fields', {}).pop('MPN', None)   # the drawing writes MPN from `mpn`; a second copy is refused
+            if not item.get('fields', True):
+                del item['fields']
         if comp.find("property[@name='dnp']") is not None:
             item['dnp'] = True
         out.append(item)

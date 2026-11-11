@@ -119,6 +119,17 @@ def measure(root):
     for i, w in enumerate(wires):
         for p in w:
             ends.setdefault((island[i], p), []).append(i)
+    # A wire end that meets no pin, name, sheet pin or other wire is a stub left behind (third redraw 2026-11-11: KiCad
+    # ERC reported one under the root sheet's path, not the page it was on).
+    met = {q for pts in pin_points.values() for q in pts}
+    met |= {(round(f.x, 4), round(f.y, 4)) for kind, f in scene.labels if kind != "text"}
+    met |= {tuple(round(float(v), 4) for v in pin[2][1:3]) for sheet in all_nodes(root, "sheet")
+            for pin in sheet if isinstance(pin, list) and pin and str(pin[0]) == "pin"
+            and len(pin) > 2 and isinstance(pin[2], list) and len(pin[2]) > 2}
+    met |= {tuple(round(float(v), 4) for v in n[1][1:3]) for n in all_nodes(root, "no_connect")
+            if len(n) > 1 and isinstance(n[1], list)}
+    dangling = sorted(list(p) for (isl, p), segs in ends.items() if len(segs) == 1 and p not in met
+                      and not any(j != segs[0] and on_segment(p, *w) for j, w in enumerate(wires)))
     bends = {}
     for (isl, p), segs in ends.items():
         if len(segs) == 2:
@@ -139,7 +150,10 @@ def measure(root):
                 crossings.append(list(p))
     power_islands = {isl for isl, t in terminals.items() if any(k == "power" for k, *_ in t)}
     rail_mm = sum(length(w) for i, w in enumerate(wires) if island[i] in power_islands)
-    two = [isl for isl, t in terminals.items() if len(t) == 2]
+    # A local net name on a wire names it; it is not an end of the wire. So a named wire between two pins is still a
+    # two-terminal connection (third redraw 2026-11-11: once every net was named, no bend or detour was counted).
+    ends_of = {isl: {x for x in t if x[0] != "label"} or t for isl, t in terminals.items()}
+    two = [isl for isl, t in ends_of.items() if len(t) == 2]
     tortuous = sorted(isl for isl in two if bends.get(isl, 0) >= 3)
     # A direct two-pin wire much longer than the distance between its pins goes the long way round (H3).
     island_mm = {}
@@ -148,10 +162,10 @@ def measure(root):
     detours = []
     for isl in two:
         pts = pin_points.get(isl, [])
-        if len(pts) == 2 and all(k == "part" for k, *_ in terminals[isl]):
+        if len(pts) == 2 and all(k == "part" for k, *_ in ends_of[isl]):
             direct = abs(pts[0][0] - pts[1][0]) + abs(pts[0][1] - pts[1][1])
             if direct and island_mm[isl] > DETOUR_MIN_MM and island_mm[isl] / direct > DETOUR_RATIO:
-                detours.append(sorted(t[2] for t in terminals[isl]) + [round(island_mm[isl] / direct, 2)])
+                detours.append(sorted(t[2] for t in ends_of[isl]) + [round(island_mm[isl] / direct, 2)])
     labels = [k for k, _ in scene.labels if k != "text"]
     # Parts joined only through labels or rail symbols are separate groups: a
     # page made of such islands shows no path, whatever its crossing count.
@@ -215,7 +229,8 @@ def measure(root):
         "power_libraries": sorted(p for p in power if p.startswith("power:")),
         # Locations, so a failure names what to redraw.
         "crossing_points": sorted(crossings),
-        "tortuous": [sorted(t[2] if t[0] in ("part", "power") else f"{t[0]}:{t[1]}" for t in terminals[isl])
+        "dangling_ends": dangling,
+        "tortuous": [sorted(t[2] if t[0] in ("part", "power") else f"{t[0]}:{t[1]}" for t in ends_of[isl])
                      for isl in tortuous],
     }
 
@@ -225,6 +240,8 @@ def gate(metrics, max_crossings=0, max_tortuous=0, allow_oversized_paper=False):
     reasons = []
     if metrics["cross_net_crossings"] > max_crossings:
         reasons.append(f"{metrics['cross_net_crossings']} different-net wire crossings (limit {max_crossings})")
+    if metrics.get("dangling_ends"):
+        reasons.append(f"{len(metrics['dangling_ends'])} wire ends connect to nothing: {metrics['dangling_ends'][:5]}")
     if metrics["tortuous_connections"] > max_tortuous:
         reasons.append(f"{metrics['tortuous_connections']} two-terminal connections with >=3 bends (limit {max_tortuous})")
     if metrics.get("oversized_paper") and not allow_oversized_paper:
