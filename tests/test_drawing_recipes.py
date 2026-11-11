@@ -61,8 +61,8 @@ class RecipeBoardTests(unittest.TestCase):
     def test_bank_shares_a_straight_return(self):
         c3, c4 = self.pins['C3.2'].point, self.pins['C4.2'].point
         self.assertEqual(self.pins['C3.1'].point[1], self.pins['C4.1'].point[1])
-        self.assertLess(c3[0], c4[0])
-        decision = next(d for d in self.report['decisions'] if d['recipe'] == 'bank' and d['parts'] == ['C3', 'C4'])
+        self.assertLess(c4[0], c3[0])                    # the ceramic sits next to the inductor (H7)
+        decision = next(d for d in self.report['decisions'] if d['recipe'] == 'bank' and d['parts'] == ['C4', 'C3'])
         self.assertTrue(decision['common_return'])
 
     def test_repeated_lanes_use_the_same_arrangement(self):
@@ -138,6 +138,22 @@ class RecipeBoardTests(unittest.TestCase):
         _, report = sheet.build('recipe_board')
         self.assertEqual('PASS', report['structure']['status'])
         self.assertEqual(['D3'], [d['subject'] for d in report['structure']['deviations']])
+
+    def test_a_capacitor_bank_is_drawn_smallest_first_from_its_pin_or_source(self):
+        # H7 (Matrix R2 redraw 2026-11-10, page 05): the 220 uF electrolytics were drawn before the 4.7 uF ceramics
+        # at the buck output, and the 100 nF farthest from the VIN pins.
+        from schematic_layout.recipes import capacitance
+        self.assertEqual([1e-7, 4.7e-6, 2.2e-4, 1e-11, None],
+                         [capacitance(v) and round(capacitance(v), 15) for v in ('100n/100V', '4u7/100V', '220uF', '10p', 'DNP')])
+        sheet = draw()
+        sheet.build('recipe_board')
+        order = lambda: [f['subject'] for f in sheet._audit([])['findings'] if f['rule'] == 'bank_order']
+        self.assertEqual([], order())
+        bank = next(d for d in sheet.decisions if d['recipe'] == 'bank' and d['parts'] == ['C4', 'C3'])
+        bank['parts'] = ['C3', 'C4']                     # 220 uF electrolytic drawn before the 100 nF ceramic
+        self.assertEqual(['C3'], order())
+        bank['serves'] = 'end'                           # unless the pin they serve is at the far end of the spine
+        self.assertEqual([], order())
 
     def test_a_wire_that_goes_the_long_way_round_is_listed(self):
         # H3: a direct two-pin wire over 1.5 times the Manhattan distance of its pins is reported, not gated.

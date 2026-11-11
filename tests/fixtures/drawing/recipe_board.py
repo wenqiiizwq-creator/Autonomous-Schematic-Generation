@@ -54,7 +54,7 @@ def draw(intent=INTENT, bad=False):
     s.place('J1', (20.32, 50.8))
     s.power('J1.2')
     s.series('J1.1', ['F1', 'D1'], RIGHT, gap=3)
-    vin = s.bank('D1.1', ['C1', 'C2'], RIGHT)
+    vin = s.bank('D1.1', ['C1', 'C2'], RIGHT, serves='end')        # the spine runs on to U1 VIN
     s.put('U1', '1', add(vin, RIGHT, 12), RIGHT)
     s.wire(vin, 'U1.1')
     s.power('U1.5')
@@ -62,7 +62,7 @@ def draw(intent=INTENT, bad=False):
     sw = s.stub('U1.2', 3)
     s.shunt(sw, 'D2', DOWN)
     l_out = s.series(sw, ['L1'], RIGHT, gap=6)[-1]
-    out = s.bank(l_out, ['C3', 'C4'], RIGHT)
+    out = s.bank(l_out, ['C4', 'C3'], RIGHT)                       # ceramic next to the inductor (H7)
     rail = s.wire(out, add(out, RIGHT, 3))
     s.power(rail)
     r1 = s.series(rail, ['R1'], RIGHT, gap=3)[-1]

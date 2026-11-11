@@ -107,6 +107,18 @@ def label_geometry(kind, text, at, outward, font):
     return angle, just, (Box(x - 0.3 - h, y - w, x - 0.3, y) if outward == UP else Box(x - 0.3 - h, y, x - 0.3, y + w))
 
 
+CAPACITANCE = re.compile(r'^\s*(\d+(?:\.\d+)?)\s*([pnuµμm])(\d*)', re.I)
+FARADS = {'p': 1e-12, 'n': 1e-9, 'u': 1e-6, 'µ': 1e-6, 'μ': 1e-6, 'm': 1e-3}
+
+
+def capacitance(value):
+    """Farads read from a capacitor value (100n, 4u7, 220uF/25V); None when the value does not start with one."""
+    m = CAPACITANCE.match(str(value or ''))
+    if not m:
+        return None
+    return float(m[1] + ('.' + m[3] if m[3] and '.' not in m[1] else '')) * FARADS[m[2].lower()]
+
+
 def select_local_names(intent, external=(), rails=(), min_pins=3):
     """Default naming rule: page-local nets touching a part with >= min_pins pins.
 
@@ -567,7 +579,7 @@ class Sheet:
         return max(4, math.ceil((width + 2 * G) / G))
 
     def bank(self, start, refs, toward=RIGHT, hang=DOWN, pitch=None, gap=2, rail=True, common=True, depth=None,
-             lead=None):
+             lead=None, serves="start"):
         """Parallel parts hanging from a spine at a regular pitch.
 
         With ``common`` the far pins share one straight return rail and a single
@@ -575,8 +587,13 @@ class Sheet:
         rail that many grid steps from the spine (a second line, e.g. N between
         L and N). ``rail=False`` draws the common line without a symbol.
         ``lead`` is the grid distance to the first part (default one pitch; 0
-        puts it at ``start``, e.g. inline with a pin). Returns the spine end.
+        puts it at ``start``, e.g. inline with a pin). ``serves`` names the end of the
+        spine where the pin or source the capacitors serve is ("start", or "end" when
+        the spine runs on to it): the smallest capacitor is drawn at that end (H7).
+        Returns the spine end.
         """
+        if serves not in ("start", "end"):
+            raise ValueError("bank serves is 'start' or 'end'")
         p, net = self._origin(start, toward)
         measured = self.pitch_for(refs)
         for ref in refs:
@@ -618,7 +635,8 @@ class Sheet:
             self.wire(ends[0], ends[-1], net=self.nets.get(fars[0]))
             if rail:
                 self._rail(ends[-1], rail)
-        self.decisions.append({"recipe": "bank", "parts": list(refs), "pitch_grid": pitch, "common_return": common})
+        self.decisions.append({"recipe": "bank", "parts": list(refs), "pitch_grid": pitch, "common_return": common,
+                               "serves": serves})
         return nodes[-1]
 
     def divider(self, top, upper, lower, toward=DOWN, gap=2, rail=True):
@@ -1242,6 +1260,18 @@ class Sheet:
             if used.get(ref) not in ALLOWED[s["role"]]:
                 found.append({"rule": "recipe", "subject": ref, "detail":
                               f"proposed {s['role']} ({s['why']}), drawn with {used.get(ref)}"})
+        # H7: a group of capacitors is drawn in the order they are to be placed, the smallest next to the pin or
+        # source the bank starts from (Matrix R2 redraw 2026-11-10: 220 uF electrolytics drawn before the ceramics).
+        for d in self.decisions:
+            parts = (d["parts"][::-1] if d.get("serves") == "end" else d["parts"]) if d["recipe"] == "bank" else []
+            caps = [(r, capacitance(self.components[r].get("value"))) for r in parts]
+            caps = [(r, c) for r, c in caps if r[:1] == "C" and c is not None]
+            late = next((r for (_, a), (r, b) in zip(caps, caps[1:]) if b < a * 0.999), None)
+            if late:
+                found.append({"rule": "bank_order", "subject": caps[0][0], "detail":
+                              f"capacitor bank {[r for r, _ in caps]}: {late} is smaller than the one before it; "
+                              "draw the smallest next to the pin or source the bank serves (H7; bank(serves=\"end\") "
+                              "when that is where the spine runs on to)"})
         banks = [set(d["parts"]) for d in self.decisions if d["recipe"] == "bank"]
         for ref, s in self.plan["parts"].items():
             if s["role"] == "bank" and not any(set(s["group"]) <= b for b in banks):
