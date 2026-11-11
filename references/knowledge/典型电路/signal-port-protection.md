@@ -6,6 +6,8 @@
 
 电路类型：SIGNAL_PROTECTION
 
+另见：[wireless-module](wireless-module.md)（天线口）；[audio-codec](audio-codec.md)（音频插孔）；[class-d-amplifier](class-d-amplifier.md)（扬声器端子）。
+
 ## 来源清单
 
 - S1：Applicationnote/TI - ESD防护布局指南 - SLVA680A.pdf

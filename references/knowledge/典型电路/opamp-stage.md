@@ -6,6 +6,8 @@
 
 电路类型：ANALOG
 
+另见：[audio-codec](audio-codec.md)（音频输入输出级）。
+
 ## 来源清单
 
 - S1：Book/Op Amps for Everyone - 2002 - Carter.pdf

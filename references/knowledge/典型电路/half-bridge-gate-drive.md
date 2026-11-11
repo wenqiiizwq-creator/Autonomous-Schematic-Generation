@@ -6,6 +6,8 @@
 
 电路类型：POWER_CONVERTER（隔离方案另加 ISOLATION）
 
+另见：[llc-resonant-converter](llc-resonant-converter.md)（LLC 半桥）。
+
 ## 来源清单
 
 - S1：Applicationnote/TI - 半桥自举电路选择 - SLUA887A.pdf

@@ -6,6 +6,8 @@
 
 电路类型：ISOLATION、POWER_CONVERTER
 
+另见：[医疗电气隔离与漏电流](../接口约定/环境与电磁等级/医疗电气隔离与漏电流.md)（医疗隔离等级）。
+
 ## 来源清单
 
 - S1：Datasheet/08_电源管理/隔离DC-DC转换器与模块/TI - DCH010505D.pdf

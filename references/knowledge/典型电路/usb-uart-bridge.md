@@ -6,6 +6,8 @@
 
 电路类型：USB、UART、STARTUP
 
+另见：[wireless-module](wireless-module.md)（无线模块的下载口）。
+
 ## 来源清单
 
 - S1：Datasheet/15_接口与隔离/USB接口/WCH - CH340.pdf

@@ -6,6 +6,8 @@
 
 电路类型：USB
 
+另见：[high-speed-serial-link](high-speed-serial-link.md)（USB 3.x）。
+
 ## 来源清单
 
 - S1：Datasheet/28_保护器件/USB端口保护/ST - TCPP01.pdf

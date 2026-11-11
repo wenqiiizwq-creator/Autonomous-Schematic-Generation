@@ -6,6 +6,8 @@
 
 电路类型：STARTUP
 
+另见：[wireless-module](wireless-module.md)（无线模块使能脚）。
+
 ## 来源清单
 
 - S1：Datasheet/08_电源管理/电压监控_复位(Supervisor)/TI - TPS3808.pdf

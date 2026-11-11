@@ -6,6 +6,8 @@
 
 电路类型：STARTUP、CLOCK
 
+另见：[wireless-module](wireless-module.md)（无线模块与带射频的芯片）。
+
 ## 来源清单
 
 - S1：Datasheet/01_微控制器与处理器/32位ARM_Cortex-M_MCU/ST - STM32F103C8.pdf

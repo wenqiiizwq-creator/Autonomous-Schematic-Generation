@@ -6,6 +6,8 @@
 
 电路类型：POWER_CONVERTER
 
+另见：[llc-resonant-converter](llc-resonant-converter.md)（PFC 之后的 LLC 级）。
+
 ## 来源清单
 
 - S1：Designexample/USB-PD/NCP1343PD100WGEVB/onsemi - NCP1343PD100WGEVB - Schematic.pdf

@@ -4,6 +4,8 @@
 适用范围：用瞬态电压抑制二极管（TVS，单向或双向）把电源端口或信号端口上的浪涌钳到被保护器件能承受的电压。管工作电压、击穿电压与钳位电压（按实际电流和温度）、按浪涌波形和温度折算的峰值脉冲电流与功率、单双向、漏电与电容。浪涌等级、波形、源阻抗和浪涌电流上界由设计准则 G07 定，这里只引用。不管压敏电阻、气体放电管、晶闸管型保护器件，也不管静电放电保护器件的选型（它们的规格条件不同）。
 对应典型电路：[dc-24v-input-protection](../典型电路/dc-24v-input-protection.md)、[can-with-miswire](../典型电路/can-with-miswire.md)、[isolated-rs485](../典型电路/isolated-rs485.md)、[industrial-di-serializer](../典型电路/industrial-di-serializer.md)、[type-c-port-protection](../典型电路/type-c-port-protection.md)、[efuse-aux-branch](../典型电路/efuse-aux-branch.md)、[efuse-bfet-short-latch](../典型电路/efuse-bfet-short-latch.md)、[high-side-quad](../典型电路/high-side-quad.md)、[hotswap-latch-powerlimit](../典型电路/hotswap-latch-powerlimit.md)
 
+另见：[车载电源瞬态](../接口约定/环境与电磁等级/车载电源瞬态.md)（车载抛负载与 ISO 7637-2 脉冲）。
+
 ## 来源
 
 - S1：Applicationnote/TI - 浪涌TVS二极管选型 - SLVAE37.pdf

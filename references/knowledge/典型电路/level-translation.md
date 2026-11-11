@@ -6,6 +6,8 @@
 
 电路类型：LEVEL_SHIFT、I2C
 
+另见：[I2S与TDM](../接口约定/总线与电平/I2S与TDM.md)（数字音频线）。
+
 ## 来源清单
 
 - S1：Applicationnote/TI - 电平转换方案选择 - SCEA035A.pdf

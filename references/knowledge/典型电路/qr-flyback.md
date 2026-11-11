@@ -6,6 +6,8 @@
 
 电路类型：POWER_CONVERTER、ISOLATION
 
+另见：[llc-resonant-converter](llc-resonant-converter.md)（LLC 谐振变换）。
+
 ## 来源清单
 
 - S1：Designexample/USB-PD/NCP1343PD100WGEVB/onsemi - NCP1343PD100WGEVB - Schematic.pdf

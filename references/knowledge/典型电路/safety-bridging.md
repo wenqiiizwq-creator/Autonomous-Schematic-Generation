@@ -6,6 +6,8 @@
 
 电路类型：ISOLATION
 
+另见：[医疗电气隔离与漏电流](../接口约定/环境与电磁等级/医疗电气隔离与漏电流.md)（医疗设备）。
+
 ## 来源清单
 
 - S1：Designexample/USB-PD/NCP1343PD100WGEVB/onsemi - NCP1343PD100WGEVB - 100W Type-C PD3.0 PPS Charger EVB User Manual.pdf

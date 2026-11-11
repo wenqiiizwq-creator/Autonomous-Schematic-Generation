@@ -6,6 +6,8 @@
 
 电路类型：无（机壳接法不是接口类型；板上有隔离域时隔离本身由 isolated-rs485、di-digital-isolation 等典型电路声明 ISOLATION）
 
+另见：[医疗电气隔离与漏电流](../接口约定/环境与电磁等级/医疗电气隔离与漏电流.md)（医疗漏电流限值）。
+
 ## 来源清单
 
 - S1：Book/Electromagnetic Compatibility Engineering - 2009 - Ott.pdf

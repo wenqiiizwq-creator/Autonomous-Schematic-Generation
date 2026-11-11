@@ -6,6 +6,8 @@
 
 电路类型：DC_24V、POWER_PROTECTION
 
+另见：[车载电源瞬态](../接口约定/环境与电磁等级/车载电源瞬态.md)（车载 12 V、24 V）。
+
 ## 来源清单
 
 - S1：Datasheet/28_保护器件/压敏电阻 (MOV)/TDK - SIOV Leaded StandarD.pdf

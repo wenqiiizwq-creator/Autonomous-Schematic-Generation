@@ -6,6 +6,8 @@
 
 电路类型：USB
 
+另见：[high-speed-serial-link](high-speed-serial-link.md)（USB 3.x）。
+
 ## 来源清单
 
 - S1：Standard/USB Type-C R2.5 Cable and Connector Specification - 2026.pdf

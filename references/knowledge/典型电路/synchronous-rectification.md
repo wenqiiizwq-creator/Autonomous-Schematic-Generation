@@ -6,6 +6,8 @@
 
 电路类型：POWER_CONVERTER
 
+另见：[llc-resonant-converter](llc-resonant-converter.md)（LLC 次级整流）。
+
 ## 来源清单
 
 - S1：Datasheet/08_电源管理/栅极驱动器/onsemi - NCP4307.pdf

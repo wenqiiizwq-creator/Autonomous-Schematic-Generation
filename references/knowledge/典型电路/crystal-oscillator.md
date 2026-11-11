@@ -6,6 +6,8 @@
 
 电路类型：CLOCK
 
+另见：[wireless-module](wireless-module.md)（射频芯片的晶体）；[audio-codec](audio-codec.md)（音频主时钟）。
+
 ## 来源清单
 
 - S1：Datasheet/01_微控制器与处理器/32位ARM_Cortex-M_MCU/ST - STM32F103C8.pdf

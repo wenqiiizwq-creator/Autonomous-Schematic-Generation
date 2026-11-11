@@ -22,7 +22,7 @@ CIRCUITS = typical_circuits.load()
 class PatternFileTests(unittest.TestCase):
     def test_every_pattern_declares_vocabulary_circuit_types(self):
         names = set(guideline_criteria.vocabulary()['vocabulary']['circuit_types'])
-        self.assertEqual(len(CIRCUITS), 68)   # knowledge package 1.0.0, without README.md
+        self.assertEqual(len(CIRCUITS), 76)   # knowledge package 1.0.2, without README.md
         for pid, info in CIRCUITS.items():
             self.assertIsNotNone(info['circuit_types'], '%s 缺 电路类型： 一行（没有对应类型写 无）' % pid)
             self.assertEqual(set(), set(info['circuit_types']) - names, (pid, info['circuit_types']))

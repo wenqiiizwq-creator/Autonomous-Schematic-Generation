@@ -6,6 +6,8 @@
 
 电路类型：ETHERNET、POE_PD
 
+另见：[poe-pd-front-end](poe-pd-front-end.md)（PoE 受电端）。
+
 ## 来源清单
 
 - S1：Applicationnote/Microchip - 以太网磁性元件指南 - ENT-AN0098 Rev.2.2.pdf
