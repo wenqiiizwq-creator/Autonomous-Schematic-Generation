@@ -18,8 +18,9 @@ RECORDS = {
                           'checks': [{'name': '结温', 'limit_basis': 'model'}, {'name': '耐压', 'limit_basis': 'guaranteed'}]}],
         'work_items': [{'id': 'W-1', 'stage': 'external', 'status': 'open', 'action': '向原厂要 SOA 曲线'},
                        {'id': 'W-2', 'stage': 'external', 'status': 'closed', 'action': 'x'}]},
-    'modules.json': {'returns': [{'from': 'C4.2', 'to': 'C2.2', 'reason': '电流预算不够', 'evidence': 'calc:C-1'}],
-                     'knowledge_misses': [{'task': 'C4.2', 'component': '计算方法', 'query': '电荷泵飞电容取值'}]},
+    'modules.json': {'returns': [{'from': 'C4.2', 'to': 'C3.3', 'reason': '电流预算不够', 'evidence': 'calc:C-1'}],
+                     'knowledge_lookups': [{'task': 'C4.2', 'component': '计算方法', 'query': '电荷泵飞电容取值', 'found': []},
+                                           {'task': 'C4.2', 'component': '计算方法', 'query': '降压电感', 'found': ['计算方法/x.md']}]},
     'requirements.json': {'clarifications': [
         {'id': 'Q1', 'proposed_requirement': '输出 2 A', 'answer': {'decision': 'DECIDED', 'text': '输出 3 A'}},
         {'id': 'Q2', 'proposed_requirement': '输出 2 A', 'answer': {'decision': 'ADOPTED_PROPOSAL', 'text': '输出 2 A'}}]},
@@ -44,9 +45,9 @@ class KnowledgeGapTests(unittest.TestCase):
                           'external_item': 1, 'returned_upstream': 1, 'user_overrode': 2, 'knowledge_missing': 1}, data['counts'])
         by = {g['signal']: g for g in data['gaps']}
         self.assertEqual(('C3', 'PSU：隔离电源'), (by['no_typical_circuit']['module'], by['no_typical_circuit']['item']))
-        self.assertEqual(('C2', 'C2.2'), (by['returned_upstream']['module'], by['returned_upstream']['task']))
+        self.assertEqual(('C3', 'C3.3'), (by['returned_upstream']['module'], by['returned_upstream']['task']))
         self.assertEqual({'Q1', '控制器'}, {g['item'] for g in data['gaps'] if g['signal'] == 'user_overrode'})
-        # 知识包里哪个组件查不到什么（modules.json 的 knowledge_misses）
+        # 知识包里哪个组件查不到什么（modules.json 的 knowledge_lookups 里 found 为空的）
         self.assertEqual(('C4', 'C4.2', '计算方法：电荷泵飞电容取值'), (by['knowledge_missing']['module'],
                          by['knowledge_missing']['task'], by['knowledge_missing']['item']))
 

@@ -350,7 +350,7 @@ def source_problem(key, p, calculations, requirements, clarifications, work, com
                 source[4:], p['value'], p.get('unit') or '')
         return None     # a missing requirement is already requirement_parameter_without_requirement
     if basis in ('guaranteed', 'typical', 'interface'):
-        return None     # the datasheet citation, or the interface row (task C2.2), is checked with every parameter
+        return None     # the datasheet citation, or the interface row (task C3.3), is checked with every parameter
     if basis == 'derived':
         if source.startswith('calc:') and source[5:] != key:
             if any(q.get('input_role') == p.get('input_role') for q in params_of(calculations.get(source[5:]) or {})):

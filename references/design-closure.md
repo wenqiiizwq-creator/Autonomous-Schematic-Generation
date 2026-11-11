@@ -337,8 +337,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     X 电容要进放电计算、Y 电容要进接触电流计算的 `refs`（见 [part-roles.md](part-roles.md) 第 1 节“保护器件与安全防护位置”）。`render_design_report.py` 核对，不一致是记录问题。
   - `derived`：由其他值推出，写 `derivation`，`source` 是手册页或 `calc:<计算 id>`。
   - `interface`：别的块在接口上给本块的数（负载能接受的电压上下限、源端保证的范围和电流），`source` 写 `interface:<流向名>`，
-    数值要是 `record/interfaces.json` 该流向写的数（任务 C2.2，同一量纲按前缀换算）；不对记 `interface_parameter_not_in_flow`。
-    本块的计算不引别的块的器件手册或计算：要用对方的限值，就引接口参数；接口参数不够用时回到任务 C2.2。
+    数值要是 `record/interfaces.json` 该流向写的数（任务 C3.3，同一量纲按前缀换算）；不对记 `interface_parameter_not_in_flow`。
+    本块的计算不引别的块的器件手册或计算：要用对方的限值，就引接口参数；接口参数不够用时回到任务 C3.3。
   - `design_choice`：本设计选定的值（电阻阻值、容差档、匝数），写 `ref`。
   - `model`：工程假设或折减（CTR 保持系数、效率包络等），写 `reason`。
   - `requirement`：来自需求的输入（额定功率、最低输入电压），`source` 写 `req:<需求编号>`，编号须在 `requirements` 里。

@@ -5,7 +5,7 @@
 
 块文件不手写，从 C3 的两份工作记录确定性地抽出：scheme-criteria.json 的每块、selection.json 的每个核心角色都写
 block_id（architecture.json 的 blocks[].id）。每个功能块一个文件，内容是选定方案、核心器件与角色、决定条件的本板取值、
-核心器件的端口限值（port_limits，供任务 C2.2 定接口参数）、留给任务 C4.2 核算的数值；不含外围器件和数值。C4 只读块文件，不读这两份工作记录。
+核心器件的端口限值（port_limits，供任务 C3.3 定接口参数）、留给任务 C4.2 核算的数值；不含外围器件和数值。C4 只读块文件，不读这两份工作记录。
 """
 import argparse
 import json

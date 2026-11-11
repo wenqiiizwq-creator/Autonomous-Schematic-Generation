@@ -142,7 +142,7 @@ def port_limits(block_files):
 
 
 def check_interfaces(data, arch, block_files=None):
-    """record/interfaces.json (task C2.2, module C2): each cross-block flow of architecture.json has what its source
+    """record/interfaces.json (task C3.3, module C3): each cross-block flow of architecture.json has what its source
     block guarantees (`provides`) and what its load block accepts (`accepts`, with its source). A supply rail's voltage
     lies inside every load's accepted range and inside the port limits of the load's core parts; its current capability
     covers the loads on the same rail; a logic signal's output levels meet the input thresholds. Returns (problems, notes)."""
@@ -150,7 +150,7 @@ def check_interfaces(data, arch, block_files=None):
         return ['interfaces.json 要写 schema_version 1 和 flows 列表（见 references/modules.md）'], []
     flows = {f['name']: f for f in (arch or {}).get('flows') or [] if isinstance(f, dict) and text(f.get('name'))}
     rows = {r.get('name'): r for r in data['flows'] if isinstance(r, dict)}
-    problems = ['interfaces.json 缺少流向 %s（任务 C2.2）' % n for n in sorted(set(flows) - set(rows))]
+    problems = ['interfaces.json 缺少流向 %s（任务 C3.3）' % n for n in sorted(set(flows) - set(rows))]
     problems += ['interfaces.json 的流向 %s 不在 architecture.json 里' % n for n in sorted(set(rows) - set(flows), key=str)]
     limits, notes, rails = port_limits(block_files), [], {}
     for name in sorted(set(flows) & set(rows)):

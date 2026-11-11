@@ -30,7 +30,7 @@ where the design ran short of knowledge, from the module records.
 
 `check_module.py <C1..C6> <design>` runs one capability module's gate on the
 parts it owns (SKILL.md 架构, P7) and records the input/output fingerprints in
-`record/modules.json`; `check_module.py return <design> --from C4.2 --to C2.2 …` records a
+`record/modules.json`; `check_module.py return <design> --from C4.2 --to C3.3 …` records a
 return to an upstream task; `check_module.py status <design>` lists the recorded
 modules as OK, STALE or MODIFIED; `report` writes `模块报告.md` and `pack`
 checks the delivery of a module run (task.json `modules`). `import_netlist.py`

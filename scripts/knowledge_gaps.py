@@ -4,7 +4,7 @@
   python3 knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]
 
 从各模块的产品里抽出设计中知识不够的地方，不手写：知识包（references/knowledge/）哪个组件查不到什么
-（典型电路没有适用方案、modules.json 的 knowledge_misses）、候选来源未证实、手册不在知识库、
+（典型电路没有适用方案、modules.json 的 knowledge_lookups 里没查到的）、候选来源未证实、手册不在知识库、
 计算依据是典型值或估计、外部资料待办、回到上游重做、用户没有采纳 ASG 的建议。清单只如实列出，不拦交付；
 能力缺陷的归纳和改进在评测侧做。格式见 references/delivery-report.md。
 """
@@ -82,7 +82,9 @@ def extract(root, datasheets_to_file=()):
             gap('external_item', 'C4', 'C4.3', str(item.get('id')), str(item.get('action') or ''), 'design-closure.json')
 
     modules = load(record / 'modules.json')
-    for row in rows(modules, 'knowledge_misses'):
+    for row in rows(modules, 'knowledge_lookups'):
+        if row.get('found'):
+            continue
         task = str(row.get('task') or '')
         gap('knowledge_missing', task.partition('.')[0], task, '%s：%s' % (row.get('component'), row.get('query')),
             str(row.get('detail') or '查不到'), 'modules.json')

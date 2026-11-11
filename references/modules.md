@@ -9,8 +9,8 @@ SKILL.md「架构」把 ASG 分成六个能力模块，P7 规定了模块契约�
 | 模块 | 关卡 |
 |---|---|
 | C1 | `audit_design_closure --module C1`：只查 `requirements.json`：每条需求有编号、条文和来源，澄清都已答复并写回，降额等级、准则范围已定；不需要设计网表 |
-| C2 | `record/architecture.json`，格式见下节；C3 的块文件已经抽出时，再查接口定稿 `record/interfaces.json`（任务 C2.2） |
-| C3 | `check_scheme_criteria.py` 的方案记录、`selection.json` 的核心选型；再用 `block_circuits.py` 抽出块文件，核对它们与这两份工作记录一致；每个核心器件写了端口限值；选定方案没有标典型电路、库里却有命中的，候选里要说明为什么不适用；不查分页方案，也不查留给 2.2 的数值 |
+| C2 | `record/architecture.json`，格式见下节 |
+| C3 | `check_scheme_criteria.py` 的方案记录、`selection.json` 的核心选型；再用 `block_circuits.py` 抽出块文件，核对它们与这两份工作记录一致；每个核心器件写了端口限值；接口定稿 `record/interfaces.json`（任务 C3.3）对 `architecture.json` 和块文件的端口限值成立；选定方案没有标典型电路、库里却有命中的，候选里要说明为什么不适用；不查分页方案，也不查留给 2.2 的数值 |
 | C4 | 每个块设计对 `architecture.json` 的核对（端口、块内网络名、位号编号段）；`interfaces.json` 里本块这一头的接口参数齐全；把已写的块设计宽松合并（端口还没有对端不报错）后做 `audit_design_closure --module C4`：计算、工况、降额、引脚表、引脚处置、准则引用；`component-requirements.json`；块文件里留给 C4.2 的数值都已闭合（只读块文件，不读 C3 的工作记录）。`--block <块>` 只核一个块，不记指纹 |
 | C5 | `electrical-intent.json` 与 `blocks.py merge` 的合并结果逐脚一致；整板设计闭合审计（不带 `--module`），包括需求追溯、网络电压、矩阵、接口约定、FMEA 与 EMC 端口矩阵 |
 | C6 | 分页方案、图面审阅、`summary.json` 没有 FAIL 的绘图检查项；有块文件时，块文件里的选定方案与分页方案标注的典型电路一致（只读 C3 的产品 `block-circuits/`，不读它的工作记录） |
@@ -41,16 +41,16 @@ C4 每块写一个块设计 `record/blocks/<块>.json`，不写整板网表；C5
   - `spec.requirements` 引用 requirements.json 里的需求编号。
 - **flows**：每条跨块流向写一个名字，代表它承载的电源轨或信号。`kind` 取 `power` 或 `signal`。`power` 流向连起来就是电源树。
   - `nets` 写它承载的整板网络名（一条总线写多个），两端块的端口只能用这些名字。
-  - `params` 写接口参数的预算值，供 C3 选方案用；C4 用的是任务 C2.2 定稿的数（见下节）：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗。
+  - `params` 写接口参数的预算值，供 C3 选方案用；C4 用的是任务 C3.3 定稿的数（见下节）：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗。
 - 块的边界放在少数几个参数就能说清的地方：两块之间要靠控制环、共用一颗芯片或多条模拟连线才能工作的，合成一块。
 - **boundaries**：每条隔离边界写它分开的电压域（`sides`），每一侧都要有功能块。
 - **interfaces**：对外接口写名字和所属功能块。
 
 单独运行 C6 时没有这个文件，功能块划分由任务 C6.1 从网表定。
 
-## interfaces.json（任务 C2.2，模块 C2）
+## interfaces.json（任务 C3.3，模块 C3）
 
-任务 C2.2 排在 C3 之后、C4 之前：核心器件选定后，把每条跨块流向的接口参数定成各块设计时要遵守的数。`architecture.json` 不动，所以 C3 不会因此过期。
+任务 C3.3 是 C3 的最后一项：核心器件选定、块文件抽出后，把每条跨块流向的接口参数定成各块设计时要遵守的数。`architecture.json` 不动。
 
 ```json
 {"schema_version": 1,
@@ -73,7 +73,7 @@ C4 每块写一个块设计 `record/blocks/<块>.json`，不写整板网表；C5
   - 同一个源块、同一组网络的几条流向是一条轨：`provides` 写得相同，电流能力不小于各负载 `current_max` 之和。
 - **逻辑信号**：`provides` 写 `voh_min`、`vol_max`（可加 `voh_max`、`drive`），`accepts` 写 `vih_min`、`vil_max`（可加 `abs_max`）。输出高电平不低于输入门限（`drive` 为 `open-drain` 时不查），输出低电平不高于输入门限，输出最高不超过输入耐压。
 - **模拟量、差分对**：两头各写 `level`（文字）。这类流向的相容性不做机械核对，关卡列为提示。
-- 交集为空或电流超出源块的块规格时，重做任务 C2.1，不在这里凑数。
+- 交集为空或电流超出源块的块规格时，先看能否回任务 C3.2 换核心器件解决；要改架构或块规格的回到任务 C2.1。两种都记 `returns`，不在这里凑数。
 - C4 设计某一块时只看它自己这一头：作源块的看 `provides`，作负载的看 `accepts`。
 
 ## requirements.json（任务 C1.1，模块 C1）
@@ -112,9 +112,9 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 ```
 
 - 每个功能块都有一个文件；没有关键方案和核心器件的块，`schemes`、`core_parts` 为空。
-- 内容是选定方案、决定条件的本板取值（`decisive`）、核心器件与角色、核心器件的端口限值（`port_limits`，任务 C2.2 用）、留给任务 C4.2 核算的数值（`deferred`）；不含落选候选、外围器件和数值。
+- 内容是选定方案、决定条件的本板取值（`decisive`）、核心器件与角色、核心器件的端口限值（`port_limits`，任务 C3.3 用）、留给任务 C4.2 核算的数值（`deferred`）；不含落选候选、外围器件和数值。
 - C3 的关卡先抽取，再核对：每个功能块一个文件；每块方案、每个核心角色都在自己块的文件里，选定方案、选定型号和位号与工作记录相同。手改过的块文件与重新抽取的结果不同，报错。
-- C4、C6 和任务 C2.2 只读块文件，不读 C3 的工作记录。
+- C4、C6 和任务 C3.3 只读块文件，不读 C3 的工作记录。
 
 ## blocks/<块>.json（任务 C4.4，模块 C4；整板层块 BOARD.json 归 C5）
 
@@ -147,8 +147,9 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
                     "inputs": {"C1:requirements.json": "<sha256>",
                                "C2:architecture.json": "<sha256>",
                                "given:/path/需求.md": "<sha256>"},
-                    "outputs": {"scheme-criteria.json": "<sha256>", "selection.json": "<sha256>", "block-circuits/": "<sha256>"}}},
- "returns": [{"date": "2026-11-09", "from": "C4.2", "to": "C2.2", "reason": "+3V3 的电流预算不够", "evidence": "calc:C-3V3"}]}
+                    "outputs": {"scheme-criteria.json": "<sha256>", "selection.json": "<sha256>", "block-circuits/": "<sha256>",
+                                "interfaces.json": "<sha256>"}}},
+ "returns": [{"date": "2026-11-09", "from": "C4.2", "to": "C3.3", "reason": "+3V3 的电流预算不够", "evidence": "calc:C-3V3"}]}
 ```
 
 - **inputs**：上游模块产出的指纹，加上用 `--given` 给定的文件。
@@ -158,17 +159,13 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 
 | 模块 | 上游 |
 |---|---|
-| C2 | C1；C3 的 `block-circuits/`（任务 C2.2 读） |
-| C3 | C1；C2 的 `architecture.json` |
+| C2 | C1 |
+| C3 | C1、C2 |
 | C4 | C1、C2、C3 |
-| C5 | C1、C2、C4 |
-| C6 | C2、C3、C5 |
+| C5 | C1、C2、C4；C3 的 `interfaces.json` |
+| C6 | C2、C5；C3 的 `block-circuits/` |
 
-上游缺失时，记为 `absent`。
-
-C2 和 C3 互为上游，但读的文件不同，不会循环：
-- C3 只读 `architecture.json`。任务 C2.2 写 `interfaces.json` 不会让 C3 过期；改 `architecture.json` 才会。
-- C2 读块文件。C3 做完后 C2 变成 STALE，表示该做任务 C2.2；写完 `interfaces.json` 重跑 C2 关卡。
+上游缺失时，记为 `absent`。上游只按 C1→C6 单向，没有互为上游的模块。
 
 `check_module.py status <设计目录>` 逐个列出已记录模块的状态：
 
@@ -205,7 +202,7 @@ result.json 里这类待办的 kind 是 `INPUT`。整板流程中登记 `input` 
 串联运行时，回到上游模块重做，下游按指纹重跑。每次回到上游都记一条：
 
 ```bash
-python3 scripts/check_module.py return <设计目录> --from C4.2 --to C2.2 --reason "+3V3 的电流预算不够" --evidence "calc:C-3V3"
+python3 scripts/check_module.py return <设计目录> --from C4.2 --to C3.3 --reason "+3V3 的电流预算不够" --evidence "calc:C-3V3"
 ```
 
-它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）；知识包查不到的记在同一文件的 `knowledge_misses`（见 [知识包](knowledge-package.md)）。
+它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）；查知识包的记录在同一文件的 `knowledge_lookups`，没查到的也抽进清单（见 [知识包](knowledge-package.md)）。

@@ -398,7 +398,7 @@ PREFIXES = {'m': 1e-3, 'µ': 1e-6, 'μ': 1e-6, 'u': 1e-6, 'k': 1e3}
 
 
 def interface_numbers(artifact_root):
-    """{flow name: numbers of its row} of record/interfaces.json (task C2.2): what a block may cite about the other end
+    """{flow name: numbers of its row} of record/interfaces.json (task C3.3): what a block may cite about the other end
     of a flow without reading the other block."""
     path = Path(artifact_root) / 'record' / 'interfaces.json'
     try:

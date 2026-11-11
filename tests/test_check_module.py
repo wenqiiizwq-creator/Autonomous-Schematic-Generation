@@ -26,6 +26,14 @@ def tearDownModule():
     test_design_closure.tearDownModule()
 
 
+def looked_up(record):
+    """Every module has recorded its knowledge package lookups (here: nothing found), as the gates require."""
+    rows = [{'task': module + '.1', 'component': c, 'query': 'x', 'found': []}
+            for module, components in check_module.LOOKUPS.items() for c in components]
+    (record / 'modules.json').write_text(json.dumps({'schema_version': 1, 'modules': {}, 'knowledge_lookups': rows},
+                                                    ensure_ascii=False), encoding='utf-8')
+
+
 ARCH = {
     'schema_version': 1,
     'domains': [{'name': '一次侧'}, {'name': '二次侧'}],
@@ -40,7 +48,7 @@ ARCH = {
     'boundaries': [{'name': '电源隔离', 'sides': ['一次侧', '二次侧']}],
     'interfaces': [{'name': '电源端子', 'block': 'IN'}],
 }
-# Task C2.2: what the source block guarantees and what the load block accepts on each flow.
+# Task C3.3: what the source block guarantees and what the load block accepts on each flow.
 FROZEN = {'schema_version': 1, 'flows': [
     {'name': 'VIN', 'provides': {'voltage': [18, 36], 'current_max': 0.3},
      'accepts': {'voltage': [16, 38], 'current_max': 0.25, 'source': 'CTRL-A 手册 p.1'}}]}
@@ -135,7 +143,7 @@ class ModuleAuditTests(unittest.TestCase):
 
 
 class InterfaceTests(unittest.TestCase):
-    """Task C2.2: record/interfaces.json against architecture.json and the port limits in the block files."""
+    """Task C3.3: record/interfaces.json against architecture.json and the port limits in the block files."""
     ARCH = dict(ARCH, flows=ARCH['flows'] + [
         {'name': 'VIN→AUX', 'kind': 'power', 'from': 'IN', 'to': 'AUX', 'nets': ['VIN'], 'params': 'x'},
         {'name': 'PG', 'kind': 'signal', 'from': 'PSU', 'to': 'AUX', 'nets': ['PG'], 'params': 'x'}])
@@ -155,7 +163,7 @@ class InterfaceTests(unittest.TestCase):
     def test_a_complete_freeze_passes(self):
         self.assertEqual(([], []), self.check())
 
-    def test_each_done_mark_of_task_c2_2_is_checked(self):
+    def test_each_done_mark_of_task_c3_3_is_checked(self):
         for change, word in (
                 (lambda r, d: d['flows'].pop(), '缺少流向 PG'),
                 (lambda r, d: r['VIN'].pop('accepts'), '要写 provides'),
@@ -206,6 +214,7 @@ class FingerprintTests(unittest.TestCase):
         self.write('design-closure.json', {'traceability': [{'requirement': 'R1'}], 'calculations': []})
         self.write('requirements.json', {'schema_version': 1, 'requirements': [{'id': 'R1'}]})
         self.write('architecture.json', ARCH)
+        looked_up(self.record)
 
     def write(self, name, data):
         (self.record / name).write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
@@ -254,6 +263,24 @@ class FingerprintTests(unittest.TestCase):
         problems, _ = check_module.gate('C2', self.root)
         self.assertTrue(any('architecture.json' in p for p in problems))
 
+    def test_gate_needs_a_recorded_lookup_of_each_component_and_entries_that_exist(self):
+        (self.record / 'modules.json').unlink()
+        problems, _ = check_module.gate('C2', self.root)
+        self.assertEqual(2, len([p for p in problems if '没有查知识包' in p]), problems)
+        entry = next(p for p in sorted((check_module.KNOWLEDGE / '板级架构模式').glob('*.md')) if p.name != 'README.md')
+        args = ['lookup', str(self.root), '--task', 'C2.1', '--component', '板级架构模式', '--query', '电源树']
+        self.assertEqual(1, check_module.main(args + ['--found', '板级架构模式/没有这一条.md']))
+        self.assertEqual(1, check_module.main(args + ['--found', '接口约定/README.md']))      # another component's entry
+        self.assertEqual(0, check_module.main(args + ['--found', '板级架构模式/' + entry.name]))
+        self.assertEqual(0, check_module.main(['lookup', str(self.root), '--task', 'C2.1', '--component', '接口约定',
+                                               '--query', '电源轨参数模板']))                  # not found is recorded too
+        self.assertEqual(([], []), check_module.gate('C2', self.root))
+        data = json.loads((self.record / 'modules.json').read_text(encoding='utf-8'))
+        self.assertEqual([['板级架构模式/' + entry.name], []], [r['found'] for r in data['knowledge_lookups']])
+        data['knowledge_lookups'][0]['found'] = ['板级架构模式/已删的条目.md']               # hand-written, not in the package
+        self.write('modules.json', data)
+        self.assertTrue(any('不是知识包' in p for p in check_module.gate('C2', self.root)[0]))
+
 
 class ModuleRunTests(unittest.TestCase):
     """task.json `modules` (workflow-handoff.md): the given inputs stay as given; the run delivers a module report."""
@@ -271,6 +298,7 @@ class ModuleRunTests(unittest.TestCase):
         self.record.mkdir(parents=True)
         (self.record / 'requirements.json').write_bytes((self.source / 'requirements.json').read_bytes())
         (self.record / 'architecture.json').write_text(json.dumps(ARCH, ensure_ascii=False), encoding='utf-8')
+        looked_up(self.record)
         given = {'requirements.json': {'path': str(self.source / 'requirements.json'),
                                        'sha256': sha256(self.source / 'requirements.json')}}
         self.task = {'id': 'T-C2', 'modules': {'from': 'C2', 'to': 'C2', 'given': given}}
@@ -339,6 +367,7 @@ class BlockCircuitTests(unittest.TestCase):
         self.record.mkdir()
         for name, data in (('architecture.json', ARCH), ('scheme-criteria.json', SCHEME), ('selection.json', SELECTION)):
             (self.record / name).write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+        looked_up(self.record)
 
     def test_each_block_gets_its_scheme_core_parts_and_deferred_values(self):
         self.assertEqual([], block_circuits.run(self.root))
@@ -372,20 +401,28 @@ class BlockCircuitTests(unittest.TestCase):
             problems = block_circuits.run(self.root)
             self.assertTrue(any(word in p for p in problems), (word, problems))
 
-    def test_c2_gate_needs_the_interface_freeze_once_c3_is_done(self):
+    def test_the_interface_freeze_closes_c3_and_upstream_runs_one_way(self):
         requirements = {'schema_version': 1, 'requirements': [{'id': 'R1'}]}
         (self.record / 'requirements.json').write_text(json.dumps(requirements), encoding='utf-8')
-        self.assertEqual(([], []), check_module.gate('C2', self.root))           # before C3: architecture.json alone
+        self.assertEqual(([], []), check_module.gate('C2', self.root))           # C2 is architecture.json alone
         check_module.record_module(self.root, 'C2', [])
-        block_circuits.run(self.root)
-        check_module.record_module(self.root, 'C3', [])
-        self.assertEqual('STALE', check_module.status(self.root)['C2'])          # the block files are there: do task C2.2
-        problems, _ = check_module.gate('C2', self.root)
-        self.assertTrue(any('任务 C2.2 接口定稿' in p for p in problems), problems)
+        problems, _ = check_module.gate('C3', self.root)
+        self.assertTrue(any('任务 C3.3 接口定稿' in p for p in problems), problems)
+        self.assertEqual({'C2': 'OK'}, check_module.status(self.root))           # the block files do not touch C2
+        frozen = copy.deepcopy(FROZEN)
+        frozen['flows'][0].pop('accepts')
+        (self.record / 'interfaces.json').write_text(json.dumps(frozen, ensure_ascii=False), encoding='utf-8')
+        problems, _ = check_module.gate('C3', self.root)
+        self.assertTrue(any('要写 provides' in p for p in problems), problems)
         (self.record / 'interfaces.json').write_text(json.dumps(FROZEN, ensure_ascii=False), encoding='utf-8')
-        self.assertEqual(([], []), check_module.gate('C2', self.root))
-        check_module.record_module(self.root, 'C2', [])
-        self.assertEqual({'C2': 'OK', 'C3': 'OK'}, check_module.status(self.root))   # C3 reads architecture.json only
+        problems, _ = check_module.gate('C3', self.root)
+        self.assertFalse(any('interfaces.json' in p for p in problems), problems)
+        check_module.record_module(self.root, 'C3', [])
+        self.assertEqual({'C2': 'OK', 'C3': 'OK'}, check_module.status(self.root))
+        (self.record / 'interfaces.json').write_text(json.dumps(dict(FROZEN, note='x'), ensure_ascii=False),
+                                                     encoding='utf-8')
+        self.assertEqual({'C2': 'OK', 'C3': 'MODIFIED'}, check_module.status(self.root))
+        (self.record / 'interfaces.json').write_text(json.dumps(FROZEN, ensure_ascii=False), encoding='utf-8')
         arch = copy.deepcopy(ARCH)
         arch['blocks'][0]['name'] = '隔离电源 3.3 V'
         (self.record / 'architecture.json').write_text(json.dumps(arch, ensure_ascii=False), encoding='utf-8')
@@ -394,11 +431,11 @@ class BlockCircuitTests(unittest.TestCase):
     def test_going_back_upstream_is_recorded(self):
         self.assertEqual(1, check_module.main(['return', str(self.root), '--from', 'C4.2', '--to', 'C2', '--reason', 'x',
                                                '--evidence', 'y']))
-        self.assertEqual(0, check_module.main(['return', str(self.root), '--from', 'C4.2', '--to', 'C2.2',
+        self.assertEqual(0, check_module.main(['return', str(self.root), '--from', 'C4.2', '--to', 'C3.3',
                                                '--reason', '+3V3 电流预算不够', '--evidence', 'calc:C-3V3']))
         check_module.record_module(self.root, 'C1', [])
         rows = json.loads((self.record / 'modules.json').read_text(encoding='utf-8'))['returns']
-        self.assertEqual([('C4.2', 'C2.2', 'calc:C-3V3')], [(r['from'], r['to'], r['evidence']) for r in rows])
+        self.assertEqual([('C4.2', 'C3.3', 'calc:C-3V3')], [(r['from'], r['to'], r['evidence']) for r in rows])
 
     def test_a_hand_edited_block_file_disagrees_with_the_records(self):
         block_circuits.run(self.root)

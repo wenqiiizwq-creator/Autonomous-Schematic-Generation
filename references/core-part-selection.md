@@ -109,7 +109,7 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 字段要求（`render_design_report.py` 检查，不满足算记录问题，`pack_design.py` 拒绝打包）：
 
 - 每个角色有 `role`、`block_id`（所属功能块，`architecture.json` 的 `blocks[].id`；`block_circuits.py` 按它把角色抽进块文件）、非空 `refs`、非空 `decisive`（对象列表，见第 3 节）、`candidates`；`sources`（候选从哪里找的）可选。
-- 选定候选写 `port_limits`：它在本块各端口上的限值和手册页码（格式见 [能力模块](modules.md) 的块文件一节），供任务 C2.2 定接口参数；
+- 选定候选写 `port_limits`：它在本块各端口上的限值和手册页码（格式见 [能力模块](modules.md) 的块文件一节），供任务 C3.3 定接口参数；
 - `selected` 和 `alternate` 候选对每条决定性条件都有 `values[param] = {"value", "page"}` 且判定满足；
   `rejected` 候选至少一条判定不满足，或写 `reject_kind`。
 - 候选 ≥ 2，否则要有 `single_candidate_reason`；`status` 只能是 `selected`/`rejected`/`alternate`，恰好一个 `selected`。

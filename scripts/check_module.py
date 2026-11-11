@@ -3,16 +3,19 @@
 
   python3 check_module.py C3 <设计目录> [--given 文件 ...]   跑模块关卡；通过后把指纹记进 record/modules.json
   python3 check_module.py C4 <设计目录> --block PSU          只核一个块的块设计（不记指纹）
-  python3 check_module.py return <设计目录> --from C4.2 --to C2.2 --reason … --evidence …
+  python3 check_module.py return <设计目录> --from C4.2 --to C3.3 --reason … --evidence …
                                                              回到上游重做时在 record/modules.json 的 returns 记一条（P7）
+  python3 check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query … [--found 计算方法/x.md ...]
+                                                             查知识包后在 record/modules.json 的 knowledge_lookups 记一条；
+                                                             不写 --found 表示没查到
   python3 check_module.py status <设计目录>                  列出已记模块：OK、STALE（上游变了）、MODIFIED（产出改过未重验）
   python3 check_module.py report <设计目录>                  单独运行（record/task.json 带 modules）时写 模块报告.md
   python3 check_module.py pack <设计目录>                    核对单独运行的交付目录
 
 关卡调用现有检查，按模块只查它拥有的部分：
-C1 requirements.json（audit_design_closure --module C1）；C2 architecture.json，C3 做完后加接口定稿 interfaces.json；
+C1 requirements.json（audit_design_closure --module C1）；C2 architecture.json；
 C3 方案记录与核心选型，
-抽出并核对块文件 block-circuits/；C4 块设计 blocks/<块>.json 对架构的核对，再对已写的块设计做
+抽出并核对块文件 block-circuits/，再核接口定稿 interfaces.json；C4 块设计 blocks/<块>.json 对架构的核对，再对已写的块设计做
 audit_design_closure --module C4、器件性能要求、块文件里留给 C4.2 的数值；C5 先核 electrical-intent.json 是 blocks.py 合并
 的结果，再做整板设计闭合审计；
 C6 分页方案、图面审阅、KiCad 检查结果，以及块文件里的选定方案与分页方案一致（只读 C3 的产品，不读它的工作记录）。
@@ -40,24 +43,28 @@ MODULES = ('C1', 'C2', 'C3', 'C4', 'C5', 'C6')
 # "dir/" is every JSON file in that folder; blocks/ leaves out BOARD.json, the board-level block module C5 writes.
 OUTPUTS = {
     'C1': ('requirements.json',),
-    'C2': ('architecture.json', architecture.INTERFACES),
-    'C3': ('scheme-criteria.json', 'selection.json', block_circuits.DIR + '/'),
+    'C2': ('architecture.json',),
+    'C3': ('scheme-criteria.json', 'selection.json', block_circuits.DIR + '/', architecture.INTERFACES),
     'C4': ('design-closure.json#calculations,operating_points,pin_dispositions', 'component-requirements.json',
            'reference-input.json', blocks.DIR + '/'),
     'C5': ('electrical-intent.json', '%s/%s.json' % (blocks.DIR, blocks.BOARD),
            'design-closure.json#traceability,net_voltages,matrices'),
     'C6': ('page-plan.json', 'summary.json', 'visual-review.json'),
 }
-# C2 comes back after C3 for task C2.2 (interface freeze), which reads the block files; C3 reads only architecture.json,
-# so writing interfaces.json does not make C3 stale. READS narrows what a module reads of an upstream one (default: all).
-UPSTREAM = {'C1': (), 'C2': ('C1', 'C3'), 'C3': ('C1', 'C2'), 'C4': ('C1', 'C2', 'C3'), 'C5': ('C1', 'C2', 'C4'),
+# Upstream runs one way (C1 → C6); task C3.3 (interface freeze) closes C3. READS narrows what a module reads of an
+# upstream one (default: all): C5 reads only the interfaces of C3, C6 only the block files.
+UPSTREAM = {'C1': (), 'C2': ('C1',), 'C3': ('C1', 'C2'), 'C4': ('C1', 'C2', 'C3'), 'C5': ('C1', 'C2', 'C3', 'C4'),
             'C6': ('C2', 'C3', 'C5')}
-READS = {('C2', 'C3'): (block_circuits.DIR + '/',), ('C3', 'C2'): ('architecture.json',)}
+READS = {('C5', 'C3'): (architecture.INTERFACES,), ('C6', 'C3'): (block_circuits.DIR + '/',)}
 TASK = re.compile(r'^C[1-6]\.[1-9]$')
 MODULE_REPORT = '模块报告.md'
 # What a module run delivers (workflow-handoff.md 角色): the drawing only when C6 ran.
 MODULE_TOP = (MODULE_REPORT, 'record', '设计资料', '原理图')
 SCHEMATIC_FILES = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
+KNOWLEDGE = Path(__file__).resolve().parent.parent / 'references' / 'knowledge'
+# The knowledge package components each module looks up before it designs (knowledge-package.md). The gate only checks
+# that the lookup was recorded and that the entries it names are in the package; C3's lookup is in the block files.
+LOOKUPS = {'C1': ('需求要素',), 'C2': ('板级架构模式', '接口约定'), 'C4': ('计算方法', '器件参数'), 'C5': ('失效与异常工况',)}
 
 
 def file_of(item):
@@ -263,17 +270,6 @@ def gate(module, root, write=True, block=None):
         ids = {r.get('id') for r in (requirements or {}).get('requirements') or [] if isinstance(r, dict)} \
             if requirements else None
         problems += check_architecture(data, ids)
-        # Task C2.2 comes after C3: once the block files exist the interface freeze is part of the gate.
-        files, _ = block_circuits.read_dir(record)
-        frozen, problem = load(record, architecture.INTERFACES)
-        if problem:
-            problems.append(problem)
-        elif frozen is None and files:
-            problems.append('缺少 record/%s：C3 做完后做任务 C2.2 接口定稿' % architecture.INTERFACES)
-        elif frozen is not None:
-            found, more = architecture.check_interfaces(frozen, data, files)
-            problems += found
-            notes += more
     if module == 'C3':
         scheme, problem = load(record, 'scheme-criteria.json')
         if problem:
@@ -290,14 +286,14 @@ def gate(module, root, write=True, block=None):
         arch, _ = load(record, 'architecture.json')
         frozen, problem = load(record, architecture.INTERFACES)
         if problem or frozen is None:
-            problems.append(problem or '缺少 record/%s：C4 按任务 C2.2 定稿的接口参数设计' % architecture.INTERFACES)
+            problems.append(problem or '缺少 record/%s：C4 按任务 C3.3 定稿的接口参数设计' % architecture.INTERFACES)
         else:
             keys = [block] if block else sorted(k for k in blocks.read_dir(record)[0] if k != blocks.BOARD)
             for key in keys:
                 for row in architecture.block_interfaces(frozen, arch, key):
                     side = 'provides' if 'provides' in row else 'accepts'
                     if not isinstance(row[side], dict) or not row[side]:
-                        problems.append('%s 的流向 %s 没有块 %s 这一头的 %s：回到任务 C2.2' % (
+                        problems.append('%s 的流向 %s 没有块 %s 这一头的 %s：回到任务 C3.3' % (
                             architecture.INTERFACES, row['name'], key, side))
         view = merged(closure, requirements)
         for name, data in sorted(found.items()):
@@ -313,6 +309,16 @@ def gate(module, root, write=True, block=None):
             evidence = {e.get('id'): e for e in merged(closure, requirements).get('evidence') or [] if isinstance(e, dict)}
             problems += report.check_selection(selection, {}, root, evidence)
         problems += block_circuits.run(root, write=write)
+        # Task C3.3: the interface freeze reads the block files just written.
+        arch, _ = load(record, 'architecture.json')
+        files, _ = block_circuits.read_dir(record)
+        frozen, problem = load(record, architecture.INTERFACES)
+        if problem or frozen is None:
+            problems.append(problem or '缺少 record/%s：任务 C3.3 接口定稿' % architecture.INTERFACES)
+        elif arch is not None:
+            found, more = architecture.check_interfaces(frozen, arch, files)
+            problems += found
+            notes += more
     if module == 'C4':
         requirements, problem = load(record, 'component-requirements.json')
         if problem or requirements is None:
@@ -354,6 +360,8 @@ def gate(module, root, write=True, block=None):
         if scheme:
             problems += [p.replace('scheme-criteria.json', block_circuits.DIR + '/')
                          for p in report.scheme_against_plan(scheme, plan)]
+    if not block:
+        problems += lookup_problems(root, module)
     return problems, notes
 
 
@@ -374,7 +382,7 @@ def record_module(root, module, given):
 def record_return(root, source, target, reason, evidence):
     """P7: going back to an upstream module is recorded in record/modules.json `returns`. Returns the problems."""
     problems = [] if TASK.match(source or '') and TASK.match(target or '') and source != target else \
-        ['--from、--to 写两项不同的任务编号，例如 C4.2、C2.2']
+        ['--from、--to 写两项不同的任务编号，例如 C4.2、C3.3']
     problems += ['--reason、--evidence 都要写'] if not (text(reason) and text(evidence)) else []
     if problems:
         return problems
@@ -382,6 +390,52 @@ def record_return(root, source, target, reason, evidence):
     data = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'schema_version': 1, 'modules': {}}
     data.setdefault('returns', []).append({'date': datetime.date.today().isoformat(), 'from': source, 'to': target,
                                            'reason': reason, 'evidence': evidence})
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return []
+
+
+def lookup_row_problems(row):
+    """Problems of one knowledge_lookups row: the task, the component and every entry it names exist."""
+    task, component, found = row.get('task'), row.get('component'), row.get('found')
+    where = '%s %s' % (task, component)
+    if not (isinstance(task, str) and TASK.match(task)):
+        return ['knowledge_lookups：task 写任务编号，例如 C4.2（现为 %r）' % task]
+    if not (isinstance(component, str) and (KNOWLEDGE / component).is_dir()):
+        return ['knowledge_lookups %s：component 不是知识包的组件' % where]
+    if not text(row.get('query')):
+        return ['knowledge_lookups %s：query 写查的什么' % where]
+    if not isinstance(found, list):
+        return ['knowledge_lookups %s：found 是条目路径的列表，没查到写 []' % where]
+    return ['knowledge_lookups %s：%s 不是知识包 %s/ 里的条目' % (where, entry, component) for entry in found
+            if not (isinstance(entry, str) and entry.startswith(component + '/') and '..' not in entry
+                    and (KNOWLEDGE / entry).is_file())]
+
+
+def lookup_problems(root, module):
+    """The module recorded a lookup (found or not) of each component it is to consult, and every row is well formed."""
+    path = root / 'record' / 'modules.json'
+    data = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+    rows = [r for r in data.get('knowledge_lookups') or [] if isinstance(r, dict)
+            and str(r.get('task') or '').startswith(module + '.')]
+    problems = [p for row in rows for p in lookup_row_problems(row)]
+    seen = {row.get('component') for row in rows}
+    return problems + ['%s 没有查知识包 %s/ 的记录（check_module.py lookup；没查到也记）' % (module, c)
+                       for c in LOOKUPS.get(module, ()) if c not in seen]
+
+
+def record_lookup(root, task, component, query, found, detail):
+    """One knowledge package lookup goes into record/modules.json `knowledge_lookups`. Returns the problems."""
+    row = {'date': datetime.date.today().isoformat(), 'task': task, 'component': component, 'query': query,
+           'found': list(found or [])}
+    if text(detail):
+        row['detail'] = detail
+    problems = lookup_row_problems(row)
+    if problems:
+        return problems
+    path = root / 'record' / 'modules.json'
+    data = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'schema_version': 1, 'modules': {}}
+    data.setdefault('knowledge_lookups', []).append(row)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return []
 
@@ -499,15 +553,26 @@ def check_delivery(root):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('module', choices=MODULES + ('status', 'report', 'pack', 'return'))
+    ap.add_argument('module', choices=MODULES + ('status', 'report', 'pack', 'return', 'lookup'))
     ap.add_argument('design_root', type=Path, help='设计目录（含 record/）')
     ap.add_argument('--given', action='append', default=[], help='单独运行时任务书给定的输入文件（记入指纹）')
     ap.add_argument('--block', help='C4：只核这个块的块设计（architecture.json 的块 id），不记入 modules.json')
     ap.add_argument('--from', dest='source', help='return：发现问题的任务，如 C4.2')
-    ap.add_argument('--to', dest='target', help='return：回到的任务，如 C2.2')
+    ap.add_argument('--to', dest='target', help='return：回到的任务，如 C3.3')
     ap.add_argument('--reason', help='return：原因')
     ap.add_argument('--evidence', help='return：依据（计算编号、手册页码、检查输出）')
+    ap.add_argument('--task', help='lookup：查知识包的任务，如 C4.2')
+    ap.add_argument('--component', help='lookup：知识包的组件，如 计算方法')
+    ap.add_argument('--query', help='lookup：查的什么')
+    ap.add_argument('--found', nargs='*', default=[], help='lookup：查到的条目（相对 references/knowledge/）；没查到不写')
+    ap.add_argument('--detail', help='lookup：补充说明（可选）')
     args = ap.parse_args(argv)
+    if args.module == 'lookup':
+        problems = record_lookup(args.design_root, args.task, args.component, args.query, args.found, args.detail)
+        for problem in problems:
+            print('PROBLEM:', problem)
+        print('FAIL' if problems else 'recorded')
+        return 1 if problems else 0
     if args.block and args.module != 'C4':
         ap.error('--block 只用于 C4')
     if args.module == 'return':
