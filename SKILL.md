@@ -425,7 +425,8 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 - 几何检查只覆盖本次 KiCad 导出中已合格的对象，范围与未支持对象见 [native-geometry.md](references/native-geometry.md)；
   外部 JSON 回执不能授权放行。`geometry` 为 INSUFFICIENT 时保留缺口并在 KiCad 渲染图上核对，有限 PASS 不等于整案通过。
   库里隐藏的引脚号/引脚名不计；可见但无法由 KiCad 导出核对的引脚文字列在 `geometry.render_review_items`（图面待审对象），
-  不算缺口，任务 C6.5 图面审阅必须逐页覆盖这些对象并在 visual-review.json 里写明。
+  不算缺口。引脚文字是库符号自带的，同一种库符号只列一条，并列出用它画的位号；每只器件的引脚号有没有被别的文字或导线压住由几何检查逐只查
+  （`pin_number_text`、`pin_number_wire`）。任务 C6.5 图面审阅覆盖这些对象并在 visual-review.json 里写明。
 - 图面检查只有三种结果：PASS、FAIL（画图问题，如外框间距不足 1.27 mm、导线交叉不打点、注释压线）、
   INSUFFICIENT（检查器覆盖不到的对象）。FAIL 由 ASG 改图关闭，不交给人复核；可读性或几何 FAIL 时
   `pack_design.py` 拒绝打包。只有 INSUFFICIENT 缺口留给图面审阅核对。
@@ -451,7 +452,8 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 
 打开导出的 PDF，逐页按 `page-plan.json` 的读者任务追主路径、支持网络与回流路径、重复通道、地域和隔离跨越；
 逐页核对绘图纲要画图习惯里不自动检查的各条，`report["readability"]["detours"]` 列出的绕远连线逐条处置；
-逐条处置 `geometry.render_review_items`，写出在本版 PDF 上看到了什么，没改动的页面也重新审阅，不沿用上一版的处置。
+逐条处置 `geometry.render_review_items`：每种库符号挑一只器件在本版 PDF 上看它的引脚号和引脚名，处置里写明看的是哪一只、看到了什么；
+同一种库符号在别的页不必重复处置。没改动的页面也重新审阅，不沿用上一版的处置。
 追法、三种状态（待返工 / 待图面审阅 / 已完成图面审阅）和 `pdf_sha256` 的写法见 [human-readable-routing.md](references/human-readable-routing.md) 第 4 节
 与 [delivery-report.md](references/delivery-report.md) 的 `visual-review.json` 一行。用户否决会重新打开图面审阅。
 

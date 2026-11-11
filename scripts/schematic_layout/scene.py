@@ -157,6 +157,7 @@ def text_field(node, text=None, label=False):
         max(float(size[1]), float(size[2])),
         bold="bold" in first(effects, "font", []),
         justify=parse_justify(just),
+        ink={"label": "label", "text": "note"}.get(str(node[0]), "field"),
     )
 
 
@@ -180,6 +181,7 @@ class Symbol:
     body: Box | None
     pins: list[Pin]
     fields: list[tuple[str, TextField]]
+    numbers_shown: bool = False     # the library draws its pin numbers
 
 
 @dataclass
@@ -194,6 +196,7 @@ class Scene:
     # Visible native text this checker cannot qualify; covered by render review,
     # so it does not make the page INSUFFICIENT.
     review: list[str] = field(default_factory=list)
+    review_refs: dict = field(default_factory=dict)      # review item -> the parts drawn with that symbol
     sheet_pins: list[tuple[str, Point]] = field(default_factory=list)
     # Annotation ink is never an electrical wire or a connectivity anchor.
     graphic_segments: list[tuple[str, Point, Point, float]] = field(default_factory=list)
@@ -595,7 +598,8 @@ def read_scene(root, native_context=None):
         ) for p in pins):
             scene.gaps.append(f"{ref}: hidden pins require native connectivity review")
         scene.symbols.append(
-            Symbol(ref, str(lib_id), unit, node, union(graphics), pins, fields)
+            Symbol(ref, str(lib_id), unit, node, union(graphics), pins, fields,
+                   bool(lib) and not is_hidden(first(lib, "pin_numbers", [])))
         )
     for wire in all_nodes(root, "wire"):
         points = all_nodes(first(wire, "pts", []), "xy")
@@ -671,7 +675,16 @@ def read_scene(root, native_context=None):
             width,height=native_context["page_mm"]
             scene.page=Box(0,0,min(scene.page.x_max,width),min(scene.page.y_max,height))
         scene.gaps.extend(native_context.get("gaps", []))
-        scene.review.extend(native_context.get("review", []))
+        # Pin text is the library symbol's: one item per symbol, naming the parts drawn with it (2026-11-11: 427
+        # per-part items on Matrix R2 were dispositioned with one template sentence).
+        drawn = {str(value(s.node, "uuid")): s for s in scene.symbols}
+        for item in native_context.get("review", []):
+            found = re.match(r"(pin-(?:number|name)):([^:]+):(?:[^:]*:)? (.*)$", item)
+            s = drawn.get(found[2]) if found else None
+            if s is not None:
+                item = "%s:%s:unit%s: %s" % (found[1], s.lib_id.replace(":", "/"), s.unit, found[3])
+                scene.review_refs.setdefault(item, set()).add(s.ref)
+            scene.review.append(item)
         scene.native_frames = native_context.get("frames", [])
         scene.native_pin_texts = native_context.get("pin_texts", [])
         scene.native_owner_outlines = native_context.get("owner_outlines", [])

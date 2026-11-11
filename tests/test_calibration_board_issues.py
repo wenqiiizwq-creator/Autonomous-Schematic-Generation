@@ -296,7 +296,7 @@ class ToolMessageTests(unittest.TestCase):
 
     def test_performance_note_width_is_measured_and_overflow_fails_at_build(self):
         # Matrix R2 (2026-11-04): CR titles mixing Chinese and Latin text wrapped by character count, and the
-        # wrapped title was no longer found on the PDF. Sample: R2's CR-R301 entry (62.5 columns measured).
+        # wrapped title was no longer found on the PDF. Sample: R2's CR-R301 entry (67.0 columns measured).
         fake = type('F', (), {})()
         fake.components = {'R301': {'performance_contract': {
             'ref': 'R301', 'purpose': '主路检流，设定 LM5069 限流 14.6～18.8 A', 'definition_status': 'complete',
@@ -307,10 +307,10 @@ class ToolMessageTests(unittest.TestCase):
         fake.text = lambda text, at, font: fake.placed.append(text)
         title = 'CR-R301: 主路检流，设定 LM5069 限流 14.6～18.8 A [性能定义完整; BOM规格已写全]'
         self.assertLessEqual(len(title), 60)      # by character count it fit width=60 ...
-        with self.assertRaisesRegex(ValueError, r'CR-R301 "CR-R301: 主路检流.*62\.5 columns > width=60.*use width=63'):
+        with self.assertRaisesRegex(ValueError, r'CR-R301 "CR-R301: 主路检流.*67\.0 columns > width=60.*use width=67'):
             recipes.Sheet.performance_notes(fake, (10, 10), width=60)   # ... measured it does not
         self.assertEqual([], fake.placed)
-        self.assertEqual(3, recipes.Sheet.performance_notes(fake, (10, 10), width=63))
+        self.assertEqual(3, recipes.Sheet.performance_notes(fake, (10, 10), width=67))
         self.assertEqual(title, fake.placed[0].splitlines()[0])   # the title stays on one line
 
 

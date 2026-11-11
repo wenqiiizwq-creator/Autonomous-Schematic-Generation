@@ -646,7 +646,7 @@ def route_root(root, intent, layout, uid, reserved, dirs=()):
         if policy.get("label_kind", "local") == "global":
             return global_label_box(aliases[name], tuple(la["at"]), la["side"], font)
         return TextField(aliases[name], *la["at"], 0.0, font,
-                         justify=frozenset({"left", "bottom"})).box()
+                         justify=frozenset({"left", "bottom"}), ink="label").box()
 
     # Explicit label terminals and power symbols are reserved before any
     # route, so an earlier net cannot take the space they were planned in.
@@ -1032,7 +1032,7 @@ class PlacedLabel:
         if self.kind == "global":
             return global_label_box(self.text, (self.x, self.y), self.side, self.font)
         return TextField(self.text, self.x, self.y, 0.0, self.font,
-                         justify=frozenset({"left", "bottom"})).box()
+                         justify=frozenset({"left", "bottom"}), ink="label").box()
 
 
 def place_global_label(name, font, end, direction, obstacles, page, stub):
@@ -1085,7 +1085,7 @@ def place_net_label(name, segment, obstacles, page, font=1.27):
         # 0-degree style and extend left-facing stubs instead of falsifying
         # bounds with property-field justification that KiCad will ignore.
         for just in (frozenset({"left", "bottom"}),):
-            f = TextField(name, *p, 0.0, font, justify=just)
+            f = TextField(name, *p, 0.0, font, justify=just, ink="label")
             box = f.box()
             if box.inside(page) and not any(
                 box.expanded(-0.06).overlaps(o) for o in obstacles

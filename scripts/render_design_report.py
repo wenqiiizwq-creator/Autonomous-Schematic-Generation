@@ -332,6 +332,9 @@ def render_sha256(path):
     return hashlib.sha256(PDF_DATES.sub(b'', Path(path).read_bytes())).hexdigest()
 
 
+PIN_TEXT = ('pin-number', 'pin-name')
+
+
 def check_visual_items(root, visual, summary=None):
     """Every object handed to the render review is dispositioned from this version's PDF.
 
@@ -347,6 +350,8 @@ def check_visual_items(root, visual, summary=None):
     if any(w in str(visual.get('method', '')) for w in CARRIED_OVER):
         errors.append('visual-review.json 的 method 写了沿用上一版：没改动的页面也要按本版 PDF 重新看')
     done = {}
+    geometry = ((summary or {}).get('gates') or {}).get('geometry', {})
+    listed, shown = geometry.get('render_review_items') or {}, geometry.get('render_review_refs') or {}
     for page in visual.get('pages') or []:
         if not isinstance(page, dict):
             continue
@@ -370,13 +375,25 @@ def check_visual_items(root, visual, summary=None):
         for item in items:
             key = str(item.get('item', ''))
             parts = key.split(':')
-            if len(parts) > 1 and parts[1] not in refs and parts[0] != 'hierarchical_label':
+            drawn = shown.get(name, {}).get(key)
+            if parts[0] in PIN_TEXT:
+                # Pin text belongs to the library symbol: one disposition covers every part drawn with it, on any page,
+                # and names the part it was read on.
+                said = str(item.get('disposition', ''))
+                if not any(key in keys for keys in listed.values()):
+                    errors.append('%s：条目“%s”不在本版的图面待审对象里' % (name, key[:48]))
+                elif drawn is not None and not any(re.search(r'(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])' % re.escape(r), said)
+                                                 for r in drawn):
+                    errors.append('%s：条目“%s”的处置要写明看的是哪一只（%s 之一）' % (name, key[:48], '、'.join(drawn[:6])))
+                elif text(said):
+                    done.setdefault(name, set()).add(key)
+            elif len(parts) > 1 and parts[1] not in refs and parts[0] != 'hierarchical_label':
                 errors.append('%s：条目“%s”的符号在图里找不到' % (name, key[:48]))
             elif text(item.get('disposition')):
                 done.setdefault(name, set()).add(key)
-    listed = ((summary or {}).get('gates') or {}).get('geometry', {}).get('render_review_items') or {}
+    anywhere = {k for keys in done.values() for k in keys if k.split(':')[0] in PIN_TEXT}
     for name, keys in listed.items():
-        left = [k for k in keys if k not in done.get(name, set())]
+        left = [k for k in keys if k not in done.get(name, set()) and k not in anywhere]
         if left:
             errors.append('%s：%d 个图面待审对象在 visual-review.json 里没有处置（如 %s）' % (name, len(left), left[0][:48]))
     return list(OrderedDict.fromkeys(errors))
@@ -1397,7 +1414,7 @@ def render(root, notes=None, title=None):
                 extra = '，'.join(x for x in (extra, '工程设为忽略的规则：%s' % '、'.join(detail['ignored_rules'])) if x)
             if key == 'geometry':
                 gaps = sum(len(v) for v in (detail.get('coverage_gaps') or {}).values())
-                pins = sum(len(v) for v in (detail.get('render_review_items') or {}).values())
+                pins = len({i for v in (detail.get('render_review_items') or {}).values() for i in v})
                 extra = '，'.join(x for x in (extra, '未覆盖对象 %d 项' % gaps if gaps else '',
                                               '%d 个对象交图面审阅' % pins if pins else '') if x)
             out.append('| %s | %s%s |' % (label, GATE_RESULTS.get(status, status), ('（%s）' % extra) if extra else ''))

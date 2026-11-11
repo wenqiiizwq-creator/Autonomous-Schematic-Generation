@@ -173,7 +173,7 @@ def main():
     tool("check_schematic_readability.py", *sheets, *extra, "--out", readability)
     gates["readability"] = {"status": status_of(readability)}
 
-    geometry, gaps, review = {}, {}, {}
+    geometry, gaps, review, review_refs = {}, {}, {}, {}
     native = None
     if args.native_geometry or all_nodes(parse(args.root.read_text()), "sheet"):
         native = prepare_geometry_context(args.root, args.project, cli, out / "native-geometry")
@@ -209,6 +209,7 @@ def main():
             items = []
         if items:
             review[sheet.name] = items
+            review_refs[sheet.name] = json.loads(report.read_text())["coverage"].get("render_review_refs", {})
     worst = [s for s in ("FAIL", "INSUFFICIENT") if s in geometry.values()]
     gates["geometry"] = {"status": worst[0] if worst else "PASS", "sheets": geometry}
     if gaps:
@@ -216,6 +217,7 @@ def main():
     if review:
         # Pin text the native channel cannot qualify; the render review must cover it.
         gates["geometry"]["render_review_items"] = review
+        gates["geometry"]["render_review_refs"] = review_refs
     if native is not None and native.get("retries"):
         # Renderer configuration changed under the job (another KiCad session); it was redone.
         gates["geometry"]["native_retries"] = native["retries"]
@@ -256,7 +258,7 @@ def main():
         "pending": (["End-to-end design closure not checked"] if not args.design_closure else [])
                    + (["Core-part pin maps and peripherals not checked against datasheets (no --reference-contract)"]
                       if not args.reference_contract else []) + ["Native render review: trace each declared reading task on every page"]
-                   + ([f"Native render review: check {sum(map(len, review.values()))} pin-text items listed in geometry.render_review_items"] if review else []),
+                   + ([f"Native render review: check {len({i for items in review.values() for i in items})} pin-text items listed in geometry.render_review_items"] if review else []),
         "commands": commands,
     }
     write(out / "summary.json", summary)

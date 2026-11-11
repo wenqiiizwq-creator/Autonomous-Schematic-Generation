@@ -101,6 +101,8 @@ def label_geometry(kind, text, at, outward, font):
     angle, just = {RIGHT: (0, ["left", "bottom"]), LEFT: (180, ["right", "bottom"]),
                    UP: (90, ["left", "bottom"]), DOWN: (270, ["right", "bottom"])}[outward]
     w, h = text_extent(text, font)
+    # KiCad's ink reaches 1.48 font heights from the wire, 1.53 with a slash (measured on KiCad 10 SVG, 2026-11-11).
+    h = 1.55 * h - 0.3
     if outward in (LEFT, RIGHT):
         x0 = x if outward == RIGHT else x - w
         return angle, just, Box(x0, y - 0.3 - h, x0 + w, y - 0.3)
@@ -782,7 +784,7 @@ class Sheet:
         board #16). Returns the number of lines placed, to plan that height before building.
 
         ``width`` is the line budget in Latin-character columns, measured with the geometry check's
-        text_extent (a CJK glyph counts about 1.24 columns), not in characters. Lines are never wrapped: the
+        text_extent (a CJK glyph counts about 1.48 columns), not in characters. Lines are never wrapped: the
         PDF gate looks each line up in ``pdftotext -layout`` text, where a wrapped title interleaves with
         whatever sits beside it and the note is no longer found (Matrix R2, 2026-11-04). A line over budget
         raises here, naming the line, its width and the width that fits.

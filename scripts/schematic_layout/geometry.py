@@ -137,7 +137,8 @@ def text_extent(
 
     def advance(line: str) -> float:
         return sum(
-            1.3 if unicodedata.east_asian_width(c) in "WF" or c in "MW@%" else 1.05
+            1.05 if c not in "MW@%" and (unicodedata.east_asian_width(c) not in "WF" or unicodedata.category(c)[0] == "P")
+            else 1.3 if c in "MW@%" else 1.55      # a CJK ideograph is 1.47 wide, full-width punctuation 0.87
             for c in line
         )
 
@@ -145,6 +146,14 @@ def text_extent(
     if bold:
         width *= _BOLD_WIDTH_FACTOR
     return (width, font_mm * (1 + 1.4 * (len(lines) - 1)))
+
+
+_TALL = frozenset("/\\()[]{}|$")
+# How far below the capitals' foot a glyph reaches, in font heights (underscore 0.09, slash and descenders 0.33,
+# brackets 0.43 measured).
+_DEPTH = {**dict.fromkeys("()[]{}|", 0.45), **dict.fromkeys("/\\$gjpqy,;", 0.35), "_": 0.1, "Q": 0.1}
+# Ink beyond the nominal text line, in font heights (above, below): symbol field, text note, local net name.
+INK_MARGIN = {"field": (0.15, 0.45), "note": (0.52, 0.42), "label": (0.48, 0.0)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +172,7 @@ class TextField:
     font_mm: float = DEFAULT_FONT_MM
     bold: bool = False
     justify: frozenset[str] = field(default_factory=frozenset)
+    ink: str = field(default="field", kw_only=True)
 
     def box(self) -> Box:
         w, h = text_extent(self.text, self.font_mm, bold=self.bold)
@@ -181,6 +191,17 @@ class TextField:
             y_min, y_max = self.y - h, self.y
         else:
             y_min, y_max = self.y - h / 2.0, self.y + h / 2.0
+        # KiCad's ink reaches past the nominal line: a slash, bracket or descender on a field, and a note or a local
+        # name sits above its anchor (measured on KiCad 10 SVG at 1.0 and 1.27 mm, 2026-11-11; INK_MARGIN).
+        above, below = INK_MARGIN[self.ink]
+        if self.ink == "field":      # a field is centred on its capitals: only these glyphs leave the line
+            above = above if set(self.text) & _TALL else 0.0
+            below = max((_DEPTH.get(c, 0.0) for c in self.text), default=0.0)
+        elif self.ink == "label" and set(self.text) & _TALL:
+            above += 0.14
+        elif self.ink == "note" and round(self.angle) % 180 == 0:
+            below = 0.25             # only a turned note reaches 0.4 past its line
+        y_min, y_max = y_min - above * self.font_mm, y_max + below * self.font_mm
         # Apply anchoring in text-local axes BEFORE rotating to the sheet.
         # Positive KiCad text angles are counterclockwise (sheet y points down).
         a = math.radians(-self.angle)

@@ -762,25 +762,34 @@ class DesignReportTests(unittest.TestCase):
             '(kicad_sch (version 20250114) (generator "t") (uuid "r") (paper "A4") (lib_symbols)\n'
             '(symbol (lib_id "Device:R") (at 0 0 0) (uuid "aaa") (property "Reference" "R1" (at 0 0 0)))\n'
             '(symbol (lib_id "Device:R") (at 0 10 0) (uuid "bbb") (property "Reference" "U1" (at 0 0 0))))\n')
-        listed = ['pin-number:aaa: physical pin numbers need native render review', 'pin-name:bbb:1: nonunique/noncausal text removal',
+        # Pin text is the library symbol's: one item per symbol, naming the parts drawn with it (2026-11-11).
+        listed = ['pin-number:Device/R:unit1: physical pin numbers need native render review',
+                  'pin-name:Device/R:unit1: nonunique/noncausal text removal',
                   'hierarchical_label: outline and attached fields need render review']
         summary = json.loads((self.d.record / 'summary.json').read_text())
-        summary['gates']['geometry']['render_review_items'] = {'board.kicad_sch': listed}
+        summary['gates']['geometry']['render_review_items'] = {'board.kicad_sch': listed, 'other.kicad_sch': listed[:1]}
+        summary['gates']['geometry']['render_review_refs'] = {'board.kicad_sch': {k: ['R1', 'U1'] for k in listed[:2]},
+                                                              'other.kicad_sch': {listed[0]: ['R7']}}
         self.d.write('summary.json', summary)
-        same = '本页 PDF 上可见的引脚号和引脚名都没有被导线或文字压住。'
+        same = '在 R1 上看：引脚号和引脚名清楚，互不相压。'
         def review(items, paths=('VIN to VOUT',)):
             self.d.write('visual-review.json', {'status': 'REVIEWED', 'pdf_sha256': self.d.pdf, 'pages': [
                 {'page': 1, 'file': 'board.kicad_sch', 'paths': list(paths), 'problems': [], 'render_review_items': items}]})
             return self.d.report()[1]
         # One sentence may describe several symbols; what matters is that every listed object was looked at.
         self.assertEqual([], review([{'item': k, 'disposition': same} for k in listed]))
-        problems = review([{'item': listed[0], 'disposition': same}, {'item': 'pin-name:ccc:1: x', 'disposition': 'C9 看过'}])
-        self.assertIn('board.kicad_sch：条目“pin-name:ccc:1: x”的符号在图里找不到', problems)
-        self.assertIn('board.kicad_sch：2 个图面待审对象在 visual-review.json 里没有处置（如 pin-name:bbb:1: nonunique/noncausal text removal）',
+        problems = review([{'item': listed[0], 'disposition': same}, {'item': 'pin-name:Device/C:unit1: x', 'disposition': 'C9 看过'}])
+        self.assertIn('board.kicad_sch：条目“pin-name:Device/C:unit1: x”不在本版的图面待审对象里', problems)
+        self.assertIn('board.kicad_sch：2 个图面待审对象在 visual-review.json 里没有处置（如 %s）' % listed[1][:48],
                       problems)
+        # The symbol was read once, on this page: the other page drawing it needs no second disposition.
+        self.assertFalse([p for p in problems if p.startswith('other.kicad_sch')], problems)
         problems = review([{'item': listed[0], 'disposition': ''}] + [{'item': k, 'disposition': same} for k in listed[1:]])
-        self.assertIn('board.kicad_sch：1 个图面待审对象在 visual-review.json 里没有处置（如 pin-number:aaa: physical pin numbers need native）',
+        self.assertIn('board.kicad_sch：1 个图面待审对象在 visual-review.json 里没有处置（如 %s）' % listed[0][:48],
                       problems)
+        # A disposition says which part it was read on; a sentence that names none could be written without looking.
+        problems = review([{'item': k, 'disposition': '引脚号和引脚名都没有被压住。'} for k in listed])
+        self.assertIn('board.kicad_sch：条目“%s”的处置要写明看的是哪一只（R1、U1 之一）' % listed[0][:48], problems)
         problems = review([{'item': k, 'disposition': '沿用上一版的处置'} for k in listed])
         self.assertIn('board.kicad_sch：处置“沿用上一版的处置”沿用上一版：没改动的页面也要按本版 PDF 重新看', problems)
         problems = review([{'item': k, 'disposition': same} for k in listed], paths=['本页未改，同上一版'])

@@ -159,6 +159,38 @@ def check_scene(scene, reserved=None, body_clearance=1.27):
                 pin.point, pin.inner, box if a in global_labels else box.expanded(-0.04)
             ) and not (a in global_labels and global_labels[a].terminal_contact(pin.point, pin.inner)):
                 add("text_pin_overlap", [a, pin.id], "Visible text crosses a pin leg")
+    # A pin number is drawn above a horizontal pin leg and left of a vertical one, centred on the leg and reaching
+    # 1.87 mm from it at 1.27 mm (KiCad 10 SVG, 2026-11-11). Whatever else is drawn there hides it; this is checked
+    # for every part, so the render review reads each library symbol's pin text once.
+    justified = {f"{s.ref}:unit{s.unit}:{name}": (f.justify, round(f.angle) % 180 == 0 and f.text.isascii())
+                 for s in scene.symbols for name, f in s.fields}
+    justified.update({f"{kind}:{i}:{f.text}": (f.justify, round(f.angle) % 180 == 0 and f.text.isascii())
+                      for i, (kind, f) in enumerate(scene.labels)})
+    for s_ in scene.symbols:
+        seen = set()
+        for pin in s_.pins if s_.numbers_shown else ():
+            if pin.hidden or pin.point == pin.inner or not pin.number:
+                continue
+            (x0, y0), (x1, y1) = pin.point, pin.inner
+            if (pin.point, pin.inner) in seen:      # stacked pads share one leg and one drawn number
+                continue
+            seen.add((pin.point, pin.inner))
+            half = 0.4 * 1.27 * min(len(pin.number), 3)
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            box = Box(mx - half, y0 - 1.9, mx + half, y0 - 0.4) if y0 == y1 else Box(x0 - 1.9, my - half, x0 - 0.4, my + half)
+            name = f"pin-number:{pin.id}"
+            for b, other in fields:
+                # Latin text is estimated about 13 % wide, on the side away from its anchor; left as it is, that
+                # would report a clear number as covered.
+                just, flat = justified.get(b, (frozenset(), False))
+                spare = 0.13 * other.width if flat else 0.0
+                left = 0.0 if "left" in just else spare if "right" in just else spare / 2
+                right = 0.0 if "right" in just else spare if "left" in just else spare / 2
+                if box.overlaps(Box(other.x_min + left, other.y_min, other.x_max - right, other.y_max), gap_mm=0.3):
+                    add("pin_number_text", [name, b], "Visible text covers a pin number")
+            for i, (a, b) in enumerate(scene.wires):
+                if segment_hits_box(a, b, box.expanded(-0.05)):
+                    add("pin_number_wire", [name, f"wire:{i}"], "Wire passes through a pin number")
     extents = bodies + fields      # wires are judged by wire_findings above
     extents += [(f"pin:{p.id}", wire_box(p.point, p.inner, 0)) for p in pins]
     extents += [
@@ -328,6 +360,7 @@ def check_scene(scene, reserved=None, body_clearance=1.27):
             "native_owner_outlines": len(scene.native_owner_outlines),
             "gaps": sorted(set(gaps)),
             "render_review_items": sorted(set(scene.review)),
+            "render_review_refs": {k: sorted(v) for k, v in sorted(scene.review_refs.items())},
             "checks": [
                 "body_overlap",
                 "body_clearance",
