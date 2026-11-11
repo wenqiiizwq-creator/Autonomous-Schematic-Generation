@@ -100,7 +100,7 @@ signal B -- R --+---------- connector B
 它不是先分配无关的 x/y 坐标，再让 A* 去发现分压的形状。
 
 `schematic_layout.recipes.Sheet` 把这些关系实现为构图原语（`series`、`shunt`、`bank`、`divider`、`stub`、`connect`、`power`、`label`、`name`）；
-见 [drawing-recipes.md](drawing-recipes.md)。它不是求解器：画法、锚点和方向仍由 agent 按绘图纲要 O1–O8 和 `sheet.plan` 中建议的角色选择；
+见 [drawing-recipes.md](drawing-recipes.md)。它不是求解器：画法、锚点和方向仍由 agent 按绘图纲要 和 `sheet.plan` 中建议的角色选择；
 构建报告审计所选的画法和标签角色，偏离需要理由。它表达不了的关系写进同一个图页脚本，作为相对引脚的显式导线。
 只有一个说明用了模板的标志不够；检查的是构建出的页。
 

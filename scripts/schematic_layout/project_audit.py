@@ -38,14 +38,6 @@ def symbol_pin_signature(lib):
     return sorted(result)
 
 
-def _instance(node, project, path):
-    matches = [p for pr in all_nodes(first(node, "instances", []), "project")
-               if pr[1] == project for p in all_nodes(pr, "path") if p[1] == path]
-    if len(matches) > 1:
-        raise ValueError("Duplicate annotation context")
-    return matches[0] if matches else None
-
-
 def pdf_page_count(path):
     cli = shutil.which("pdfinfo")
     if not cli:

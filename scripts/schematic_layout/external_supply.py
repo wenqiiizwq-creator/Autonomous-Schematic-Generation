@@ -16,7 +16,6 @@ from . import circuit_supply
 from .project_audit import properties
 from .sexpr import all_nodes, first, parse, value, dump
 
-FLAG_LIB = "power:PWR_FLAG"
 ALIAS = "FLGX"
 
 

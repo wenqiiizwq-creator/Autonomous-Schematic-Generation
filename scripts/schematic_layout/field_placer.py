@@ -225,30 +225,6 @@ def autoplace_fields(
     return placements
 
 
-def field_extent(
-    specs: Sequence[FieldSpec], placements: Sequence[FieldPlacement]
-) -> Box | None:
-    """Return the merged box of the placed, non-empty fields (for clearance use)."""
-    boxes: list[Box] = []
-    for spec, placement in zip(specs, placements, strict=True):
-        if not spec.text:
-            continue
-        boxes.append(
-            placement.text_field(spec.text, spec.font_mm, bold=spec.bold).box()
-        )
-    if not boxes:
-        return None
-    merged = boxes[0]
-    for box in boxes[1:]:
-        merged = Box(
-            min(merged.x_min, box.x_min),
-            min(merged.y_min, box.y_min),
-            max(merged.x_max, box.x_max),
-            max(merged.y_max, box.y_max),
-        )
-    return merged
-
-
 def _gap(a: Box, b: Box) -> float:
     dx = max(a.x_min - b.x_max, b.x_min - a.x_max, 0.0)
     dy = max(a.y_min - b.y_max, b.y_min - a.y_max, 0.0)

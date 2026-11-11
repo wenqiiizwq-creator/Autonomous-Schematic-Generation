@@ -216,59 +216,5 @@ def parse_justify(tokens: str | Iterable[str] | None) -> frozenset[str]:
     return frozenset(token for token in raw if token in keep)
 
 
-def body_box_from_pins(
-    pin_points: Sequence[tuple[float, float]],
-    *,
-    pad_mm: float = 1.27,
-    min_half_mm: float = 1.27,
-    center: tuple[float, float] | None = None,
-) -> Box:
-    """Estimate a symbol's body box from its absolute pin tip positions.
-
-    Pins sit on the body outline, so their extent is a good lower bound for the
-    drawn body; ``pad_mm`` adds the small margin between the pin tips and the
-    rendered graphic. When a symbol exposes no pins, a ``min_half_mm`` square
-    around ``center`` (or the origin) is returned so the box is never empty.
-    """
-    if pin_points:
-        xs = [p[0] for p in pin_points]
-        ys = [p[1] for p in pin_points]
-        return Box(
-            min(xs) - pad_mm, min(ys) - pad_mm, max(xs) + pad_mm, max(ys) + pad_mm
-        )
-    cx, cy = center if center is not None else (0.0, 0.0)
-    return Box(cx - min_half_mm, cy - min_half_mm, cx + min_half_mm, cy + min_half_mm)
-
-
-def symbol_extent(body: Box, fields: Iterable[TextField]) -> Box:
-    """Merge a symbol's body box with its text-field boxes into one extent."""
-    boxes = [body]
-    boxes.extend(f.box() for f in fields if f.text)
-    merged = union(boxes)
-    # union() over a non-empty list (body is always present) never returns None.
-    return merged if merged is not None else body
-
-
-def boxes_overlap_pairs(
-    boxes: Sequence[tuple[str, Box]], *, gap_mm: float = 0.0
-) -> list[tuple[str, str, float]]:
-    """Return ``(ref_a, ref_b, overlap_area)`` for every overlapping labelled box.
-
-    A stable O(n²) sweep — schematic sheets hold tens to low hundreds of objects,
-    so the simple form is preferred over an interval tree for determinism and
-    clarity. Pairs are emitted in input order; ``gap_mm`` treats near-touching
-    boxes as overlapping (area is the raw geometric intersection, which may be 0
-    when only the clearance gap is violated).
-    """
-    pairs: list[tuple[str, str, float]] = []
-    for i in range(len(boxes)):
-        ref_a, box_a = boxes[i]
-        for j in range(i + 1, len(boxes)):
-            ref_b, box_b = boxes[j]
-            if box_a.overlaps(box_b, gap_mm=gap_mm):
-                pairs.append((ref_a, ref_b, box_a.intersection_area(box_b)))
-    return pairs
-
-
 def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     return math.hypot(a[0] - b[0], a[1] - b[1])

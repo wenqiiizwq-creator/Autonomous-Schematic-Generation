@@ -3,22 +3,12 @@
 > ASG：从需求文档出发，基于 KiCad 自主绘制可读、电气正确、经 KiCad 导出验证的原理图
 
 Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claude 等 Agent 的 Skill。
-从需求文档出发，按六个能力模块完成一块板的原理图设计：C1 需求理解与澄清 → C2 板级方案 → C3 块电路选择
-→ C4 详细设计与器件选型（每块一次）→ C5 全板闭合 → C6 原理图绘制与检查，再生成设计报告和固定交付目录。
+从需求文档出发，按六个能力模块（C1–C6）完成一块板的原理图设计，再生成设计报告和固定交付目录。
 模块可以按给定输入单独运行，也可以串联；上游变化后按指纹重跑受影响的模块。
 ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 
-流程与规则见 [SKILL.md](SKILL.md)。各模块及交付的主要入口：
-
-| 模块 | 入口 |
-|---|---|
-| C1 需求理解与澄清 | `check_module.py C1`（核对 `requirements.json`） |
-| C2 板级方案 | `check_module.py C2`（核对 `architecture.json`，C3 做完后加 `interfaces.json`） |
-| C3 块电路选择 | `find_parts.py`（检索本机知识库及知识包里的典型电路）、`check_scheme_criteria.py`、`select_guidelines.py`、`block_circuits.py` |
-| C4 详细设计与器件选型 | `fill_pin_maps.py`、`make_symbol.py`、`complete_pin_coverage.py`、`audit_design_closure.py`、`audit_component_requirements.py`、`check_module.py C4` |
-| C5 全板闭合 | `blocks.py merge`、`audit_design_closure.py`、`check_module.py C5` |
-| C6 原理图绘制与检查 | `schematic_layout.recipes.Sheet`、`schematic_layout.root.Root`、`verify_schematic.py`、`audit_system_block.py` |
-| 交付 | `deliver.py`（一次跑完出图到打包）、`render_design_report.py`、`pack_design.py`、`check_ledger.py` |
+模块划分，各模块的任务、给定输入和产出只写在 [SKILL.md](SKILL.md) 的「架构」与「主流程」，本页不重复；
+各脚本做什么见 [scripts/README.md](scripts/README.md)。
 
 其他：多页核对用 `audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
 夹具与草稿用的低层生成器 `generate_schematic.py` 见 [schematic-generation.md](references/schematic-generation.md)，
@@ -52,7 +42,7 @@ PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（
 
 ## 设计约定
 
-以 SKILL.md 的「ASG 纲要」为核心标准（原则 P1–P6 与绘图纲要 O1–O8），修改纲要须先经人确认。
+以 SKILL.md 的「ASG 纲要」为核心标准（核心原则与绘图纲要），修改纲要须先经人确认。
 
 维护约定：
 
@@ -78,3 +68,8 @@ Copyright (c) 2026 wenqiii.zwq
 共用规范 G01–G10（G01–G09 设计准则、G10 降额与应力规范）由硬件设计规范发布，安装在 `references/shared/` 等受控文件里，技能内不得编辑。
 维护源在规范的 `准则登记/`、`规范正文/G10_元器件降额与应力规范/` 和 `工具/`（含 `包说明/`），发布与安装流程只写在规范的 `README.md`；
 技能内有哪些共用文件、谁读、怎样核对见 [共用层说明](references/shared/shared-layer.md)。
+
+## 知识包
+
+准则以外的设计知识由硬件设计知识框架以固定知识包发布，装在 `references/knowledge/`，技能内不得编辑；
+版本以根目录 `knowledge-release.json` 为准，各模块查哪部分见 [知识包](references/knowledge-package.md)。

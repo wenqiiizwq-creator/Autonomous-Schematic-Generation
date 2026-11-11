@@ -7,7 +7,7 @@
 |---|---|---|
 | tscircuit/schematic-trace-solver（`1c6fff6`） | 稳定 pin/net ID、曼哈顿 Prim MST | `routing.py::manhattan_mst` |
 | oaslananka/kicad-mcp-pro（`19dc856`） | 本体/字段/可见范围分开、四边字段候选、网格 A*、从文件做几何检查 | `geometry.py`、`field_placer.py`、`scene.py`、`qa.py` |
-| devbisme/skidl（`4372de5`） | 器件/引脚/网络对象图、子电路与稳定标签、分块布局 | `circuit_ir.py`、`placement.py` |
-| circuit-synth/circuit-synth（`3aaff18`） | 精确引脚名查找、按连接安排邻近器件 | `circuit_ir.py`、`placement.py` |
+| devbisme/skidl（`4372de5`） | 器件/引脚/网络对象图、子电路与稳定标签、分块布局 | `circuit_ir.py`（按模板分块摆放的 `placement.py` 已于 2026-11-11 删除，由图页脚本取代） |
+| circuit-synth/circuit-synth（`3aaff18`） | 精确引脚名查找、按连接安排邻近器件 | `circuit_ir.py` |
 
 这些机制只属于低层后端，交付页一律按 SKILL.md 任务 C6.2 用 recipes 画。

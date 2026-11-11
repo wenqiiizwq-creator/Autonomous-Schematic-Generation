@@ -22,7 +22,7 @@ ASG 从需求文档出发，让 Agent 在 KiCad 中画出**可读、电气正确
 
 - **电气正确**：电路来自已确认的需求、关键与特殊器件的数据手册和常规件的规格，用一份独立写出的设计网表表达；
   KiCad 导出网表必须与设计网表逐脚一致。
-- **可读**：结构由 Agent 按绘图纲要 O1–O8 决定，坐标由 `recipes.Sheet` 按真实引脚几何推出。
+- **可读**：结构由 Agent 按绘图纲要 决定，坐标由 `recipes.Sheet` 按真实引脚几何推出。
 - **经 KiCad 验证**：以 KiCad 导出的 ERC、XML 网表和 PDF 为准；JSON、脚本成功或 solver 的 `solved` 都不算证据。
 
 ASG 负责需求到电路的方案可行性、选型依据、设计计算和功能实现，不能把未做完的设计留给别人。
@@ -60,11 +60,11 @@ ASG 的输入是一块板卡的设计需求，输出是设计方案确定后的�
 3. **功能电路选得合适**（C3）：选定方案的适用范围覆盖本板工况；都能满足的候选里选结构最简单、依赖最少的，选更复杂的要有需求、标准或手册上的理由；核心器件靠保证值覆盖决定条件；按核心器件的端口限值把块与块之间的接口参数定下来，各块据此能独立设计。
 4. **电路实现正确且有度**（C4）：外围电路按手册的应用条件接全，每个引脚有着落；取值按最坏情况算出，应力在降额之内；裕量够用，不无故取高；环路、启动和关断成立。
 5. **异常工况与全板配合成立**（C4 管块内，C5 管跨块）：过压、过流、反接、短路、掉电和热插拔下电路的表现是确定的；保护门槛两侧都成立，上下级保护有先后；跨块的电平、时序、电源预算、复位和故障传递相互适配；对外端口的防护与它面对的环境相称。
-6. **图面清晰易读**（C6）：模块清晰，图形连接明确，读图的人能沿功能路径看懂电路。按 P4 和绘图纲要 O1–O8 画出并审阅。
+6. **图面清晰易读**（C6）：模块清晰，图形连接明确，读图的人能沿功能路径看懂电路。按 P4 和绘图纲要 画出并审阅。
 7. **知道自己哪里知识不够，并据此改进**：设计中遇到库里没有、依据不足或回到上游重做的地方，如实留下记号，不用印象补上。每次运行由工具从各模块的产品里抽出知识缺口清单；跨多次运行和评测，把重复出现的缺口归纳成能力缺陷，改进后用题目验证。
 
 评测 ASG 按能力模块分别进行：每个模块用标准上游作给定输入单独评测；从需求串联到交付的整板运行作集成测试。判定按合理性五条：充分不成立的算不通过，稳健不足的算风险，必要不成立的算过度设计、单独计数。
-能力缺陷的归纳和改进在评测侧做，不在单次设计里做。每条缺陷带一道能稳定暴露它的题目；改进之后这道题通过、留出的题目没有变差，才算修好。
+能力缺陷的归纳和改进在评测侧做，不在单次设计里做。每条缺陷带一道能稳定暴露它的题目；改进之后这道题通过、留出的题目没有变差，才算修好。评测体系在本技能之外，题目、基线和现状以硬件设计知识框架的 `评测/` 为准，本技能不记它的状态。
 
 ### 架构
 
@@ -97,14 +97,14 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 - **P1 证据**：只认 KiCad 导出的 ERC、XML 网表和 PDF；JSON、脚本成功都不算证据。
 - **P2 电气与几何分离**：设计网表从需求和手册独立写出，不从图上回抄；摆放不改变电气。
 - **P3 真值**：器件先形成与实际工况对应的性能要求；需绑定型号的器件以确切料号或定制设计单为依据，可按规格采购的器件以算得的性能要求为依据。性能定义与候选器件符合性的核实状态分别记录，料号不能替代性能核验。
-- **P4 可读**：页面结构按绘图纲要 O1–O8 决定，坐标从引脚几何推出；可读性是交付标准。
+- **P4 可读**：页面结构按绘图纲要 决定，坐标从引脚几何推出；可读性是交付标准。
 - **P5 失败改结构，不改计数**：不靠 PWR_FLAG、豁免、改引脚类型或标签来掩盖问题。
 - **P6 责任边界**：设计完成由 ASG 负责，只做自检；独立审查交给独立审查方（schematic-review 技能）。
 - **P7 模块契约**：单独运行时，给定输入只读，并带 SHA-256。产出按契约写；关卡（做完的标志）过了才交下游，并在 `record/modules.json` 记下上游与产出的指纹；上游一变，下游即过期。发现给定输入有问题时，只登记 `INPUT` 待办，不改上游；串联运行时回到上游模块重做，并在 `record/modules.json` 的 `returns` 记一条：哪个模块的哪项任务发现、回到哪个模块的哪项任务、原因和依据。
 
 ### 纲要的修改
 
-本节（架构、P1–P7）、主流程的步骤、任务与做完的标志，以及绘图纲要 O1–O8，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
+本节（架构、核心原则）、主流程的步骤、任务与做完的标志，以及绘图纲要的每一条，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
 `scripts/` 和 `references/` 中的实现细节可以直接修改，但一旦与纲要冲突，就先写纲要草案交人确认。
 经确认的改动在 `docs/outline-approvals.md` 加一条，写确认日期、用户原话和改后纲要哈希
 （`python3 scripts/check_ledger.py --outline-hash` 输出当前哈希）；纲要文字与最新确认的哈希不一致时 `check_ledger.py` 报 FAIL。
@@ -353,9 +353,9 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 
 - 按拓扑选结构（Buck、LDO、隔离反激、滤波、MCU 各不相同），见
   [schematic-drawing-standards.md](references/schematic-drawing-standards.md) 第 2 节。不得为别的拓扑编造 SW 节点或电感级。
-- 按绘图纲要 O1–O8 决定页面流向、锚点、器件归属、画法、出线、标签、间距和修复顺序，见
+- 按绘图纲要 决定页面流向、锚点、器件归属、画法、出线、标签、间距和修复顺序，见
   [drawing-recipes.md](references/drawing-recipes.md)。
-- 图面的目标是逻辑清晰、按功能块划分、方便工程师理解、能指导 PCB 设计；按画图习惯 H1–H8 落实（块标题、块内导线块间标签、不绕远、
+- 图面的目标是逻辑清晰、按功能块划分、方便工程师理解、能指导 PCB 设计；按绘图纲要里的画图习惯落实（块标题、块内导线块间标签、不绕远、
   密度与纸张、多单元器件按单元画、去耦画在引脚旁、写给 PCB 的短注），见同一文件。
 
 做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与关键块的典型电路标注（库里没有适用的写 none）齐全，每个器件属于一个功能块。
@@ -450,7 +450,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 在实际 PDF 上逐页核对性能标注（位号/注号对应、参数与单位、“要求/器件保证/待核”含义清楚、表格未压线），按位号记录结果；隐藏属性完整不代替这一步。
 
 打开导出的 PDF，逐页按 `page-plan.json` 的读者任务追主路径、支持网络与回流路径、重复通道、地域和隔离跨越；
-逐页核对画图习惯 H1–H8 里不自动检查的各条，`report["readability"]["detours"]` 列出的绕远连线逐条处置；
+逐页核对绘图纲要画图习惯里不自动检查的各条，`report["readability"]["detours"]` 列出的绕远连线逐条处置；
 逐条处置 `geometry.render_review_items`，写出在本版 PDF 上看到了什么，没改动的页面也重新审阅，不沿用上一版的处置。
 追法、三种状态（待返工 / 待图面审阅 / 已完成图面审阅）和 `pdf_sha256` 的写法见 [human-readable-routing.md](references/human-readable-routing.md) 第 4 节
 与 [delivery-report.md](references/delivery-report.md) 的 `visual-review.json` 一行。用户否决会重新打开图面审阅。
@@ -502,11 +502,11 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 
 由外部流程派发任务时，读 [任务输入输出格式](references/workflow-handoff.md)。
 以 `task.json` 的需求、版本和给定输入为输入；审查意见按 P7 回到负责的模块重做；架构生成、查资料、计算与改图仍由 ASG 完成。
-交付仍按「交付」一节“报告与打包”规定的目录；用流程提供的 `pack-result` 生成 `result.json`。独立使用本技能不依赖外部流程。
+交付仍按「交付」一节“报告与打包”规定的目录；`result.json` 由派发任务的外部流程按该页格式生成，本技能不带这个工具。独立使用本技能不依赖外部流程。
 
 ## 硬性规则
 
-原则见「ASG 纲要」P1–P7；这里只列具体操作约束。
+原则见「ASG 纲要」的核心原则；这里只列具体操作约束。
 
 - P2：位号、值、MPN、引脚号、装配状态和网络归属不因摆放改变；不为布图方便改符号的引脚映射。
 - P4/P5：不手写辅助器件坐标；不把可读页面交给 MST/A* 自动路由；不用标签掩盖失败的连线。
@@ -540,8 +540,8 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 必写的设计文档（FMEA、EMC 端口矩阵）：何时要写、必备章节与对象 | [guideline-evidence-groups.md](references/guideline-evidence-groups.md)、`references/guideline-evidence-groups.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
 | 共用规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
-| 绘图纲要 O1–O8 与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
-| 阅读路径、HR-01–HR-11、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
+| 绘图纲要（结构规则与画图习惯）与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
+| 阅读路径、HR 规则、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |
 | ERC 摘要对应到对象、自动网络名不比对、层次与 PDF | [project-verification.md](references/project-verification.md) |
 | 交付证据与是否最新 | [delivery-report.md](references/delivery-report.md) 的“交付证据（快照检查）” |

@@ -16,7 +16,6 @@ RECORD = ROOT / 'docs' / 'outline-approvals.md'
 OUTLINE = (('SKILL.md', '## ASG 纲要（核心标准）'), ('SKILL.md', '## 主流程'),
            ('references/drawing-recipes.md', '## 绘图纲要（怎样决定结构）'))
 APPROVED = re.compile(r'^user:\d{4}-\d{2}-\d{2}$')
-HASH = re.compile(r'^[0-9a-f]{16}$')
 
 
 def outline_hash(root=ROOT):
