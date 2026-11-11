@@ -271,8 +271,9 @@ def unexplained_none(scheme, circuits_dir=CIRCUITS_DIR):
     return problems
 
 
-def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, scheme=None, explain_none=True):
-    """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task."""
+def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, scheme=None, explain_none=True, typical=True):
+    """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task.
+    `typical=False` is C6 run alone on a given netlist (SKILL.md task C6.1): no block files, so no typical-circuit labels."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
     errors = []
@@ -296,7 +297,9 @@ def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, 
             errors.append('%s：要按功能块列出器件（blocks）' % name)
             continue
         key_blocks = page.get('key_blocks', [])
-        if not isinstance(key_blocks, list) or any(not text(b) or b not in blocks for b in key_blocks):
+        if not typical:
+            key_blocks = []
+        elif not isinstance(key_blocks, list) or any(not text(b) or b not in blocks for b in key_blocks):
             errors.append('%s：key_blocks 必须列出本页 blocks 中的关键功能块名' % name)
             key_blocks = []
         key_blocks = set(key_blocks) | {b['block'] for b in ((scheme or {}).get('blocks') or [])
@@ -310,7 +313,7 @@ def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, 
                     errors.append('%s：%s 同时在功能块“%s”和“%s”里' % (name, ref, placed[ref], block))
                 placed[ref] = block
         cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task C6.3)
-        if not cover and 'system_block' not in name.lower():
+        if typical and not cover and 'system_block' not in name.lower():
             errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, key_blocks=key_blocks, scheme=scheme, circuits_dir=circuits_dir,
                                              explain_none=explain_none)
         missing = sorted(on_page.get(Path(name).stem, set()) - set(placed))

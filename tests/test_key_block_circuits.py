@@ -30,6 +30,16 @@ def test_scheme_blocks_are_key_even_without_page_key_declaration():
     assert len(problems) == 1 and '关键' in problems[0]
 
 
+def test_c6_run_alone_has_no_typical_circuit_labels_to_check():
+    # Matrix R2 redraw 2026-11-10: SKILL.md said the labels are not checked when C6 runs alone, the gate checked them.
+    plan = {'schema_version': 1, 'pages': [{'file': 'a.kicad_sch', 'reader_tasks': ['跟随电源'],
+            'blocks': {'关键': ['U1']}, 'key_blocks': ['关键']}]}
+    intent = {'components': [{'ref': 'U1'}]}
+    visual = {'pages': [{'file': 'a.kicad_sch', 'paths': ['电源路径']}]}
+    assert len(report.check_page_plan(plan, intent, visual)) == 1
+    assert report.check_page_plan(plan, intent, visual, typical=False) == []
+
+
 # A5 (whole-board baseline 2026-11-07): Matrix said its reset block U702 had no typical circuit while
 # multi-domain-reset covers MCU reset split from network reset.
 def test_a_none_block_compares_each_typical_circuit_the_search_finds(tmp_path):

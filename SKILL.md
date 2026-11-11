@@ -348,7 +348,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`key_blocks`、`circuits`），本页每个器件都要属于一个功能块，
 每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有适用典型电路的关键块写 `none`）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](references/human-readable-routing.md) 第 1 节。
-单独运行 C6、没有 `architecture.json` 和块文件时，功能块划分由本任务从网表定，`circuits` 留空，不做典型电路标注检查。
+单独运行 C6、没有 `architecture.json` 和块文件时，功能块划分由本任务从网表定，`key_blocks`、`circuits` 留空，C6 关卡不做典型电路标注检查。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
 - 按拓扑选结构（Buck、LDO、隔离反激、滤波、MCU 各不相同），见
@@ -548,4 +548,4 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 用词 | [terminology.md](references/terminology.md) |
 | 低层生成器 | [schematic-generation.md](references/schematic-generation.md) |
 
-运行不需要上游完整仓库、新的 MCP 服务、Bun 或网络连接。
+运行依赖见 [README.md](README.md) 的“安装”一节。

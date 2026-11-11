@@ -352,7 +352,8 @@ def gate(module, root, write=True, block=None):
         scheme = {'blocks': [{'block': s.get('name'), 'candidates': [dict(s['selected'], status='selected')]}
                              for _, data in sorted(files.items()) for s in (data.get('schemes') or [])
                              if isinstance(s, dict) and isinstance(s.get('selected'), dict)]} if files else None
-        problems += report.check_page_plan(plan, intent, visual, root=root, scheme=scheme, explain_none=False)
+        problems += report.check_page_plan(plan, intent, visual, root=root, scheme=scheme, explain_none=False,
+                                           typical=bool(files))
         problems += report.check_visual_items(root, visual, summary)
         if visual.get('status') != 'REVIEWED':
             problems.append('visual-review.json 的 status 不是 REVIEWED（任务 C6.5）')
