@@ -665,8 +665,10 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
     """Recompute from source and actual artifacts; missing native evidence is never PASS. `digest` is the projection
     digest of the whole record when `record` is one block's part of it (check_module.py C4 --block)."""
     if record is None:
+        # An imported netlist (C6 alone) carries the source project's fields; its record is not a given input.
         required = intent.get('component_requirements_version') or any(
-            c.get('performance_contract') or c.get('fields', {}).get('RequirementsSHA256')
+            c.get('performance_contract') or (c.get('fields', {}).get('RequirementsSHA256')
+                                              and not intent.get('source_netlist'))
             for c in intent.get('components', []))
         return {'status': 'FAIL' if required else 'NOT_CHECKED',
                 'errors': ['component-requirements.json missing'], 'pending': [], 'native': 'NOT_CHECKED'}

@@ -51,6 +51,18 @@ class ImportNetlistTests(unittest.TestCase):
         for comp in intent['components']:
             libraries.load(comp['lib_id'])
 
+    def test_a_sub_sheet_net_loses_its_page_path_unless_two_pages_share_the_name(self):
+        xml = XML.replace('</components>', '</components><design><sheet number="2" name="/AFE/"/>'
+                          '<sheet number="3" name="/CH2/"/></design>').replace(
+            '<net code="2" name="/IN">', '<net code="4" name="/AFE/FLT"><node ref="U1" pin="4"/></net>'
+            '<net code="5" name="/CH2/FLT"><node ref="U1" pin="5"/></net>'
+            '<net code="6" name="/AFE/OUT"><node ref="U1" pin="6"/></net><net code="2" name="/IN">')
+        (self.dir / 'n.xml').write_text(xml, encoding='utf-8')
+        intent = import_netlist.convert(self.dir / 'n.xml')
+        self.assertEqual({'GND', 'IN', 'OUT', 'AFE_FLT', 'CH2_FLT'}, set(intent['nets']))
+        self.assertEqual({'OUT': '/AFE/OUT', 'AFE_FLT': '/AFE/FLT', 'CH2_FLT': '/CH2/FLT'},
+                         intent['source_netlist']['net_names'])
+
     def test_a_pin_number_with_a_dot_cannot_be_written(self):
         (self.dir / 'n.xml').write_text(XML.replace('pin="2"/><node ref="U1" pin="2"', 'pin="2"/><node ref="U1" pin="39.1"'),
                                         encoding='utf-8')

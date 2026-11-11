@@ -4,8 +4,10 @@
   python3 import_netlist.py <netlist.xml> --out record/electrical-intent.json \\
       [--source-schematic 根图.kicad_sch --library-dir 设计资料/symbols]
 
-- 器件：位号、lib_id、Value、封装、手册和其余字段原样带过来；电源符号（# 开头的位号）不进网表。
-- 网络：每个网络列出 `位号.引脚`；KiCad 给单脚未接网络起的 `unconnected-…` 名字归入 no_connect。
+- 器件：位号、lib_id、Value、封装、手册和其余字段原样带过来（源工程的器件性能字段也在内，性能记录不是给定输入，
+  `verify_schematic.py` 对导入的网表不要求它，记 NOT_CHECKED）；电源符号（# 开头的位号）不进网表。
+- 网络：每个网络列出 `位号.引脚`；子页局部标签的网络名去掉页路径（`/页/名字` 写成 `名字`，两页同名时写成 `页_名字`），
+  原名记在 `source_netlist.net_names`；KiCad 给单脚未接网络起的 `unconnected-…` 名字归入 no_connect。
 - 符号：给了源原理图时，把根图和各子页里内嵌的 lib_symbols 抽成项目符号库（每个库一个 .kicad_sym），
   库名里 KiCad 允许而布图库不收的字符换成 `_`，lib_id 一并改写；工程内改过的符号（没有库名）放进 `local` 库。
   画图时用 `--symbol-dir` 指向这个目录。
@@ -67,7 +69,11 @@ def nets(root, refs):
         # `位号.引脚` is split at the last dot, so a pin number with a dot cannot be written (SparkFun GNSSDO 39.1).
         raise ValueError('引脚号带“.”，设计网表的“位号.引脚”写法表达不了：%s%s' % (
             '、'.join(dotted[:5]), ' 等 %d 个' % len(dotted) if len(dotted) > 5 else ''))
-    named, no_connect = {}, []
+    # A label on a sub-sheet is exported as /页路径/名字. A redraw may split pages differently, so the page path is
+    # dropped; the bare name is what the page scripts label (Matrix R2 redraw, 2026-11-10: /09_CH12/IN_D1 could not
+    # be labelled on the new page 06_CH12).
+    sheets = sorted({s.get('name') or '/' for s in root.iter('sheet')} | {'/'}, key=len, reverse=True)
+    found, no_connect = [], []
     for net in root.iter('net'):
         pins = ['%s.%s' % (n.get('ref'), n.get('pin')) for n in net.iter('node') if n.get('ref') in refs]
         if not pins:
@@ -75,9 +81,20 @@ def nets(root, refs):
         name = net.get('name') or 'NET%s' % net.get('code')
         if UNCONNECTED.match(name) and len(pins) == 1:
             no_connect += pins
-        else:
-            named[name.lstrip('/') if name.startswith('/') and name.count('/') == 1 else name] = pins
-    return named, sorted(no_connect)
+            continue
+        sheet = next((s for s in sheets if name.startswith(s) and len(name) > len(s)), '') if name.startswith('/') else ''
+        found.append((name, sheet, pins))
+    bare = [name[len(sheet):] for name, sheet, _ in found]
+    named, renamed = {}, {}
+    for (name, sheet, pins), short in zip(found, bare):
+        # Two sheets using the same local name stay apart by keeping the page path in the name.
+        new = short if bare.count(short) == 1 else name.strip('/').replace('/', '_')
+        if new in named:
+            raise ValueError('网络名 %s 去掉页路径后与另一个网络重名' % name)
+        named[new] = pins
+        if sheet not in ('', '/'):
+            renamed[new] = name
+    return named, sorted(no_connect), renamed
 
 
 def sheet_files(root_file):
@@ -121,10 +138,12 @@ def convert(netlist, source_schematic=None, library_dir=None):
     raw = Path(netlist).read_bytes()
     root = ET.fromstring(raw)
     comps = components(root)
-    named, no_connect = nets(root, {c['ref'] for c in comps})
+    named, no_connect, renamed = nets(root, {c['ref'] for c in comps})
     intent = {'schema': 'project-hardware-intent-v1', 'revision': 'imported', 'components': comps, 'nets': named,
               'no_connect': no_connect, 'net_roles': {},
               'source_netlist': {'path': str(netlist), 'sha256': hashlib.sha256(raw).hexdigest()}}
+    if renamed:
+        intent['source_netlist']['net_names'] = renamed
     libraries = extract_libraries(Path(source_schematic), Path(library_dir)) if source_schematic else {}
     if libraries:
         intent['source_netlist']['symbol_libraries'] = libraries

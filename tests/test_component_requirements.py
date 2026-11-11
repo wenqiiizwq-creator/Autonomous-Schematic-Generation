@@ -427,6 +427,12 @@ class PerformanceTests(unittest.TestCase):
         self.intent['component_requirements_version'] = 1
         self.assertEqual('FAIL', cr.audit(self.intent, None, self.root)['status'])
 
+    def test_an_imported_netlist_carrying_the_source_fields_needs_no_record(self):
+        self.intent['components'][0].setdefault('fields', {})['RequirementsSHA256'] = 'x' * 64
+        self.assertEqual('FAIL', cr.audit(self.intent, None, self.root)['status'])
+        self.intent['source_netlist'] = {'path': 'n.xml', 'sha256': 'y' * 64}
+        self.assertEqual('NOT_CHECKED', cr.audit(self.intent, None, self.root)['status'])
+
     def test_missing_marker_does_not_hide_a_projected_contract(self):
         projected = self.project()
         projected.pop('component_requirements_version')

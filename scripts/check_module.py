@@ -63,8 +63,11 @@ MODULE_TOP = (MODULE_REPORT, 'record', '设计资料', '原理图')
 SCHEMATIC_FILES = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
 KNOWLEDGE = Path(__file__).resolve().parent.parent / 'references' / 'knowledge'
 # The knowledge package components each module looks up before it designs (knowledge-package.md). The gate only checks
-# that the lookup was recorded and that the entries it names are in the package; C3's lookup is in the block files.
-LOOKUPS = {'C1': ('需求要素',), 'C2': ('板级架构模式', '接口约定'), 'C4': ('计算方法', '器件参数'), 'C5': ('失效与异常工况',)}
+# that the lookup was recorded and that the entries it names are in the package; which typical circuit task C3.1 chose
+# is in the scheme records. A board with external connectors (EMC port matrix) adds CONNECTOR_LOOKUPS to C5.
+LOOKUPS = {'C1': ('需求要素',), 'C2': ('板级架构模式', '接口约定'), 'C3': ('接口约定',), 'C4': ('计算方法', '器件参数'),
+           'C5': ('失效与异常工况',)}
+CONNECTOR_LOOKUPS = {'C5': ('接口约定',)}
 
 
 def file_of(item):
@@ -419,8 +422,20 @@ def lookup_problems(root, module):
             and str(r.get('task') or '').startswith(module + '.')]
     problems = [p for row in rows for p in lookup_row_problems(row)]
     seen = {row.get('component') for row in rows}
+    wanted = LOOKUPS.get(module, ()) + (CONNECTOR_LOOKUPS.get(module, ()) if has_connectors(root) else ())
     return problems + ['%s 没有查知识包 %s/ 的记录（check_module.py lookup；没查到也记）' % (module, c)
-                       for c in LOOKUPS.get(module, ()) if c not in seen]
+                       for c in wanted if c not in seen]
+
+
+def has_connectors(root):
+    """The design netlist has an external connector (the board then writes the EMC port matrix, task C5.2)."""
+    from schematic_layout.component_role import is_connector
+    path = root / 'record' / 'electrical-intent.json'
+    try:
+        intent = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+    except ValueError:
+        return False
+    return any(isinstance(c, dict) and is_connector(c) for c in intent.get('components') or [])
 
 
 def record_lookup(root, task, component, query, found, detail):

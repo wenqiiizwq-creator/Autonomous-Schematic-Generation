@@ -139,6 +139,13 @@ class RecipeBoardTests(unittest.TestCase):
         self.assertEqual('PASS', report['structure']['status'])
         self.assertEqual(['D3'], [d['subject'] for d in report['structure']['deviations']])
 
+    def test_a_wire_that_goes_the_long_way_round_is_listed(self):
+        # H3: a direct two-pin wire over 1.5 times the Manhattan distance of its pins is reported, not gated.
+        self.assertEqual(0, self.report['readability']['detour_connections'])
+        span = self.report['readability']['content_span']
+        self.assertTrue(0 < span[0] <= 1 and 0 < span[1] <= 1, span)
+        self.assertEqual([['D3.2', 'R3.2', 2.33]], self.bad_report['readability']['detours'])
+
     def test_good_and_bad_are_electrically_identical(self):
         cli = find_cli()
         if not cli:

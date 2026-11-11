@@ -29,7 +29,8 @@ def tearDownModule():
 def looked_up(record):
     """Every module has recorded its knowledge package lookups (here: nothing found), as the gates require."""
     rows = [{'task': module + '.1', 'component': c, 'query': 'x', 'found': []}
-            for module, components in check_module.LOOKUPS.items() for c in components]
+            for table in (check_module.LOOKUPS, check_module.CONNECTOR_LOOKUPS)
+            for module, components in table.items() for c in components]
     (record / 'modules.json').write_text(json.dumps({'schema_version': 1, 'modules': {}, 'knowledge_lookups': rows},
                                                     ensure_ascii=False), encoding='utf-8')
 
@@ -280,6 +281,21 @@ class FingerprintTests(unittest.TestCase):
         data['knowledge_lookups'][0]['found'] = ['板级架构模式/已删的条目.md']               # hand-written, not in the package
         self.write('modules.json', data)
         self.assertTrue(any('不是知识包' in p for p in check_module.gate('C2', self.root)[0]))
+
+
+    def test_c3_and_a_board_with_connectors_look_up_the_interface_conventions(self):
+        (self.record / 'modules.json').unlink()
+        self.assertEqual(['C3 没有查知识包 接口约定/ 的记录（check_module.py lookup；没查到也记）'],
+                         check_module.lookup_problems(self.root, 'C3'))
+        self.assertEqual(['失效与异常工况'], [p.split('知识包 ')[1].split('/')[0]
+                                          for p in check_module.lookup_problems(self.root, 'C5')])
+        intent = {'components': [{'ref': 'J1', 'lib_id': 'Connector:Conn_01x02', 'fields': {}}]}
+        self.write('electrical-intent.json', intent)
+        self.assertEqual(['失效与异常工况', '接口约定'], [p.split('知识包 ')[1].split('/')[0]
+                                                     for p in check_module.lookup_problems(self.root, 'C5')])
+        self.assertEqual(0, check_module.main(['lookup', str(self.root), '--task', 'C3.3', '--component', '接口约定',
+                                               '--query', '电源轨参数模板']))
+        self.assertEqual([], check_module.lookup_problems(self.root, 'C3'))
 
 
 class ModuleRunTests(unittest.TestCase):

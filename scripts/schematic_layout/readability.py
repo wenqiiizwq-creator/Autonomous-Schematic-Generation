@@ -18,6 +18,10 @@ PAPER_ORDER = ("A4", "A3", "A2", "A1", "A0")
 
 
 CELL_MM = 25.4
+# Drawing habit H3 (drawing-recipes.md): engineers' direct two-pin wires are at most 1.5 times the Manhattan distance of
+# their pins in 96 % of 4191 connections of the public KiCad projects census; shorter runs than this are not judged.
+DETOUR_RATIO = 1.5
+DETOUR_MIN_MM = 25.4
 
 
 def _object_boxes(scene, root=None):
@@ -92,6 +96,7 @@ def measure(root):
     for s in scene.symbols:
         refs.setdefault("power" if s.ref.startswith("#") else "part", []).append(s)
     terminals = {}
+    pin_points = {}
     for kind, symbols in refs.items():
         for s in symbols:
             for p in s.pins:
@@ -99,6 +104,7 @@ def measure(root):
                 for i, w in enumerate(wires):
                     if on_segment(pt, *w):
                         terminals.setdefault(island[i], set()).add((kind, s.ref, p.id))
+                        pin_points.setdefault(island[i], []).append(pt)
                         break
     for kind, f in scene.labels:
         if kind == "text":
@@ -135,6 +141,17 @@ def measure(root):
     rail_mm = sum(length(w) for i, w in enumerate(wires) if island[i] in power_islands)
     two = [isl for isl, t in terminals.items() if len(t) == 2]
     tortuous = sorted(isl for isl in two if bends.get(isl, 0) >= 3)
+    # A direct two-pin wire much longer than the distance between its pins goes the long way round (H3).
+    island_mm = {}
+    for i, w in enumerate(wires):
+        island_mm[island[i]] = island_mm.get(island[i], 0) + length(w)
+    detours = []
+    for isl in two:
+        pts = pin_points.get(isl, [])
+        if len(pts) == 2 and all(k == "part" for k, *_ in terminals[isl]):
+            direct = abs(pts[0][0] - pts[1][0]) + abs(pts[0][1] - pts[1][1])
+            if direct and island_mm[isl] > DETOUR_MIN_MM and island_mm[isl] / direct > DETOUR_RATIO:
+                detours.append(sorted(t[2] for t in terminals[isl]) + [round(island_mm[isl] / direct, 2)])
     labels = [k for k, _ in scene.labels if k != "text"]
     # Parts joined only through labels or rail symbols are separate groups: a
     # page made of such islands shows no path, whatever its crossing count.
@@ -171,6 +188,9 @@ def measure(root):
         "paper": paper,
         "content_box_mm": [round(v, 1) for v in (content.x_min, content.y_min, content.x_max, content.y_max)] if content else None,
         "content_size_mm": [round(content.width, 1), round(content.height, 1)] if content else None,
+        # Share of the drawing area's width and height the content spans: a page drawn as one strip leaves a low value.
+        "content_span": [round(content.width / drawing.width, 2), round(content.height / drawing.height, 2)]
+        if content and drawing.area else None,
         "occupancy": round(content.area / drawing.area, 3) if content and drawing.area else 0.0,
         "cell_coverage": round(len(cells) / total, 3),
         "fits_paper": fits,
@@ -185,6 +205,8 @@ def measure(root):
         "junctions": len(junctions),
         "two_terminal_connections": len(two),
         "tortuous_connections": len(tortuous),
+        "detour_connections": len(detours),
+        "detours": sorted(detours),
         "max_bends_in_connection": max(bends.values(), default=0),
         "rail_wire_mm": round(rail_mm, 1),
         "power_symbols": len(refs.get("power", [])),
