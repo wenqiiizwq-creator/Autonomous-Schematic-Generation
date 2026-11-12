@@ -954,7 +954,7 @@ class PackDesignTests(unittest.TestCase):
         self.assertEqual(manifest['inputs']['requirements']['kind'], 'directory')
         self.assertIn('原理图/schematic.pdf', manifest['packed'])
         self.assertTrue((self.d.record / 'manifest.json').is_file())
-        release = json.loads((Path(__file__).resolve().parents[1] / 'knowledge-release.json').read_text(encoding='utf-8'))
+        release = json.loads((Path(__file__).resolve().parents[1] / 'knowledge-sync.json').read_text(encoding='utf-8'))
         self.assertEqual({'knowledge_version': release['knowledge_version'], 'fingerprint': release['fingerprint']},
                          manifest['knowledge_release'])
 

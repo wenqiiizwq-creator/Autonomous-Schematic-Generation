@@ -5,7 +5,7 @@
   python3 check_module.py C4 <设计目录> --block PSU          只核一个块的块设计（不记指纹）
   python3 check_module.py return <设计目录> --from C4.2 --to C3.3 --reason … --evidence …
                                                              回到上游重做时在 record/modules.json 的 returns 记一条（P7）
-  python3 check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query … [--found 计算方法/x.md ...]
+  python3 check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query … [--found 计算方法/<知识域>/x.md ...]
                                                              查知识包后在 record/modules.json 的 knowledge_lookups 记一条；
                                                              不写 --found 表示没查到
   python3 check_module.py status <设计目录>                  列出已记模块：OK、STALE（上游变了）、MODIFIED（产出改过未重验）
@@ -66,8 +66,8 @@ KNOWLEDGE = Path(__file__).resolve().parent.parent / 'references' / 'knowledge'
 # that the lookup was recorded and that the entries it names are in the package; which typical circuit task C3.1 chose
 # is in the scheme records. A board with external connectors (EMC port matrix) adds CONNECTOR_LOOKUPS to C5.
 LOOKUPS = {'C1': ('需求要素',), 'C2': ('板级架构模式', '接口约定'), 'C3': ('接口约定',), 'C4': ('计算方法', '器件参数'),
-           'C5': ('失效与异常工况',)}
-CONNECTOR_LOOKUPS = {'C5': ('接口约定',)}
+           'C5': ('失效与故障分析',)}
+CONNECTOR_LOOKUPS = {'C5': ('需求要素',)}
 
 
 def file_of(item):

@@ -1,7 +1,7 @@
 # SWD 与 JTAG 调试接口
 
 类别：总线约定。
-适用范围：板上处理器、可编程逻辑与调试工具之间的 JTAG（TCK、TMS、TDI、TDO，可带 TRST−、RTCK）和 SWD（SWDIO、SWCLK，可带 SWO）调试接口，以及调试口上的目标电压参考、复位和地。多器件扫描链和边界扫描只写接口层面要核的量。实现电路见典型电路 [swd-debug](../../典型电路/swd-debug.md)、[boundary-scan-chain](../../典型电路/boundary-scan-chain.md)。
+适用范围：板上处理器、可编程逻辑与调试工具之间的 JTAG（TCK、TMS、TDI、TDO，可带 TRST−、RTCK）和 SWD（SWDIO、SWCLK，可带 SWO）调试接口，以及调试口上的目标电压参考、复位和地。多器件扫描链和边界扫描只写接口层面要核的量。实现电路见典型电路 [swd-debug](../../典型电路/测试与调试/swd-debug.md)、[boundary-scan-chain](../../典型电路/测试与调试/boundary-scan-chain.md)。
 
 ## 来源
 

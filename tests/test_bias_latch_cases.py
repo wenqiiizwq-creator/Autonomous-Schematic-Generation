@@ -23,8 +23,8 @@ class ReviewedCases(unittest.TestCase):
  def test_published_implementations_and_origins(self):
   # 知识包 1.0.0：原条目拆分成指路条目，四种方案并入别的典型电路，原审查案例写在“内容去向”。
   folder=ROOT/'references/knowledge/典型电路'
-  text=(folder/'reviewed-bias-and-latch.md').read_text()
+  text=next(folder.rglob('reviewed-bias-and-latch.md')).read_text()
   for key in ['F-001','F-005','F-006']:self.assertIn(key,text)
   self.assertEqual(sum(l.startswith('### ') for l in text.splitlines()),0)
   for target in ['aux-bias-supply','ac-indicator','aux-overvoltage-latch','ldo']:
-   self.assertIn('](%s.md)'%target,text); self.assertTrue((folder/(target+'.md')).is_file())
+   self.assertIn('%s.md)'%target,text); self.assertEqual(len(list(folder.rglob(target+'.md'))),1)

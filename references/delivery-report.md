@@ -34,7 +34,7 @@
 | `scripts/` | 图页脚本，下一版只重生成有变化的页面 |
 | `evidence/` | 设计结论引用的截图、手册摘页等 |
 | `sr-review/` | 本版交独立审查（schematic-review）时的审查报告、`findings.json` 与审查记录；没有就不建 |
-| `manifest.json` | `pack_design.py` 写：需求、原厂资料的路径和 SHA-256，本目录每个文件的 SHA-256，所用知识包的版本与指纹（`knowledge_release`，从 `knowledge-release.json` 读） |
+| `manifest.json` | `pack_design.py` 写：需求、原厂资料的路径和 SHA-256，本目录每个文件的 SHA-256，所用知识包依据的框架版本与指纹（`knowledge_release`，从 `knowledge-sync.json` 读） |
 
 单个文件超过 10 MB 说明带了不该带的东西：仿真原始波形、整份手册、历史台账。只留结论引用的部分，
 其余留在工作目录，或用 `--input` 按路径登记。

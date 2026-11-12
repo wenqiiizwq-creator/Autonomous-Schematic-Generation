@@ -1,7 +1,7 @@
 # I2C 总线（标准、快速、快速增强模式）
 
 类别：总线约定。
-适用范围：双向开漏的 SDA、SCL 总线，标准模式（100 kbit/s）、快速模式（400 kbit/s）、快速增强模式（1 Mbit/s）。高速模式（3.4 Mbit/s）和超快模式是另一套电气约定，不在本条目。实现电路见典型电路 [level-translation](../../典型电路/level-translation.md)、[spi-flash-eeprom](../../典型电路/spi-flash-eeprom.md)；上拉电阻的取值步骤见 [上拉与开漏](../../计算方法/上拉与开漏.md)。
+适用范围：双向开漏的 SDA、SCL 总线，标准模式（100 kbit/s）、快速模式（400 kbit/s）、快速增强模式（1 Mbit/s）。高速模式（3.4 Mbit/s）和超快模式是另一套电气约定，不在本条目。实现电路见典型电路 [level-translation](../../典型电路/总线与接口/level-translation.md)、[spi-flash-eeprom](../../典型电路/数字核心与时钟复位/spi-flash-eeprom.md)；上拉电阻的取值步骤见 [上拉与开漏](../../计算方法/总线与接口/上拉与开漏.md)。
 
 另见：[I2S与TDM](I2S与TDM.md)（编解码器的音频数据口）。
 

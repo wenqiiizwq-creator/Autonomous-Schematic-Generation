@@ -287,11 +287,11 @@ class FingerprintTests(unittest.TestCase):
         (self.record / 'modules.json').unlink()
         self.assertEqual(['C3 没有查知识包 接口约定/ 的记录（check_module.py lookup；没查到也记）'],
                          check_module.lookup_problems(self.root, 'C3'))
-        self.assertEqual(['失效与异常工况'], [p.split('知识包 ')[1].split('/')[0]
+        self.assertEqual(['失效与故障分析'], [p.split('知识包 ')[1].split('/')[0]
                                           for p in check_module.lookup_problems(self.root, 'C5')])
         intent = {'components': [{'ref': 'J1', 'lib_id': 'Connector:Conn_01x02', 'fields': {}}]}
         self.write('electrical-intent.json', intent)
-        self.assertEqual(['失效与异常工况', '接口约定'], [p.split('知识包 ')[1].split('/')[0]
+        self.assertEqual(['失效与故障分析', '需求要素'], [p.split('知识包 ')[1].split('/')[0]
                                                      for p in check_module.lookup_problems(self.root, 'C5')])
         self.assertEqual(0, check_module.main(['lookup', str(self.root), '--task', 'C3.3', '--component', '接口约定',
                                                '--query', '电源轨参数模板']))

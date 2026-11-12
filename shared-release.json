@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "library_version": "1.9.10",
+  "library_version": "3.3.0",
   "fingerprint_format": "shared-paths-sha256-v2",
   "fingerprint_algorithm": "SHA-256 of UTF-8 canonical JSON mapping relative paths to lowercase file SHA-256 digests; sorted keys, compact separators, no trailing LF. fingerprint_order declares the controlled scope only.",
   "fingerprint_order": [
@@ -13,10 +13,10 @@
     "scripts/guideline_criteria.py",
     "scripts/stress_check.py"
   ],
-  "fingerprint": "bada55e1b4c7b5b148ea5ffe928b9aaa3a6e26052c8e5b11ac27c394247113f4",
+  "fingerprint": "46f5c91992cbe2cc26bc4365cb110b67fa8b36bbe9f6a07fb35522aedd8541f4",
   "payload": {
     "references/shared/shared-layer.md": "43e4898c26de9d085a6716eab5951af5c2b4342e4971daafba2af61feb6b51ab",
-    "references/shared/guideline-criteria.json": "e65edb94ae72ceabdd08e0a59d04bdcd13a73b1e46b307116649cc7282911e8b",
+    "references/shared/guideline-criteria.json": "6ed571dc4dc873017fad10dec75c397c9bdc00dcc72af2e028b64a17380befea",
     "references/shared/guideline-criteria.md": "4c38cfb29613d1553e67262189548b87ef9c07d7dcb833ae0f48e666e55cc5e2",
     "references/shared/derating-rules.json": "590a89c4f318aa9924578d67d4500cbf016ced6e26106c71e3bda9c45413506e",
     "references/shared/derating-rules.md": "36936bf77c2deca9585235ef43a4aaff4d76228e4a067bf409040a4d98cfb03a",
@@ -27,15 +27,6 @@
     "scripts/stress_check.py": "50ab4bcafcc3c32e14133ca056694c5c134e2dd56aff5c1186958631b0935fb4"
   },
   "inputs": {
-    "references/shared/commodity-floors.json": "a9bcbfbba448a33207320ee3b1bbcb74b736893850a4119d7fcd01d8e70bed69",
-    "references/shared/derating-rules.json": "590a89c4f318aa9924578d67d4500cbf016ced6e26106c71e3bda9c45413506e",
-    "references/shared/derating-rules.md": "36936bf77c2deca9585235ef43a4aaff4d76228e4a067bf409040a4d98cfb03a",
-    "references/shared/guideline-criteria.md": "4c38cfb29613d1553e67262189548b87ef9c07d7dcb833ae0f48e666e55cc5e2",
-    "references/shared/shared-layer.md": "43e4898c26de9d085a6716eab5951af5c2b4342e4971daafba2af61feb6b51ab",
-    "references/shared/stress-spec.md": "314061e2c6d0e68d74a28096e4cdc7c228f1947456e808eb125779aebd76ce04",
-    "references/shared/vocabulary.json": "86c84fb5a78896b78d3410af592e14de612a9467ca9768975b48de9bdc4acf21",
-    "scripts/guideline_criteria.py": "68a4920faedea56a357ec5995fddb169572d7c27d6cc489fac77091b1e9737f7",
-    "scripts/stress_check.py": "50ab4bcafcc3c32e14133ca056694c5c134e2dd56aff5c1186958631b0935fb4",
     "准则登记/G01_准则登记.json": "a0432406550a66ccb6653e70a84f56d04d0611d5e2fb40d7f6d2b84f8f6b77ae",
     "准则登记/G02_准则登记.json": "7fc8bbc147ca4c2ec23be088366a6aaceb8c49597817025bfaa3682a8fa4a07f",
     "准则登记/G03_准则登记.json": "592c00c45b1a71dcf714ce4a82bb5728bdcbe7329305abe510b90a24c3300f1a",

@@ -1,7 +1,7 @@
 # RMII 与 MDIO
 
 类别：总线约定。
-适用范围：板内 MAC 与以太网 PHY 之间的简化介质无关接口（RMII，50 MHz 参考时钟，TXD[1:0]、TX_EN、RXD[1:0]、CRS_DV、RX_ER），以及管理接口 MDC、MDIO（IEEE 802.3 第 22 条）。MII 只在与 MDIO 共用的电气规定处提到；PHY 到网口一侧见 [百兆以太网](百兆以太网.md)。实现电路见典型电路 [ethernet-phy-port](../../典型电路/ethernet-phy-port.md)；RMII 建立、保持余量的算法见 [同步接口时序](../../计算方法/同步接口时序.md)。
+适用范围：板内 MAC 与以太网 PHY 之间的简化介质无关接口（RMII，50 MHz 参考时钟，TXD[1:0]、TX_EN、RXD[1:0]、CRS_DV、RX_ER），以及管理接口 MDC、MDIO（IEEE 802.3 第 22 条）。MII 只在与 MDIO 共用的电气规定处提到；PHY 到网口一侧见 [百兆以太网](百兆以太网.md)。实现电路见典型电路 [ethernet-phy-port](../../典型电路/总线与接口/ethernet-phy-port.md)；RMII 建立、保持余量的算法见 [同步接口时序](../../计算方法/总线与接口/同步接口时序.md)。
 
 ## 来源
 

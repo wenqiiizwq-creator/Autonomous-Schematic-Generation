@@ -126,7 +126,7 @@ class FindPartsTests(unittest.TestCase):
             if not info['implementations']:
                 self.assertEqual('reviewed-bias-and-latch', pid)
                 continue
-            body = (find_parts.CIRCUITS_DIR / (pid + '.md')).read_text(encoding='utf-8')
+            body = (find_parts.CIRCUITS_DIR.parents[2] / info['file']).read_text(encoding='utf-8')
             self.assertIn('\n## 来源清单\n', body, pid)
             section_text = body.split('\n## 实现方案\n', 1)[1].split('\n## ', 1)[0]
             for section in section_text.split('\n### ')[1:]:

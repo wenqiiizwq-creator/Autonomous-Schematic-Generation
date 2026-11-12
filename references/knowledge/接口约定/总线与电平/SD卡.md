@@ -1,7 +1,7 @@
 # SD 卡
 
 类别：总线约定。
-适用范围：主机与 SD 存储卡（含 microSD）之间的 SD 总线（CLK、CMD、DAT0～DAT3）和 SPI 模式接口，卡座的卡检测与写保护开关，以及卡的供电。SDIO 卡和 UHS-II 只在说明里提到。实现电路见典型电路 [sd-card-socket](../../典型电路/sd-card-socket.md)。
+适用范围：主机与 SD 存储卡（含 microSD）之间的 SD 总线（CLK、CMD、DAT0～DAT3）和 SPI 模式接口，卡座的卡检测与写保护开关，以及卡的供电。SDIO 卡和 UHS-II 只在说明里提到。实现电路见典型电路 [sd-card-socket](../../典型电路/数字核心与时钟复位/sd-card-socket.md)。
 
 ## 来源
 

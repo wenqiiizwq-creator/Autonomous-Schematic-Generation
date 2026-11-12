@@ -112,4 +112,4 @@
 - 分级电阻：Class 0 用 1270 Ω，Class 1 用 243 Ω，Class 2 用 137 Ω，Class 3 用 90.9 Ω（S3 p4）。
 - 输入旁路电容：VDD 与 VSS 之间 0.1 µF、100 V、±10 % 陶瓷；SLVA305 写的容值范围“0.05 µF–1.2 µF”是笔误，标准写 0.05 µF 到 0.12 µF（S3 p4；IEEE 802.3-2022 表 33–14）。
 - 保护管：VDD 与 VSS 之间接 SMAJ58A 一类瞬态抑制管（S3 p4）。
-- 适配器接法：在 PoE 整流器与变换器之间插入适配器（ORing 选项 2）时，APD 优先或 VDD 与 VDD1 间加二极管做 PoE 优先；具体三种插入点与优先方式见 [poe-pd-front-end](../../典型电路/poe-pd-front-end.md)（S2 p2–5）。
+- 适配器接法：在 PoE 整流器与变换器之间插入适配器（ORing 选项 2）时，APD 优先或 VDD 与 VDD1 间加二极管做 PoE 优先；具体三种插入点与优先方式见 [poe-pd-front-end](../../典型电路/入口保护与配电/poe-pd-front-end.md)（S2 p2–5）。

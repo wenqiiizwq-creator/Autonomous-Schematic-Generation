@@ -1,7 +1,7 @@
 # UART 与 RS-232
 
 类别：总线约定。
-适用范围：板内或板间的逻辑电平异步串口（UART，TXD、RXD，可带 RTS、CTS），以及经 RS-232 收发器转换后的单端 ±5～±15 V 电平接口（TIA/EIA-232-F）。RS-485、RS-422 差分接口见 [RS-485](RS-485.md)。实现电路见典型电路 [rs232-port](../../典型电路/rs232-port.md)、[usb-uart-bridge](../../典型电路/usb-uart-bridge.md)。
+适用范围：板内或板间的逻辑电平异步串口（UART，TXD、RXD，可带 RTS、CTS），以及经 RS-232 收发器转换后的单端 ±5～±15 V 电平接口（TIA/EIA-232-F）。RS-485、RS-422 差分接口见 [RS-485](RS-485.md)。实现电路见典型电路 [rs232-port](../../典型电路/总线与接口/rs232-port.md)、[usb-uart-bridge](../../典型电路/总线与接口/usb-uart-bridge.md)。
 
 ## 来源
 

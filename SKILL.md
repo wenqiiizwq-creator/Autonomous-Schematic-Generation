@@ -74,9 +74,9 @@ ASG 的**设计能力框架**由六个能力模块（C1–C6）组成，与硬�
 - **输入**：需求、器件知识库、知识包（`references/knowledge/`，含典型电路）；单独运行时的给定输入
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
 
-共用工程判据由硬件设计规范发布，ASG 使用本技能中已安装并固定版本的发布包；准则版本与共用层指纹由发布包读取。运行和本地测试不读取 SR 源码。
+共用工程判据（设计准则与降额）来自硬件设计知识框架，ASG 使用同步进本技能的一份；准则版本与共用层指纹由 `shared-release.json` 读取。运行和本地测试不读取 SR 源码。
 计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
-准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与异常工况）由硬件设计知识框架以固定知识包发布，装在 `references/knowledge/`，版本与指纹由 `knowledge-release.json` 读取；运行不读知识框架目录。各模块查哪部分见[知识包](references/knowledge-package.md)。
+准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析）同样从硬件设计知识框架同步，装在 `references/knowledge/`（这一份叫知识包），依据的框架版本与指纹由 `knowledge-sync.json` 读取；运行不读知识框架目录，框架更新后用 `knowledge_package.py sync` 重新同步。各模块查哪部分见[知识包](references/knowledge-package.md)。
 C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任务、哪个组件、查的什么、查到哪些条目，没查到也记；写进 `record/modules.json` 的 `knowledge_lookups`。这五个模块的关卡核对每个该查的组件都有记录、所记条目在知识包里，不判查得对不对。任务 C3.1 选了哪个典型电路的哪种方案另记在方案记录里。
 
 | 模块 | 任务 | 给定输入 | 产出 |
@@ -275,7 +275,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
   也不能支撑 `supported`。格式见 [设计待办记录](references/design-closure.md)，`audit_design_closure.py` 核对。
   器件保证值先查知识包 `器件参数/`（保证值与手册页码），没有的再读手册；用 onsemi 等原件时，`原件勘误.md` 名单里文字层单位有问题的原件看页面图像核单位。
 - **工况输入有来源**：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆这些板外工况，参数写 `input_role`，来源只能是需求、负载器件手册或由它们推导；
-  需求只给了标准和等级（例如 ISO 7637-2 的严酷度、GB/T 17799.2 的端口电平、GJB 151C 的 CS117）时，该等级对应的波形和数值查知识包 `接口约定/环境与电磁等级/`，来源按“由需求推导”记并引所用条目；
+  需求只给了标准和等级（例如 ISO 7637-2 的严酷度、GB/T 17799.2 的端口电平、GJB 151C 的 CS117）时，该等级对应的波形和数值查知识包 `需求要素/环境与电磁等级/`，来源按“由需求推导”记并引所用条目；
   需求没给、取值又会改变选型的，按[需求澄清](references/requirement-clarifications.md)问用户，不自定。启动计算必须声明启动期负载。
   判法见[设计待办记录](references/design-closure.md)“工况输入的来源”，`audit_design_closure.py` 核对。
 - **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作。只有进入计算的准则逐条落实：落实它的计算在 `guidelines` 里写准则编号，
@@ -330,7 +330,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 
 #### C5.2 全板闭合核对
 
-整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）；端口矩阵里各端口的试验项目、等级和波形查知识包 `接口约定/环境与电磁等级/`，器件失效方式与分析步骤查 `失效与异常工况/`，从准则编号反查条目用 `准则支撑表.md`。不满足的格改设计，不以列出缺口代替完成。
+整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）；端口矩阵里各端口的试验项目、等级和波形查知识包 `需求要素/环境与电磁等级/`，器件失效方式与分析步骤查 `失效与故障分析/`，从准则编号反查条目用 `索引/准则支撑表.md`。不满足的格改设计，不以列出缺口代替完成。
 
 做完的标志：`audit_design_closure.py`（不带 `--module`）无错误；矩阵与状态表没有缺结论或不满足的格；有对外连接器的板 FMEA 与 EMC 端口矩阵章节与连接器齐全。
 
@@ -531,13 +531,13 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 架构页、参考设计外围 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
-| 知识包：需求要素、板级架构模式、接口约定、典型电路（一个功能有几种实现方案、各自的必算项与已知坑）、计算方法、器件参数、失效与异常工况；各模块查哪部分、典型电路标注与 `scheme-criteria.json` 格式、本地校验（版本以根目录 `knowledge-release.json` 为准） | [knowledge-package.md](references/knowledge-package.md) 与 `references/knowledge/` |
+| 知识包：需求要素、板级架构模式、接口约定、典型电路（一个功能有几种实现方案、各自的必算项与已知坑）、计算方法、器件参数、失效与故障分析；各模块查哪部分、典型电路标注与 `scheme-criteria.json` 格式、从知识框架同步与本地校验（依据的框架版本以根目录 `knowledge-sync.json` 为准） | [knowledge-package.md](references/knowledge-package.md) 与 `references/knowledge/` |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 器件性能要求、BOM 与图面标注 | [component-requirements.md](references/component-requirements.md) |
 | KiCad 导出几何的范围 | [native-geometry.md](references/native-geometry.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
-| 共用设计准则（G01–G09，运行包版本以根目录 `shared-release.json` 为准）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
+| 共用设计准则（G01–G09，版本以根目录 `shared-release.json` 为准）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
 | 必写的设计文档（FMEA、EMC 端口矩阵）：何时要写、必备章节与对象 | [guideline-evidence-groups.md](references/guideline-evidence-groups.md)、`references/guideline-evidence-groups.json` |
 | 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
 | 共用规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |

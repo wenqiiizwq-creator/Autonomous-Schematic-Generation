@@ -1,7 +1,7 @@
 # CAN 总线（高速 CAN，ISO 11898-2）
 
 类别：总线约定。
-适用范围：高速 CAN 的物理层，CANH、CANL 一对双绞线，线型拓扑、两端端接，速率至 1 Mbit/s。CAN FD 的数据段速率、低速容错 CAN（ISO 11898-3）和单线 CAN 不在本条目。实现电路见典型电路 [can-with-miswire](../../典型电路/can-with-miswire.md)；端接与位时序的取值步骤见 [CAN总线端接与位时序](../../计算方法/CAN总线端接与位时序.md)。
+适用范围：高速 CAN 的物理层，CANH、CANL 一对双绞线，线型拓扑、两端端接，速率至 1 Mbit/s。CAN FD 的数据段速率、低速容错 CAN（ISO 11898-3）和单线 CAN 不在本条目。实现电路见典型电路 [can-with-miswire](../../典型电路/总线与接口/can-with-miswire.md)；端接与位时序的取值步骤见 [CAN总线端接与位时序](../../计算方法/总线与接口/CAN总线端接与位时序.md)。
 
 ## 来源
 

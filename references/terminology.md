@@ -45,7 +45,7 @@ SKILL.md 和 references 写同一概念只用一个词。“不用的词”一�
 | 共用规范 | 硬件设计规范发布的 G01–G10：G01–G09 拆成设计准则（登记在设计准则库），G10 是降额与应力规范（`references/shared/derating-rules.md`、`stress-spec.md`、`commodity-floors.json`，规则编号自成一套，不进准则登记） | |
 | 设计准则、设计准则库 | 共用规范 G01–G09 拆成的单条可核对要求（`G0x-nnn`，含 `asg_action`/`sr_check`），全部准则的汇编叫设计准则库（`references/shared/guideline-criteria.json`，2026-11-02 由“规范规则/规则库”改名） | 规范规则、规则卡、规则库 |
 | 典型电路、实现方案 | 一个功能通常怎么搭叫典型电路（知识包 `references/knowledge/典型电路/`），同一典型电路的几种搭法各叫一个实现方案；分页方案按 `典型电路#实现方案` 标注 | 电路模式、模式库 |
-| 知识包 | 硬件设计知识框架发布、装在 `references/knowledge/` 的固定包（版本见 `knowledge-release.json`）：需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与异常工况；“知识库”仍指原厂资料所在的 `~/Documents/知识库/HardwareWiki` | 典型电路库 |
+| 知识包 | 从硬件设计知识框架同步、装在 `references/knowledge/` 的一份知识（依据的框架版本见 `knowledge-sync.json`）：需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析；“知识库”仍指原厂资料所在的 `~/Documents/知识库/HardwareWiki` | 典型电路库 |
 
 ## 报告固定用语
 

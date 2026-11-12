@@ -65,11 +65,22 @@ Copyright (c) 2026 wenqiii.zwq
 
 ## 共用层
 
-共用规范 G01–G10（G01–G09 设计准则、G10 降额与应力规范）由硬件设计规范发布，安装在 `references/shared/` 等受控文件里，技能内不得编辑。
-维护源在规范的 `准则登记/`、`规范正文/G10_元器件降额与应力规范/` 和 `工具/`（含 `包说明/`），发布与安装流程只写在规范的 `README.md`；
+共用规范 G01–G10（G01–G09 设计准则、G10 降额与应力规范）在硬件设计知识框架的 `设计准则/` 维护，同步进本技能的 `references/shared/` 等受控文件，技能内不得编辑。
+维护源是框架 `设计准则/` 下的 `准则登记/`、`规范正文/G10_元器件降额与应力规范/` 和 `工具/`（含 `包说明/`）；
 技能内有哪些共用文件、谁读、怎样核对见 [共用层说明](references/shared/shared-layer.md)。
 
 ## 知识包
 
-准则以外的设计知识由硬件设计知识框架以固定知识包发布，装在 `references/knowledge/`，技能内不得编辑；
-版本以根目录 `knowledge-release.json` 为准，各模块查哪部分见 [知识包](references/knowledge-package.md)。
+准则以外的设计知识也在硬件设计知识框架维护，同步进本技能的 `references/knowledge/`，技能内不得编辑；
+依据的框架版本以根目录 `knowledge-sync.json` 为准，各模块查哪部分见 [知识包](references/knowledge-package.md)。
+
+框架更新后重新同步（共用层和知识包一起换，只有这一步读框架目录；技能运行时只读自己这一份，离开框架目录也能用）：
+
+```bash
+python3 scripts/knowledge_package.py sync <硬件设计知识框架目录>      # 加 --dry-run 只看差异
+python3 scripts/knowledge_package.py verify-installed
+python3 scripts/guideline_criteria.py verify-installed
+```
+
+同步把与上一次的差异写进 `docs/knowledge-sync/<框架版本>.md`：新增、改了、删除、搬了位置的条目和准则。这份差异是技能要消化的清单，按它改查阅表、关卡和说明，再跑全量测试。
+同步后再跑 `python3 scripts/knowledge_coverage.py --write`，重写 [知识到关卡的对照表](docs/knowledge-coverage.md)：知识包里每类可核对的内容有多少项、关卡现在核对到哪一步，“核对到内容”为“否”的是技能还没吃进去的知识。

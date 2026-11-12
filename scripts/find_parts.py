@@ -168,10 +168,10 @@ def locate_file(wiki, path, index=None):
 
 
 def circuit_index(path=CIRCUITS_DIR):
-    """{pattern id: {"title", "function", "implementations": [...]}} from references/knowledge/典型电路/*.md;
+    """{pattern id: {"title", "function", "implementations": [...]}} from references/knowledge/典型电路/<知识域>/*.md;
     implementations are the ### headings under 「## 实现方案」 only."""
     index = {}
-    for md in sorted(path.glob("*.md")) if path.is_dir() else []:
+    for md in sorted(path.rglob("*.md")) if path.is_dir() else []:
         if md.name == "README.md":
             continue
         title, function, implementations, in_implementations = "", "", [], False
@@ -184,7 +184,8 @@ def circuit_index(path=CIRCUITS_DIR):
                 in_implementations = line.strip() == "## 实现方案"
             elif line.startswith("### ") and in_implementations:
                 implementations.append(line[4:].strip())
-        index[md.stem] = {"title": title, "function": function, "implementations": implementations}
+        index[md.stem] = {"title": title, "function": function, "implementations": implementations,
+                          "file": "references/knowledge/典型电路/" + md.relative_to(path).as_posix()}
     return index
 
 
@@ -193,7 +194,7 @@ def search_circuits(terms, path=CIRCUITS_DIR):
     for pid, info in circuit_index(path).items():
         hay = norm(" ".join([pid, info["title"], info["function"]] + info["implementations"]))
         if all(norm(t) in hay for t in terms):
-            hits.append({"id": pid, "file": "references/knowledge/典型电路/%s.md" % pid, **info})
+            hits.append({"id": pid, **info})
     return {"terms": terms, "total": len(hits), "results": hits}
 
 

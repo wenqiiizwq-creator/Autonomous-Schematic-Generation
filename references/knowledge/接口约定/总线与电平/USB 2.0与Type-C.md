@@ -1,7 +1,7 @@
 # USB 2.0 与 Type-C（不带 PD）
 
 类别：总线约定。
-适用范围：USB 2.0 低速（1.5 Mb/s）、全速（12 Mb/s）、高速（480 Mb/s）的 D+、D− 数据线与 VBUS；USB Type-C 插座在不带供电协商（PD）时的 CC 端接、电流通告和 VCONN。USB 3.x 超高速差分对、带 PD 的电压协商、Type-C 替代模式不在本条目；PD 只指到标准：USB Power Delivery R3.2 V1.2（`Standard/USB PD R3.2 V1.2 USB Power Delivery Specification - 2026.pdf`），供电侧的判据见 G01-026～G01-031。实现电路见典型电路 [usb2-device-port](../../典型电路/usb2-device-port.md)、[type-c-port-protection](../../典型电路/type-c-port-protection.md)、[usb-uart-bridge](../../典型电路/usb-uart-bridge.md)；供电侧的核算见 [USB供电端口](../../计算方法/USB供电端口.md)。
+适用范围：USB 2.0 低速（1.5 Mb/s）、全速（12 Mb/s）、高速（480 Mb/s）的 D+、D− 数据线与 VBUS；USB Type-C 插座在不带供电协商（PD）时的 CC 端接、电流通告和 VCONN。USB 3.x 超高速差分对、带 PD 的电压协商、Type-C 替代模式不在本条目；PD 只指到标准：USB Power Delivery R3.2 V1.2（`Standard/USB PD R3.2 V1.2 USB Power Delivery Specification - 2026.pdf`），供电侧的判据见 G01-026～G01-031。实现电路见典型电路 [usb2-device-port](../../典型电路/总线与接口/usb2-device-port.md)、[type-c-port-protection](../../典型电路/总线与接口/type-c-port-protection.md)、[usb-uart-bridge](../../典型电路/总线与接口/usb-uart-bridge.md)；供电侧的核算见 [USB供电端口](../../计算方法/总线与接口/USB供电端口.md)。
 
 ## 来源
 

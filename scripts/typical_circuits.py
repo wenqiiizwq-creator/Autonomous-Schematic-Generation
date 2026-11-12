@@ -21,7 +21,7 @@ def load(circuits_dir=None):
     None means the optional rule line is absent; an explicit 无 is an empty list."""
     circuits_dir = Path(CIRCUITS_DIR if circuits_dir is None else circuits_dir)   # resolved per call so tests can point elsewhere
     index = {}
-    for md in sorted(circuits_dir.glob('*.md')) if circuits_dir.is_dir() else []:
+    for md in sorted(circuits_dir.rglob('*.md')) if circuits_dir.is_dir() else []:
         if md.name == 'README.md':
             continue
         info = {'title': '', 'function': '', 'circuit_types': None, 'implementations': {}}
