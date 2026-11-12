@@ -8,10 +8,10 @@ SKILL.md「架构」把 ASG 分成六个能力模块，P7 规定了模块契约�
 
 | 模块 | 关卡 |
 |---|---|
-| C1 | `audit_design_closure --module C1`：只查 `requirements.json`：每条需求有编号、条文和来源，澄清都已答复并写回，降额等级、准则范围已定；不需要设计网表 |
+| C1 | `audit_design_closure --module C1`：只查 `requirements.json`：每条需求有编号、条文和来源，澄清都已答复并写回，降额等级、准则范围已定；必答清单 C1 的每项有处置（`knowledge_checklist.py`）；不需要设计网表 |
 | C2 | `record/architecture.json`，格式见下节 |
 | C3 | `check_scheme_criteria.py` 的方案记录、`selection.json` 的核心选型；再用 `block_circuits.py` 抽出块文件，核对它们与这两份工作记录一致；每个核心器件写了端口限值；接口定稿 `record/interfaces.json`（任务 C3.3）对 `architecture.json` 和块文件的端口限值成立；选定方案没有标典型电路、库里却有命中的，候选里要说明为什么不适用；不查分页方案，也不查留给 2.2 的数值 |
-| C4 | 每个块设计对 `architecture.json` 的核对（端口、块内网络名、位号编号段）；`interfaces.json` 里本块这一头的接口参数齐全；把已写的块设计宽松合并（端口还没有对端不报错）后做 `audit_design_closure --module C4`：计算、工况、降额、引脚表、引脚处置、准则引用；`component-requirements.json`；块文件里留给 C4.2 的数值都已闭合（只读块文件，不读 C3 的工作记录）。`--block <块>` 只核一个块，不记指纹 |
+| C4 | 每个块设计对 `architecture.json` 的核对（端口、块内网络名、位号编号段）；`interfaces.json` 里本块这一头的接口参数齐全；把已写的块设计宽松合并（端口还没有对端不报错）后做 `audit_design_closure --module C4`：计算、工况、降额、引脚表、引脚处置、准则引用；`component-requirements.json`；块文件里留给 C4.2 的数值都已闭合（只读块文件，不读 C3 的工作记录）；必答清单 C4 的每项有处置。`--block <块>` 只核一个块（必答清单只核该块选定方案的项），不记指纹 |
 | C5 | `electrical-intent.json` 与 `blocks.py merge` 的合并结果逐脚一致；整板设计闭合审计（不带 `--module`），包括需求追溯、网络电压、矩阵、接口约定、FMEA 与 EMC 端口矩阵 |
 | C6 | 分页方案、图面审阅、`summary.json` 没有 FAIL 的绘图检查项；有块文件时，块文件里的选定方案与分页方案标注的典型电路一致（只读 C3 的产品 `block-circuits/`，不读它的工作记录） |
 

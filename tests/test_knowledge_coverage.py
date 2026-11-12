@@ -49,7 +49,7 @@ def test_counts_come_from_the_entry_text():
     assert c.rows_outside_sources(ENTRY) == 2          # the source table is not counted
     assert c.bullets_in('算完之后的核对')(ENTRY) == 3
     assert c.headings_in('实现方案')(ENTRY) == 2
-    assert (c.sub_bullets('必算项')(ENTRY), c.sub_bullets('已知坑')(ENTRY)) == (3, 1)
+    assert [c.checklist_items(k)(ENTRY) for k in ('必算项', '已知坑', '取值步骤', '算完核对')] == [3, 1, 2, 3]
 
 
 def test_the_written_table_matches_the_installed_knowledge():

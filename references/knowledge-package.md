@@ -31,11 +31,34 @@ python3 scripts/check_module.py lookup <设计目录> --task C4.2 --component �
 ```
 
 没查到就不写 `--found`。它写进 `record/modules.json` 的 `knowledge_lookups`：日期、任务、组件、查的什么、查到的条目（相对 `references/knowledge/`）。
-命令当场核对组件和条目在知识包里。各模块关卡再核一遍，并要求该模块每个该查的组件至少有一条记录：
+命令当场核对组件和条目在知识包里。各模块关卡再核一遍，并要求该模块每个该查的组件至少有一条记录（查到的条目里哪些内容要逐项回答见下面“必答清单”）：
 C1 `需求要素`，C2 `板级架构模式`、`接口约定`，C3 `接口约定`（任务 C3.3），C4 `计算方法`、`器件参数`，C5 `失效与故障分析`，设计网表里有对外连接器时 C5 另加 `需求要素`（EMC 端口矩阵查 `需求要素/环境与电磁等级/`）（`check_module.py C4 --block` 不核）。关卡不判查得对不对、用没用上。
 任务 C3.1 选了哪个典型电路的哪种方案另记在 `scheme-criteria.json`，没有适用方案由块文件抽出。
 
 没查到的记录由 `knowledge_gaps.py` 抽进知识缺口清单（见[交付与设计报告](delivery-report.md)）。知识包条目日后勘误时，按 `found` 可以找出用过它的设计。
+
+## 必答清单
+
+查到条目不等于用上了。设计用到的条目里，下面几类内容逐项要有处置，记在 `record/knowledge-checklist.json`：
+
+| 模块 | 来自哪些条目 | 每项是什么 | `covered` 时 `where` 写什么 |
+|---|---|---|---|
+| C1 | 任务 C1.x 查阅记录里 `需求要素/端口/`、`需求要素/全板/` 下的条目 | 条件表（第一列是“条件”的表）的每一行 | `requirements.json` 的需求或澄清编号 |
+| C4 | 各块块文件里选定的 `典型电路#实现方案` | 该方案的每条必算项 | `design-closure.json` 的计算编号 |
+| C4 | 同上 | 该方案的每条必需外围 | 块设计里的位号 |
+| C4 | 同上 | 该方案的每条已知坑 | 怎样避开的说明 |
+| C4 | 任务 C4.x 查阅记录里 `计算方法/` 下的条目 | 取值顺序的每一步、算完之后的核对的每一条 | `design-closure.json` 的计算编号 |
+
+```bash
+python3 scripts/knowledge_checklist.py build <设计目录>                 # 按当前记录列出每一项，已写的处置保留
+python3 scripts/knowledge_checklist.py check <设计目录> [--module C1|C4] [--block <块>]
+```
+
+`build` 写出的每项有 `entry`、`kind`、`id`、`text`（C4 的方案项另有 `block`、`scheme`），这些不改；只填 `disposition`、`where`、`reason`：
+`covered` 在 `where` 列出落实在哪（列表），`not_applicable` 在 `reason` 写本板为什么没有这种情况。不能因为没做就写不适用。
+`check_module.py C1`、`C4` 的关卡核对：清单里的项齐全，每项有处置，`where` 里的编号和位号在记录里存在；`C4 --block` 只核该块选定方案的项。
+没有标注典型电路的块（`circuit` 没写）不产生方案项。条目文字变了（知识同步之后），对应项的 `id` 跟着变，原处置作废：重跑 `build` 后补写。
+接口约定的参数模板、器件失效方式还没有进必答清单；各类内容核对到哪一步见 `docs/knowledge-coverage.md`。
 
 ## 典型电路
 

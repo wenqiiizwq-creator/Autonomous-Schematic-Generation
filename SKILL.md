@@ -78,13 +78,14 @@ ASG 的**设计能力框架**由六个能力模块（C1–C6）组成，与硬�
 计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
 准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析）同样从硬件设计知识框架同步，装在 `references/knowledge/`（这一份叫知识包），依据的框架版本与指纹由 `knowledge-sync.json` 读取；运行不读知识框架目录，框架更新后用 `knowledge_package.py sync` 重新同步。各模块查哪部分见[知识包](references/knowledge-package.md)。
 C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任务、哪个组件、查的什么、查到哪些条目，没查到也记；写进 `record/modules.json` 的 `knowledge_lookups`。这五个模块的关卡核对每个该查的组件都有记录、所记条目在知识包里，不判查得对不对。任务 C3.1 选了哪个典型电路的哪种方案另记在方案记录里。
+用到的条目里的每一项都要回答，写进 `record/knowledge-checklist.json`（必答清单，`knowledge_checklist.py build` 从条目里抽，不手抄）：C1 查到的需求要素条目的每个条件，C4 各块选定实现方案的必算项、必需外围、已知坑和查到的计算方法条目的取值步骤、算完核对，逐项写落实在哪（需求或澄清编号、计算编号、位号、怎样避开）或不适用及理由；C1、C4 的关卡核对没有漏项、落实处指向的记录存在。见[知识包](references/knowledge-package.md)的“必答清单”。
 
 | 模块 | 任务 | 给定输入 | 产出 |
 |---|---|---|---|
-| C1 需求理解与澄清 | C1.1 | 需求文件；任务书里的澄清答复与代答授权 | `requirements.json`：需求条文与来源、需求澄清、降额等级、准则范围 |
+| C1 需求理解与澄清 | C1.1 | 需求文件；任务书里的澄清答复与代答授权 | `requirements.json`：需求条文与来源、需求澄清、降额等级、准则范围；`knowledge-checklist.json` 的 C1 部分 |
 | C2 板级方案 | C2.1 | C1 的产出 | `architecture.json`：功能块、电压域、电源树、隔离边界、跨块流向（接口参数预算）、对外接口和各块的块规格 |
 | C3 块电路选择与接口定稿 | C3.1 · C3.2 · C3.3 | `architecture.json`（块规格与跨块流向） | 每块一个 `block-circuits/<块>.json`；`interfaces.json`：每条跨块流向定稿的接口参数；工作记录 `scheme-criteria.json`、`selection.json` |
-| C4 详细设计与器件选型（每块一次） | C4.1 · C4.2 · C4.3 · C4.4 | 块规格、`interfaces.json` 中与本块相连的流向、`block-circuits/<块>.json` | 每块一个块设计 `blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json` |
+| C4 详细设计与器件选型（每块一次） | C4.1 · C4.2 · C4.3 · C4.4 | 块规格、`interfaces.json` 中与本块相连的流向、`block-circuits/<块>.json` | 每块一个块设计 `blocks/<块>.json`；工作记录 `reference-input.json`、计算记录、`component-requirements.json`、`knowledge-checklist.json` 的 C4 部分 |
 | C5 全板闭合 | C5.1 · C5.2 | `architecture.json`、`interfaces.json`、各块的块设计 | `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵 |
 | C6 原理图绘制 | C6.1–C6.5 | 设计网表；串联运行时另读 `architecture.json` 与各块的 `block-circuits/<块>.json`；单独运行时只给网表 | `page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json` |
 
@@ -130,7 +131,7 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 #### C1.1 需求追溯
 
 按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单：每条需求写编号、可验收的条文和来源，记入 `record/requirements.json`。
-按板上的对外端口查知识包 `需求要素/` 的对应条目（另有全板条目），逐行核需求有没有给。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
+按板上的对外端口查知识包 `需求要素/` 的对应条目（另有全板条目），逐行核需求有没有给，核的结果逐项写进必答清单（`knowledge_checklist.py build` 列出每个条件；给了的写需求或澄清编号，本板没有这种情况的写不适用及理由）。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
 需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**：录完需求后一次汇总提问，每问附一条可验收的建议条文，
 答复后马上写回需求清单再往下设计；问什么、不问什么、中途发现缺口和用户暂缓怎么处理见[需求澄清](references/requirement-clarifications.md)。
 **无人当场答复时**，只接受任务书里写明的答复或代答授权（[任务书](references/workflow-handoff.md) 的 `clarification_answers`、`delegation`）；
@@ -141,7 +142,7 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、正 24 V 工业直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
-做完的标志：`record/requirements.json` 的每条需求有编号、条文和来源；每个需求澄清都有答复
+做完的标志：`record/requirements.json` 的每条需求有编号、条文和来源；必答清单 C1 的每个条件都有处置；每个需求澄清都有答复
 （用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求，或并入已有需求并在该需求里引用这条澄清。有未答复的需求澄清不进入 C4。
 降额等级已定（需求给定、用户答复或写明的假设），记入 `requirements.json`。
 设计准则库有准则时，产品基线、功能电路类型与器件类别记入 `requirements.json` 的 `guideline_scope`（`guideline_version: 1`）。
@@ -233,7 +234,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
   `pack_design.py` 核对 `datasheets` 目录里哪些 PDF 还不在知识库（同哈希或同文件名），不拒绝打包，
   列进 `record/manifest.json` 的 `datasheets_to_file`；设计完成后在汇报里提示用户把它们复制到
   `raw/Datasheet/<分类>/<子类>/`（分类按 `raw/Datasheet/元器件体系/器件统一分类大表.md`，无分类放 `ZZ_其他`），何时入库由用户定。
-  参考设计和评估板手册放 `raw/Designexample/<拓扑>/<板名>/`，
+  参考设计和评估板手册放 `raw/Designexample/<领域>/<拓扑>/<板名>/`（领域是 `01_电源变换` 等十一个，照已有目录归），
   文件名为 `Vendor - BoardName - Title.pdf`；应用笔记和标准不放 Datasheet 目录。
 
 做完的标志：每个核心器件在外围电路核对表 `reference-input.json` 里有引脚表与外围检查，核对通过或列出资料不足的项；
@@ -286,7 +287,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 - 每项要求的字段、各类器件按用途核哪些性能（放电电阻的能量与波形、电容的有效容量、电感的饱和电流等）、受控标准料的引用和数据不足时的暂定要求，
   见 [器件性能要求](references/component-requirements.md)。本可计算却尚未计算的，仍是设计未完成，不能用“待采购确认”代替。
 
-做完的标志：`audit_design_closure.py` 无错误；没有 `failed` 的计算；每条计算的结论、`rests_on` 与 `coverage` 与参数依据推出的一致。与额定比较的应力都点名适用降额规则；超降额未超额定按原规范列风险。每个已识别的性能核算项都有数值、条件和出处，或有明确的有条件要求与假设；仍缺可独立完成的计算时不得标记本任务完成。任务 C3.1 留给 C4.2 的数值都已由计算关闭。
+做完的标志：`audit_design_closure.py` 无错误；没有 `failed` 的计算；每条计算的结论、`rests_on` 与 `coverage` 与参数依据推出的一致。与额定比较的应力都点名适用降额规则；超降额未超额定按原规范列风险。每个已识别的性能核算项都有数值、条件和出处，或有明确的有条件要求与假设；仍缺可独立完成的计算时不得标记本任务完成。任务 C3.1 留给 C4.2 的数值都已由计算关闭。必答清单 C4 的每一项都有处置：选定实现方案的必算项和所用计算方法的取值步骤、算完核对各指到一条计算，必需外围指到位号，已知坑写明怎样避开，或写不适用及理由。
 
 #### C4.3 器件选型与性能符合性
 

@@ -760,6 +760,9 @@ def block_against_plan(block, where, selected, plan):
         problems.append(where + ' 在 page-plan.json 中没有对应功能块')
     for page in matches:
         ref = (page.get('circuits') or {}).get(block['block']) if isinstance(page.get('circuits'), dict) else None
+        # A selected scheme the library has no circuit for is annotated none on its page (the page check accepts nothing else).
+        if 'circuit' not in selected and ref == 'none':
+            continue
         if not text(expected) or not text(ref) or expected not in ((ref,) if 'circuit' in selected else (ref, ref.partition('#')[2])):
             problems.append(where + ' selected 方案与 page-plan.json 的 circuits 不一致')
     return problems

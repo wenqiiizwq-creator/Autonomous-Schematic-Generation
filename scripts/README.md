@@ -25,6 +25,11 @@ generator is described in [`schematic-generation.md`](../references/schematic-ge
 existing whole-board netlist by the page plan's blocks and merges it back pin for pin. See
 [`modules.md`](../references/modules.md).
 
+`knowledge_checklist.py build|check <design>` lists the items of the knowledge entries the
+design used (requirement conditions, a selected scheme's must-calculate items, required
+peripherals and pitfalls, a calculation method's steps) in `record/knowledge-checklist.json`
+and checks each has a disposition; the C1 and C4 gates run the check.
+
 `knowledge_gaps.py <delivery>` extracts `record/knowledge-gaps.json`, the places
 where the design ran short of knowledge, from the module records.
 

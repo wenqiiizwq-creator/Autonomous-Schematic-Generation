@@ -34,6 +34,7 @@ import architecture
 from architecture import check_architecture
 import block_circuits
 import blocks
+import knowledge_checklist
 import render_design_report as report
 from schematic_layout import component_requirements
 
@@ -42,11 +43,11 @@ MODULES = ('C1', 'C2', 'C3', 'C4', 'C5', 'C6')
 # written by C4 and C5, each owning its sections; the shared ones (evidence, work_items, versions) are no module's.
 # "dir/" is every JSON file in that folder; blocks/ leaves out BOARD.json, the board-level block module C5 writes.
 OUTPUTS = {
-    'C1': ('requirements.json',),
+    'C1': ('requirements.json', knowledge_checklist.FILE + '#C1'),
     'C2': ('architecture.json',),
     'C3': ('scheme-criteria.json', 'selection.json', block_circuits.DIR + '/', architecture.INTERFACES),
     'C4': ('design-closure.json#calculations,operating_points,pin_dispositions', 'component-requirements.json',
-           'reference-input.json', blocks.DIR + '/'),
+           'reference-input.json', blocks.DIR + '/', knowledge_checklist.FILE + '#C4'),
     'C5': ('electrical-intent.json', '%s/%s.json' % (blocks.DIR, blocks.BOARD),
            'design-closure.json#traceability,net_voltages,matrices'),
     'C6': ('page-plan.json', 'summary.json', 'visual-review.json'),
@@ -366,6 +367,9 @@ def gate(module, root, write=True, block=None):
                          for p in report.scheme_against_plan(scheme, plan)]
     if not block:
         problems += lookup_problems(root, module)
+    if module in ('C1', 'C4'):
+        # The items of the knowledge entries the design used are each answered (knowledge_checklist.py).
+        problems += knowledge_checklist.problems(root, module, block)
     return problems, notes
 
 

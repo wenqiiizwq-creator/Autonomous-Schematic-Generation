@@ -11,11 +11,14 @@ import re
 import sys
 from pathlib import Path
 
+import knowledge_checklist as checklist
+
 ROOT = Path(__file__).resolve().parent.parent
 KNOWLEDGE = ROOT / 'references' / 'knowledge'
 OUT = ROOT / 'docs' / 'knowledge-coverage.md'
 ROW = re.compile(r'^\|(?!\s*-{3})')            # a table line that is not the |---| separator
 LOOKUP = '只核对查过这个组件（`knowledge_lookups` 有记录、所记条目存在）'
+ANSWERED = '必答清单：设计用到的条目，这类内容逐项写处置，%s（`knowledge_checklist.py`，%s 关卡）'
 
 
 def sections(text):
@@ -57,23 +60,22 @@ def headings_in(name):
     return lambda text: sum(line.startswith('### ') for line in sections(text).get(name, []))
 
 
-def sub_bullets(label):
-    """Second-level bullets under 「- **label**：」 of every implementation of a typical circuit."""
-    def count(text):
-        total, inside = 0, False
-        for line in sections(text).get('实现方案', []):
-            if line.startswith('- **'):
-                inside = line.startswith('- **%s**' % label)
-            elif inside and line.startswith('  - '):
-                total += 1
-        return total
+def checklist_items(kind):
+    """How many checklist items of this kind knowledge_checklist.py draws from one entry."""
+    def count(body):
+        if kind == '条件':
+            return len(checklist.requirement_items(body))
+        if kind in checklist.SCHEME_KINDS:
+            names = [line[4:].strip() for line in sections(body).get('实现方案', []) if line.startswith('### ')]
+            return sum(k == kind for name in names for k, _ in checklist.scheme_items(body, name) or [])
+        return sum(k == kind for k, _ in checklist.method_items(body))
     return count
 
 
 # (组件下的目录, 这类内容, 怎么数, 哪项任务用, 关卡现在核对什么, 是否核对到内容)
 KINDS = (
-    ('需求要素/端口', '端口要给定的条件', rows_outside_sources, 'C1.1', LOOKUP, False),
-    ('需求要素/全板', '全板要给定的条件', rows_outside_sources, 'C1.1', LOOKUP, False),
+    ('需求要素/端口', '端口要给定的条件', checklist_items('条件'), 'C1.1', ANSWERED % ('落实处写需求或澄清编号', 'C1'), True),
+    ('需求要素/全板', '全板要给定的条件', checklist_items('条件'), 'C1.1', ANSWERED % ('落实处写需求或澄清编号', 'C1'), True),
     ('需求要素/环境与电磁等级', '标准等级对应的波形和数值', rows_outside_sources, 'C4.2、C5.2', LOOKUP, False),
     ('板级架构模式', '结构问题的做法', headings_in('做法'), 'C2.1', LOOKUP, False),
     ('板级架构模式', '块之间由此要交代的参数', lambda t: rows_in('块之间由此要交代的参数')(t) or bullets_in('块之间由此要交代的参数')(t),
@@ -83,12 +85,11 @@ KINDS = (
     ('接口约定/总线与电平', '总线和电平的电气约定', rows_outside_sources, 'C2.1、C3.3', LOOKUP, False),
     ('典型电路', '实现方案', headings_in('实现方案'), 'C3.1',
      '关键功能块要有候选比较、恰好选定一个方案，标注的文件和方案名存在（`scheme-criteria.json`、分页方案）', True),
-    ('典型电路', '实现方案的必算项', sub_bullets('必算项'), 'C4.2',
-     '不核对：只有 `scheme-criteria.json` 里写了 `defer` 的数值名要在计算里闭合，必算项本身不对照', False),
-    ('典型电路', '实现方案的必需外围', sub_bullets('必需外围'), 'C4', '不核对', False),
-    ('典型电路', '实现方案的已知坑', sub_bullets('已知坑'), 'C4、C5', '不核对', False),
-    ('计算方法', '取值步骤', rows_in('取值顺序'), 'C4.2', LOOKUP + '；计算记录不对照步骤', False),
-    ('计算方法', '算完之后的核对', bullets_in('算完之后的核对'), 'C4.2', LOOKUP + '；其中的准则编号由准则闭环另行核对引用覆盖', False),
+    ('典型电路', '实现方案的必算项', checklist_items('必算项'), 'C4.2', ANSWERED % ('落实处写计算编号', 'C4'), True),
+    ('典型电路', '实现方案的必需外围', checklist_items('必需外围'), 'C4', ANSWERED % ('落实处写位号', 'C4'), True),
+    ('典型电路', '实现方案的已知坑', checklist_items('已知坑'), 'C4', ANSWERED % ('落实处写怎样避开', 'C4'), True),
+    ('计算方法', '取值步骤', checklist_items('取值步骤'), 'C4.2', ANSWERED % ('落实处写计算编号', 'C4'), True),
+    ('计算方法', '算完之后的核对', checklist_items('算完核对'), 'C4.2', ANSWERED % ('落实处写计算编号', 'C4'), True),
     ('器件参数', '器件条目（保证值与页码）', lambda t: 1, 'C4.1、C4.3', LOOKUP + '；计算里用的保证值不对照条目', False),
     ('失效与故障分析/器件失效方式', '失效方式', rows_in('失效方式与比例'), 'C5.2', LOOKUP + '；FMEA 的行不对照失效方式', False),
     ('失效与故障分析/分析步骤', '分析步骤条目', lambda t: 1, 'C5.2', LOOKUP, False),

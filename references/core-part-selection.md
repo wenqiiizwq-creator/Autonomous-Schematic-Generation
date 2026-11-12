@@ -11,7 +11,7 @@
 | 位置 | 内容 | 怎么找 |
 |---|---|---|
 | `raw/Datasheet/<一级类>/<二级类>/Vendor - PartNumber.pdf` | 器件手册，约四千份；`catalog.json` 索引了厂商、型号、分类、标签和前几页正文 | `scripts/find_parts.py --category "<二级类>" 关键词…`、`--mpn 型号`；`--text` 连正文一起搜（正文多为英文，关键词用英文） |
-| `raw/Designexample/<拓扑>/<板名>/` | 参考设计、评估板手册 | `find_parts.py --designs 关键词…`，结果按板文件夹归并 |
+| `raw/Designexample/<领域>/<拓扑>/<板名>/` | 参考设计、评估板手册 | `find_parts.py --designs 关键词…`，结果按板文件夹归并 |
 | `raw/Applicationnote/` | 应用笔记 | `find_parts.py --notes 关键词…` |
 | `raw/Datasheet/元器件体系/器件统一分类大表.md` | 分类规则与各厂商产品线 | 决定一个新手册放哪个目录 |
 | `wiki/entities/` | 已整理的器件/概念条目 | 直接按文件名打开 |
@@ -89,7 +89,7 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
         {"param": "待机功耗", "op": "<=", "limit": 75, "unit": "mW", "requirement": "R-EFF-02"},
         {"param": "外置 MOSFET 驱动", "op": "has", "limit": true}
       ],
-      "sources": ["designexample:raw/Designexample/USB-PD/NCP1343PD100WGEVB", "catalog:08_电源管理/AC-DC 转换器"],
+      "sources": ["designexample:raw/Designexample/02_电源保护配电与电池/USB-PD/NCP1343PD100WGEVB", "catalog:08_电源管理/AC-DC 转换器"],
       "candidates": [
         {"mpn": "NCP1623", "vendor": "onsemi", "status": "selected",
          "datasheet": "raw/Datasheet/08_电源管理/AC-DC 转换器/onsemi - NCP1623.pdf",
