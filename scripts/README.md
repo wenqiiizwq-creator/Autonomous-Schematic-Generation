@@ -37,7 +37,10 @@ where the design ran short of knowledge, from the module records.
 parts it owns (SKILL.md 架构, P7) and records the input/output fingerprints in
 `record/modules.json`; `check_module.py return <design> --from C4.2 --to C3.3 …` records a
 return to an upstream task; `check_module.py status <design>` lists the recorded
-modules as OK, STALE or MODIFIED; `report` writes `模块报告.md` and `pack`
+modules as OK, STALE or MODIFIED; `check_module.py entries <design>` lists the knowledge
+framework entries whose headers declare the board's circuit types and device kinds
+(`guideline_scope`), by component, and the C1/C3/C4 gates note declared entries no lookup
+names; `report` writes `模块报告.md` and `pack`
 checks the delivery of a module run (task.json `modules`). `import_netlist.py`
 turns a KiCad XML netlist into a design netlist, with the source's embedded
 symbols as project libraries, for a C6-only run. `block_circuits.py <design>`

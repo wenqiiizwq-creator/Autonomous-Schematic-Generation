@@ -325,8 +325,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   每条计算加非空 `parameters`，每项 `{name, value, unit, basis, ref, source, locator}`。`basis` 取：
   - `guaranteed`：手册保证的 MIN/MAX；`typical`：手册典型值。两者都要 `ref`（位号）和 `source`
     `datasheet:<库内路径>#p<页>` 加 `locator`（表名/参数符号/条件）。
-  - 手册引用的核对（`schematic_layout/citations.py`，参数、工作点、缺口里的 `datasheet:` 都核）：文件不在知识库
-    （`HARDWARE_WIKI/raw`）或声明的资料里、页码超出文档页数，记 `citation_wrong`，审计 FAIL；写成本机绝对路径
+  - 手册引用的核对（`schematic_layout/citations.py`，参数、工作点、缺口里的 `datasheet:` 都核）：文件不在原件总库
+    （知识框架里的 `原件/`，它指向 HardwareWiki/raw；库内路径形如 `Datasheet/<分类>/…`）或声明的资料里、页码超出文档页数，记 `citation_wrong`，审计 FAIL；写成本机绝对路径
     （`/Users/…/原厂资料/X.pdf`）的记 `citation_not_in_library`：引用写知识库里的路径，不写本机副本的位置（R8）。`guaranteed`/`typical`
     的数值在所引页的文字里找不到（含 SI 前缀换算、百分数、尾随 0、Unicode 负号）时列入报告“引用待人工核对”，不拦。
     `locator` 文字不核。找不到知识库或没有 poppler（`pdfinfo`/`pdftotext`）时记为“没核对”并写明原因。

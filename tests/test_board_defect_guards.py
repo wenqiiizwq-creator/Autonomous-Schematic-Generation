@@ -4,6 +4,7 @@
 Part numbers and file names below come from the board findings; the files are synthetic stand-ins, not datasheets.
 """
 import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
+import temp_framework
 import copy
 import hashlib
 import json
@@ -32,7 +33,7 @@ def setUpModule():
                    content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria-boards.json'
     empty.write_text(guideline_criteria.dump(library), encoding='utf-8')
-    _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library'),
+    _env = mock.patch.dict('os.environ', {**temp_framework.without_raw(),   # 没有原件总库
                                           'GUIDELINE_CRITERIA': str(empty), 'GUIDELINE_CRITERIA_TESTING': '1'})
     _env.start()
 

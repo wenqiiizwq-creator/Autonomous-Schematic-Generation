@@ -1,6 +1,7 @@
-"""find_parts.py searches the HardwareWiki raw library: catalog rows, unindexed PDFs, design examples."""
+"""find_parts.py searches the source library (the knowledge framework's 原件/): catalog rows, unindexed PDFs, design examples."""
 from framework_guard import skip_without_framework  # noqa: E402
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,13 +12,15 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / 'scripts'))
 import find_parts
 import knowledge_source
+import temp_framework
 
 CLI = HERE.parent / 'scripts' / 'find_parts.py'
 
 
 def make_wiki(tmp):
-    wiki = Path(tmp) / 'HardwareWiki'
-    ds = wiki / 'raw' / 'Datasheet'
+    """A small source library (what the framework's 原件 points to)."""
+    wiki = Path(tmp) / 'raw'
+    ds = wiki / 'Datasheet'
     rows = [
         {'path': '08_电源管理/USB PD 控制器/Richtek - RT7209.pdf', 'vendor': 'Richtek', 'model': 'RT7209',
          'category': '08_电源管理', 'subcategory': 'USB PD 控制器', 'kind': '器件资料', 'facets': ['电源转换'],
@@ -33,10 +36,10 @@ def make_wiki(tmp):
     extra = ds / '09_功率半导体' / 'MOSFET' / 'Infineon - IPA60R180P7.pdf'
     extra.parent.mkdir(parents=True)
     extra.write_bytes(b'%PDF')
-    board = wiki / 'raw' / 'Designexample' / 'USB-PD' / 'NCP1343PD100WGEVB'
+    board = wiki / 'Designexample' / 'USB-PD' / 'NCP1343PD100WGEVB'
     board.mkdir(parents=True)
     (board / 'onsemi - NCP1343PD100WGEVB - 100 W PD charger.pdf').write_bytes(b'%PDF')
-    note = wiki / 'raw' / 'Applicationnote' / 'TI - SLVA123 - Type-C sink design.pdf'
+    note = wiki / 'Applicationnote' / 'TI - SLVA123 - Type-C sink design.pdf'
     note.parent.mkdir(parents=True)
     note.write_bytes(b'%PDF')
     return wiki
@@ -53,7 +56,7 @@ class FindPartsTests(unittest.TestCase):
     def test_terms_match_any_indexed_field_and_ignore_case_and_hyphens(self):
         r = find_parts.search_datasheets(self.wiki, ['usb-pd'])
         self.assertEqual(['RT7209'], [x['model'] for x in r['results']])
-        self.assertEqual('raw/Datasheet/08_电源管理/USB PD 控制器/Richtek - RT7209.pdf', r['results'][0]['path'])
+        self.assertEqual('Datasheet/08_电源管理/USB PD 控制器/Richtek - RT7209.pdf', r['results'][0]['path'])
         self.assertEqual(0, find_parts.search_datasheets(self.wiki, ['PPS'])['total'])       # body text is opt-in
         self.assertEqual(1, find_parts.search_datasheets(self.wiki, ['PPS'], with_text=True)['total'])
         self.assertEqual(1, find_parts.search_datasheets(self.wiki, ['电源转换'], category='AC-DC')['total'])
@@ -68,14 +71,14 @@ class FindPartsTests(unittest.TestCase):
                          [(x['model'], x['kind'], x['vendor']) for x in r['results']])
 
     def test_missing_catalog_is_reported_not_fatal(self):
-        (self.wiki / 'raw' / 'Datasheet' / 'catalog.json').unlink()
+        (self.wiki / 'Datasheet' / 'catalog.json').unlink()
         r = find_parts.search_datasheets(self.wiki, ['NCP1343'])
         self.assertIn('catalog.json not found', r['catalog_problem'])
         self.assertEqual(1, r['total'])
 
     def test_designs_and_notes_by_path(self):
         r = find_parts.search_paths(self.wiki, 'Designexample', ['pd', '100w'])
-        self.assertEqual(['raw/Designexample/USB-PD/NCP1343PD100WGEVB'], r['folders'])
+        self.assertEqual(['Designexample/USB-PD/NCP1343PD100WGEVB'], r['folders'])
         self.assertEqual(0, find_parts.search_paths(self.wiki, 'Designexample', ['flyback'])['total'])
         self.assertEqual(1, find_parts.search_paths(self.wiki, 'Applicationnote', ['type-c'])['total'])
 
@@ -88,24 +91,45 @@ class FindPartsTests(unittest.TestCase):
         self.assertEqual(1, json.loads(r.stdout)['total'])
         r = subprocess.run([sys.executable, str(CLI), '--wiki', str(self.wiki)], capture_output=True, text=True)
         self.assertEqual(2, r.returncode)
+        # without --wiki the library is the framework's 原件
+        framework = temp_framework.minimal(Path(self.tmp.name) / 'framework', self.wiki)
+        r = subprocess.run([sys.executable, str(CLI), '--category', 'USB PD'], capture_output=True, text=True,
+                           env=dict(os.environ, **{knowledge_source.ENV_VAR: str(framework)}))
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertEqual((1, str(self.wiki.resolve())), (json.loads(r.stdout)['total'], json.loads(r.stdout)['library']))
+
+    def test_the_old_hardwarewiki_root_is_refused_with_the_new_meaning(self):
+        # --wiki names the source library itself; the HardwareWiki root (raw/ inside, no Datasheet/) is an old call
+        root = Path(self.tmp.name) / 'HardwareWiki'
+        root.mkdir()
+        self.wiki.rename(root / 'raw')
+        r = subprocess.run([sys.executable, str(CLI), '--wiki', str(root), '--category', 'USB PD'], capture_output=True, text=True)
+        self.assertEqual(2, r.returncode)
+        self.assertIn('现在要给原件目录本身（%s）' % (root / 'raw'), r.stderr)
+        self.assertIn('默认取知识框架的原件', r.stderr)
+        r = subprocess.run([sys.executable, str(HERE.parent / 'scripts' / 'pack_design.py'), str(Path(self.tmp.name) / 'v1'),
+                            '--wiki', str(root)], capture_output=True, text=True)
+        self.assertEqual(2, r.returncode)
+        self.assertIn('现在要给原件目录本身', r.stderr)
+        self.assertIsNone(find_parts.old_wiki_problem(root / 'raw'))
 
     def test_locate_file_by_hash_then_by_name(self):
-        ds = self.wiki / 'raw' / 'Datasheet'
+        ds = self.wiki / 'Datasheet'
         rows = json.loads((ds / 'catalog.json').read_text())['rows']
         rows[0]['sha256'] = find_parts.sha256(ds / rows[0]['path'])
         (ds / 'catalog.json').write_text(json.dumps({'rows': rows}))
         with tempfile.TemporaryDirectory() as tmp:
             same = Path(tmp) / 'renamed.pdf'
             same.write_bytes((ds / rows[0]['path']).read_bytes())
-            self.assertEqual('raw/Datasheet/' + rows[0]['path'], find_parts.locate_file(self.wiki, same))
+            self.assertEqual('Datasheet/' + rows[0]['path'], find_parts.locate_file(self.wiki, same))
             by_name = Path(tmp) / 'infineon-IPA60R180P7.pdf'
             by_name.write_bytes(b'%PDF-other')
-            self.assertEqual('raw/Datasheet/09_功率半导体/MOSFET/Infineon - IPA60R180P7.pdf', find_parts.locate_file(self.wiki, by_name))
+            self.assertEqual('Datasheet/09_功率半导体/MOSFET/Infineon - IPA60R180P7.pdf', find_parts.locate_file(self.wiki, by_name))
             renamed_in_library = Path(tmp) / 'onsemi-NCP1343-old-name.pdf'       # same bytes, stale catalog, other name
             renamed_in_library.write_bytes((ds / rows[1]['path']).read_bytes() + b'')
             (ds / rows[1]['path']).write_bytes(b'%PDF-ncp1343-unique')
             renamed_in_library.write_bytes(b'%PDF-ncp1343-unique')
-            self.assertEqual('raw/Datasheet/' + rows[1]['path'], find_parts.locate_file(self.wiki, renamed_in_library))
+            self.assertEqual('Datasheet/' + rows[1]['path'], find_parts.locate_file(self.wiki, renamed_in_library))
             other = Path(tmp) / 'TI - TPS1234.pdf'
             other.write_bytes(b'%PDF-x')
             self.assertIsNone(find_parts.locate_file(self.wiki, other))
@@ -141,7 +165,7 @@ class FindPartsTests(unittest.TestCase):
     def test_roles_table_covers_library_subcategories(self):
         r = find_parts.roles_coverage(self.wiki)
         self.assertEqual('PASS', r['status'], r)
-        extra = self.wiki / 'raw' / 'Datasheet' / 'catalog.json'
+        extra = self.wiki / 'Datasheet' / 'catalog.json'
         data = json.loads(extra.read_text())
         data['rows'].append(dict(data['rows'][0], path='08_电源管理/新子类/X - Y.pdf', subcategory='新子类'))
         extra.write_text(json.dumps(data))
@@ -152,7 +176,7 @@ class FindPartsTests(unittest.TestCase):
         self.assertEqual(1, r.returncode)
 
     def test_archived_versions_are_neither_candidates_nor_a_subcategory(self):
-        path = self.wiki / 'raw' / 'Datasheet' / 'catalog.json'
+        path = self.wiki / 'Datasheet' / 'catalog.json'
         data = json.loads(path.read_text())
         old = '08_电源管理/versions/abc123/Richtek - RT7209.pdf'
         (path.parent / old).parent.mkdir(parents=True)
@@ -160,13 +184,17 @@ class FindPartsTests(unittest.TestCase):
         data['rows'].append(dict(data['rows'][0], path=old, subcategory='versions'))
         path.write_text(json.dumps(data))
         r = find_parts.search_datasheets(self.wiki, [], mpn='RT7209')
-        self.assertEqual(['raw/Datasheet/08_电源管理/USB PD 控制器/Richtek - RT7209.pdf'], [x['path'] for x in r['results']])
+        self.assertEqual(['Datasheet/08_电源管理/USB PD 控制器/Richtek - RT7209.pdf'], [x['path'] for x in r['results']])
         self.assertNotIn('versions', find_parts.categories(self.wiki)['categories']['08_电源管理'])
 
     def test_roles_table_matches_the_real_library_when_present(self):
-        if not (find_parts.DEFAULT_WIKI / 'raw' / 'Datasheet' / 'catalog.json').is_file():
-            raise unittest.SkipTest('HardwareWiki library is not on this machine')
-        r = find_parts.roles_coverage(find_parts.DEFAULT_WIKI)
+        try:
+            raw = knowledge_source.raw_root()
+        except knowledge_source.KnowledgeFrameworkNotFound:
+            raw = None
+        if raw is None or not (raw / 'Datasheet' / 'catalog.json').is_file():
+            raise unittest.SkipTest('the source library (the framework\'s 原件) is not on this machine')
+        r = find_parts.roles_coverage(raw)
         self.assertEqual([], r['missing_in_table'], r)
 
 

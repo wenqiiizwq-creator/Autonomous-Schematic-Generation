@@ -144,6 +144,6 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 表格给出的型号（mpn）和值（value）与设计网表一致；`设计资料/*.md` 正文里写成“位号 型号”的（如“U801 LTC4367”：位号字母是设计网表用到的前缀，紧随的词含数字和大写字母、至少 4 个字符，不是带单位的数值如 100uF、不是 Pin3/4 这类词加编号），位号要在设计网表里，型号要与该位号的 mpn 对得上（忽略大小写和连字符，可省封装/变体后缀和 SN74 这类系列前缀：LM5069-1 对 LM5069MM-1/NOPB、LVC07A 对 SN74LVC07APWR），否则按文件和行号报错（Matrix R2：器件改成 LTC4367 后 `供电路径复核.md` 还写着“U801 LM5060”）；表格行（`|` 开头）和代码块不核，其余说明文字（只提位号不写型号、写功能描述）不在自动检查范围，改设计时要人工清理；
 `record/` 只有允许的子目录；没有日志和超大文件；`design-closure.json` 在交付目录内重新审核不出错，且没有 `design_document_incomplete`（有对外连接器的板 FMEA 与 EMC 端口矩阵齐全，见[必写的设计文档](guideline-evidence-groups.md)；没引用的适用准则不挡打包），也没有 `matrix_cell_missing`、`matrix_cell_failed`（`object_matrices.py` 列出的矩阵与状态表逐格有结论且满足）；
 报告用到的记录没有问题——可读性或几何检查 FAIL 也算问题（画图问题要改图到 PASS），打包失败；
-通过后写 `record/manifest.json`。`datasheets` 目录里还不在知识库 `~/Documents/知识库/HardwareWiki/raw/` 的 PDF
+通过后写 `record/manifest.json`。`datasheets` 目录里还不在原件总库（知识框架里的 `原件/`，它指向 HardwareWiki/raw）的 PDF
 （同哈希或同文件名都算在库，`find_parts.py --file <pdf>` 可查）不挡打包，列进 manifest 的 `datasheets_to_file` 并打印出来，
-设计完成后提示用户复制进知识库（SKILL.md 任务 C4.1 的资料规则）。
+设计完成后提示用户复制进原件总库（SKILL.md 任务 C4.1 的资料规则）。

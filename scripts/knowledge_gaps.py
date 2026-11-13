@@ -146,7 +146,7 @@ def datasheets_of(inputs):
     if not folder:
         return []
     import pack_design
-    return pack_design.datasheets_not_in_library(folder, pack_design.DEFAULT_WIKI)
+    return pack_design.datasheets_not_in_library(folder)
 
 
 def main(argv=None):

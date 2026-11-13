@@ -76,7 +76,9 @@ ASG 的**设计能力框架**由六个能力模块（C1–C6）组成，与硬�
 
 工程判据（设计准则与降额）和其余设计知识都直接读本机的硬件设计知识框架；准则由 `guideline_criteria.py` 从框架的准则登记汇编，降额值、常规件最弱档、词表也从框架读，路径见[知识框架的用法](references/knowledge-package.md)。运行和本地测试不读取 SR 源码。
 计划/审计记录写明采用的设计准则身份（指纹、指纹格式、读取日期）；准则登记、降额与应力数据或判法脚本变了，身份随之变，按规定重验；框架里不属于这些数据的维护说明不属于工程身份。
-准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析）读框架 `知识/` 下的同名目录；框架位置由环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK` 或技能根目录的 `.knowledge-framework` 指定，脚本经 `knowledge_source.py` 定位，只读不改。交付物记读取日期和读到的知识文件的指纹。各模块查哪部分见[知识框架的用法](references/knowledge-package.md)。
+准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、器件类别、失效与故障分析）读框架 `知识/` 下的同名目录；框架位置由环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK` 或技能根目录的 `.knowledge-framework` 指定，脚本经 `knowledge_source.py` 定位，只读不改。交付物记读取日期和读到的知识文件的指纹。各模块查哪部分见[知识框架的用法](references/knowledge-package.md)。
+查阅时先用 `check_module.py entries <设计目录>` 按本板的电路类型、器件类别（`guideline_scope`）列出知识框架里声明了它们的条目（条目头部的 `电路类型：`、`器件类别：`），再按需读；C1、C3、C4 的关卡把声明了本板类型、查阅记录里却没有的条目列为提示（不判失败），读过不适用的也记一条并写理由。
+原厂资料（数据手册、应用笔记、参考设计、标准）在原件总库：知识框架里的 `原件/`（它指向 HardwareWiki/raw），脚本经 `knowledge_source.raw_root()` 找，不另设位置。
 C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项任务、哪个组件、查的什么、查到哪些条目，没查到也记；写进 `record/modules.json` 的 `knowledge_lookups`。这五个模块的关卡核对每个该查的组件都有记录、所记条目在知识框架里，不判查得对不对。任务 C3.1 选了哪个典型电路的哪种方案另记在方案记录里。
 用到的条目里的每一项都要回答，写进 `record/knowledge-checklist.json`（必答清单，`knowledge_checklist.py build` 从条目里抽，不手抄）：C1 查到的需求要素条目的每个条件，C4 各块选定实现方案的必算项、必需外围、已知坑和查到的计算方法条目的取值步骤、算完核对，逐项写落实在哪（需求或澄清编号、计算编号、位号、怎样避开）或不适用及理由；C1、C4 的关卡核对没有漏项、落实处指向的记录存在。见[知识框架的用法](references/knowledge-package.md)的“必答清单”。
 
@@ -181,8 +183,8 @@ C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项�
 
 - **先选型再核数据手册**：每个核心器件角色（控制器、协议 IC、功率开关、磁件、隔离/反馈器件、MCU）按
   [core-part-selection.md](references/core-part-selection.md) 找候选、比较并记录到 `record/selection.json`：
-  至少两个候选、写明决定性条件和每个候选选中/淘汰的理由（唯一可选时写 `single_candidate_reason`，见 core-part-selection.md）。原厂资料在本机知识库
-  `~/Documents/知识库/HardwareWiki/raw/`（数据手册、参考设计、应用笔记），用 `scripts/find_parts.py` 检索；
+  至少两个候选、写明决定性条件和每个候选选中/淘汰的理由（唯一可选时写 `single_candidate_reason`，见 core-part-selection.md）。原厂资料在原件总库：知识框架里的
+  `原件/`（它指向 HardwareWiki/raw；数据手册、参考设计、应用笔记），用 `scripts/find_parts.py` 检索；
   每类器件干什么、选它看什么参数见 [part-roles.md](references/part-roles.md)，从"按功能找类"定二级类再找候选。
   库里没有合适候选才外部检索，下载的手册按任务 C4.1 的资料规则存入工程资料目录。
 - **外部条件不确定时给出方案**：推荐候选依赖未公开的资料或行为（会产生外部资料待办）时，按 [core-part-selection.md](references/core-part-selection.md)
@@ -229,12 +231,12 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
   有可行替代却保留手册未规定的方式，审计 FAIL，`pack_design.py` 拒绝打包。
 - 原理图阶段 `footprint` 可以留空。必须核实所选订货变体、实际物理引脚号（含EP/Kelvin）及电气/热额定适用条件；PCB封装库制作、焊盘尺寸、孔径、钢网、courtyard、布线与DFM交给PCB阶段，不能作为原理图设计定型的门槛。既有封装候选仅作为未确认的后续环节输入，不用填充率证明电气选型完成。
 - **资料规则**（2026-11-04 改）：本项目用到的数据手册存在当前设计工程的资料目录（打包输入 `datasheets`，
-  通常是交付目录 `设计资料/datasheets/`），文件名为 `Vendor - PartNumber.pdf`（厂商简称按知识库 `raw/Datasheet/VENDORS.yaml`）；
-  设计期间不复制进知识库 `~/Documents/知识库/HardwareWiki/raw/`，也不触发知识库入库。
-  `pack_design.py` 核对 `datasheets` 目录里哪些 PDF 还不在知识库（同哈希或同文件名），不拒绝打包，
-  列进 `record/manifest.json` 的 `datasheets_to_file`；设计完成后在汇报里提示用户把它们复制到
-  `raw/Datasheet/<分类>/<子类>/`（分类按 `raw/Datasheet/元器件体系/器件统一分类大表.md`，无分类放 `ZZ_其他`），何时入库由用户定。
-  参考设计和评估板手册放 `raw/Designexample/<领域>/<拓扑>/<板名>/`（领域是 `01_电源变换` 等十一个，照已有目录归），
+  通常是交付目录 `设计资料/datasheets/`），文件名为 `Vendor - PartNumber.pdf`（厂商简称按原件总库的 `Datasheet/VENDORS.yaml`）；
+  设计期间不复制进原件总库（知识框架里的 `原件/`），也不触发知识库入库。
+  `pack_design.py` 核对 `datasheets` 目录里哪些 PDF 还不在原件总库（同哈希或同文件名），不拒绝打包，
+  列进 `record/manifest.json` 的 `datasheets_to_file`；设计完成后在汇报里提示用户把它们复制到原件总库的
+  `Datasheet/<分类>/<子类>/`（分类按 `Datasheet/元器件体系/器件统一分类大表.md`，无分类放 `ZZ_其他`），何时入库由用户定。
+  参考设计和评估板手册放 `Designexample/<领域>/<拓扑>/<板名>/`（领域是 `01_电源变换` 等十一个，照已有目录归），
   文件名为 `Vendor - BoardName - Title.pdf`；应用笔记和标准不放 Datasheet 目录。
 
 做完的标志：每个核心器件在外围电路核对表 `reference-input.json` 里有引脚表与外围检查，核对通过或列出资料不足的项；

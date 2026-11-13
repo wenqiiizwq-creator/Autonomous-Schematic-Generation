@@ -1,5 +1,6 @@
 """One generated report plus a small fixed folder; numbers come only from the records."""
 import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
+import temp_framework
 import json
 import os
 from pathlib import Path
@@ -26,12 +27,14 @@ class Delivery:
     def __init__(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name) / 'v1'
-        # Cited datasheets are real PDFs in a private library, so citations are checked page by page.
-        wiki = Path(self.tmp.name) / 'library'
-        self.env = mock.patch.dict(os.environ, {'HARDWARE_WIKI': str(wiki)})
+        # Cited datasheets are real PDFs in a private source library (the 原件 of a temporary framework), so citations
+        # are checked page by page.
+        raw = Path(self.tmp.name) / 'raw'
+        (raw / 'Datasheet/08_电源管理').mkdir(parents=True)
+        (raw / 'Datasheet/08_电源管理/X - XYZ100.pdf').write_bytes(pdf(['VIN 4.5 V to 18 V', 'SOIC-8', 'COUT']))
+        framework = temp_framework.mirror(Path(self.tmp.name) / 'framework', raw)
+        self.env = mock.patch.dict(os.environ, {temp_framework.knowledge_source.ENV_VAR: str(framework)})
         self.env.start()
-        (wiki / 'raw/Datasheet/08_电源管理').mkdir(parents=True)
-        (wiki / 'raw/Datasheet/08_电源管理/X - XYZ100.pdf').write_bytes(pdf(['VIN 4.5 V to 18 V', 'SOIC-8', 'COUT']))
         self.record = self.root / 'record'
         for d in ('原理图', '设计资料', 'record/evidence'):
             (self.root / d).mkdir(parents=True)
@@ -878,21 +881,24 @@ class PackDesignTests(unittest.TestCase):
         self.assertTrue(any('与当前记录不一致' in e for e in errors), errors)
 
     def test_datasheets_not_in_the_library_are_listed_not_rejected(self):
-        # 2026-11-04 (user): project datasheets stay in the project; filing them into HardwareWiki is prompted after delivery
-        wiki = Path(self.d.tmp.name) / 'wiki'
-        (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X').mkdir(parents=True)
-        (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X' / 'X - XYZ100.pdf').write_bytes(b'%PDF-lib')
+        # 2026-11-04 (user): project datasheets stay in the project; filing them into the source library is prompted after delivery
+        raw = Path(self.d.tmp.name) / 'raw2'
+        (raw / 'Datasheet' / '08_电源管理' / 'X').mkdir(parents=True)
+        (raw / 'Datasheet' / '08_电源管理' / 'X' / 'X - XYZ100.pdf').write_bytes(b'%PDF-lib')
         sheets = Path(self.d.tmp.name) / 'sheets'
         sheets.mkdir()
         (sheets / 'X - XYZ100.pdf').write_bytes(b'%PDF-copy')
         (sheets / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
         self.gaps()
-        errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, wiki)
+        errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, raw)
         self.assertEqual([], errors)
         self.assertEqual(['Y - ABC200.pdf'], manifest['datasheets_to_file'])
         self.assertIn('datasheets', manifest['inputs'])
-        (wiki / 'raw' / 'Datasheet' / '08_电源管理' / 'X' / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
-        errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, wiki)
+        # without a library given, the framework's 原件 (here the delivery's private library, which has X - XYZ100) is used
+        self.assertEqual(['Y - ABC200.pdf'], pack(self.d.root, {'requirements': str(self.inputs),
+                                                                'datasheets': str(sheets)})[1]['datasheets_to_file'])
+        (raw / 'Datasheet' / '08_电源管理' / 'X' / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
+        errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, raw)
         self.assertEqual(([], []), (errors, manifest['datasheets_to_file']))
 
     def test_failed_drawing_gate_cannot_be_packed(self):

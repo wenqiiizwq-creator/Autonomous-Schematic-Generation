@@ -2,6 +2,7 @@
 guideline rules it meets in its calculations and work items, holds the others not applicable with a reason, and hands
 a rule closing after the schematic downstream with a work item. An empty rule library asks nothing."""
 import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
+import temp_framework
 import copy
 import json
 import os
@@ -20,7 +21,7 @@ ASG = Path(__file__).resolve().parents[1]
 
 def setUpModule():
     global _env
-    _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library')})
+    _env = mock.patch.dict('os.environ', temp_framework.without_raw())   # 没有原件总库
     _env.start()
 
 

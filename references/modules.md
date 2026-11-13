@@ -99,7 +99,7 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 `python3 scripts/block_circuits.py <设计目录>` 从这两份记录确定性地抽出每块一个文件，不手写：
 
 ```json
-{"schema_version": 1, "block": "PSU", "name": "隔离电源", "library_root": "~/Documents/知识库/HardwareWiki",
+{"schema_version": 1, "block": "PSU", "name": "隔离电源", "library_root": null,
  "schemes": [{"name": "隔离反激电源", "circuit_types": ["POWER_CONVERTER"], "device_kinds": [], "ports": false,
               "selected": {"name": "QR 反激", "circuit": "qr-flyback#…", "reason": "…", "source": ["…"]},
               "decisive": [{"condition": "输入电压", "value": "18～36 V"}],

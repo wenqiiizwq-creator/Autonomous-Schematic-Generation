@@ -84,13 +84,44 @@ class ClassTests(unittest.TestCase):
         self.assertIn('不是器件类型', pc.kind_of(part('D1', 'Device:D', Kind='suppressor'))[1])
 
     def test_kind_vocabulary_is_the_framework_vocabulary(self):
-        # names and titles come from the framework's 词表.json, not from SR's code
-        import json
+        # the kinds ASG uses are names of the framework's 词表.json and carry its titles; the framework may have more
         import knowledge_source
-        shared = json.loads(knowledge_source.vocabulary_path().read_text(encoding='utf-8'))['device_kinds']
-        self.assertEqual({x['name'] for x in shared}, set(pc.KINDS) - {'mechanical'})
-        for item in shared:
-            self.assertEqual(pc.KINDS[item['name']].title, item['title'], item['name'])
+        import render_design_report
+        vocabulary = knowledge_source.vocabulary()
+        self.assertLessEqual(set(pc.KINDS) - {'mechanical'}, set(vocabulary['device_kinds']))
+        for name, kind in pc.KINDS.items():
+            if name != 'mechanical':
+                self.assertEqual(vocabulary['device_kinds'][name], kind.title, name)
+        self.assertEqual([n for n in vocabulary['device_kinds'] if n not in pc.KINDS], pc.unhandled_kinds())
+        self.assertLessEqual(set(render_design_report.KEY_CIRCUIT_TYPES), set(vocabulary['circuit_types']))
+
+    def test_a_framework_kind_without_asg_behavior_is_no_error(self):
+        # a temporary framework whose vocabulary has one device kind and one circuit type more than ASG knows
+        import json
+        import os
+        import knowledge_source
+        import check_module
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vocab = json.loads(knowledge_source.vocabulary_path().read_text(encoding='utf-8'))
+            vocab['device_kinds'].append({'name': 'flux_capacitor', 'title': '通量电容'})
+            vocab['circuit_types'].append({'name': 'TIME_TRAVEL', 'title': '时间旅行'})
+            registry = root / '知识/设计准则/准则登记'
+            registry.mkdir(parents=True)
+            (registry / '词表.json').write_text(json.dumps(vocab, ensure_ascii=False), encoding='utf-8')
+            (root / '索引').mkdir()
+            entry = root / '知识/器件类别/flux_capacitor.md'
+            entry.parent.mkdir(parents=True)
+            entry.write_text('# 通量电容\n\n电路类型：TIME_TRAVEL\n器件类别：flux_capacitor\n\n## 要点\n', encoding='utf-8')
+            with mock.patch.dict(os.environ, {knowledge_source.ENV_VAR: str(root)}):
+                self.assertIn('flux_capacitor', pc.unhandled_kinds())
+                kind, problem = pc.kind_of(part('X1', 'Device:C', Kind='flux_capacitor'))
+                self.assertEqual('capacitor', kind)
+                self.assertIn('还没有专门的识别或检查', problem)
+                (root / 'design' / 'record').mkdir(parents=True)
+                text = check_module.entries_report(root / 'design', ['TIME_TRAVEL'], ['flux_capacitor'])
+        self.assertIn('器件类别/flux_capacitor.md（TIME_TRAVEL、flux_capacitor）', text)
+        self.assertIn('本技能对这些器件类别还没有专门的识别或检查：flux_capacitor', text)
 
     def test_kind_cues_have_explicit_local_expectations(self):
         # Classification evidence has independent, named examples; no other skill defines the answer.
@@ -289,6 +320,18 @@ class TierTests(unittest.TestCase):
             (('CY1', 'Device:C', '1n/400Vac'), (pc.SAFETY_C, 'special'))]
         for args, expected in cases:
             self.assertEqual(expected, self.level(*args), args[0])
+
+    def test_power_resistor_tiers_are_the_frameworks(self):
+        # 常规件最弱档.json: ±1 % metal film (Vishay PR) starts at 1 Ω, below it only the ±5 % wirewound rows hold
+        ctx = pc.context({'high_voltage_nets': []})
+        sub_ohm = part('R305', 'Device:R', '0R5/1%/2W', Category=pc.POWER_R)
+        self.assertEqual('special', pc.part_class(sub_ohm, ctx))
+        self.assertEqual('common', pc.part_class(part('R306', 'Device:R', '0R5/5%/2W', Category=pc.POWER_R), ctx))
+        self.assertEqual('common', pc.part_class(part('R307', 'Device:R', '10R/1%/2W', Category=pc.POWER_R), ctx))
+        floors = pc.guideline_criteria.commodity_floors()
+        self.assertEqual([(t['power_w_70c'], t['min_ohm'], t['max_ohm'], t['tolerance_pct'], t['tcr_ppm'])
+                          for t in floors['power_resistor']['tiers']], pc.power_tiers())
+        self.assertEqual(floors['sense_resistor']['tolerance_pct'], pc.sense_tiers()[0])
 
     def test_the_library_folder_and_a_declaration_set_the_subcategory(self):
         filed = part('R5', 'Device:R', '10k', datasheet='raw/Datasheet/22_电阻器/电流检测电阻 (分流)/Vishay - WSL.pdf')

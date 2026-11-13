@@ -8,6 +8,9 @@
   python3 check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query … [--found 计算方法/<知识域>/x.md ...]
                                                              查知识框架后在 record/modules.json 的 knowledge_lookups 记一条；
                                                              不写 --found 表示没查到
+  python3 check_module.py entries <设计目录> [--circuit-types …] [--device-kinds …]
+                                                             按本板的电路类型、器件类别（默认取 guideline_scope）
+                                                             列出知识框架里声明了它们的条目，按组件分组，标出已查的
   python3 check_module.py status <设计目录>                  列出已记模块：OK、STALE（上游变了）、MODIFIED（产出改过未重验）
   python3 check_module.py report <设计目录>                  单独运行（record/task.json 带 modules）时写 模块报告.md
   python3 check_module.py pack <设计目录>                    核对单独运行的交付目录
@@ -37,7 +40,7 @@ import blocks
 import knowledge_checklist
 import knowledge_source
 import render_design_report as report
-from schematic_layout import component_requirements
+from schematic_layout import component_requirements, part_classes
 
 MODULES = ('C1', 'C2', 'C3', 'C4', 'C5', 'C6')
 # What each module writes (SKILL.md 架构). "file#a,b" is those top-level sections of a JSON file: design-closure.json is
@@ -69,6 +72,10 @@ SCHEMATIC_FILES = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
 LOOKUPS = {'C1': ('需求要素',), 'C2': ('板级架构模式', '接口约定'), 'C3': ('接口约定',), 'C4': ('计算方法', '器件参数'),
            'C5': ('失效与故障分析',)}
 CONNECTOR_LOOKUPS = {'C5': ('需求要素',)}
+# Components whose entries the C1/C3/C4 gates list from the framework's header declarations (knowledge_source.entries_for)
+# for the board's circuit types and device kinds (guideline_scope): a declared entry no lookup names is a note, never a
+# failure. A typical circuit named among the candidates of scheme-criteria.json counts as consulted.
+DECLARED_LOOKUPS = {'C1': ('需求要素',), 'C3': ('接口约定', '典型电路'), 'C4': ('计算方法', '器件参数', '器件类别')}
 
 
 def file_of(item):
@@ -367,6 +374,7 @@ def gate(module, root, write=True, block=None):
                          for p in report.scheme_against_plan(scheme, plan)]
     if not block:
         problems += lookup_problems(root, module)
+        notes += declaration_notes(root, module)
     if module in ('C1', 'C4'):
         # The items of the knowledge entries the design used are each answered (knowledge_checklist.py).
         problems += knowledge_checklist.problems(root, module, block)
@@ -442,6 +450,80 @@ def has_connectors(root):
     except ValueError:
         return False
     return any(isinstance(c, dict) and is_connector(c) for c in intent.get('components') or [])
+
+
+def board_scope(root):
+    """(circuit types, device kinds) the board declares in guideline_scope (requirements.json, else design-closure.json)."""
+    for name in (closure_audit.REQUIREMENTS_FILE, 'design-closure.json'):
+        data, _ = load(root / 'record', name)
+        scope = data.get('guideline_scope') if isinstance(data, dict) else None
+        if isinstance(scope, dict):
+            return tuple([v for v in scope.get(key) or [] if isinstance(v, str)] for key in ('circuit_types', 'device_kinds'))
+    return [], []
+
+
+def declared_entries(circuit_types, device_kinds, components=None):
+    """{component: {entry (relative to 知识/): [the names it declares of these]}}: the framework entries whose header
+    declares one of these circuit types or device kinds, grouped by component in the framework's order."""
+    grouped = {}
+    for path, names in knowledge_source.entries_for(circuit_types, device_kinds).items():
+        component = path.partition('/')[0]
+        if components is None or component in components:
+            grouped.setdefault(component, {})[path] = names
+    return {c: grouped[c] for c in knowledge_source.COMPONENTS if c in grouped}
+
+
+def consulted(root):
+    """Entries the knowledge lookups name, and the text of scheme-criteria.json (typical circuits compared there)."""
+    data, _ = load(root / 'record', 'modules.json')
+    rows = data.get('knowledge_lookups') or [] if isinstance(data, dict) else []
+    found = {e for r in rows if isinstance(r, dict) for e in r.get('found') or [] if isinstance(e, str)}
+    scheme = root / 'record' / 'scheme-criteria.json'
+    return found, scheme.read_text(encoding='utf-8') if scheme.is_file() else ''
+
+
+def declaration_notes(root, module):
+    """Notes (never failures): entries the framework declares for the board's circuit types or device kinds, in the
+    components the module consults, that no lookup names."""
+    types, kinds = board_scope(root)
+    if module not in DECLARED_LOOKUPS or not (types or kinds):
+        return []
+    found, compared = consulted(root)
+    notes = []
+    for component, entries in declared_entries(types, kinds, DECLARED_LOOKUPS[module]).items():
+        missing = [p for p in entries if p not in found and not (component == '典型电路' and Path(p).stem in compared)]
+        if missing:
+            notes.append('knowledge_declared：知识框架 知识/%s/ 里声明了本板电路类型或器件类别的条目，查阅记录里没有 %d 条：%s；'
+                         '查阅后用 check_module.py lookup 记下，读过不适用的也记（--detail 写理由）' % (
+                             component, len(missing), '、'.join('%s（%s）' % (p, '、'.join(entries[p])) for p in missing)))
+    return notes
+
+
+def entries_report(root, circuit_types=None, device_kinds=None):
+    """Text of `check_module.py entries`: the framework entries declared for the board's circuit types and device kinds
+    (guideline_scope unless given), by component, each marked when a lookup already names it."""
+    types, kinds = board_scope(root)
+    types = types if circuit_types is None else circuit_types
+    kinds = kinds if device_kinds is None else device_kinds
+    vocabulary = knowledge_source.vocabulary()
+    lines = ['本板：电路类型 %s；器件类别 %s' % ('、'.join(types) or '无', '、'.join(kinds) or '无')]
+    unknown = [v for v in types if v not in vocabulary['circuit_types']] + \
+              [v for v in kinds if v not in vocabulary['device_kinds']]
+    if unknown:
+        lines.append('不在知识框架词表里（拼错或已删）：%s' % '、'.join(unknown))
+    unhandled = [v for v in kinds if v in part_classes.unhandled_kinds()]
+    if unhandled:
+        lines.append('本技能对这些器件类别还没有专门的识别或检查：%s（按下面的条目读；器件类型声明写最接近的类型）'
+                     % '、'.join(unhandled))
+    found, compared = consulted(root)
+    grouped = declared_entries(types, kinds)
+    for component, entries in grouped.items():
+        lines += ['', '## %s' % component]
+        lines += ['- %s（%s）%s' % (p, '、'.join(names), '  已查' if p in found or (component == '典型电路' and Path(p).stem in compared)
+                                   else '') for p, names in entries.items()]
+    if not grouped:
+        lines.append('知识框架里没有声明这些电路类型、器件类别的条目')
+    return '\n'.join(lines)
 
 
 def record_lookup(root, task, component, query, found, detail):
@@ -574,7 +656,7 @@ def check_delivery(root):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('module', choices=MODULES + ('status', 'report', 'pack', 'return', 'lookup'))
+    ap.add_argument('module', choices=MODULES + ('status', 'report', 'pack', 'return', 'lookup', 'entries'))
     ap.add_argument('design_root', type=Path, help='设计目录（含 record/）')
     ap.add_argument('--given', action='append', default=[], help='单独运行时任务书给定的输入文件（记入指纹）')
     ap.add_argument('--block', help='C4：只核这个块的块设计（architecture.json 的块 id），不记入 modules.json')
@@ -587,7 +669,12 @@ def main(argv=None):
     ap.add_argument('--query', help='lookup：查的什么')
     ap.add_argument('--found', nargs='*', default=[], help='lookup：查到的条目（相对知识框架的 知识/）；没查到不写')
     ap.add_argument('--detail', help='lookup：补充说明（可选）')
+    ap.add_argument('--circuit-types', nargs='*', help='entries：电路类型（词表名称）；不写取 guideline_scope')
+    ap.add_argument('--device-kinds', nargs='*', help='entries：器件类别（词表名称）；不写取 guideline_scope')
     args = ap.parse_args(argv)
+    if args.module == 'entries':
+        print(entries_report(args.design_root, args.circuit_types, args.device_kinds))
+        return 0
     if args.module == 'lookup':
         problems = record_lookup(args.design_root, args.task, args.component, args.query, args.found, args.detail)
         for problem in problems:

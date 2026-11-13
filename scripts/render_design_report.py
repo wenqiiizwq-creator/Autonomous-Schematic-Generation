@@ -22,7 +22,7 @@ import typical_circuits  # noqa: E402
 import guideline_criteria  # noqa: E402
 import knowledge_gaps  # noqa: E402
 import operating_inputs  # noqa: E402
-from schematic_layout.citations import check as check_citation  # noqa: E402
+from schematic_layout.citations import check as check_citation, library_root  # noqa: E402
 from schematic_layout import lifecycle, part_classes  # noqa: E402
 from schematic_layout.sexpr import all_nodes, first, parse  # noqa: E402
 from schematic_layout.component_requirements import package_audit, DEFINITIONS, SELECTIONS  # noqa: E402
@@ -533,6 +533,7 @@ def check_selection(data, intent, root, evidence=None):
     comps = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
     netlist = 'components' in intent
     library = Path(os.path.expanduser(data.get('library_root') if text(data.get('library_root')) else ''))
+    sources = [b for b in (library_root(), library, root) if b is not None]   # the source library (原件/) first
     covered, undeclared = set(), []
     for i, role in enumerate(roles, 1):
         if not isinstance(role, dict):
@@ -572,8 +573,9 @@ def check_selection(data, intent, root, evidence=None):
             if not text(c.get('reason')):
                 problems.append('候选 %s 没有写选中或淘汰的理由' % mpn)
             sheet = c.get('datasheet') if text(c.get('datasheet')) else ''
-            if not sheet or not ((library / sheet).is_file() or (root / sheet).is_file()):
-                problems.append('候选 %s 的资料 %s 不在知识库 %s 或交付目录内' % (mpn, sheet or '（没写）', library))
+            if not sheet or not any((base / sheet).is_file() for base in sources):
+                problems.append('候选 %s 的资料 %s 不在知识库（原件总库 %s、library_root %s）或交付目录内'
+                                % (mpn, sheet or '（没写）', sources[0] if len(sources) > 2 else '没有', library))
         for ref in refs if netlist else []:
             covered.add(ref)
             if ref not in comps:

@@ -8,6 +8,7 @@ from test_filtered_supply import xml
 from schematic_layout.native import compare_netlist
 from schematic_layout import citations
 from test_citations import pdf
+import temp_framework
 
 class ReviewedCircuitSupplyTests(unittest.TestCase):
  def setUp(self):
@@ -45,9 +46,10 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
 
  def single_part(self,basis):
   # Matrix R2 SW_12: an IC switch node has one source part; the datasheet page says so instead of padded capacitors.
-  wiki=self.p/'wiki';sheet=wiki/'raw/Datasheet/08/Vendor - D.pdf';sheet.parent.mkdir(parents=True,exist_ok=True)
+  raw=self.p/'raw';sheet=raw/'Datasheet/08/Vendor - D.pdf';sheet.parent.mkdir(parents=True,exist_ok=True)
   sheet.write_bytes(pdf(['SW switch node driven by internal switches','p2']))
-  env=mock.patch.dict(os.environ,{'HARDWARE_WIKI':str(wiki)});env.start();self.addCleanup(env.stop)
+  framework=temp_framework.with_raw(self.p/'framework',raw)
+  env=mock.patch.dict(os.environ,{temp_framework.knowledge_source.ENV_VAR:str(framework)});env.start();self.addCleanup(env.stop)
   citations._pages.clear();citations._texts.clear()
   d=self.i['reviewed_circuit_supply'][0];d['refs']=['D1'];d['basis']=basis;d['binding_sha256']=binding(self.i,['D1'])
   return self.run_case()

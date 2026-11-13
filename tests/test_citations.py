@@ -1,5 +1,6 @@
 """Datasheet citations are checked against the cited file and page; unshown values are listed, not blocking."""
 from framework_guard import skip_without_framework  # noqa: E402
+import temp_framework
 import json
 import os
 from pathlib import Path
@@ -39,11 +40,12 @@ class CitationTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.wiki = Path(tmp.name) / 'wiki'
-        sheet = self.wiki / 'raw/Datasheet/08/Vendor - PART.pdf'
+        self.raw = Path(tmp.name) / 'raw'      # the source library the framework's 原件 points to
+        sheet = self.raw / 'Datasheet/08/Vendor - PART.pdf'
         sheet.parent.mkdir(parents=True)
         sheet.write_bytes(pdf(['Features 85 to 265 Vac', 'VCS 0.930 V  tDLY 200 ns  Vneg -0.9 V  tol 20 %']))
-        env = mock.patch.dict(os.environ, {'HARDWARE_WIKI': str(self.wiki)})
+        framework = temp_framework.with_raw(Path(tmp.name) / 'framework', self.raw)
+        env = mock.patch.dict(os.environ, {temp_framework.knowledge_source.ENV_VAR: str(framework)})
         env.start()
         self.addCleanup(env.stop)
         citations._pages.clear(); citations._texts.clear()
@@ -66,7 +68,7 @@ class CitationTests(unittest.TestCase):
         self.assertTrue(citations._shown(-0.9, 'VZCD(MIN) \u22120.9 \u22120.7'))   # Unicode minus as printed
 
     def test_without_the_library_nothing_is_claimed(self):
-        shutil.rmtree(self.wiki)
+        shutil.rmtree(self.raw)
         r = citations.check_source('datasheet:Datasheet/08/Vendor - PART.pdf#p2')
         self.assertEqual('NOT_CHECKED', r['status'])
         self.assertIn('找不到知识库', r['reason'])

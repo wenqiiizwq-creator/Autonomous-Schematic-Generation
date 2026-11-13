@@ -1,6 +1,7 @@
 """Process issues from the industrial I/O calibration board run (~/Documents/ASG-calibration/industrial-io-rs485-can/
 record/issues.md; user 2026-11-02: 这里面找到的问题，请提醒主对话进行修改). Each fix has a failing and a passing case."""
 import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
+import temp_framework
 import copy
 import json
 from pathlib import Path
@@ -19,7 +20,7 @@ LIBRARY = test_guideline_closure.LIBRARY
 
 def setUpModule():
     global _env
-    _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library')})
+    _env = mock.patch.dict('os.environ', temp_framework.without_raw())   # 没有原件总库
     _env.start()
 
 

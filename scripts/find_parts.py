@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Find candidate parts, reference designs and application notes in the local
-HardwareWiki raw library before looking anywhere else.
+source library (原件总库) before looking anywhere else.
 
-The library lives outside the skill (default ~/Documents/知识库/HardwareWiki).
-Datasheets are indexed by raw/Datasheet/catalog.json (vendor, model,
+The library lives outside the skill: the knowledge framework's 原件/ (it points
+to HardwareWiki/raw), found through knowledge_source.raw_root(); --wiki names
+another source library directory instead. Paths are relative to that directory.
+Datasheets are indexed by Datasheet/catalog.json (vendor, model,
 category, subcategory, facets, first pages of text); PDFs not yet in that
 index are listed from the file system and marked 未入索引. Reference designs
-(raw/Designexample/<topology>/<board>/) and application notes are matched by
+(Designexample/<topology>/<board>/) and application notes are matched by
 path. Every hit is a path to open and read; this tool proves nothing about a
 part's suitability.
 
@@ -22,7 +24,6 @@ part's suitability.
 
 import argparse
 import json
-import os
 from pathlib import Path
 import re
 import sys
@@ -30,15 +31,23 @@ import sys
 import knowledge_source
 
 ROLES_MD = Path(__file__).resolve().parent.parent / "references" / "part-roles.md"
-DEFAULT_WIKI = Path(os.environ.get("HARDWARE_WIKI", Path.home() / "Documents" / "知识库" / "HardwareWiki"))
+
+
+def old_wiki_problem(path):
+    """The message for a --wiki that still names the HardwareWiki root (raw/ inside, no Datasheet/), else None."""
+    path = Path(path).expanduser()
+    if not (path / "Datasheet").is_dir() and (path / "raw").is_dir():
+        return ("--wiki %s 是 HardwareWiki 根目录：现在要给原件目录本身（%s），默认取知识框架的原件"
+                % (path, path / "raw"))
+    return None
 
 
 def norm(s):
     return re.sub(r"[\s\-_–—/]+", "", str(s or "")).lower()
 
 
-def load_catalog(wiki):
-    path = wiki / "raw" / "Datasheet" / "catalog.json"
+def load_catalog(raw):
+    path = raw / "Datasheet" / "catalog.json"
     if not path.is_file():
         return None, f"{path} not found; run the library's build_catalog.py or search by path only"
     try:
@@ -52,8 +61,8 @@ def archived(row):
     return "versions" in row["path"].split("/")
 
 
-def unindexed_pdfs(wiki, indexed_paths):
-    root = wiki / "raw" / "Datasheet"
+def unindexed_pdfs(raw, indexed_paths):
+    root = raw / "Datasheet"
     found = []
     for p in root.rglob("*.pdf"):
         rel = p.relative_to(root).as_posix()
@@ -78,10 +87,10 @@ def match_row(row, terms, category, with_text):
     return all(norm(t) in hay_n for t in terms)
 
 
-def search_datasheets(wiki, terms, category=None, mpn=None, with_text=False, limit=40):
-    catalog, problem = load_catalog(wiki)
+def search_datasheets(raw, terms, category=None, mpn=None, with_text=False, limit=40):
+    catalog, problem = load_catalog(raw)
     rows = list((catalog or {}).get("rows") or [])
-    rows += unindexed_pdfs(wiki, {r["path"] for r in rows})
+    rows += unindexed_pdfs(raw, {r["path"] for r in rows})
     rows = [r for r in rows if not archived(r)]
     if mpn:
         key = norm(mpn)
@@ -90,21 +99,21 @@ def search_datasheets(wiki, terms, category=None, mpn=None, with_text=False, lim
         hits = [r for r in rows if match_row(r, terms, category, with_text)]
     hits.sort(key=lambda r: (r.get("category", ""), r.get("subcategory", ""), r.get("vendor", ""), r.get("model", "")))
     out = [{k: r.get(k) for k in ("vendor", "model", "category", "subcategory", "kind", "pages")}
-           | {"path": "raw/Datasheet/" + r["path"]} for r in hits[:limit]]
+           | {"path": "Datasheet/" + r["path"]} for r in hits[:limit]]
     return {"query": {"terms": terms, "category": category, "mpn": mpn, "text": with_text},
-            "library": str(wiki), "catalog_generated": (catalog or {}).get("generated"),
+            "library": str(raw), "catalog_generated": (catalog or {}).get("generated"),
             "catalog_problem": problem, "total": len(hits), "shown": len(out), "results": out}
 
 
-def categories(wiki):
-    catalog, problem = load_catalog(wiki)
+def categories(raw):
+    catalog, problem = load_catalog(raw)
     counts = {}
     for r in (catalog or {}).get("rows") or []:
         if archived(r):
             continue
         counts.setdefault(r.get("category", ""), {}).setdefault(r.get("subcategory", ""), 0)
         counts[r["category"]][r.get("subcategory", "")] += 1
-    return {"library": str(wiki), "catalog_problem": problem, "categories": counts}
+    return {"library": str(raw), "catalog_problem": problem, "categories": counts}
 
 
 def roles_subcategories(path=ROLES_MD):
@@ -117,11 +126,11 @@ def roles_subcategories(path=ROLES_MD):
     return names
 
 
-def roles_coverage(wiki, path=ROLES_MD):
-    cats = categories(wiki)
+def roles_coverage(raw, path=ROLES_MD):
+    cats = categories(raw)
     library = {s for subs in cats["categories"].values() for s in subs}
     table = roles_subcategories(path)
-    return {"library": str(wiki), "roles": str(path), "catalog_problem": cats["catalog_problem"],
+    return {"library": str(raw), "roles": str(path), "catalog_problem": cats["catalog_problem"],
             "missing_in_table": sorted(library - table), "not_in_library": sorted(table - library),
             "status": "PASS" if library and library <= table else "FAIL"}
 
@@ -135,36 +144,35 @@ def sha256(path):
     return h.hexdigest()
 
 
-def library_index(wiki):
-    """One walk of raw/: catalog SHA-256 -> path, normalised file name -> path, byte size -> paths."""
-    catalog, _ = load_catalog(wiki)
-    by_hash = {row["sha256"]: "raw/Datasheet/" + row["path"] for row in (catalog or {}).get("rows") or [] if row.get("sha256")}
+def library_index(raw):
+    """One walk of the source library: catalog SHA-256 -> path, normalised file name -> path, byte size -> paths."""
+    catalog, _ = load_catalog(raw)
+    by_hash = {row["sha256"]: "Datasheet/" + row["path"] for row in (catalog or {}).get("rows") or [] if row.get("sha256")}
     by_name, by_size = {}, {}
-    raw = wiki / "raw"
     for p in raw.rglob("*.pdf") if raw.is_dir() else []:
         by_name.setdefault(norm(p.stem), p)
         by_size.setdefault(p.stat().st_size, []).append(p)
-    return {"wiki": wiki, "by_hash": by_hash, "by_name": by_name, "by_size": by_size}
+    return {"raw": raw, "by_hash": by_hash, "by_name": by_name, "by_size": by_size}
 
 
-def locate_file(wiki, path, index=None):
-    """Library-relative path of a file already in raw/, or None.
+def locate_file(raw, path, index=None):
+    """Library-relative path of a file already in the source library, or None.
 
     Matched by catalog SHA-256, then by normalised file name, then by hashing the
     library files of the same byte size (a renamed copy whose catalog entry is stale).
     Pass the same library_index() when locating many files.
     """
     path = Path(path)
-    index = index or library_index(wiki)
+    index = index or library_index(raw)
     digest = sha256(path)
     if digest in index["by_hash"]:
         return index["by_hash"][digest]
     hit = index["by_name"].get(norm(path.stem))
     if hit is not None:
-        return hit.relative_to(wiki).as_posix()
+        return hit.relative_to(raw).as_posix()
     for p in index["by_size"].get(path.stat().st_size, []):
         if sha256(p) == digest:
-            return p.relative_to(wiki).as_posix()
+            return p.relative_to(raw).as_posix()
     return None
 
 
@@ -200,37 +208,45 @@ def search_circuits(terms, path=None):
     return {"terms": terms, "total": len(hits), "results": hits}
 
 
-def search_paths(wiki, kind, terms, limit=40):
-    root = wiki / "raw" / kind
+def search_paths(raw, kind, terms, limit=40):
+    root = raw / kind
     if not root.is_dir():
-        return {"library": str(wiki), "problem": f"{root} not found", "results": []}
+        return {"library": str(raw), "problem": f"{root} not found", "results": []}
     hits = []
     for p in sorted(root.rglob("*")):
         if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in (".pdf", ".txt", ".zip", ".md"):
-            rel = p.relative_to(wiki).as_posix()
+            rel = p.relative_to(raw).as_posix()
             if all(norm(t) in norm(rel) for t in terms):
                 hits.append(rel)
     boards = sorted({h.rsplit("/", 1)[0] for h in hits})
-    return {"library": str(wiki), "kind": kind, "terms": terms, "total": len(hits),
+    return {"library": str(raw), "kind": kind, "terms": terms, "total": len(hits),
             "folders": boards[:limit], "files": hits[:limit]}
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("terms", nargs="*", help="search terms, all must match (case/hyphen insensitive)")
-    ap.add_argument("--wiki", type=Path, default=DEFAULT_WIKI, help="HardwareWiki root (env HARDWARE_WIKI)")
+    ap.add_argument("--wiki", type=Path, help="source library directory (the one holding Datasheet/); default: the "
+                    "knowledge framework's 原件/, which points to HardwareWiki/raw")
     ap.add_argument("--categories", action="store_true", help="list datasheet categories and counts")
     ap.add_argument("--category", help="restrict datasheets to a category or subcategory substring")
     ap.add_argument("--mpn", help="exact-ish model lookup (substring of model or alias)")
     ap.add_argument("--text", action="store_true", help="also match the indexed first pages of each datasheet")
-    ap.add_argument("--designs", action="store_true", help="search raw/Designexample by path")
-    ap.add_argument("--notes", action="store_true", help="search raw/Applicationnote by path")
+    ap.add_argument("--designs", action="store_true", help="search Designexample/ by path")
+    ap.add_argument("--notes", action="store_true", help="search Applicationnote/ by path")
     ap.add_argument("--circuits", action="store_true", help="search circuit patterns in the knowledge framework's 知识/典型电路/")
     ap.add_argument("--file", type=Path, help="report where this local file already is in the library")
     ap.add_argument("--roles-coverage", action="store_true", help="compare references/part-roles.md with the library")
     ap.add_argument("--limit", type=int, default=40)
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
+    if not args.circuits and args.wiki is None:
+        try:
+            args.wiki = knowledge_source.raw_root()
+        except knowledge_source.KnowledgeFrameworkNotFound as exc:
+            ap.error(str(exc))
+    elif not args.circuits and old_wiki_problem(args.wiki):
+        ap.error(old_wiki_problem(args.wiki))
     if args.circuits:
         report = search_circuits(args.terms)
     elif args.file:

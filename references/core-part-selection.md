@@ -6,15 +6,14 @@
 
 ## 1. 器件库在哪里
 
-原厂资料不在本技能内，在本机知识库 `~/Documents/知识库/HardwareWiki`（环境变量 `HARDWARE_WIKI` 可改）：
+原厂资料不在本技能内，在原件总库：知识框架里的 `原件/`（它指向 HardwareWiki/raw），脚本经 `knowledge_source.raw_root()` 找。下表路径相对原件总库：
 
 | 位置 | 内容 | 怎么找 |
 |---|---|---|
-| `raw/Datasheet/<一级类>/<二级类>/Vendor - PartNumber.pdf` | 器件手册，约四千份；`catalog.json` 索引了厂商、型号、分类、标签和前几页正文 | `scripts/find_parts.py --category "<二级类>" 关键词…`、`--mpn 型号`；`--text` 连正文一起搜（正文多为英文，关键词用英文） |
-| `raw/Designexample/<领域>/<拓扑>/<板名>/` | 参考设计、评估板手册 | `find_parts.py --designs 关键词…`，结果按板文件夹归并 |
-| `raw/Applicationnote/` | 应用笔记 | `find_parts.py --notes 关键词…` |
-| `raw/Datasheet/元器件体系/器件统一分类大表.md` | 分类规则与各厂商产品线 | 决定一个新手册放哪个目录 |
-| `wiki/entities/` | 已整理的器件/概念条目 | 直接按文件名打开 |
+| `Datasheet/<一级类>/<二级类>/Vendor - PartNumber.pdf` | 器件手册，约四千份；`catalog.json` 索引了厂商、型号、分类、标签和前几页正文 | `scripts/find_parts.py --category "<二级类>" 关键词…`、`--mpn 型号`；`--text` 连正文一起搜（正文多为英文，关键词用英文） |
+| `Designexample/<领域>/<拓扑>/<板名>/` | 参考设计、评估板手册 | `find_parts.py --designs 关键词…`，结果按板文件夹归并 |
+| `Applicationnote/` | 应用笔记 | `find_parts.py --notes 关键词…` |
+| `Datasheet/元器件体系/器件统一分类大表.md` | 分类规则与各厂商产品线 | 决定一个新手册放哪个目录 |
 
 每类器件是干什么的、选它看什么参数，见 [part-roles.md](part-roles.md)；选型从那张表的"按功能找类"开始，
 先定二级类，再在类里检索候选。没入索引的 PDF 检索结果标 `未入索引`，可以用，但要自己读文件名核对型号。
@@ -76,7 +75,6 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 ```json
 {
   "schema_version": 1,
-  "library_root": "~/Documents/知识库/HardwareWiki",
   "roles": [
     {
       "role": "PFC 控制器",
@@ -89,15 +87,15 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
         {"param": "待机功耗", "op": "<=", "limit": 75, "unit": "mW", "requirement": "R-EFF-02"},
         {"param": "外置 MOSFET 驱动", "op": "has", "limit": true}
       ],
-      "sources": ["designexample:raw/Designexample/02_电源保护配电与电池/USB-PD/NCP1343PD100WGEVB", "catalog:08_电源管理/AC-DC 转换器"],
+      "sources": ["designexample:Designexample/02_电源保护配电与电池/USB-PD/NCP1343PD100WGEVB", "catalog:08_电源管理/AC-DC 转换器"],
       "candidates": [
         {"mpn": "NCP1623", "vendor": "onsemi", "status": "selected",
-         "datasheet": "raw/Datasheet/08_电源管理/AC-DC 转换器/onsemi - NCP1623.pdf",
+         "datasheet": "Datasheet/08_电源管理/AC-DC 转换器/onsemi - NCP1623.pdf",
          "reason": "参考设计验证的组合；多模 CrM/DCM 满足轻载效率", "pages": "1, 6", "external_dependencies": [],
          "values": {"输入电压范围": {"value": [85, 265], "page": 1}, "轻载 DCM/跳周期": {"value": true, "page": 1},
                     "待机功耗": {"value": 30, "page": 6}, "外置 MOSFET 驱动": {"value": true, "page": 1}}},
         {"mpn": "L4984D", "vendor": "ST", "status": "rejected",
-         "datasheet": "raw/Datasheet/08_电源管理/AC-DC 转换器/ST - L4984D.pdf",
+         "datasheet": "Datasheet/08_电源管理/AC-DC 转换器/ST - L4984D.pdf",
          "reason": "固定 CCM，没有轻载 DCM/跳周期", "pages": "1",
          "values": {"轻载 DCM/跳周期": {"value": false, "page": 1}}}
       ]
@@ -113,7 +111,7 @@ NOT RECOMMENDED FOR NEW DESIGN、NRND、LAST TIME BUY 下的料号不用于新�
 - `selected` 和 `alternate` 候选对每条决定性条件都有 `values[param] = {"value", "page"}` 且判定满足；
   `rejected` 候选至少一条判定不满足，或写 `reject_kind`。
 - 候选 ≥ 2，否则要有 `single_candidate_reason`；`status` 只能是 `selected`/`rejected`/`alternate`，恰好一个 `selected`。
-- 每个候选有 `mpn`、`reason`、`datasheet`；`datasheet` 是相对 `library_root` 的路径，文件必须存在（也可以是交付目录内 `设计资料/` 下的文件）。
+- 每个候选有 `mpn`、`reason`、`datasheet`；`datasheet` 是相对原件总库的路径（如 `Datasheet/<一级类>/…`），文件必须存在（也可以是交付目录内 `设计资料/` 下的文件；可选的 `library_root` 另给一个查找目录）。
   `values` 的每个 `page` 必须在该手册页数之内，否则算记录问题；数值在那一页的文字里找不到时列入报告“引用待人工核对”，不拦。
 - `selected` 的每个位号都在设计网表里，且该器件的 `value` 或 `mpn` 含选定型号。
 - 设计网表里每个 U/Q/T 开头的器件都属于某个角色；一个角色可以覆盖多个位号（例如两只并联 MOS）。

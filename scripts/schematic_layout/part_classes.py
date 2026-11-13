@@ -16,6 +16,7 @@ import os
 import re
 
 import guideline_criteria
+import knowledge_source
 from collections import OrderedDict, namedtuple
 from pathlib import Path
 
@@ -27,15 +28,19 @@ CLASS_NAMES = {KEY: '关键器件', SPECIAL: '特殊器件', COMMON: '常规件'
 
 Kind = namedtuple('Kind', 'title prefixes words cues')
 
-# The kind vocabulary of the framework's 词表.json (plus ASG's `mechanical`; test_part_classes checks it). Words are matched
+# The kinds ASG recognizes and checks: names and titles from the framework's 词表.json (plus ASG's own `mechanical`), the
+# recognition and behavior here. A name the framework drops or ASG misspells stops the import; a framework kind ASG has
+# no entry for yet is listed by unhandled_kinds(). Words are matched
 # on "<lib_id> <value> <mpn>" in this order, the first kind wins; prefixes are the weakest evidence. Cues are what a
 # datasheet quote must say, lowercase with spaces removed; they include schematic-review's cues for the kind.
 # A part-number family (B) never starts inside a longer part number: PS2[5-9]xx is not the PS2663 in TPS26630.
 B = r'(?<![A-Z0-9])'
-_KIND_TITLES = guideline_criteria.vocabulary_titles('device_kinds')
+_KIND_TITLES = knowledge_source.vocabulary()['device_kinds']
 _LOCAL_KIND_TITLES = {'mechanical': '机械件'}
 
 def _kind(name, *args, **kwargs):
+    if name not in _LOCAL_KIND_TITLES and name not in _KIND_TITLES:
+        raise ValueError('器件类型 %s 不在知识框架的词表里（%s）' % (name, knowledge_source.vocabulary_path()))
     title = _LOCAL_KIND_TITLES[name] if name in _LOCAL_KIND_TITLES else _KIND_TITLES[name]
     return name, Kind(title, *args, **kwargs)
 
@@ -89,6 +94,13 @@ KINDS = OrderedDict([
     _kind('resistor', ('R', 'RN'), (r':R(?:_|\s|$)|RESISTOR|POTENTIOMETER',), ('resistor',)),
     _kind('ic', ('U', 'M', 'IC', 'A', 'MODULE', 'REF'), (), ()),
 ])
+
+
+def unhandled_kinds():
+    """Device kinds of the framework vocabulary that ASG has no recognition or check for yet, in vocabulary order."""
+    return [name for name in knowledge_source.vocabulary()['device_kinds'] if name not in KINDS]
+
+
 KEY_KINDS = ('ic', 'mosfet', 'bjt', 'opto', 'transformer', 'zener', 'tvs', 'bridge_rectifier')
 IC_PREFIXES = KINDS['ic'].prefixes
 # A more specific declared kind than the symbol shows is not a conflict.
@@ -104,9 +116,9 @@ PPM = re.compile(r'\d\s*ppm', re.I)
 DIELECTRIC = re.compile(r'(?<![A-Za-z0-9])(?:C0G|COG|NP0|NPO|U2J|[XYZ][4-8][PRSTUV])(?![A-Za-z0-9])', re.I)
 
 
-# Subcategories are the library's second level (raw/Datasheet/<category>/<subcategory>); only resistors and
-# capacitors are subdivided for the level. Tiers are the commodity bounds of the catalogs checked on 2026-10-26
-# (part-roles.md section 1): within a tier a part is common, beyond it special.
+# Subcategories are the library's second level (Datasheet/<category>/<subcategory> of the source library); only
+# resistors and capacitors are subdivided for the level. Tiers are the commodity bounds of the framework's
+# 常规件最弱档.json (sense_tiers, power_tiers): within a tier a part is common, beyond it special.
 R_CAT, C_CAT = '22_电阻器/', '20_电容器/'
 GENERAL_R, THIN_R, SENSE_R, POWER_R, POT_R, NETWORK_R = (R_CAT + n for n in (
     '厚膜贴片电阻 (通用)', '薄膜贴片电阻', '电流检测电阻 (分流)', '功率电阻 (线绕_金属板)', '电位器_微调', '电阻网络_分压器'))
@@ -116,13 +128,20 @@ SUBCATEGORIES = {'resistor': (GENERAL_R, THIN_R, SENSE_R, POWER_R, POT_R, NETWOR
                  'capacitor': (MLCC, ALUMINUM, POLYMER, TANTALUM, FILM, SAFETY_C)}
 PULSE = re.compile(r'pulse|脉冲|浪涌|surge', re.I)
 DV_DT = re.compile(r'dv/dt|snubber|吸收', re.I)
-# Current-sense tiers: (lowest Ω, highest Ω, highest power W at 70 °C, weakest TCR ppm/K); ±1 % throughout.
-# Vishay WSL p1-p2, Panasonic ERJ low resistance p2-p3, Bourns CRL p1 and CRA p1.
-SENSE_TIERS = ((0.001, 0.0019999, 1.0, 275), (0.002, 0.0029999, 2.0, 275), (0.003, 0.0049999, 2.0, 150),
-               (0.005, 0.0099999, 2.0, 300), (0.010, 0.100, 3.0, 300), (0.100001, 0.999999, 1.0, 300))
-# Power-resistor tiers: (highest power W at 70 °C, lowest Ω, highest Ω, tightest tolerance %, weakest TCR ppm/K).
-# Vishay PR01/PR02/PR03 p1-p2 (metal film, ±1 %) and AC01-AC10 p1 (wirewound, ±5 %).
-POWER_TIERS = ((3.0, 0.22, 1e6, 1.0, 250), (3.0, 0.1, 27e3, 5.0, 250), (8.4, 0.1, 27e3, 5.0, 180))
+
+
+def sense_tiers():
+    """Current-sense tiers read from the framework when used: (tightest tolerance %, [(lowest Ω, highest Ω, highest
+    power W at 70 °C, weakest TCR ppm/K)])."""
+    floors = guideline_criteria.commodity_floors()['sense_resistor']
+    return floors['tolerance_pct'], [(t['min_ohm'], t['max_ohm'], t['power_w_70c'], t['tcr_ppm']) for t in floors['tiers']]
+
+
+def power_tiers():
+    """Power-resistor tiers read from the framework when used: [(highest power W at 70 °C, lowest Ω, highest Ω,
+    tightest tolerance %, weakest TCR ppm/K)]."""
+    return [(t['power_w_70c'], t['min_ohm'], t['max_ohm'], t['tolerance_pct'], t['tcr_ppm'])
+            for t in guideline_criteria.commodity_floors()['power_resistor']['tiers']]
 
 
 def spec_text(comp):
@@ -212,18 +231,19 @@ def beyond_tier(comp, cat):
     if r is None:
         return None
     if cat == SENSE_R:
-        tier = next((t for t in SENSE_TIERS if t[0] <= r <= t[1]), None)
+        tight, tiers = sense_tiers()
+        tier = next((t for t in tiers if t[0] <= r <= t[1]), None)
         if tier is None:
             return '阻值 %g Ω 不在检流电阻档位内' % r
         if w and w > tier[2]:
             return '功率 %g W 超过该档上限 %g W' % (w, tier[2])
-        if tol is not None and tol < 1:
-            return '容差 ±%g%% 比档位的 ±1%% 更紧' % tol
+        if tol is not None and tol < tight:
+            return '容差 ±%g%% 比档位的 ±%g%% 更紧' % (tol, tight)
         if ppm is not None and ppm < tier[3]:
             return 'TCR %g ppm/K 比档位最弱值 %g ppm/K 更严' % (ppm, tier[3])
         return None
     if cat == POWER_R:
-        fits = [t for t in POWER_TIERS if (w or 0) <= t[0] and t[1] <= r <= t[2]
+        fits = [t for t in power_tiers() if (w or 0) <= t[0] and t[1] <= r <= t[2]
                 and (tol is None or tol >= t[3]) and (ppm is None or ppm >= t[4])]
         return None if fits else '功率 %s W、阻值 %g Ω、容差 %s、TCR %s 不在功率电阻档位内' % (
             w, r, '±%g%%' % tol if tol is not None else '未写', '%g ppm/K' % ppm if ppm is not None else '未写')
@@ -275,6 +295,9 @@ def kind_of(comp):
     if not text(declared):
         return inferred, None
     if declared not in KINDS:
+        if declared in unhandled_kinds():
+            return inferred, 'fields.Kind 写的 %s 在知识框架的词表里，但本技能对它还没有专门的识别或检查；写最接近的类型（可选：%s）' % (
+                declared, '、'.join(KINDS))
         return inferred, 'fields.Kind 写的 %s 不是器件类型（可选：%s）' % (declared, '、'.join(KINDS))
     if basis == 'symbol' and inferred != declared and declared not in REFINES.get(inferred, ()):
         return declared, '类型声明 %s 与符号或型号 %s 推断的 %s 不一致（选错了符号或填错了型号）' % (

@@ -8,8 +8,12 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from schematic_layout import discrete_semantics as ds
 from schematic_layout.discrete_semantics import audit_discrete_semantics, mpn_meaning
+import knowledge_source
 
-LIBRARY = Path.home() / 'Documents' / '知识库' / 'HardwareWiki' / 'raw' / 'Datasheet'
+try:
+    LIBRARY = knowledge_source.raw_root() / 'Datasheet'     # the source library: the framework's 原件 (HardwareWiki/raw)
+except knowledge_source.KnowledgeFrameworkNotFound:
+    LIBRARY = Path('/nonexistent')
 
 SYMBOLS = {
     'Device:D_TVS': ('Bidirectional transient-voltage-suppression diode', ('A1', 'A2')),
@@ -125,7 +129,7 @@ class DiscreteSemanticsTests(unittest.TestCase):
         self.assertIsNone(ds.legend_meaning('For bidirectional types the IR limit is double\n', 'XYZ12For'))
         self.assertEqual('CA', ds.mpn_suffix('30KPA28CA-B'))
 
-    @unittest.skipUnless(LIBRARY.is_dir() and ds.shutil.which('pdftotext'), 'HardwareWiki or pdftotext not installed')
+    @unittest.skipUnless(LIBRARY.is_dir() and ds.shutil.which('pdftotext'), 'the source library (原件) or pdftotext not installed')
     def test_real_datasheets_from_matrix_r2(self):
         """R2 had 17 INSUFFICIENT false alarms from these two datasheets."""
         with tempfile.TemporaryDirectory() as tmp:

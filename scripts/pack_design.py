@@ -13,7 +13,7 @@ copied. Anything else at the top level, history snapshots and design
 evidence that the closure record cites but the folder does not contain all fail the pack.
 Design documents must also agree with the design: every part a 设计资料/ table or assembly file
 names must exist in the electrical intent, with the same MPN and value where the table gives them.
-PDFs in the datasheets input that the HardwareWiki library does not hold yet (same SHA-256 or
+PDFs in the datasheets input that the source library (the knowledge framework's 原件/) does not hold yet (same SHA-256 or
 file name ignoring spaces, hyphens and case) do not block packing: they are listed in the manifest's
 ``datasheets_to_file`` and printed, so the user can file them into the library after delivery.
 """
@@ -31,7 +31,7 @@ from audit_design_closure import audit, load_task, read_requirements  # noqa: E4
 import check_module  # noqa: E402
 import knowledge_gaps  # noqa: E402
 import knowledge_source  # noqa: E402
-from find_parts import DEFAULT_WIKI, library_index, locate_file  # noqa: E402
+from find_parts import library_index, locate_file, old_wiki_problem  # noqa: E402
 from render_design_report import REPORT, render  # noqa: E402
 from schematic_layout.component_requirements import package_audit  # noqa: E402
 
@@ -249,15 +249,26 @@ def check(root, inputs=()):
     return errors
 
 
-def datasheets_not_in_library(folder, wiki):
-    """PDFs under the datasheets input that the HardwareWiki library does not hold yet."""
+def source_library():
+    """The source library: the knowledge framework's 原件/ (HardwareWiki/raw); None when it is not there."""
+    try:
+        return knowledge_source.raw_root()
+    except knowledge_source.KnowledgeFrameworkNotFound:
+        return None
+
+
+def datasheets_not_in_library(folder, raw=None):
+    """PDFs under the datasheets input that the source library (default: source_library()) does not hold yet."""
     folder = Path(folder)
     pdfs = sorted(p for p in folder.rglob('*.pdf') if p.is_file()) if folder.is_dir() else []
-    index = library_index(Path(wiki)) if pdfs else None
-    return [p.relative_to(folder).as_posix() for p in pdfs if locate_file(wiki, p, index) is None]
+    raw = Path(raw) if raw else source_library()
+    if raw is None:
+        return [p.relative_to(folder).as_posix() for p in pdfs]
+    index = library_index(raw) if pdfs else None
+    return [p.relative_to(folder).as_posix() for p in pdfs if locate_file(raw, p, index) is None]
 
 
-def pack(root, inputs, wiki=DEFAULT_WIKI):
+def pack(root, inputs, wiki=None):
     root = Path(root)
     errors = check(root, list(inputs.values()))
     declared = {}
@@ -266,7 +277,7 @@ def pack(root, inputs, wiki=DEFAULT_WIKI):
             errors.append('input %s does not exist: %s' % (name, path))
         else:
             declared[name] = fingerprint(path)
-    to_file = datasheets_not_in_library(inputs['datasheets'], Path(wiki)) if 'datasheets' in declared else []
+    to_file = datasheets_not_in_library(inputs['datasheets'], wiki) if 'datasheets' in declared else []
     if not (load_task(root) or {}).get('modules'):      # a whole-board delivery carries its knowledge-gap list
         problem = knowledge_gaps.stale(root)
         errors += [problem] if problem else []
@@ -286,13 +297,17 @@ def main(argv=None):
     parser.add_argument('delivery')
     parser.add_argument('--input', action='append', default=[], metavar='NAME=PATH',
                         help='requirements, datasheets ... (referenced, not copied)')
-    parser.add_argument('--wiki', type=Path, default=DEFAULT_WIKI, help='HardwareWiki root (env HARDWARE_WIKI)')
+    parser.add_argument('--wiki', type=Path, help='source library directory (the one holding Datasheet/); default: the '
+                        "knowledge framework's 原件/, which points to HardwareWiki/raw")
     args = parser.parse_args(argv)
+    if args.wiki is not None and old_wiki_problem(args.wiki):
+        parser.error(old_wiki_problem(args.wiki))
     errors, manifest = pack(args.delivery, dict(item.split('=', 1) for item in args.input), args.wiki)
     for e in errors:
         print('ERROR:', e)
     for pdf in (manifest or {}).get('datasheets_to_file') or []:
-        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, SKILL.md task C4.1)' % args.wiki)
+        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, SKILL.md task C4.1)'
+              % (args.wiki or source_library()))
     print('FAIL' if errors else 'PASS')
     return 1 if errors else 0
 

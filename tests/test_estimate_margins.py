@@ -3,6 +3,7 @@ on it whose margin is smaller than that passes with a margin risk and an improve
 check's margin is taken to its rating (R12). A calculation that fails even in its best case carries a design change
 candidate for the user to approve, and may list what the result is the sum of."""
 import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
+import temp_framework
 import copy
 import json
 from pathlib import Path
@@ -18,7 +19,7 @@ from current_record import make_current  # noqa: E402
 
 def setUpModule():
     global _env
-    _env = mock.patch.dict('os.environ', {'HARDWARE_WIKI': str(Path(tempfile.gettempdir()) / 'asg-no-library')})
+    _env = mock.patch.dict('os.environ', temp_framework.without_raw())   # 没有原件总库
     _env.start()
 
 

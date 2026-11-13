@@ -3,10 +3,12 @@ and record/modules.json says when an upstream change leaves a module stale."""
 import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import block_circuits
@@ -562,6 +564,77 @@ class InputItemTests(unittest.TestCase):
         self.assertNotIn('input_item_in_whole_flow', self.codes())
         self.record['work_items'][-1]['upstream'] = 'C6'
         self.assertIn('input_item_schema', self.codes())
+
+
+def declared_framework(root):
+    """A small framework whose entries declare circuit types and device kinds in their headers."""
+    entries = {
+        '计算方法/电源/buck.md': '# Buck 取值\n\n电路类型：POWER_CONVERTER\n器件类别：通用\n\n## 取值顺序\n',
+        '器件类别/mosfet.md': '# MOSFET\n\n电路类型：通用\n器件类别：`mosfet`\n\n## 要点\n',
+        '典型电路/电源/qr-flyback.md': '# QR 反激\n\n电路类型：POWER_CONVERTER（隔离）\n器件类别：mosfet、transformer\n\n## 实现方案\n',
+        '需求要素/端口/usb.md': '# USB 端口\n\n电路类型：USB\n器件类别：通用\n\n## 条件\n',
+    }
+    for path, body in entries.items():
+        (root / '知识' / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / '知识' / path).write_text(body, encoding='utf-8')
+    (root / '索引').mkdir()
+    registry = root / '知识/设计准则/准则登记'
+    registry.mkdir(parents=True)
+    vocab = {'circuit_types': [{'name': n, 'title': n} for n in ('POWER_CONVERTER', 'USB')],
+             'device_kinds': [{'name': n, 'title': n} for n in ('mosfet', 'transformer', 'led')]}
+    (registry / '词表.json').write_text(json.dumps(vocab, ensure_ascii=False), encoding='utf-8')
+    return root
+
+
+class DeclaredEntriesTests(unittest.TestCase):
+    """check_module.py entries lists the framework entries declared for the board's circuit types and device kinds; the
+    C1/C3/C4 gates note declared entries no lookup names, without failing."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        framework = declared_framework(Path(tmp.name) / 'framework')
+        env = mock.patch.dict(os.environ, {knowledge_source.ENV_VAR: str(framework)})
+        env.start()
+        self.addCleanup(env.stop)
+        self.root = Path(tmp.name) / 'design'
+        (self.root / 'record').mkdir(parents=True)
+        (self.root / 'record' / 'requirements.json').write_text(json.dumps({'guideline_scope': {
+            'circuit_types': ['POWER_CONVERTER'], 'device_kinds': ['mosfet', 'led']}}), encoding='utf-8')
+
+    def test_entries_are_listed_by_component_with_the_names_they_declare(self):
+        self.assertEqual({'典型电路': {'典型电路/电源/qr-flyback.md': ['POWER_CONVERTER', 'mosfet']},
+                          '计算方法': {'计算方法/电源/buck.md': ['POWER_CONVERTER']},
+                          '器件类别': {'器件类别/mosfet.md': ['mosfet']}},
+                         check_module.declared_entries(['POWER_CONVERTER'], ['mosfet']))
+        text = check_module.entries_report(self.root)
+        self.assertIn('本板：电路类型 POWER_CONVERTER；器件类别 mosfet、led', text)
+        self.assertIn('## 计算方法\n- 计算方法/电源/buck.md（POWER_CONVERTER）', text)
+        self.assertIn('本技能对这些器件类别还没有专门的识别或检查：led', text)
+        self.assertNotIn('usb.md', text)
+        text = check_module.entries_report(self.root, ['USB', 'NOPE'], [])
+        self.assertIn('需求要素/端口/usb.md（USB）', text)
+        self.assertIn('不在知识框架词表里（拼错或已删）：NOPE', text)
+
+    def test_declared_entries_missing_from_the_lookups_are_notes(self):
+        notes = check_module.declaration_notes(self.root, 'C4')
+        self.assertEqual(2, len(notes), notes)
+        self.assertTrue(notes[0].startswith('knowledge_declared：知识框架 知识/计算方法/'), notes)
+        self.assertIn('计算方法/电源/buck.md（POWER_CONVERTER）', notes[0])
+        self.assertIn('器件类别/mosfet.md（mosfet）', notes[1])
+        self.assertEqual([], check_module.declaration_notes(self.root, 'C1'))     # no 需求要素 entry declares them
+        self.assertEqual([], check_module.declaration_notes(self.root, 'C5'))     # C5 has no such note
+        rows = [{'task': 'C4.2', 'component': '计算方法', 'query': 'x', 'found': ['计算方法/电源/buck.md']}]
+        (self.root / 'record' / 'modules.json').write_text(json.dumps({'knowledge_lookups': rows}), encoding='utf-8')
+        notes = check_module.declaration_notes(self.root, 'C4')
+        self.assertEqual(1, len(notes), notes)
+        self.assertIn('器件类别/mosfet.md', notes[0])
+        self.assertIn('已查', check_module.entries_report(self.root).split('buck.md')[1].splitlines()[0])
+        # task C3.1: a typical circuit compared among the scheme candidates counts as consulted
+        self.assertEqual(1, len(check_module.declaration_notes(self.root, 'C3')))
+        (self.root / 'record' / 'scheme-criteria.json').write_text(json.dumps({'blocks': [{'block': 'PSU', 'candidates': [
+            {'name': 'QR', 'circuit': 'qr-flyback#QR', 'status': 'selected'}]}]}), encoding='utf-8')
+        self.assertEqual([], check_module.declaration_notes(self.root, 'C3'))
 
 
 if __name__ == '__main__':

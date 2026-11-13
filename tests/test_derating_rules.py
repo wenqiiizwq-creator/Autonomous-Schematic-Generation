@@ -17,7 +17,10 @@ import guideline_criteria
 import knowledge_source
 JSON_PATH = knowledge_source.derating_path()
 MD_PATH = knowledge_source.derating_doc_path()
-LIBRARY = Path.home() / 'Documents' / '知识库' / 'HardwareWiki'
+try:
+    LIBRARY = knowledge_source.raw_root()        # the source library: the framework's 原件 (HardwareWiki/raw)
+except knowledge_source.KnowledgeFrameworkNotFound:
+    LIBRARY = None
 SPEC = json.loads(JSON_PATH.read_text(encoding='utf-8'))
 LEVELS = ('I', 'II', 'III')
 # Direction of each measure from level I to level III: less derating allows a larger ratio or temperature and asks a
@@ -79,10 +82,10 @@ class DeratingSpecTests(unittest.TestCase):
         listed = re.findall(r'^\| ([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+) \|', MD_PATH.read_text(encoding='utf-8'), flags=re.M)
         self.assertEqual(sorted(listed), sorted(r['id'] for r in SPEC['rules']))
 
-    @unittest.skipUnless((LIBRARY / 'raw' / 'Standard').is_dir(), 'HardwareWiki not installed')
+    @unittest.skipUnless(LIBRARY and (LIBRARY / 'Standard').is_dir(), 'the source library (原件) is not installed')
     def test_sources_are_the_library_files(self):
         for key, source in SPEC['sources'].items():
-            path = LIBRARY / source['path']
+            path = LIBRARY / source['path'].removeprefix('raw/')   # 降额值.json writes them from the HardwareWiki root
             self.assertTrue(path.is_file(), source['path'])
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), source['sha256'], key)
 

@@ -7,14 +7,14 @@ plain text search. Without the library or the poppler tools the citation is NOT_
 with the reason. Locator text (table name, symbol) is not searched.
 """
 
-import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
 
+import knowledge_source
+
 CITATION = re.compile(r'^datasheet:(.+)#p(\d+)$')
-WIKI = Path(os.environ.get('HARDWARE_WIKI', Path.home() / 'Documents' / '知识库' / 'HardwareWiki'))
 _pages, _texts = {}, {}
 
 
@@ -24,10 +24,20 @@ def parse(source):
     return (m.group(1), int(m.group(2))) if m else None
 
 
+def library_root():
+    """The source library: the knowledge framework's 原件/ (HardwareWiki/raw); None when it is not there."""
+    try:
+        return knowledge_source.raw_root()
+    except knowledge_source.KnowledgeFrameworkNotFound:
+        return None
+
+
 def locate(path, extra=()):
-    """The cited file: under the library (raw/ or its root), then a declared folder or file by name."""
-    wiki = Path(os.environ.get('HARDWARE_WIKI', WIKI))
-    for base in (wiki / 'raw', wiki, *map(Path, extra)):
+    """The cited file: under the library (a path such as Datasheet/<category>/…, an older raw/Datasheet/… or an absolute
+    path), then a declared folder or file by name."""
+    raw = library_root()
+    path = path[len('raw/'):] if raw is not None and path.startswith('raw/') else path
+    for base in ((raw,) if raw is not None else ()) + tuple(map(Path, extra)):
         base = base.expanduser()
         candidates = (base / path, base / Path(path).name) if base.is_dir() else (base,)
         for c in candidates:
@@ -37,7 +47,7 @@ def locate(path, extra=()):
 
 
 def library_present():
-    return (Path(os.environ.get('HARDWARE_WIKI', WIKI)).expanduser() / 'raw').is_dir()
+    return library_root() is not None
 
 
 def page_count(pdf):

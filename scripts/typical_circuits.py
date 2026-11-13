@@ -9,7 +9,7 @@ CIRCUIT_TYPES_LINE = '电路类型：'
 IMPLEMENTATIONS = '## 实现方案'   # only the ### headings of this section are implementations
 RULES_BULLET = re.compile(r'^- \*\*落实规则\*\*：(.*)$')
 RULE_ID = re.compile(r'G0[1-9]-\d{3}')
-NONE = '无'
+NONE = ('无', '通用')   # 知识框架的条目规范用“通用”表示不专属于任何电路类型
 
 
 def _names(rest):
