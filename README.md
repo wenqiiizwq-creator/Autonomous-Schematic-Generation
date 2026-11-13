@@ -63,24 +63,17 @@ Copyright (c) 2026 wenqiii.zwq
 改编部分另保留 tscircuit Inc. 和 Osman Aslan 的 MIT 声明，见
 [上游许可证](references/upstream-licenses/)。
 
-## 共用层
+## 知识框架
 
-共用规范 G01–G10（G01–G09 设计准则、G10 降额与应力规范）在硬件设计知识框架的 `设计准则/` 维护，同步进本技能的 `references/shared/` 等受控文件，技能内不得编辑。
-维护源是框架 `设计准则/` 下的 `准则登记/`、`规范正文/G10_元器件降额与应力规范/` 和 `工具/`（含 `包说明/`）；
-技能内有哪些共用文件、谁读、怎样核对见 [共用层说明](references/shared/shared-layer.md)。
+技能直接读本机的硬件设计知识框架，不自带拷贝，也不改它。设计准则（G01–G09）、降额与应力规范（G10）和其余设计知识都在框架里维护：准则登记、词表和 G10 数据在 `知识/设计准则/`，需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析在 `知识/` 下的同名目录。
 
-## 知识包
-
-准则以外的设计知识也在硬件设计知识框架维护，同步进本技能的 `references/knowledge/`，技能内不得编辑；
-依据的框架版本以根目录 `knowledge-sync.json` 为准，各模块查哪部分见 [知识包](references/knowledge-package.md)。
-
-框架更新后重新同步（共用层和知识包一起换，只有这一步读框架目录；技能运行时只读自己这一份，离开框架目录也能用）：
+先告诉技能框架在哪里，二选一（环境变量优先）：
 
 ```bash
-python3 scripts/knowledge_package.py sync <硬件设计知识框架目录>      # 加 --dry-run 只看差异
-python3 scripts/knowledge_package.py verify-installed
-python3 scripts/guideline_criteria.py verify-installed
+export HARDWARE_KNOWLEDGE_FRAMEWORK=<硬件设计知识框架的绝对路径>
+# 或在技能根目录建文件 .knowledge-framework，一行写框架的绝对路径（该文件不进版本库）
+python3 scripts/knowledge_source.py        # 打印框架目录、读取日期和指纹，确认配对
 ```
 
-同步把与上一次的差异写进 `docs/knowledge-sync/<框架版本>.md`：新增、改了、删除、搬了位置的条目和准则。这份差异是技能要消化的清单，按它改查阅表、关卡和说明，再跑全量测试。
-同步后再跑 `python3 scripts/knowledge_coverage.py --write`，重写 [知识到关卡的对照表](docs/knowledge-coverage.md)：知识包里每类可核对的内容有多少项、关卡现在核对到哪一步，“核对到内容”为“否”的是技能还没吃进去的知识。
+框架目录下要有 `知识/` 和 `索引/`；没配或配错时脚本报错并说明办法。各模块查哪部分见 [知识框架的用法](references/knowledge-package.md)。
+框架更新后技能直接读到新内容。[知识到关卡的对照表](docs/knowledge-coverage.md) 用 `python3 scripts/knowledge_coverage.py --write` 重新生成，它列出知识框架里每类可核对的内容有多少项、关卡现在核对到哪一步，“核对到内容”为“否”的是技能还没吃进去的知识。

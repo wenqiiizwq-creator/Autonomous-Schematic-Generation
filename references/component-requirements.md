@@ -27,13 +27,13 @@
 | `requirements[]` | `parameter`, `op: eq/le/ge`, 有限数值 `value`, `unit`, `conditions`, `basis`, `source` |
 | `procurement` | `mode: spec/mpn/design_sheet` 与 `reason`；由物理引脚、行为、认证或不可替代曲线决定绑定时列 `binding_dependencies`，必须选 `mpn`；`design_sheet` 只用于带 `fields.DesignSheet` 的定制磁件 |
 | `selection` | `status: not_selected/candidate/qualified/by_spec/by_bom_spec/by_design_sheet`；候选与型号已核准时附 `mpn` 和选料途径 `route`；已核准另有 `properties[]`；受控规格核实用 `by_spec`；按 BOM 规格转交采购用 `by_bom_spec`；定制磁件按设计单核实用 `by_design_sheet` |
-| `guidelines` | 可选：这项选型落实的共用设计准则编号（[设计准则库](shared/guideline-criteria.md)），设计待办审计计入覆盖 |
+| `guidelines` | 可选：这项选型落实的共用设计准则编号（框架的准则登记（`知识/设计准则/准则登记/`）），设计待办审计计入覆盖 |
 | `display` | `inline`：完整要求显示在元件旁；`note`：元件旁显示“要求见 CR-位号”，同页生成完整技术注释 |
 
 比较对象是采购性能：`power ge 3 W` 表示额定功率至少 3 W；`tolerance le 5 %` 表示容差不得大于 5%。
 同一参数有上下界（如有效容量既要满足保持时间的下限，又要满足充电时间的上限）时，写一条 `ge` 和一条 `le`，两条的 `conditions` 相同；
 同一参数同一比较符只写一条，下限大于上限记错，核准时同一项 `properties` 要同时满足两条（Matrix R3：22 颗电容的上下界曾被当成重复参数拒绝）。
-要求值、实际工作应力、额定值和降额后的可用值不能互相覆盖。应力判法见[器件应力规范](shared/stress-spec.md)。
+要求值、实际工作应力、额定值和降额后的可用值不能互相覆盖。应力判法见应力判法（框架 G10 目录的 `应力判法.md`）。
 
 **图面与检查口径**：性能要求用“要求/至少/至多”等措辞，已核实的器件参数另标为器件额定或保证值；完整性能要求不能只放隐藏属性、BOM 或报告，
 元件旁至少有可见规格或同页要求引用。相同规格不在多个生成脚本里分别硬编码。设计要求与候选实参分开比较：实际 ±1% 满足“容差 ≤5%”，
@@ -43,7 +43,7 @@
 **只写起约束作用的要求，数值取 2–3 位有效数字**（R10：110 颗器件都写了工作电压，有 R503 ≥ 0.063125 V 这样的值；
 用户 2026-10-28：先改前四条）。电压、脉冲等参数只在最坏值超过最弱常用件额定的降额值时才写，判据同
 [design-closure.md](design-closure.md) 的“电阻写额定功率”：电阻的工作电压要求不超过封装最弱常用件耐压 × 降额规范 RES-SMD-V 按设计准则库工程取值 `unset_level`（I 级，最严）取值
-（封装最弱档耐压见 [commodity-floors.json](shared/commodity-floors.json)，没写封装按 0402）时不起约束作用，审核结果 `hints` 给提示。`le`/`ge` 的数值超过 3 位有效数字记错，按保守方向取整：下限向上、上限向下
+（封装最弱档耐压见 框架 G10 目录的 `常规件最弱档.json`，没写封装按 0402）时不起约束作用，审核结果 `hints` 给提示。`le`/`ge` 的数值超过 3 位有效数字记错，按保守方向取整：下限向上、上限向下
 （`conservative(value, op)`，如 0.063125 → 0.0632、466.69 → 467）。同一句波形或漂移条件出现在 3 颗以上器件时 `hints` 给提示：
 按各自工况写，确实相同的保留。提示不挡交付，报告结论一节每类一行。
 

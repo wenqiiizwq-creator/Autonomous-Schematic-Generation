@@ -11,8 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / 'scripts'
-# Installed read-only from the design guidelines; their content is not the skill's to edit.
-SHARED = {'guideline_criteria.py', 'stress_check.py'}
+# Used by both skills, byte-identical; some of their functions are only the other skill's.
+SHARED = {'guideline_criteria.py', 'stress_check.py', 'knowledge_source.py'}
 # A range of rule numbers starts at 1 (P0–P3 is the work-item priority scale, not the principles).
 RANGE = re.compile(r'(?<![\w-])(?:[OHP]1|HR-01)\s*[–-]\s*(?:[OHP]|HR-)?\d+')
 OWNERS = {'O': 'references/drawing-recipes.md', 'H': 'references/drawing-recipes.md',
@@ -20,9 +20,7 @@ OWNERS = {'O': 'references/drawing-recipes.md', 'H': 'references/drawing-recipes
 
 
 def docs():
-    skip = (ROOT / 'references' / 'knowledge', ROOT / 'references' / 'shared')
-    return [ROOT / 'README.md', ROOT / 'SKILL.md', SCRIPTS / 'README.md'] + sorted(
-        p for p in (ROOT / 'references').rglob('*.md') if not any(s in p.parents for s in skip))
+    return [ROOT / 'README.md', ROOT / 'SKILL.md', SCRIPTS / 'README.md'] + sorted((ROOT / 'references').rglob('*.md'))
 
 
 def sources():

@@ -209,22 +209,19 @@ def symbol_refs(sch_path):
     return refs
 
 
-CIRCUITS_DIR = typical_circuits.CIRCUITS_DIR
-
-
-def circuit_implementations(circuits_dir=CIRCUITS_DIR):
+def circuit_implementations(circuits_dir=None):
     return {pid: set(info['implementations']) for pid, info in typical_circuits.load(circuits_dir).items()}
 
 
-def library_hits(block, circuits_dir=CIRCUITS_DIR):
+def library_hits(block, circuits_dir=None):
     """Typical circuits a key block marked none must say why it does not use (whole-board baseline 2026-11-07, A5:
     Matrix marked its reset block as having no typical circuit while multi-domain-reset covers it). The search
     find_parts.py --circuits runs for the block name."""
-    return [h['id'] for h in find_parts.search_circuits([block], Path(circuits_dir))['results']
+    return [h['id'] for h in find_parts.search_circuits([block], circuits_dir)['results']
             if h['implementations']] if text(block) else []   # a pointer entry has no approach to use
 
 
-def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(), scheme=None, circuits_dir=CIRCUITS_DIR,
+def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(), scheme=None, circuits_dir=None,
                          explain_none=True):
     """Each key functional block names an existing pattern approach, or none; a none block's scheme comparison
     names every typical circuit the library search finds for it."""
@@ -247,13 +244,13 @@ def check_block_circuits(name, blocks, patterns, implementations, key_blocks=(),
             continue
         pid, _, approach = ref.partition('#')
         if pid not in implementations:
-            errors.append('%s：功能块“%s”标注的典型电路 %s 在 references/knowledge/典型电路/ 里不存在' % (name, block, pid))
+            errors.append('%s：功能块“%s”标注的典型电路 %s 在知识框架的 知识/典型电路/ 里不存在' % (name, block, pid))
         elif approach not in implementations[pid]:
             errors.append('%s：功能块“%s”标注的实现方案“%s”不在典型电路 %s 里（有：%s）' % (name, block, approach, pid, '、'.join(sorted(implementations[pid]))))
     return errors
 
 
-def unexplained_none(scheme, circuits_dir=CIRCUITS_DIR):
+def unexplained_none(scheme, circuits_dir=None):
     """Module C3 gate: a block whose selected scheme names no typical circuit says, among its candidates, why each
     typical circuit the library search finds for it does not apply."""
     problems = []
@@ -271,7 +268,7 @@ def unexplained_none(scheme, circuits_dir=CIRCUITS_DIR):
     return problems
 
 
-def check_page_plan(plan, intent, visual, circuits_dir=CIRCUITS_DIR, root=None, scheme=None, explain_none=True, typical=True):
+def check_page_plan(plan, intent, visual, circuits_dir=None, root=None, scheme=None, explain_none=True, typical=True):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task.
     `typical=False` is C6 run alone on a given netlist (SKILL.md task C6.1): no block files, so no typical-circuit labels."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
@@ -959,7 +956,7 @@ def render(root, notes=None, title=None):
     else:
         problems += check_architecture(arch, {r.get('id') for r in closure.get('requirements') or [] if isinstance(r, dict)})
     if isinstance(audit.get('guidelines'), dict):
-        problems += ['共用层身份：' + e for e in guideline_criteria.identity_errors(audit['guidelines'])]
+        problems += ['设计准则身份：' + e for e in guideline_criteria.identity_errors(audit['guidelines'])]
     summary = data['summary.json'] or {}
     visual = data['visual-review.json'] or {}
 
@@ -1349,7 +1346,7 @@ def render(root, notes=None, title=None):
                 '这些应力在器件额定之内，但超过了本项目降额等级的降额值：合格但有风险（应力），不挡定稿（见 stress-spec.md）。', '']
         if severe:
             out += ['超幅较大的要挂未关闭的 design 或 validation 待办（design-closure.md“应力超幅”）：项目等级比 %s 级严时，'
-                    '应力超过 %s 级的降额值至少 P2；离额定的余量小于估算所需的余量（温度类 %g ℃，即共用层 G02 '
+                    '应力超过 %s 级的降额值至少 P2；离额定的余量小于估算所需的余量（温度类 %g ℃，即设计准则 G02 '
                     'est_junction_margin；其他应力取该检查的 uncertainty）为 P1。' % (
                         severe.get('loosest_level'), severe.get('loosest_level'), severe.get('junction_margin_c')), '']
         out += ['| 计算 | 位号 | 降额规则 | 应力 / 降额值 / 额定 | 改进 | 超幅待办 |', '|---|---|---|---|---|---|']

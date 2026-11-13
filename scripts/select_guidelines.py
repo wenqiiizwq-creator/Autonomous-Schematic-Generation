@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """列出适用设计准则（技能侧包装，输出与 `guideline_criteria.py select` 相同）。
 
-共用层 `guideline_criteria.py select` 的 --circuit-type/--device-kind 每个值要单独写一次选项；
+`guideline_criteria.py select` 的 --circuit-type/--device-kind 每个值要单独写一次选项；
 这里一个选项可接多个值，逗号或空格分隔都行（zsh 里不分词的 "$TYPES" 也能用），也可直接读设计记录的 guideline_scope。
 
     python3 select_guidelines.py --circuit-type POWER_PROTECTION DC_24V --device-kind tvs,mosfet --typed-only
@@ -25,7 +25,7 @@ def split_values(values):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--bundle', default=str(guideline_criteria.BUNDLE_PATH))
+    parser.add_argument('--bundle', default=None, help='准则汇编 JSON；不写则从知识框架的准则登记汇编')
     parser.add_argument('--scope', type=Path, help='requirements.json：取其 guideline_scope 的基线、电路类型、器件类别')
     parser.add_argument('--baseline')
     parser.add_argument('--circuit-type', nargs='+', action='extend', default=[])
@@ -47,8 +47,8 @@ def main(argv=None):
     if errors:
         print('\n'.join(errors), file=sys.stderr)
         return 1
-    # 共用层 CLI 也只做 argparse 后转调 select；保持同一输出格式
-    return guideline_criteria.main(['select', args.bundle] + (['--baseline', baseline] if baseline else [])
+    # guideline_criteria CLI 也只做 argparse 后转调 select；保持同一输出格式
+    return guideline_criteria.main(['select'] + ([args.bundle] if args.bundle else []) + (['--baseline', baseline] if baseline else [])
                                    + sum((['--circuit-type', t] for t in types), [])
                                    + sum((['--device-kind', k] for k in kinds), [])
                                    + (['--typed-only'] if args.typed_only else [])

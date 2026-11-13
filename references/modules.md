@@ -207,4 +207,4 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 python3 scripts/check_module.py return <设计目录> --from C4.2 --to C3.3 --reason "+3V3 的电流预算不够" --evidence "calc:C-3V3"
 ```
 
-它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）；查知识包的记录在同一文件的 `knowledge_lookups`，没查到的也抽进清单（见 [知识包](knowledge-package.md)）。
+它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）；查知识框架的记录在同一文件的 `knowledge_lookups`，没查到的也抽进清单（见 [知识框架的用法](knowledge-package.md)）。

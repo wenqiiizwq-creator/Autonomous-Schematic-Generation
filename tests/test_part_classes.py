@@ -1,5 +1,6 @@
 """Key and special parts carry an MPN, a datasheet and a kind declaration; common parts carry their ratings; a cited
 datasheet is the part's own (R7: 21 parts unnamed; P3 aligned with schematic-review, user 2026-10-26)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 from pathlib import Path
 import sys
 import tempfile
@@ -82,11 +83,11 @@ class ClassTests(unittest.TestCase):
         self.assertEqual(('tvs', None), pc.kind_of(part('D1', 'Device:D', Kind='tvs')))
         self.assertIn('不是器件类型', pc.kind_of(part('D1', 'Device:D', Kind='suppressor'))[1])
 
-    def test_kind_vocabulary_is_the_shared_vocabulary(self):
-        # 2026-11-02 (user: 词表进共用层): names and titles come from references/shared/vocabulary.json, not from SR's code
+    def test_kind_vocabulary_is_the_framework_vocabulary(self):
+        # names and titles come from the framework's 词表.json, not from SR's code
         import json
-        import guideline_criteria
-        shared = json.loads(guideline_criteria.VOCABULARY_PATH.read_text(encoding='utf-8'))['device_kinds']
+        import knowledge_source
+        shared = json.loads(knowledge_source.vocabulary_path().read_text(encoding='utf-8'))['device_kinds']
         self.assertEqual({x['name'] for x in shared}, set(pc.KINDS) - {'mechanical'})
         for item in shared:
             self.assertEqual(pc.KINDS[item['name']].title, item['title'], item['name'])

@@ -1,4 +1,5 @@
 """Hierarchical root with the System_block cover: named, attached flow lines; rewritten instance paths; native pass."""
+from framework_guard import skip_without_framework  # noqa: E402
 import json
 import subprocess
 import sys
@@ -133,6 +134,7 @@ class RootTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'no flow line reaches'):
                 r.write(Path(tmp) / 'p')
 
+    @skip_without_framework
     def test_native_project_passes_every_gate(self):
         cli = find_cli()
         if not cli:

@@ -3,7 +3,8 @@
 import re
 from pathlib import Path
 
-CIRCUITS_DIR = Path(__file__).resolve().parent.parent / 'references' / 'knowledge' / '典型电路'
+import knowledge_source
+
 CIRCUIT_TYPES_LINE = '电路类型：'
 IMPLEMENTATIONS = '## 实现方案'   # only the ### headings of this section are implementations
 RULES_BULLET = re.compile(r'^- \*\*落实规则\*\*：(.*)$')
@@ -16,10 +17,15 @@ def _names(rest):
     return [] if not rest or rest.startswith(NONE) else [n.strip() for n in re.split(r'[、,，]', rest) if n.strip()]
 
 
+def default_circuits_dir():
+    """知识框架的 知识/典型电路/（每次调用解析，没配框架时才在用到时报错）。"""
+    return knowledge_source.knowledge_dir() / '典型电路'
+
+
 def load(circuits_dir=None):
     """{typical circuit id: {title, function, circuit_types: [..] | None, implementations: {name: {criteria: [..] | None}}}};
     None means the optional rule line is absent; an explicit 无 is an empty list."""
-    circuits_dir = Path(CIRCUITS_DIR if circuits_dir is None else circuits_dir)   # resolved per call so tests can point elsewhere
+    circuits_dir = Path(default_circuits_dir() if circuits_dir is None else circuits_dir)   # resolved per call so tests can point elsewhere
     index = {}
     for md in sorted(circuits_dir.rglob('*.md')) if circuits_dir.is_dir() else []:
         if md.name == 'README.md':

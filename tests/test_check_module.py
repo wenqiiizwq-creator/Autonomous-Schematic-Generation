@@ -1,5 +1,6 @@
 """Capability modules (SKILL.md 架构 and P7, user 2026-11-09 “确认写入”): each module's gate checks only what it owns,
 and record/modules.json says when an upstream change leaves a module stale."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 from pathlib import Path
@@ -12,6 +13,7 @@ import block_circuits
 import blocks
 import architecture
 import check_module
+import knowledge_source
 from architecture import check_architecture
 from audit_design_closure import audit, sha256
 from current_record import make_current, split, write_record
@@ -267,8 +269,8 @@ class FingerprintTests(unittest.TestCase):
     def test_gate_needs_a_recorded_lookup_of_each_component_and_entries_that_exist(self):
         (self.record / 'modules.json').unlink()
         problems, _ = check_module.gate('C2', self.root)
-        self.assertEqual(2, len([p for p in problems if '没有查知识包' in p]), problems)
-        entry = next(p for p in sorted((check_module.KNOWLEDGE / '板级架构模式').glob('*.md')) if p.name != 'README.md')
+        self.assertEqual(2, len([p for p in problems if '没有查知识框架' in p]), problems)
+        entry = next(p for p in sorted((knowledge_source.knowledge_dir() / '板级架构模式').glob('*.md')) if p.name != 'README.md')
         args = ['lookup', str(self.root), '--task', 'C2.1', '--component', '板级架构模式', '--query', '电源树']
         self.assertEqual(1, check_module.main(args + ['--found', '板级架构模式/没有这一条.md']))
         self.assertEqual(1, check_module.main(args + ['--found', '接口约定/README.md']))      # another component's entry
@@ -278,20 +280,20 @@ class FingerprintTests(unittest.TestCase):
         self.assertEqual(([], []), check_module.gate('C2', self.root))
         data = json.loads((self.record / 'modules.json').read_text(encoding='utf-8'))
         self.assertEqual([['板级架构模式/' + entry.name], []], [r['found'] for r in data['knowledge_lookups']])
-        data['knowledge_lookups'][0]['found'] = ['板级架构模式/已删的条目.md']               # hand-written, not in the package
+        data['knowledge_lookups'][0]['found'] = ['板级架构模式/已删的条目.md']               # hand-written, not in the framework
         self.write('modules.json', data)
-        self.assertTrue(any('不是知识包' in p for p in check_module.gate('C2', self.root)[0]))
+        self.assertTrue(any('不是知识框架' in p for p in check_module.gate('C2', self.root)[0]))
 
 
     def test_c3_and_a_board_with_connectors_look_up_the_interface_conventions(self):
         (self.record / 'modules.json').unlink()
-        self.assertEqual(['C3 没有查知识包 接口约定/ 的记录（check_module.py lookup；没查到也记）'],
+        self.assertEqual(['C3 没有查知识框架 知识/接口约定/ 的记录（check_module.py lookup；没查到也记）'],
                          check_module.lookup_problems(self.root, 'C3'))
-        self.assertEqual(['失效与故障分析'], [p.split('知识包 ')[1].split('/')[0]
+        self.assertEqual(['失效与故障分析'], [p.split('知识框架 知识/')[1].split('/')[0]
                                           for p in check_module.lookup_problems(self.root, 'C5')])
         intent = {'components': [{'ref': 'J1', 'lib_id': 'Connector:Conn_01x02', 'fields': {}}]}
         self.write('electrical-intent.json', intent)
-        self.assertEqual(['失效与故障分析', '需求要素'], [p.split('知识包 ')[1].split('/')[0]
+        self.assertEqual(['失效与故障分析', '需求要素'], [p.split('知识框架 知识/')[1].split('/')[0]
                                                      for p in check_module.lookup_problems(self.root, 'C5')])
         self.assertEqual(0, check_module.main(['lookup', str(self.root), '--task', 'C3.3', '--component', '接口约定',
                                                '--query', '电源轨参数模板']))

@@ -47,7 +47,7 @@ class KnowledgeGapTests(unittest.TestCase):
         self.assertEqual(('C3', 'PSU：隔离电源'), (by['no_typical_circuit']['module'], by['no_typical_circuit']['item']))
         self.assertEqual(('C3', 'C3.3'), (by['returned_upstream']['module'], by['returned_upstream']['task']))
         self.assertEqual({'Q1', '控制器'}, {g['item'] for g in data['gaps'] if g['signal'] == 'user_overrode'})
-        # 知识包里哪个组件查不到什么（modules.json 的 knowledge_lookups 里 found 为空的）
+        # 知识框架里哪个组件查不到什么（modules.json 的 knowledge_lookups 里 found 为空的）
         self.assertEqual(('C4', 'C4.2', '计算方法：电荷泵飞电容取值'), (by['knowledge_missing']['module'],
                          by['knowledge_missing']['task'], by['knowledge_missing']['item']))
 
@@ -63,7 +63,7 @@ class KnowledgeGapTests(unittest.TestCase):
         self.assertIn('不一致', knowledge_gaps.stale(self.root))
         text = '\n'.join(knowledge_gaps.render(knowledge_gaps.extract(self.root, ['Y.pdf'])))
         self.assertIn('| 手册不在知识库 | 器件知识库 | 1 |', text)
-        self.assertIn('| 典型电路没有适用方案 | 知识包/典型电路 | 1 |', text)
+        self.assertIn('| 典型电路没有适用方案 | 知识框架/典型电路 | 1 |', text)
         self.assertIn('本版没有抽出知识缺口', '\n'.join(knowledge_gaps.render({'gaps': []})))
 
 

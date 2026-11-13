@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 from design_frontier import frontier
 import guideline_criteria
+import knowledge_source
 import object_matrices
 import operating_inputs
 import stress_check
@@ -90,14 +91,13 @@ DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 # Whether the user let ASG write a decided requirement into the original requirement files.
 FILE_DECISIONS = ('UPDATED', 'KEPT')
 # derating_version 1 (user 2026-10-27): stresses are checked against the I/II/III column of the shared derating spec.
-DERATING_RULES = Path(__file__).resolve().parent.parent / 'references' / 'shared' / 'derating-rules.json'
 DERATING_SOURCE = re.compile(r'^(req:|clarification:)(\S+)$')
 RATING_SOURCE = re.compile(r'^(datasheet:.+#p\d+|req:\S+|calc:\S+)$')
 # A resistor whose power matters carries its power rating (user 2026-10-27: 设计时考虑功耗，除阻值和精度外还要写上功率等级，
 # 作为给以后的约束). The same rule as schematic-review's passive_stress: the weakest part the written fields allow is half the
 # package's commodity floor (RG1005 0.032 W), derated by the level's RES-SMD-P value (with no level, the spec's
 # engineering value unset_level, in the rule library since 2026-11-02; user 2026-10-29: 删掉 2 倍，按降额规范取); a part without a footprint is judged as 0402.
-# The floors and the two judgement values are the shared layer's (commodity-floors.json; G02 weakest_share,
+# The floors and the two judgement values are the framework's (常规件最弱档.json; G02 weakest_share,
 # assumed_resistor_package), the same bytes SR's passive_stress reads (2026-11-02).
 RESISTOR_FLOORS = {p: v['power_w_70c'] for p, v in guideline_criteria.commodity_floors()['chip_resistor']['packages'].items()}
 WEAKEST_SHARE = guideline_criteria.engineering_value('weakest_share')
@@ -572,9 +572,9 @@ def audit_gaps(work, calculations, error):
             error('gap_reason_repeated', '、'.join(keys))
 
 
-def load_derating(path=DERATING_RULES):
-    """The shared derating spec: {rule id: rule} plus the spec itself."""
-    spec = json.loads(Path(path).read_text(encoding='utf-8'))
+def load_derating(path=None):
+    """The framework's derating spec (降额值.json): {rule id: rule} plus the spec itself."""
+    spec = json.loads(Path(path or knowledge_source.derating_path()).read_text(encoding='utf-8'))
     return {r['id']: r for r in spec['rules']}, spec
 
 
@@ -631,7 +631,7 @@ def implied_rule(c, comp, kind, rules, level):
 
 
 # A stress risk that is more than a deviation (Matrix R2, 2026-11-04: LM70880 estimated at 146 °C against 95 °C at level II and
-# 150 °C absolute, reported only as a pass with risk). Both thresholds come from the shared layer, none is set here:
+# 150 °C absolute, reported only as a pass with risk). Both thresholds come from the framework's design guidelines, none is set here:
 # for a project below the loosest level, beyond the loosest level's derated value (no level of the spec allows it); or closer to the rating than the margin
 # an estimate needs (temperatures: G02 est_junction_margin; other stresses: the check's own uncertainty).
 TEMPERATURE_MEASURES = ('max_c', 'tj_percent', 'margin_c')
@@ -1054,7 +1054,7 @@ def audit_carrier(spec, files, objects):
 
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None,
                      requirements=None, groups=None, intent=None, read=None, documents=True):
-    """guideline_version 1: the shared guideline rules this design triggers (references/shared/guideline-criteria.md).
+    """guideline_version 1: the shared guideline rules this design triggers (知识/设计准则/工具/包说明/guideline-criteria.md).
     Only the rules that rule out a scheme candidate, change a selection or enter a calculation are implemented one by one
     (user 2026-11-08: 按草案实施); the others are design actions followed without a citation each. The audit lists the
     applicable and the cited rules for review and raises nothing for an uncited one. A cited rule exists and applies; a
@@ -1574,7 +1574,7 @@ def audit_requirements(record, artifact_root, inputs=None):
             error('guideline_scope', problem)
         guideline_scope = 'CHECKED'
     elif guideline_criteria.load()['criteria']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
     status = 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS'
     return {'status': status, 'module': 'C1', 'scope': 'Requirements, clarifications, derating level and guideline scope',
             'errors': errors, 'pending': pending, 'counts': {k: len(v) for k, v in tables.items()},
@@ -1801,7 +1801,7 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
                                           intent=intent, read=lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
                                           and not Path(p).is_absolute() else None, documents=closure)
     elif guideline_criteria.load()['criteria']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（references/shared/guideline-criteria.md）')
+        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
     convergence = {'status': 'NOT_ASSESSED'}
     if 'convergence_version' in record:
         if record['convergence_version'] != 1:

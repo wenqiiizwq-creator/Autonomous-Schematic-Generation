@@ -1,4 +1,5 @@
 """SKILL.md and references use one word per concept (references/terminology.md, 技能文档用词; user:2026-10-26)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 from pathlib import Path
 import re
 import sys
@@ -27,9 +28,7 @@ def pattern(word):
 
 
 def skill_docs():
-    # The knowledge package (references/knowledge/) is installed read-only from the knowledge framework, not skill docs.
-    package = ROOT / 'references' / 'knowledge'
-    return [ROOT / 'SKILL.md'] + sorted(p for p in (ROOT / 'references').rglob('*.md') if p != TERMS and package not in p.parents)
+    return [ROOT / 'SKILL.md'] + sorted(p for p in (ROOT / 'references').rglob('*.md') if p != TERMS)
 
 
 class TerminologyTests(unittest.TestCase):

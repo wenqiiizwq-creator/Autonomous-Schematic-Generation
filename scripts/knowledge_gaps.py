@@ -3,7 +3,7 @@
 
   python3 knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]
 
-从各模块的产品里抽出设计中知识不够的地方，不手写：知识包（references/knowledge/）哪个组件查不到什么
+从各模块的产品里抽出设计中知识不够的地方，不手写：知识框架（知识/）哪个组件查不到什么
 （典型电路没有适用方案、modules.json 的 knowledge_lookups 里没查到的）、候选来源未证实、手册不在知识库、
 计算依据是典型值或估计、外部资料待办、回到上游重做、用户没有采纳 ASG 的建议。清单只如实列出，不拦交付；
 能力缺陷的归纳和改进在评测侧做。格式见 references/delivery-report.md。
@@ -17,12 +17,12 @@ FILE = 'knowledge-gaps.json'
 SCHEMA_VERSION = 1
 # signal → (label, the knowledge carrier it points at)
 SIGNALS = {
-    'no_typical_circuit': ('典型电路没有适用方案', '知识包/典型电路'),
-    'knowledge_missing': ('知识包查不到', '知识包（组件见对象）'),
-    'unverified_candidate': ('候选来源未证实', '知识包/典型电路'),
+    'no_typical_circuit': ('典型电路没有适用方案', '知识框架/典型电路'),
+    'knowledge_missing': ('知识框架查不到', '知识框架（组件见对象）'),
+    'unverified_candidate': ('候选来源未证实', '知识框架/典型电路'),
     'datasheet_not_in_library': ('手册不在知识库', '器件知识库'),
-    'weak_basis': ('计算依据是典型值、估计或未规定', '知识包/器件参数'),
-    'external_item': ('外部资料待办', '知识包/器件参数'),
+    'weak_basis': ('计算依据是典型值、估计或未规定', '知识框架/器件参数'),
+    'external_item': ('外部资料待办', '知识框架/器件参数'),
     'returned_upstream': ('回到上游重做', '上游模块'),
     'user_overrode': ('用户没有采纳 ASG 的建议', '判断依据'),
 }

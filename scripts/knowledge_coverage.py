@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""知识到关卡的对照表：知识包里每类可核对的内容有多少项，C1–C5 的关卡现在核对到哪一步，还差什么。
+"""知识到关卡的对照表：知识框架里每类可核对的内容有多少项，C1–C5 的关卡现在核对到哪一步，还差什么。
 
   python3 knowledge_coverage.py            打印对照表
-  python3 knowledge_coverage.py --write    写进 docs/knowledge-coverage.md（每次同步知识后重写）
+  python3 knowledge_coverage.py --write    写进 docs/knowledge-coverage.md（知识框架更新后重写）
 
-条数从 references/knowledge/ 的条目里数出来；“关卡现在核对什么”一列是本文件的 KINDS 表，按关卡代码的实际行为写：
+条数从知识框架 知识/ 下七个组件的条目里数出来；“关卡现在核对什么”一列是本文件的 KINDS 表，按关卡代码的实际行为写：
 给某类内容加了关卡，就改这里的 checked，对照表里它就不再算缺口。
 """
 import re
@@ -12,9 +12,9 @@ import sys
 from pathlib import Path
 
 import knowledge_checklist as checklist
+import knowledge_source
 
 ROOT = Path(__file__).resolve().parent.parent
-KNOWLEDGE = ROOT / 'references' / 'knowledge'
 OUT = ROOT / 'docs' / 'knowledge-coverage.md'
 ROW = re.compile(r'^\|(?!\s*-{3})')            # a table line that is not the |---| separator
 LOOKUP = '只核对查过这个组件（`knowledge_lookups` 有记录、所记条目存在）'
@@ -97,7 +97,7 @@ KINDS = (
 
 
 def entries(folder):
-    return [p for p in sorted((KNOWLEDGE / folder).rglob('*.md')) if p.name != 'README.md']
+    return [p for p in sorted((knowledge_source.knowledge_dir() / folder).rglob('*.md')) if p.name != 'README.md']
 
 
 def measure():
@@ -109,11 +109,11 @@ def measure():
     return out
 
 
-def render(rows, version):
+def render(rows, label):
     open_items = sum(r[3] for r in rows if not r[6])
     lines = ['# 知识到关卡的对照表', '',
-             '由 `scripts/knowledge_coverage.py --write` 生成，依据知识框架 %s。每次同步知识后重写；给某类内容加了关卡，改脚本里的 `KINDS`。' % version, '',
-             '“项数”是知识包里这类内容的条数（从条目的表格行、列表项、小标题数出来）。“核对到内容”为“否”的，'
+             '由 `scripts/knowledge_coverage.py --write` 生成，依据%s。知识框架更新后重写；给某类内容加了关卡，改脚本里的 `KINDS`。' % label, '',
+             '“项数”是知识框架里这类内容的条数（从条目的表格行、列表项、小标题数出来）。“核对到内容”为“否”的，'
              '关卡只知道设计时查过这个组件，不知道查到的内容有没有用上：这些就是技能还没吃进去的知识，共 %d 项（%d 类里的 %d 类）。'
              % (open_items, len(rows), sum(not r[6] for r in rows)), '',
              '| 组件 | 内容 | 条目数 | 项数 | 哪项任务用 | 关卡现在核对什么 | 核对到内容 |', '|---|---|---|---|---|---|---|']
@@ -126,8 +126,7 @@ def main(argv=None):
     if argv not in ([], ['--write']):
         print(__doc__)
         return 2
-    import knowledge_package
-    text = render(measure(), knowledge_package.manifest()['knowledge_version'])
+    text = render(measure(), knowledge_source.label())
     if argv:
         OUT.write_text(text, encoding='utf-8')
     print(text, end='')

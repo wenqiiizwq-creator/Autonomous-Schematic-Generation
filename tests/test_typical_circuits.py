@@ -1,4 +1,5 @@
 """典型电路选择资料及来源检查；不以库声明强制设计准则范围。"""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 import sys
@@ -22,7 +23,7 @@ CIRCUITS = typical_circuits.load()
 class PatternFileTests(unittest.TestCase):
     def test_every_pattern_declares_vocabulary_circuit_types(self):
         names = set(guideline_criteria.vocabulary()['vocabulary']['circuit_types'])
-        self.assertEqual(len(CIRCUITS), 76)   # knowledge package 1.0.2, without README.md
+        self.assertTrue(CIRCUITS)   # without README.md
         for pid, info in CIRCUITS.items():
             self.assertIsNotNone(info['circuit_types'], '%s 缺 电路类型： 一行（没有对应类型写 无）' % pid)
             self.assertEqual(set(), set(info['circuit_types']) - names, (pid, info['circuit_types']))
@@ -40,7 +41,6 @@ class PatternFileTests(unittest.TestCase):
     def test_the_swd_port_claims_the_g09_debug_rules_it_puts_into_practice(self):
         # G09 定稿接入项（2026-11-05）：swd-debug 的“落实规则：无”换成它真实做到的 G09 规则；上下拉（G09-011）、
         # 手接静电（G09-026）没有写进做法，不列。
-        # 知识包 1.0.0 改写了方案名并补了上下拉、手接静电等规则。
         rules = CIRCUITS['swd-debug']['implementations']['10 针 1.27 mm 排针（SWD 引脚排列）']['criteria']
         self.assertTrue({'G09-010', 'G09-012', 'G09-013', 'G09-015'} <= set(rules), rules)
 
@@ -117,7 +117,7 @@ class PatternClosureTests(unittest.TestCase):
 
     def run_audit(self):
         with mock.patch.object(guideline_criteria, 'load', lambda *args: TEST_LIBRARY), \
-                mock.patch.object(typical_circuits, 'CIRCUITS_DIR', self.patterns):
+                mock.patch.object(typical_circuits, 'default_circuits_dir', lambda: self.patterns):
             return audit(self.record, self.intent, self.root)
 
     def codes(self, result):

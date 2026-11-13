@@ -1,6 +1,7 @@
 """The derating spec (I/II/III levels from T/CPSS 1013, GJB/Z 35 and T/CPSS 1006) is one file shared with
-schematic-review (references/shared, validated locally by test_installed_release): every rule names a known kind,
+schematic-review (the knowledge framework's 降额值.json, read through knowledge_source): every rule names a known kind,
 a measure, a condition and a cited page, and the levels run from most to least derating (user 2026-10-27)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import hashlib
 import json
 import re
@@ -12,9 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from schematic_layout import part_classes as pc
 
-JSON_PATH = ROOT / 'references' / 'shared' / 'derating-rules.json'
-MD_PATH = ROOT / 'references' / 'shared' / 'derating-rules.md'
 import guideline_criteria
+import knowledge_source
+JSON_PATH = knowledge_source.derating_path()
+MD_PATH = knowledge_source.derating_doc_path()
 LIBRARY = Path.home() / 'Documents' / '知识库' / 'HardwareWiki'
 SPEC = json.loads(JSON_PATH.read_text(encoding='utf-8'))
 LEVELS = ('I', 'II', 'III')
@@ -27,7 +29,7 @@ FALLING = {'margin_c', 'min_hours', 'min_years'}
 class DeratingSpecTests(unittest.TestCase):
     def test_header(self):
         self.assertEqual(SPEC['levels'], list(LEVELS))
-        # NB/T 10297 is cited for comparison only and gives no default value (derating-rules.md, NB/T 10297 的差异).
+        # NB/T 10297 is cited for comparison only and gives no default value (降额规范.md, NB/T 10297 的差异).
         self.assertEqual(sorted(SPEC['priority']), sorted(set(SPEC['sources']) - {'nbt10297'}))
         self.assertEqual(SPEC['priority'][0], 'cpss1013')
         self.assertTrue({r['source'] for r in SPEC['rules']} <= set(SPEC['priority']))

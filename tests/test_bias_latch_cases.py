@@ -1,6 +1,9 @@
 """Synthetic review cases; no delivered schematic or vendor PDF fixture."""
-import unittest,math,pathlib
+from framework_guard import skip_without_framework  # noqa: E402
+import unittest,math,pathlib,sys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
+import knowledge_source
 class ReviewedCases(unittest.TestCase):
  def test_line_threshold_must_cover_legal_corner(self):
   divider=lambda bottom:264*math.sqrt(2)*bottom/(6e6+bottom)
@@ -20,9 +23,10 @@ class ReviewedCases(unittest.TestCase):
  def test_mov_prefix_needs_specific_identity(self):
   identity=lambda r:'varistor' if r.startswith('RV') else 'resistor'
   self.assertEqual(identity('RV101'),'varistor')
+ @skip_without_framework
  def test_published_implementations_and_origins(self):
-  # 知识包 1.0.0：原条目拆分成指路条目，四种方案并入别的典型电路，原审查案例写在“内容去向”。
-  folder=ROOT/'references/knowledge/典型电路'
+  # 原条目拆分成指路条目，四种方案并入别的典型电路，原审查案例写在“内容去向”。
+  folder=knowledge_source.knowledge_dir()/'典型电路'
   text=next(folder.rglob('reviewed-bias-and-latch.md')).read_text()
   for key in ['F-001','F-005','F-006']:self.assertIn(key,text)
   self.assertEqual(sum(l.startswith('### ') for l in text.splitlines()),0)

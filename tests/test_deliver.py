@@ -1,4 +1,5 @@
 """deliver.py runs the delivery steps in order, goes on only on a known good or design-state status, and writes evidence from its own run."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import hashlib
 import json
 from pathlib import Path

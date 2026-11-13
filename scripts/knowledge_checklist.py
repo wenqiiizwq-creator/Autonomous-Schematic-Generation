@@ -4,14 +4,14 @@
   python3 knowledge_checklist.py build <设计目录>     按当前记录重写 record/knowledge-checklist.json 的清单，保留已写的处置
   python3 knowledge_checklist.py check <设计目录> [--module C1|C4] [--block <块>]
 
-清单不手抄，由本工具从知识包（references/knowledge/）的条目里抽：
+清单不手抄，由本工具从知识框架（知识/）的条目里抽：
   C1  任务 C1.1 查到的需求要素条目（查阅记录里 `需求要素/端口/`、`需求要素/全板/` 下的）：每个条件一项
   C4  各功能块选定的典型电路实现方案（块文件 schemes[].selected.circuit）：必算项、必需外围、已知坑各一项；
       任务 C4.x 查到的计算方法条目：取值顺序每步一项、算完之后的核对每条一项
 每项写 `disposition`：`covered`（`where` 写落实在哪）或 `not_applicable`（`reason` 写理由）。`where` 是列表：
   条件 → 需求或澄清的编号；必算项、取值步骤、算完核对 → design-closure.json 的计算编号；
   必需外围 → 块设计里的位号；已知坑 → 怎样避开的说明。
-条目改了（知识同步后文字变了）对应项的编号就变，原处置作废，重跑 build 后补写。关卡是 check_module.py 的 C1、C4。
+条目改了（框架里的文字变了）对应项的编号就变，原处置作废，重跑 build 后补写。关卡是 check_module.py 的 C1、C4。
 """
 import argparse
 import hashlib
@@ -20,7 +20,8 @@ import re
 import sys
 from pathlib import Path
 
-KNOWLEDGE = Path(__file__).resolve().parent.parent / 'references' / 'knowledge'
+import knowledge_source
+
 FILE = 'knowledge-checklist.json'
 SCHEMA_VERSION = 1
 SCHEME_KINDS = ('必算项', '必需外围', '已知坑')
@@ -123,11 +124,11 @@ def lookups(record, module, component):
     rows = load(record / 'modules.json').get('knowledge_lookups') or []
     found = [e for r in rows if isinstance(r, dict) and str(r.get('task') or '').startswith(module + '.')
              and r.get('component') == component for e in r.get('found') or [] if isinstance(e, str)]
-    return sorted(set(e for e in found if Path(e).name != 'README.md' and (KNOWLEDGE / e).is_file()))
+    return sorted(set(e for e in found if Path(e).name != 'README.md' and (knowledge_source.knowledge_dir() / e).is_file()))
 
 
 def circuit_file(stem):
-    hits = sorted((KNOWLEDGE / '典型电路').rglob(stem + '.md'))
+    hits = sorted((knowledge_source.knowledge_dir() / '典型电路').rglob(stem + '.md'))
     return hits[0] if len(hits) == 1 else None
 
 
@@ -137,7 +138,7 @@ def required(record, module, block=None):
     if module == 'C1':
         for entry in lookups(record, 'C1', '需求要素'):
             if entry.startswith(REQUIREMENT_FOLDERS):
-                rows += keyed({'entry': entry}, requirement_items((KNOWLEDGE / entry).read_text(encoding='utf-8')))
+                rows += keyed({'entry': entry}, requirement_items((knowledge_source.knowledge_dir() / entry).read_text(encoding='utf-8')))
         return rows, problems
     folder = record / 'block-circuits'
     for path in sorted(folder.glob('*.json')) if folder.is_dir() else []:
@@ -151,12 +152,12 @@ def required(record, module, block=None):
             md = circuit_file(stem)
             pairs = scheme_items(md.read_text(encoding='utf-8'), name) if md else None
             if pairs is None:
-                problems.append('块 %s 选定的 %s 在知识包的典型电路里找不到' % (path.stem, circuit))
+                problems.append('块 %s 选定的 %s 在知识框架的典型电路里找不到' % (path.stem, circuit))
                 continue
-            rows += keyed({'block': path.stem, 'entry': md.relative_to(KNOWLEDGE).as_posix(), 'scheme': name}, pairs)
+            rows += keyed({'block': path.stem, 'entry': md.relative_to(knowledge_source.knowledge_dir()).as_posix(), 'scheme': name}, pairs)
     if not block:
         for entry in lookups(record, 'C4', '计算方法'):
-            rows += keyed({'entry': entry}, method_items((KNOWLEDGE / entry).read_text(encoding='utf-8')))
+            rows += keyed({'entry': entry}, method_items((knowledge_source.knowledge_dir() / entry).read_text(encoding='utf-8')))
     return rows, problems
 
 

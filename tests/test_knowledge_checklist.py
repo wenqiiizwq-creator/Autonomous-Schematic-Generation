@@ -8,6 +8,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import knowledge_checklist as k
+import knowledge_source
 
 REQUIREMENT = '''# 口
 
@@ -80,7 +81,7 @@ def design(tmp_path, monkeypatch):
     for name, body in (('需求要素/端口/口.md', REQUIREMENT), ('典型电路/电源变换/reg.md', CIRCUIT), ('计算方法/电源变换/算.md', METHOD)):
         (knowledge / name).parent.mkdir(parents=True, exist_ok=True)
         (knowledge / name).write_text(body, encoding='utf-8')
-    monkeypatch.setattr(k, 'KNOWLEDGE', knowledge)
+    monkeypatch.setattr(knowledge_source, 'knowledge_dir', lambda: knowledge)
     record = tmp_path / 'design' / 'record'
     (record / 'block-circuits').mkdir(parents=True)
     (record / 'blocks').mkdir()
@@ -137,18 +138,22 @@ def test_the_gate_wants_every_item_answered_with_records_that_exist(design):
 def test_a_changed_entry_voids_the_old_answer_and_a_lost_scheme_is_reported(design):
     k.build(design)
     answer(design, 'C1', lambda row: {'disposition': 'covered', 'where': ['REQ-001']})
-    path = k.KNOWLEDGE / '需求要素/端口/口.md'
+    path = knowledge_source.knowledge_dir() / '需求要素/端口/口.md'
     path.write_text(path.read_text(encoding='utf-8').replace('线缆是否穿出外壳', '线缆是否穿出外壳或机柜'), encoding='utf-8')
     assert k.problems(design, 'C1') == ['record/knowledge-checklist.json 的 C1 缺 1 项（知识条目或选定方案变了）：重跑 knowledge_checklist.py build 后补写处置']
     block = design / 'record' / 'block-circuits' / 'PSU.json'
     block.write_text(block.read_text(encoding='utf-8').replace('方案甲', '方案丙'), encoding='utf-8')
-    assert k.problems(design, 'C4') [0] == '块 PSU 选定的 reg#方案丙 在知识包的典型电路里找不到'
+    assert k.problems(design, 'C4') [0] == '块 PSU 选定的 reg#方案丙 在知识框架的典型电路里找不到'
 
 
-def test_every_installed_entry_of_the_checked_kinds_yields_items():
+def test_every_framework_entry_of_the_checked_kinds_yields_items():
     import typical_circuits
+    try:
+        knowledge_source.framework_root()
+    except knowledge_source.KnowledgeFrameworkNotFound as exc:
+        pytest.skip('没有配置知识框架：%s' % exc)
     for folder in k.REQUIREMENT_FOLDERS:
-        for path in sorted((ROOT / 'references/knowledge' / folder).glob('*.md')):
+        for path in sorted((knowledge_source.knowledge_dir() / folder).glob('*.md')):
             assert path.name == 'README.md' or k.requirement_items(path.read_text(encoding='utf-8')), path.name
     for stem, info in typical_circuits.load().items():
         body = k.circuit_file(stem).read_text(encoding='utf-8')

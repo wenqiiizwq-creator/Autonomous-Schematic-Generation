@@ -1,6 +1,7 @@
 """Tasks C1.1 and C5.2 (user 2026-10-31: 请开始执行这个方案): the design declares its guideline scope, cites the shared
 guideline rules it meets in its calculations and work items, holds the others not applicable with a reason, and hands
 a rule closing after the schematic downstream with a work item. An empty rule library asks nothing."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 import os
@@ -15,7 +16,6 @@ import guideline_criteria
 from audit_design_closure import audit, sha256
 
 ASG = Path(__file__).resolve().parents[1]
-SHARED = guideline_criteria.SHARED_FILES
 
 
 def setUpModule():
@@ -117,7 +117,7 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertEqual(result['guidelines']['covered']['G04-001'], ['component:U1'])
 
     def test_the_six_external_interface_types_select_their_rules(self):
-        real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+        real = guideline_criteria.load()
         for name in ('DC_48V', 'AC_MAINS', 'INDUSTRIAL_DI', 'POE_PD', 'VEHICLE_28V', 'SHIP_AC'):
             self.assertIn(name, real['vocabulary']['circuit_types'])
         none = guideline_criteria.select(real, 'industrial_telecom', [], [])
@@ -125,7 +125,7 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertGreater(len(poe), len(none))
 
     def test_dc_24v_selects_its_own_rules_and_no_telecom_48v_rule(self):
-        real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+        real = guideline_criteria.load()
         ids = lambda types: {r['id'] for r in guideline_criteria.select(real, 'industrial_telecom', types, [])}
         added = ids(['DC_24V']) - ids([])
         self.assertEqual(added, {'G01-051', 'G01-052', 'G01-053', 'G01-054',
@@ -135,7 +135,7 @@ class GuidelineClosureTests(unittest.TestCase):
     def test_library_1_7_0_board_identity_rules_and_usb_port_rules(self):
         # user 2026-11-02: 按草案入库 — the nine rules drafted from the 86 open-hardware boards are in the library;
         # the identity/placeholder rules apply board-wide, the Type-C CC rule only with USB.
-        real = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+        real = guideline_criteria.load()
         ids = lambda types: {r['id'] for r in guideline_criteria.select(real, 'industrial_telecom', types, [])}
         new = {'G02-036', 'G02-037', 'G02-038', 'G02-039', 'G03-059', 'G04-101', 'G04-102', 'G04-103', 'G04-104'}
         self.assertTrue(new <= {r['id'] for r in real['criteria']})
@@ -171,19 +171,21 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertNotIn('guideline_scope_missing', self.codes(result))
         self.assertEqual(result['guidelines'], 'NOT_CHECKED')
 
-    def test_the_audit_binds_the_shared_layer_it_read(self):
+    def test_the_audit_binds_the_guideline_data_it_read(self):
         self.record['guideline_scope']['device_kinds'] = ['fuse']
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G05-001', 'reason': '输入由上级设备熔断'}]
         result = self.run_audit()
-        self.assertEqual(result['guidelines']['fingerprint_format'], 'shared-paths-sha256-v2')
+        self.assertEqual(result['guidelines']['fingerprint_format'], 'framework-paths-sha256-v1')
         self.assertEqual(result['guidelines']['shared_sha256'], guideline_criteria.shared_versions(bundle=LIBRARY)['shared_sha256'])   # binds the actual test input
         self.assertEqual(result['guidelines']['covered']['G04-001'], ['calc:C1'])
         self.assertEqual(result['guidelines']['not_applicable']['G05-001'], '输入由上级设备熔断')
 
-    def test_the_shared_directory_holds_exactly_the_shared_files(self):
-        listed = {Path(n).name for n in SHARED if n.startswith('references/shared/')}
-        self.assertEqual(sorted(p.name for p in guideline_criteria.SHARED_DIR.iterdir() if p.name != '__pycache__'), sorted(listed))
-        self.assertRegex(guideline_criteria.shared_label(), r'^共用层 [0-9a-f]{12} \[shared-paths-sha256-v2\]，设计准则库 \S+，降额 v\d+$')
+    def test_the_identity_names_the_framework_files_and_the_label_is_readable(self):
+        files = guideline_criteria.shared_files()
+        self.assertTrue(all(len(digest) == 64 for digest in files.values()))
+        self.assertEqual(sorted(n for n in files if n.startswith('scripts/')), ['scripts/guideline_criteria.py', 'scripts/stress_check.py'])
+        self.assertTrue(any(n.endswith('/降额值.json') for n in files) and any(n.endswith('/词表.json') for n in files))
+        self.assertRegex(guideline_criteria.shared_label(), r'^设计准则 [0-9a-f]{12}（\d{4}-\d{2}-\d{2} 读取），降额 v\d+$')
 
     def batch_library(self):
         return library(card('G01-001'), card('G04-001', applies_when={'circuit_types': ['RS485']}),
@@ -247,11 +249,6 @@ class GuidelineClosureTests(unittest.TestCase):
                                       card('G08-001', coverage='project_input'), card('G08-002', coverage='item')), [])
         self.assertEqual(len(field_errors(card('G07-001', coverage='batch'))), 1)
         self.assertEqual(len(field_errors(card('G07-001', coverage='handoff'))), 1)   # closing_stage is schematic
-
-    def test_local_installed_release_matches_its_manifest(self):
-        manifest = guideline_criteria.verify_installed(ASG)
-        self.assertEqual(manifest['payload'], guideline_criteria.shared_files(ASG))
-        self.assertEqual(manifest['fingerprint'], guideline_criteria.shared_digest(ASG))
 
 
 if __name__ == '__main__':

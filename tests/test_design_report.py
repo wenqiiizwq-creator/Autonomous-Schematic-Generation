@@ -1,4 +1,5 @@
 """One generated report plus a small fixed folder; numbers come only from the records."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import json
 import os
 from pathlib import Path
@@ -356,9 +357,9 @@ class DesignReportTests(unittest.TestCase):
                                    'identity': {}}
         self.d.write('design-closure-audit.json', audit_out)
         with mock.patch('render_design_report.guideline_criteria.identity_errors', lambda found: []), \
-                mock.patch('render_design_report.guideline_criteria.shared_label', lambda identity=None: '共用层 x'):
+                mock.patch('render_design_report.guideline_criteria.shared_label', lambda identity=None: '设计准则 x'):
             text, _ = self.d.report()
-        self.assertIn('- **共用规范**：共用层 x，适用 2 条，其中计算、选型、待办或证据引用 2 条，写明不适用 0 条；'
+        self.assertIn('- **共用规范**：设计准则 x，适用 2 条，其中计算、选型、待办或证据引用 2 条，写明不适用 0 条；'
                       '只有淘汰候选方案、改变选型或进入计算的准则逐条落实。', text)
         self.assertIn('逐条在 record/design-closure-audit.json 的 guidelines', text)
         for heading in ('## 共用设计准则覆盖', '## 下游约束', '## 由自动检查覆盖', '## 由设计文档整组覆盖'):
@@ -716,7 +717,7 @@ class DesignReportTests(unittest.TestCase):
         page['circuits'] = {'稳压': 'no-such#做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
-        self.assertIn('board.kicad_sch：功能块“稳压”标注的典型电路 no-such 在 references/knowledge/典型电路/ 里不存在', problems)
+        self.assertIn('board.kicad_sch：功能块“稳压”标注的典型电路 no-such 在知识框架的 知识/典型电路/ 里不存在', problems)
         page['circuits'] = {'稳压': 'output-filter-storage#不存在的做法'}
         self.d.write('page-plan.json', plan)
         _, problems = self.d.report()
@@ -954,9 +955,9 @@ class PackDesignTests(unittest.TestCase):
         self.assertEqual(manifest['inputs']['requirements']['kind'], 'directory')
         self.assertIn('原理图/schematic.pdf', manifest['packed'])
         self.assertTrue((self.d.record / 'manifest.json').is_file())
-        release = json.loads((Path(__file__).resolve().parents[1] / 'knowledge-sync.json').read_text(encoding='utf-8'))
-        self.assertEqual({'knowledge_version': release['knowledge_version'], 'fingerprint': release['fingerprint']},
-                         manifest['knowledge_release'])
+        import knowledge_source
+        self.assertEqual(sorted(manifest['knowledge_release']), ['fingerprint', 'read_date'])
+        self.assertEqual(manifest['knowledge_release']['fingerprint'], knowledge_source.identity()['fingerprint'])
 
     def test_extra_files_and_history_fail_but_a_log_does_not(self):
         (self.d.root / 'README.md').write_text('x')

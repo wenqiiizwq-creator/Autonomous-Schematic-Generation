@@ -2,6 +2,7 @@
 on it whose margin is smaller than that passes with a margin risk and an improvement, like a stress risk; a derating
 check's margin is taken to its rating (R12). A calculation that fails even in its best case carries a design change
 candidate for the user to approve, and may list what the result is the sum of."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 from pathlib import Path

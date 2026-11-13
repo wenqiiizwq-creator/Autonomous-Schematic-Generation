@@ -1,4 +1,6 @@
-"""M4: engineering identity, document integrity, historical semantics and actual alternate input."""
+"""Guideline identity: what the fingerprint covers, that a non-current record is rejected, and that an actual alternate
+input binds its real bytes. Tests that change files use a small framework copied from the configured one."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import hashlib
 import json
@@ -13,107 +15,95 @@ if ROOT.name == 'scripts':
     ROOT = ROOT.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 import guideline_criteria as g
+import knowledge_source as ks
 
 
 @pytest.fixture
-def package(tmp_path):
-    for name in g.SHARED_FILES + ('shared-release.json',):
-        dest = tmp_path / name
+def package(tmp_path, monkeypatch):
+    """A framework holding only the files the identity covers, and a skill folder holding the two scripts it covers."""
+    framework, skill = tmp_path / 'framework', tmp_path / 'skill'
+    real = ks.framework_root()
+    for name in g.shared_files():
+        source = ROOT / name if name.startswith('scripts/') else real / name
+        dest = (skill if name.startswith('scripts/') else framework) / name
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ROOT / name, dest)
-    manifest_path = tmp_path / 'shared-release.json'
-    manifest = json.loads(manifest_path.read_text())
-    manifest['payload'] = g.shared_files(tmp_path)
-    manifest['fingerprint'] = g.shared_digest(tmp_path, manifest['fingerprint_format'])
-    manifest_path.write_text(g.dump(manifest))
-    return tmp_path
+        shutil.copyfile(source, dest)
+    for name in ('知识', '索引'):
+        (framework / name).mkdir(exist_ok=True)
+    monkeypatch.setenv(ks.ENV_VAR, str(framework))
+    monkeypatch.setattr(g, 'SKILL_ROOT', skill)
+    return framework
 
 
-def test_only_maintenance_prose_changes_neither_engineering_identity_nor_version(package):
-    before = g.shared_versions(package)
-    for name in ('shared-layer.md', 'guideline-criteria.md'):
-        path = package / 'references/shared' / name
-        path.write_text(path.read_text() + '\n合成维护历史补充。\n')
-    assert g.shared_versions(package) == before
-    assert g.identity_errors(before, package) == []
-    # Excluded prose is still protected by the full manifest, independently of engineering identity.
-    with pytest.raises(ValueError, match='installed sha256 mismatch'):
-        g.verify_installed(package)
+def test_only_prose_outside_the_controlled_files_changes_nothing(package):
+    before = g.shared_versions()
+    (package / '知识/设计准则/维护').mkdir(parents=True)
+    (package / '知识/设计准则/维护/说明.md').write_text('合成维护历史补充。\n')
+    (package / '知识/设计准则/README.md').write_text('合成说明。\n')
+    assert g.shared_versions() == before
+    assert g.identity_errors(before) == []
 
 
-@pytest.mark.parametrize('name', [
-    'references/shared/guideline-criteria.json', 'references/shared/vocabulary.json',
-    'references/shared/derating-rules.json', 'references/shared/derating-rules.md',
-    'references/shared/commodity-floors.json', 'references/shared/stress-spec.md',
-    'scripts/guideline_criteria.py', 'scripts/stress_check.py'])
-def test_each_controlled_engineering_input_changes_fingerprint(package, name):
-    before = g.shared_digest(package)
-    path = package / name
-    if name.endswith('guideline-criteria.json'):
-        library = json.loads(path.read_text())
-        library['engineering_values']['assumed_resistor_package']['value'] = '0201'
-        path.write_text(g.dump(library))
-    elif name.endswith('stress-spec.md'):
-        path.write_text(path.read_text() + '\n合成判法变化：边界相等也记失败。\n')
-    elif name.endswith('.py'):
-        path.write_text(path.read_text() + '\nSYNTHETIC_ALGORITHM = lambda value: value + 1\n')
-    else:
-        path.write_bytes(path.read_bytes() + b'\ncontrolled change')
-    assert g.shared_digest(package) != before
+def test_each_controlled_input_changes_the_fingerprint(package):
+    names = sorted(g.shared_files())
+    assert any(n.endswith('降额值.json') for n in names) and any(n.endswith('应力判法.md') for n in names)
+    for name in names:
+        path = (g.SKILL_ROOT if name.startswith('scripts/') else package) / name
+        before_bytes = path.read_bytes()
+        before = g.shared_digest()
+        path.write_bytes(before_bytes + b'\n')      # JSON stays valid; scripts and prose just end with a blank line
+        try:
+            assert g.shared_digest() != before, name
+        finally:
+            path.write_bytes(before_bytes)
+        assert g.shared_digest() == before, name
 
 
-def test_v2_is_a_sorted_relative_path_hash_map_not_implicit_list_order(package, monkeypatch):
-    files = g.shared_files(package)
-    names = {'references/shared/guideline-criteria.json', 'references/shared/vocabulary.json',
-             'references/shared/derating-rules.json', 'references/shared/derating-rules.md',
-             'references/shared/commodity-floors.json', 'references/shared/stress-spec.md',
-             'scripts/guideline_criteria.py', 'scripts/stress_check.py'}
-    expected = hashlib.sha256(json.dumps({n: files[n] for n in names}, sort_keys=True,
-                                         separators=(',', ':')).encode()).hexdigest()
-    assert g.shared_digest(package) == expected
-    monkeypatch.setattr(g, 'SHARED_FILES', tuple(reversed(g.SHARED_FILES)))
-    monkeypatch.setattr(g, 'ENGINEERING_FILES', tuple(reversed(g.ENGINEERING_FILES)))
-    assert g.shared_digest(package) == expected
+def test_the_fingerprint_is_a_sorted_relative_path_hash_map(package):
+    files = g.shared_files()
+    assert all(not Path(n).is_absolute() for n in files)
+    expected = hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    assert g.shared_digest() == expected
     # Path names themselves bind the file role (even if the multiset of hashes is unchanged).
-    files['scripts/guideline_criteria.py'], files['scripts/stress_check.py'] = files['scripts/stress_check.py'], files['scripts/guideline_criteria.py']
-    assert g._engineering_digest(files) != expected
+    swapped = dict(files)
+    swapped['scripts/guideline_criteria.py'], swapped['scripts/stress_check.py'] = files['scripts/stress_check.py'], files['scripts/guideline_criteria.py']
+    assert g._digest(swapped) != expected
 
 
-def test_old_format_records_and_installs_are_rejected_not_promoted(package):
-    """v1 and older packages are deleted; any non-current record must be regenerated, never migrated."""
-    current = g.shared_versions(package)
-    for fmt in (None, 'shared-files-sha256-lines-v1'):
+def test_old_format_records_are_rejected_not_promoted(package):
+    """Any non-current record must be regenerated, never migrated."""
+    current = g.shared_versions()
+    for fmt in (None, 'shared-paths-sha256-v2'):
         old = dict(current)
         old.pop('fingerprint_format')
         if fmt:
             old['fingerprint_format'] = fmt
         original = copy.deepcopy(old)
-        assert any('fingerprint format' in e for e in g.identity_errors(old, package))
+        assert any('fingerprint format' in e for e in g.identity_errors(old))
         assert old == original
-    with pytest.raises(ValueError, match='unsupported fingerprint format'):
-        g.shared_digest(package, 'shared-files-sha256-lines-v1')
-    manifest_path = package / 'shared-release.json'
-    manifest = json.loads(manifest_path.read_text())
-    manifest.update(fingerprint_format='shared-files-sha256-lines-v1', fingerprint_order=list(g.SHARED_FILES))
-    manifest_path.write_text(g.dump(manifest))
-    with pytest.raises(ValueError, match='unsupported installed manifest'):
-        g.verify_installed(package)
 
 
 @pytest.mark.parametrize('field,value', [('fingerprint_format', None), ('fingerprint_format', 'unknown'),
                                        ('shared_sha256', '0'*64), ('library_version', '0.0.0')])
 def test_new_identity_requires_version_digest_and_explicit_format(package, field, value):
-    record = g.shared_versions(package)
+    record = g.shared_versions()
     if value is None:
         record.pop(field)
     else:
         record[field] = value
-    assert g.identity_errors(record, package)
+    assert g.identity_errors(record)
+
+
+def test_the_read_date_is_recorded_and_not_compared(package):
+    record = g.shared_versions()
+    assert record['read_date']
+    record['read_date'] = '2000-01-01'
+    assert g.identity_errors(record) == []
 
 
 def test_alternate_input_binds_real_bytes_even_when_test_mode_is_explicit(tmp_path, monkeypatch):
     installed = g.shared_versions()
-    library = g.load(g.BUNDLE_PATH)
+    library = g.load()
     library['engineering_values']['assumed_resistor_package']['value'] = '0201'
     override = tmp_path / 'alternate.json'
     raw = json.dumps(library, ensure_ascii=False).encode()
@@ -136,8 +126,8 @@ def test_alternate_input_binds_real_bytes_even_when_test_mode_is_explicit(tmp_pa
 def test_recorded_label_never_prints_the_current_identity_for_old_records():
     record = {'library_version': 'historical', 'shared_sha256': '1'*64}
     label = g.shared_label(identity=record)
-    assert '111111111111 [格式未记录]' in label
-    assert '设计准则库 historical' in label
+    assert label.startswith('设计准则 111111111111（') and '日期未记录' in label
+    assert g.shared_versions()['read_date'] not in label
 
 
 def test_asg_report_rejects_old_audit_identity_without_rewriting_it():

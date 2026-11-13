@@ -1,4 +1,5 @@
 """A part the datasheet lists as discontinued is not used in a new design (R5 review F-D201: MUR550APFG)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 from pathlib import Path
 import shutil
 import sys

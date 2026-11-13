@@ -68,17 +68,17 @@ ASG 的输入是一块板卡的设计需求，输出是设计方案确定后的�
 
 ### 架构
 
-ASG 的**设计能力框架**由六个能力模块（C1–C6）组成，与硬件设计知识框架对应：知识框架管知道什么，能力框架管会做什么，每个能力模块查知识包的指定组件。能力七项中第 5 项由 C4、C5 分担，第 7 项不归某个模块，所以能力框架指这六个模块，不等于七项能力。每个模块是主流程中连续的几项任务，有固定的给定输入、产出和关卡，可以单独运行，也可以串联。
+ASG 的**设计能力框架**由六个能力模块（C1–C6）组成，与硬件设计知识框架对应：知识框架管知道什么，能力框架管会做什么，每个能力模块查知识框架的指定组件。能力七项中第 5 项由 C4、C5 分担，第 7 项不归某个模块，所以能力框架指这六个模块，不等于七项能力。每个模块是主流程中连续的几项任务，有固定的给定输入、产出和关卡，可以单独运行，也可以串联。
 主流程按 C1→C6 排列，串起来就是从需求做新设计的默认编排。先弄清本次从哪个模块进、跑到哪个模块（见“选择工作流”），再按“主流程”逐项任务做，每项任务做到“做完的标志”为止；一个模块各项任务的做完标志合起来就是它的关卡（`check_module.py`）。
 
-- **输入**：需求、器件知识库、知识包（`references/knowledge/`，含典型电路）；单独运行时的给定输入
+- **输入**：需求、器件知识库、知识框架（`知识/`，含典型电路）；单独运行时的给定输入
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
 
-共用工程判据（设计准则与降额）来自硬件设计知识框架，ASG 使用同步进本技能的一份；准则版本与共用层指纹由 `shared-release.json` 读取。运行和本地测试不读取 SR 源码。
-计划/审计记录采用的共用层版本、指纹及指纹格式；版本或工程身份变化按规定重验，维护历史不属于工程身份。
-准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析）同样从硬件设计知识框架同步，装在 `references/knowledge/`（这一份叫知识包），依据的框架版本与指纹由 `knowledge-sync.json` 读取；运行不读知识框架目录，框架更新后用 `knowledge_package.py sync` 重新同步。各模块查哪部分见[知识包](references/knowledge-package.md)。
-C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任务、哪个组件、查的什么、查到哪些条目，没查到也记；写进 `record/modules.json` 的 `knowledge_lookups`。这五个模块的关卡核对每个该查的组件都有记录、所记条目在知识包里，不判查得对不对。任务 C3.1 选了哪个典型电路的哪种方案另记在方案记录里。
-用到的条目里的每一项都要回答，写进 `record/knowledge-checklist.json`（必答清单，`knowledge_checklist.py build` 从条目里抽，不手抄）：C1 查到的需求要素条目的每个条件，C4 各块选定实现方案的必算项、必需外围、已知坑和查到的计算方法条目的取值步骤、算完核对，逐项写落实在哪（需求或澄清编号、计算编号、位号、怎样避开）或不适用及理由；C1、C4 的关卡核对没有漏项、落实处指向的记录存在。见[知识包](references/knowledge-package.md)的“必答清单”。
+工程判据（设计准则与降额）和其余设计知识都直接读本机的硬件设计知识框架；准则由 `guideline_criteria.py` 从框架的准则登记汇编，降额值、常规件最弱档、词表也从框架读，路径见[知识框架的用法](references/knowledge-package.md)。运行和本地测试不读取 SR 源码。
+计划/审计记录写明采用的设计准则身份（指纹、指纹格式、读取日期）；准则登记、降额与应力数据或判法脚本变了，身份随之变，按规定重验；框架里不属于这些数据的维护说明不属于工程身份。
+准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析）读框架 `知识/` 下的同名目录；框架位置由环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK` 或技能根目录的 `.knowledge-framework` 指定，脚本经 `knowledge_source.py` 定位，只读不改。交付物记读取日期和读到的知识文件的指纹。各模块查哪部分见[知识框架的用法](references/knowledge-package.md)。
+C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项任务、哪个组件、查的什么、查到哪些条目，没查到也记；写进 `record/modules.json` 的 `knowledge_lookups`。这五个模块的关卡核对每个该查的组件都有记录、所记条目在知识框架里，不判查得对不对。任务 C3.1 选了哪个典型电路的哪种方案另记在方案记录里。
+用到的条目里的每一项都要回答，写进 `record/knowledge-checklist.json`（必答清单，`knowledge_checklist.py build` 从条目里抽，不手抄）：C1 查到的需求要素条目的每个条件，C4 各块选定实现方案的必算项、必需外围、已知坑和查到的计算方法条目的取值步骤、算完核对，逐项写落实在哪（需求或澄清编号、计算编号、位号、怎样避开）或不适用及理由；C1、C4 的关卡核对没有漏项、落实处指向的记录存在。见[知识框架的用法](references/knowledge-package.md)的“必答清单”。
 
 | 模块 | 任务 | 给定输入 | 产出 |
 |---|---|---|---|
@@ -131,14 +131,14 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 #### C1.1 需求追溯
 
 按 [requirements-to-intent.md](references/requirements-to-intent.md) 第 1–2 节建立需求清单：每条需求写编号、可验收的条文和来源，记入 `record/requirements.json`。
-按板上的对外端口查知识包 `需求要素/` 的对应条目（另有全板条目），逐行核需求有没有给，核的结果逐项写进必答清单（`knowledge_checklist.py build` 列出每个条件；给了的写需求或澄清编号，本板没有这种情况的写不适用及理由）。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
+按板上的对外端口查知识框架 `知识/需求要素/` 的对应条目（另有全板条目），逐行核需求有没有给，核的结果逐项写进必答清单（`knowledge_checklist.py build` 列出每个条件；给了的写需求或澄清编号，本板没有这种情况的写不适用及理由）。功能追溯（功能路径、承担器件、依赖的待办）在任务 C5.1 写。
 需求没写、写得含糊、前后矛盾或尚未确认，而设计要靠它定的，**当场问用户**：录完需求后一次汇总提问，每问附一条可验收的建议条文，
 答复后马上写回需求清单再往下设计；问什么、不问什么、中途发现缺口和用户暂缓怎么处理见[需求澄清](references/requirement-clarifications.md)。
 **无人当场答复时**，只接受任务书里写明的答复或代答授权（[任务书](references/workflow-handoff.md) 的 `clarification_answers`、`delegation`）；
 两者都没有就停下来问，不自拟答复人。
-降额等级（I/II/III 级）是一条需求：需求没写时一并问用户，附建议等级（[降额规范](references/shared/derating-rules.md)“降额等级从哪来”）；
-用户暂缓的按建议等级作为写明的假设设计。等级定下之前，点名降额规则的比较只按 `unset_level` 预判（[器件应力规范](references/shared/stress-spec.md)）。
-共用设计准则（G01–G09，见[共用设计准则库](references/shared/guideline-criteria.md)）按产品基线和本设计的功能电路类型、器件类别适用：
+降额等级（I/II/III 级）是一条需求：需求没写时一并问用户，附建议等级（降额规范“降额等级从哪来”，框架 `知识/设计准则/规范正文/G10_元器件降额与应力规范/降额规范.md`）；
+用户暂缓的按建议等级作为写明的假设设计。等级定下之前，点名降额规则的比较只按 `unset_level` 预判（同目录的 `应力判法.md`）。
+设计准则（G01–G09，登记在框架 `知识/设计准则/准则登记/`，字段说明见 `知识/设计准则/工具/包说明/guideline-criteria.md`）按产品基线和本设计的功能电路类型、器件类别适用：
 产品基线默认工业/通信板卡，需求写明航天、军用时按需求定；功能电路类型与器件类别随架构确定后补全。
 需求有 −48 V 直流、正 24 V 工业直流、交流市电、工业数字输入、PoE 受电、军车 28 V、舰船交流这些对外接口的，写进功能电路类型（`DC_48V`、`DC_24V`、`AC_MAINS`、`INDUSTRIAL_DI`、`POE_PD`、`VEHICLE_28V`、`SHIP_AC`），这些接口的规则靠它选中。
 
@@ -155,9 +155,9 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 
 定出真实的系统架构：功能块及其电压域、电源与信号流向、板与隔离边界、接口，以及每条跨块流向代表的电源轨或信号
 （RECT、BULK、FB/FAULT 光耦……）。它在任务 C6.3 画成第 1 页 `System_block`，只有页面索引不算架构。
-见 [reference-driven-board-design.md](references/reference-driven-board-design.md)；电源树、电压域、隔离、接地、保护分层等结构选择查知识包 `板级架构模式/`。
+见 [reference-driven-board-design.md](references/reference-driven-board-design.md)；电源树、电压域、隔离、接地、保护分层等结构选择查知识框架 `知识/板级架构模式/`。
 架构记入 `record/architecture.json`，并为每个功能块写块规格（输入、输出、功率与指标，只写要什么，不写拓扑）。隔离边界的位置在这里定，块内的隔离实现方式留给任务 C3.1。
-每条跨块流向写它承载的整板网络名（`nets`）和接口参数的预算值（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗，按知识包 `接口约定/参数模板/` 写，总线按 `接口约定/总线与电平/`；预算在任务 C3.3 按核心器件的端口限值定稿）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
+每条跨块流向写它承载的整板网络名（`nets`）和接口参数的预算值（`params`：电源轨写电压范围与最大电流，信号写电平、方向与驱动方式，模拟量写量程与源阻抗，差分对写差分阻抗，按知识框架 `知识/接口约定/参数模板/` 写，总线按 `接口约定/总线与电平/`；预算在任务 C3.3 按核心器件的端口限值定稿）；地网络按电压域的 `ground` 命名。各块端口只用这些网络名。
 块的边界放在少数几个参数就能说清的地方：两块之间要靠控制环、共用一颗芯片或多条模拟连线才能工作的，合成一块。每块给一个位号编号段。
 
 做完的标志：`record/architecture.json` 中每个功能块有输入输出、所在电压域和块规格；每条跨块流向有名字；隔离边界两侧各有哪些功能块已定。每条流向有网络名和接口参数；每块有位号编号段，各段不重叠。
@@ -168,7 +168,7 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 
 #### C3.1 功能块实现方案
 
-关键功能块先在知识包的[典型电路](references/knowledge-package.md)（`references/knowledge/典型电路/`）里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。
+关键功能块先在知识框架的[典型电路](references/knowledge-package.md)（`知识/典型电路/`）里找候选方案（`find_parts.py --circuits <功能>`）：写出决定选哪种方案的条件及本板取值，对照每种候选的适用范围，选出方案并写明其他候选被淘汰的理由。库里候选不足时，先检索知识库再比较；仍只有一种可行方案的，写明查过哪些资料。模型自身知识提出的候选须当次查到来源，查不到标`未证实`，不能选定。常规功能块可直接选用。
 
 关键功能块（功率变换拓扑、保护架构、块内隔离实现方式、信号链架构、对外接口）定方案前，先用 `guideline_criteria.py select` 按该块的电路类型和器件类别列出按类型触发的规则，有对外端口的块再加上端口矩阵对应的 G07 规则；从中找出会淘汰某个候选方案的规则，逐条写明它排除了哪个候选、选定方案怎样满足、哪些数值留给任务 C4.2 核算，记入 `record/scheme-criteria.json`。没有规则能淘汰候选的块写明查过的规则范围。不要求逐条列出全部适用规则，不能淘汰候选、不改变选型也不进入计算的规则不要求逐条落实。
 
@@ -200,7 +200,7 @@ C1–C5 每次查知识包后用 `check_module.py lookup` 记一条：哪项任�
 
 #### C3.3 接口定稿
 
-任务 C2.1 写的接口参数是预算；核心器件选定后，按各块 `block-circuits/<块>.json` 里核心器件的端口限值，把每条跨块流向的参数定成各块设计时要遵守的数，记入 `record/interfaces.json`。每条流向要写哪些量按知识包 `接口约定/参数模板/`，总线和电平按 `接口约定/总线与电平/`。
+任务 C2.1 写的接口参数是预算；核心器件选定后，按各块 `block-circuits/<块>.json` 里核心器件的端口限值，把每条跨块流向的参数定成各块设计时要遵守的数，记入 `record/interfaces.json`。每条流向要写哪些量按知识框架 `知识/接口约定/参数模板/`，总线和电平按 `接口约定/总线与电平/`。
 每条流向写两头。负载端写它能接受的范围（`accepts`）：电源轨写电压上下限、最大取用电流和上电时序要求，信号写输入门限与耐压；数值取自核心器件的端口限值并注手册页码，没有核心器件的块沿用任务 C2.1 的预算。
 源端写它要保证的范围（`provides`）：电源轨写输出电压上下限与电流能力，信号写输出电平与驱动方式；由各负载的范围推出：电压落在所有负载接受范围的交集内，电流能力不小于各负载取用之和。
 交集为空，或电流之和超出源块的块规格时，先看能否在 C3.2 换核心器件解决（按 C3.2 的选型确认重新确认）；要改架构或块规格的回到任务 C2.1，C3 按指纹重跑。两种都在 `record/modules.json` 的 `returns` 记一条，不在本任务凑数。
@@ -243,7 +243,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 
 #### C4.2 设计计算与性能要求
 
-- 取值按知识包 `计算方法/` 对应条目的取值步骤（每步写了输入取哪一端、算完要满足哪条准则）；数值计算按 [calculation-preflight.md](references/calculation-preflight.md) 写明保证条件；按
+- 取值按知识框架 `知识/计算方法/` 对应条目的取值步骤（每步写了输入取哪一端、算完要满足哪条准则）；数值计算按 [calculation-preflight.md](references/calculation-preflight.md) 写明保证条件；按
   [requirements-to-intent.md](references/requirements-to-intent.md) 第 4 节清单逐项核这些工况：上电/热插拔、关断/掉电、
   全温角点、引脚应力、工作包络角点（最低/最高输入 × 空载/轻载/满载 × 每个输出档位的组合）和单点故障
   （反馈开路、光耦失效、检测电阻开路等：保护要在被保护对象越限前动作）。
@@ -262,9 +262,9 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 - 器件热可行性（功耗→结温）属于设计，在本任务算；散热实现才交 PCB。见 requirements-to-intent.md 第 4 节。
   损耗预算列出主要遗漏项及有依据的边界，不能用子总和证明达标。
 - **器件应力按降额等级核对**：关键器件与特殊器件在工作包络角点和瞬态下的电压、电流、功率与温度应力，与额定比较的检查点名
-  `derating-rules.json` 里适用的规则；取值见[降额规范](references/shared/derating-rules.md)，判定见[器件应力规范](references/shared/stress-spec.md)，
+  `降额值.json` 里适用的规则；取值见 `降额规范.md`，判定见 `应力判法.md`（均在框架 `知识/设计准则/规范正文/G10_元器件降额与应力规范/`），
   记录写法见 [design-closure.md](references/design-closure.md) 的 `derating_version`。只审写出来的应力，不要求每颗器件、每条规则都有一条比较。
-  常规件的规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。超过额定为 `failed`；应力超幅按共用判法挂待办，其余应力风险写 `improvement`、
+  常规件的规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。超过额定为 `failed`；应力超幅按应力判法挂待办，其余应力风险写 `improvement`、
   列入报告的应力风险，不挡交付，不挂待办。
 - **同一判据对全部对象核对**：复位/欠压门限对受监督轨上每颗负载的最低工作电压，工作温度与存储温度对每颗器件，
   端口的每项外部应力对路径上每颗器件的绝对最大值（含回线被开关器件断开时经其他端口的地回路），
@@ -274,12 +274,12 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
   位号和手册定位（`datasheet:<库内路径>#p<页>` 加表名/符号）。依据另有 `requirement`（来自需求，`source` 写 `req:<需求编号>`）
   和 `constant`（物理常数），不再归入 `model`。手册没给的器件参数标 `unspecified`，不能写成保证值，
   也不能支撑 `supported`。格式见 [设计待办记录](references/design-closure.md)，`audit_design_closure.py` 核对。
-  器件保证值先查知识包 `器件参数/`（保证值与手册页码），没有的再读手册；用 onsemi 等原件时，`原件勘误.md` 名单里文字层单位有问题的原件看页面图像核单位。
+  器件保证值先查知识框架 `知识/器件参数/`（保证值与手册页码），没有的再读手册；用 onsemi 等原件时，`原件勘误.md` 名单里文字层单位有问题的原件看页面图像核单位。
 - **工况输入有来源**：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆这些板外工况，参数写 `input_role`，来源只能是需求、负载器件手册或由它们推导；
-  需求只给了标准和等级（例如 ISO 7637-2 的严酷度、GB/T 17799.2 的端口电平、GJB 151C 的 CS117）时，该等级对应的波形和数值查知识包 `需求要素/环境与电磁等级/`，来源按“由需求推导”记并引所用条目；
+  需求只给了标准和等级（例如 ISO 7637-2 的严酷度、GB/T 17799.2 的端口电平、GJB 151C 的 CS117）时，该等级对应的波形和数值查知识框架 `知识/需求要素/环境与电磁等级/`，来源按“由需求推导”记并引所用条目；
   需求没给、取值又会改变选型的，按[需求澄清](references/requirement-clarifications.md)问用户，不自定。启动计算必须声明启动期负载。
   判法见[设计待办记录](references/design-closure.md)“工况输入的来源”，`audit_design_closure.py` 核对。
-- **按适用的共用设计准则设计**：设计准则的 `asg_action` 是设计动作。只有进入计算的准则逐条落实：落实它的计算在 `guidelines` 里写准则编号，
+- **按适用的设计准则设计**：设计准则的 `asg_action` 是设计动作。只有进入计算的准则逐条落实：落实它的计算在 `guidelines` 里写准则编号，
   任务 C3.1 留给本任务的数值由引用该准则的计算关闭。其余准则按设计动作照做，不要求逐条引用；审计列出适用与已引用的准则供审查对照。
   有对外连接器的板写 FMEA 和 EMC 端口矩阵，登记为证据并写 `carrier`，审计核对必备章节与连接器齐全。
 
@@ -331,7 +331,7 @@ C4 每块做一次。给定输入：本块的块规格、`interfaces.json` 中�
 
 #### C5.2 全板闭合核对
 
-整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）；端口矩阵里各端口的试验项目、等级和波形查知识包 `需求要素/环境与电磁等级/`，器件失效方式与分析步骤查 `失效与故障分析/`，从准则编号反查条目用 `索引/准则支撑表.md`。不满足的格改设计，不以列出缺口代替完成。
+整板设计网表写完后，按整板审计核对全板：引脚处置、网络电压、对象矩阵与状态表、跨板接口约定。有对外连接器的板写 FMEA 与 EMC 端口矩阵（[必写的设计文档](references/guideline-evidence-groups.md)）；端口矩阵里各端口的试验项目、等级和波形查知识框架 `知识/需求要素/环境与电磁等级/`，器件失效方式与分析步骤查 `失效与故障分析/`，从准则编号反查条目用 `索引/准则支撑表.md`。不满足的格改设计，不以列出缺口代替完成。
 
 做完的标志：`audit_design_closure.py`（不带 `--module`）无错误；矩阵与状态表没有缺结论或不满足的格；有对外连接器的板 FMEA 与 EMC 端口矩阵章节与连接器齐全。
 
@@ -484,7 +484,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
   原理图/         KiCad 工程（根图、各页、项目符号库与封装库）、schematic.pdf、netlist.xml、BOM.csv
   设计资料/       跨版本有效、每版更新的设计文档（方案与选型依据、FMEA、EMC 端口矩阵、磁件设计单等；其他按需求选做）
   record/         设计网表、分页方案、待办处理情况、自检结果、图面审阅、本版用到的计算、知识缺口清单、
-                  图页脚本、manifest.json（需求、原厂资料按路径+SHA-256 登记，不复制；记知识包版本与指纹）
+                  图页脚本、manifest.json（需求、原厂资料按路径+SHA-256 登记，不复制；记知识框架的读取日期与指纹）
 ```
 
 ```bash
@@ -493,7 +493,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
   --input datasheets=<资料目录>
 ```
 
-`knowledge_gaps.py <交付目录>` 从各模块的产品里抽出知识缺口清单 `record/knowledge-gaps.json`，不手写：知识包哪个组件查不到什么（典型电路没有适用方案、`modules.json` 的 `knowledge_lookups` 里没查到的）、候选来源未证实、计算依据是典型值或估计、回到上游重做、用户否定了 ASG 的建议。清单只如实列出，不拦交付；它是评测侧归纳能力缺陷的输入。
+`knowledge_gaps.py <交付目录>` 从各模块的产品里抽出知识缺口清单 `record/knowledge-gaps.json`，不手写：知识框架哪个组件查不到什么（典型电路没有适用方案、`modules.json` 的 `knowledge_lookups` 里没查到的）、候选来源未证实、计算依据是典型值或估计、回到上游重做、用户否定了 ASG 的建议。清单只如实列出，不拦交付；它是评测侧归纳能力缺陷的输入。
 也可以用 `deliver.py <交付目录>` 按固定顺序一次跑完生成报告、写交付证据、新鲜度检查和打包，见任务 C6.4。
 报告如实写出各项自检的 PASS/FAIL/INSUFFICIENT 及数量（含零）。历史版本快照、日志、仿真中间文件、
 审查方的其他文件都不放进交付目录；本版独立审查的报告只放 `record/sr-review/`。
@@ -532,16 +532,16 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 | 架构页、参考设计外围 | [reference-driven-board-design.md](references/reference-driven-board-design.md) |
 | 核心器件从哪找候选、怎么比较、`selection.json` | [core-part-selection.md](references/core-part-selection.md) |
 | 每类器件干什么、选它看什么参数（按知识库分类） | [part-roles.md](references/part-roles.md) |
-| 知识包：需求要素、板级架构模式、接口约定、典型电路（一个功能有几种实现方案、各自的必算项与已知坑）、计算方法、器件参数、失效与故障分析；各模块查哪部分、典型电路标注与 `scheme-criteria.json` 格式、从知识框架同步与本地校验（依据的框架版本以根目录 `knowledge-sync.json` 为准） | [knowledge-package.md](references/knowledge-package.md) 与 `references/knowledge/` |
+| 知识框架的用法：需求要素、板级架构模式、接口约定、典型电路（一个功能有几种实现方案、各自的必算项与已知坑）、计算方法、器件参数、失效与故障分析；各模块查哪部分、典型电路标注与 `scheme-criteria.json` 格式、框架位置怎么配 | [knowledge-package.md](references/knowledge-package.md) |
 | 选符号、引脚表、外围电路要求 | [symbol-and-peripheral-contracts.md](references/symbol-and-peripheral-contracts.md) |
 | 计算条件记录 | [calculation-preflight.md](references/calculation-preflight.md) |
 | 器件性能要求、BOM 与图面标注 | [component-requirements.md](references/component-requirements.md) |
 | KiCad 导出几何的范围 | [native-geometry.md](references/native-geometry.md) |
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
-| 共用设计准则（G01–G09，版本以根目录 `shared-release.json` 为准）：设计准则、适用条件、引用与覆盖、下游约束（共用层，见 shared-layer.md） | [guideline-criteria.md](references/shared/guideline-criteria.md)、`references/shared/guideline-criteria.json` |
+| 设计准则（G01–G09）：适用条件、引用与覆盖、下游约束 | 框架 `知识/设计准则/工具/包说明/guideline-criteria.md`、`知识/设计准则/准则登记/` |
 | 必写的设计文档（FMEA、EMC 端口矩阵）：何时要写、必备章节与对象 | [guideline-evidence-groups.md](references/guideline-evidence-groups.md)、`references/guideline-evidence-groups.json` |
-| 共用层：哪些文件两技能同字节、各自的角色、谁读、哪条测试守、怎么改 | [shared-layer.md](references/shared/shared-layer.md) |
-| 共用规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度（共用层，见 shared-layer.md） | [stress-spec.md](references/shared/stress-spec.md)、[derating-rules.md](references/shared/derating-rules.md)、`references/shared/derating-rules.json` |
+| 设计准则、降额数据和词表在框架里的位置、各文件的字段、身份指纹覆盖哪些文件 | 框架 `知识/设计准则/工具/包说明/shared-layer.md` |
+| 规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度 | 框架 `知识/设计准则/规范正文/G10_元器件降额与应力规范/` 下的 `应力判法.md`、`降额规范.md`、`降额值.json` |
 | 绘图纲要（结构规则与画图习惯）与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR 规则、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |

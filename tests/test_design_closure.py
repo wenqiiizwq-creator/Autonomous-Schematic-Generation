@@ -1,4 +1,5 @@
 """Design claims must not outrun the evidence or their dependencies."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 from pathlib import Path
@@ -22,7 +23,7 @@ def setUpModule():
     from unittest import mock
     # the installed shared guideline rules would ask every record here for its guideline scope; test_guideline_closure
     # covers that with its own library
-    library = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+    library = guideline_criteria.load()
     library.update(library_version='0.0.0', specs={}, criteria=[],
                    content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria.json'

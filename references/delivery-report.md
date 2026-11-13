@@ -22,20 +22,20 @@
 | `summary.json` | `verify_schematic.py` 的自动检查结果，原样复制 |
 | `component-requirements.json` | 新性能流程的唯一源记录：用途筛选、计算得到的性能要求、采购方式、候选核实状态；格式与准备/出图接口见 [器件性能要求](component-requirements.md) |
 | `component-requirements-check.json` | 从本次原生图纸、PDF、XML与BOM复核的结果；不与源记录重名，不用历史PASS代替本次核对 |
-| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注知识包 `references/knowledge/典型电路/` 里的典型电路与实现方案，库里没有适用的写 `none`，常规块可不标；显式标注均检查（第一页架构页免标） |
+| `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注知识框架 `知识/典型电路/` 里的典型电路与实现方案，库里没有适用的写 `none`，常规块可不标；显式标注均检查（第一页架构页免标） |
 | `selection.json` | 核心器件选型：每个角色的位号、决定性条件、≥2 个候选（选中/淘汰理由、相对知识库的手册路径）；每个 U/Q/T 器件都要属于一个角色；选定候选写外部依赖，依赖未公开资料时附 2–3 个方案、建议和用户的决定，格式见 [核心器件选型](core-part-selection.md) |
-| `scheme-criteria.json` | 任务 C3.1 关键功能块的候选比较；何时必须有、字段与格式示例见 [知识包](knowledge-package.md) 的规则一节 |
+| `scheme-criteria.json` | 任务 C3.1 关键功能块的候选比较；何时必须有、字段与格式示例见 [知识框架的用法](knowledge-package.md) 的规则一节 |
 | `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要有非空处置，写出在本版 PDF 上看到了什么；引脚文字的条目按库符号列，处置里要写明看的是 `render_review_refs` 里的哪一只，在一页处置过的库符号别的页不必再写；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `原理图/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 原理图/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
 | `delivery-evidence.json` | 导出后有没有再改过的核对记录 |
 | `calculations/` | 本版设计还在依赖的计算（不管是哪一版算的），作废的不带 |
 | `interfaces.json` | 任务 C3.3 接口定稿：每条跨块流向源块要保证、负载块能接受的范围（模块 C3，格式见 [能力模块](modules.md)） |
-| `knowledge-checklist.json` | 必答清单：C1 查到的需求要素条件、C4 各块选定实现方案的必算项、必需外围、已知坑和所用计算方法的步骤，逐项的处置；`knowledge_checklist.py build` 列项，格式见 [知识包](knowledge-package.md) 的“必答清单” |
-| `knowledge-gaps.json` | 知识缺口清单：`knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]` 从记录抽出，不手写；`deliver.py` 在生成报告前运行它，报告的“知识缺口”一节照它列出。`{"schema_version": 1, "counts": {信号: 数量}, "gaps": [{"signal", "module", "task", "item", "detail", "source"}]}`。信号有八种：`no_typical_circuit`（块文件里选定方案没有标典型电路）、`knowledge_missing`（知识包其他组件查不到的：`modules.json` 的 `knowledge_lookups` 里 `found` 为空的行，见 [知识包](knowledge-package.md) 的查阅记录）、`unverified_candidate`（方案候选 `unverified`）、`datasheet_not_in_library`（手册不在知识库）、`weak_basis`（计算参数或门槛的依据是 `typical`/`model`/`unspecified`）、`external_item`（未关闭的外部资料待办）、`returned_upstream`（`modules.json` 的 `returns`）、`user_overrode`（用户给定的需求与建议条文不同，或选定方案不是推荐方案）。清单不拦交付；打包只核它是从当前记录抽出的（手册条目取决于知识库，不比对）。能力缺陷的归纳在评测侧做 |
+| `knowledge-checklist.json` | 必答清单：C1 查到的需求要素条件、C4 各块选定实现方案的必算项、必需外围、已知坑和所用计算方法的步骤，逐项的处置；`knowledge_checklist.py build` 列项，格式见 [知识框架的用法](knowledge-package.md) 的“必答清单” |
+| `knowledge-gaps.json` | 知识缺口清单：`knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]` 从记录抽出，不手写；`deliver.py` 在生成报告前运行它，报告的“知识缺口”一节照它列出。`{"schema_version": 1, "counts": {信号: 数量}, "gaps": [{"signal", "module", "task", "item", "detail", "source"}]}`。信号有八种：`no_typical_circuit`（块文件里选定方案没有标典型电路）、`knowledge_missing`（知识框架其他组件查不到的：`modules.json` 的 `knowledge_lookups` 里 `found` 为空的行，见 [知识框架的用法](knowledge-package.md) 的查阅记录）、`unverified_candidate`（方案候选 `unverified`）、`datasheet_not_in_library`（手册不在知识库）、`weak_basis`（计算参数或门槛的依据是 `typical`/`model`/`unspecified`）、`external_item`（未关闭的外部资料待办）、`returned_upstream`（`modules.json` 的 `returns`）、`user_overrode`（用户给定的需求与建议条文不同，或选定方案不是推荐方案）。清单不拦交付；打包只核它是从当前记录抽出的（手册条目取决于知识库，不比对）。能力缺陷的归纳在评测侧做 |
 | `block-circuits/` | 每个功能块一个块文件，由 `block_circuits.py` 从 `scheme-criteria.json`、`selection.json` 抽出（模块 C3，格式见 [能力模块](modules.md)） |
 | `scripts/` | 图页脚本，下一版只重生成有变化的页面 |
 | `evidence/` | 设计结论引用的截图、手册摘页等 |
 | `sr-review/` | 本版交独立审查（schematic-review）时的审查报告、`findings.json` 与审查记录；没有就不建 |
-| `manifest.json` | `pack_design.py` 写：需求、原厂资料的路径和 SHA-256，本目录每个文件的 SHA-256，所用知识包依据的框架版本与指纹（`knowledge_release`，从 `knowledge-sync.json` 读） |
+| `manifest.json` | `pack_design.py` 写：需求、原厂资料的路径和 SHA-256，本目录每个文件的 SHA-256，所读知识框架的读取日期与指纹（`knowledge_release`，由 `knowledge_source.identity()` 给出） |
 
 单个文件超过 10 MB 说明带了不该带的东西：仿真原始波形、整份手册、历史台账。只留结论引用的部分，
 其余留在工作目录，或用 `--input` 按路径登记。
@@ -60,7 +60,7 @@
    design 待办的改设计候选（须用户批准）和对应待办。
    **依赖厂家资料的计算**、**依赖工程估计的计算**、**依赖暂缓的需求的计算**（`parameter_version: 3`，分档由审计推出，见 design-closure.md）：列出算出的值与门槛（`checks`）、依赖的参数或没算的项和对应待办；结论一节按设计成立 / 依赖工程估计 / 依赖厂家资料 / 依赖暂缓的需求 / 不满足计数。
    **应力风险**（`derating_version: 1`）：在额定内但超过降额值的应力，逐条列出计算、位号、降额规则、应力 / 降额值 / 额定和改进；
-   合格但有风险，不挡交付（见 [器件应力规范](shared/stress-spec.md)）。结论一节的“降额等级”一行写等级、来源、应力风险处数和没点名规则的提示数。
+   合格但有风险，不挡交付（见 应力判法（框架 G10 目录的 `应力判法.md`））。结论一节的“降额等级”一行写等级、来源、应力风险处数和没点名规则的提示数。
    **余量不足以覆盖估计误差**（`uncertainty_version: 1`）：余量小于所依赖工程估计不确定度的检查，列值 / 门槛、余量 / 不确定度和改进；
    合格但有风险，不挡交付，结论一节写处数。
    **共用设计准则**（`guideline_version: 1`）：报告只在结论一节写一行设计准则库版本和各类条数，不逐条列准则；

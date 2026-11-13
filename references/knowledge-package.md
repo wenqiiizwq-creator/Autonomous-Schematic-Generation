@@ -1,11 +1,31 @@
-# 知识包
+# 知识框架的用法
 
-`references/part-roles.md` 回答"这类器件干什么"；知识包回答"这个功能通常怎么实现、需求要给什么、块之间交代哪些参数、元件值怎么算、器件保证值是多少、器件怎样失效"。
+`references/part-roles.md` 回答"这类器件干什么"；知识框架回答"这个功能通常怎么实现、需求要给什么、块之间交代哪些参数、元件值怎么算、器件保证值是多少、器件怎样失效"，以及设计准则与降额数据。
 ASG 画不同类型的板子时复用的是这一层，不是具体型号。
 
-知识包是从硬件设计知识框架同步进本技能的一份，装在 `references/knowledge/`，目录与框架里的同名（各组件回答什么见各目录的 `README.md`）；依据的框架版本、同步日期、指纹和逐文件哈希在技能根目录的 `knowledge-sync.json`。
-知识包只读：不在这里改条目，补写或修订在知识框架里做，再用 `python3 scripts/knowledge_package.py sync <知识框架目录>` 重新同步（共用层一起换，差异写进 `docs/knowledge-sync/<框架版本>.md`）。`python3 scripts/knowledge_package.py verify-installed` 核对装的内容与清单一致；运行时只读本技能里的这份，不读知识框架目录。设计实例（范例）没有同步。
-准则不在知识包里，在共用层 `references/shared/`；条目里指向 `设计准则/` 的链接在包内无效，按准则编号查 `references/shared/guideline-criteria.md`。条目里的来源路径相对知识框架的 `原件/`。
+## 框架在哪里
+
+技能运行时直接读本机的硬件设计知识框架，只读，不改：条目的补写和修订在框架里做，技能下一次运行就读到新内容。框架位置二选一指定（环境变量优先）：
+
+1. 环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK`，值为框架目录的绝对路径；
+2. 技能根目录下的本机文件 `.knowledge-framework`，一行，写框架目录的绝对路径（该文件不进版本库）。
+
+框架目录下要有 `知识/` 和 `索引/`；否则脚本报 `KnowledgeFrameworkNotFound`，消息写明这两种办法。所有脚本只经 `scripts/knowledge_source.py` 取框架里的路径，`python3 scripts/knowledge_source.py` 打印框架目录、读取日期和指纹。
+交付物（`record/manifest.json` 的 `knowledge_release`、设计准则身份）记读取日期和读到的知识文件的指纹；框架不维护版本号。
+
+## 框架里读哪些路径
+
+下表路径都相对框架目录。条目里的来源路径相对框架的 `原件/`；条目里指向 `设计准则/` 的链接，按准则编号查准则登记。
+
+| 内容 | 路径 |
+|---|---|
+| 七个知识组件：需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、失效与故障分析（各组件回答什么见各目录的 `README.md`） | `知识/<组件>/` |
+| 全部条目一览、准则编号反查条目 | `索引/条目总表.md`、`索引/准则支撑表.md` |
+| 原件勘误、条目规范 | `原件勘误.md`、`条目规范.md` |
+| 设计准则登记（G01–G09）与词表 | `知识/设计准则/准则登记/G0*_准则登记.json`、`词表.json`；`guideline_criteria.py` 读它们汇编，字段说明见 `知识/设计准则/工具/包说明/guideline-criteria.md` |
+| G10 降额与应力规范 | `知识/设计准则/规范正文/G10_元器件降额与应力规范/` 下的 `降额值.json`、`降额规范.md`、`应力判法.md`、`常规件最弱档.json` |
+
+设计实例（范例）不属于技能读的七个组件。
 
 ## 各模块查什么
 
@@ -23,19 +43,19 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。
 
 ## 查阅记录
 
-C1–C5 每次查知识包后记一条，查到没查到都记：
+C1–C5 每次查知识框架后记一条，查到没查到都记：
 
 ```bash
 python3 scripts/check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query "降压电感取值" \
   --found 计算方法/<知识域>/<条目>.md [更多条目 ...] [--detail "补充说明"]
 ```
 
-没查到就不写 `--found`。它写进 `record/modules.json` 的 `knowledge_lookups`：日期、任务、组件、查的什么、查到的条目（相对 `references/knowledge/`）。
-命令当场核对组件和条目在知识包里。各模块关卡再核一遍，并要求该模块每个该查的组件至少有一条记录（查到的条目里哪些内容要逐项回答见下面“必答清单”）：
+没查到就不写 `--found`。它写进 `record/modules.json` 的 `knowledge_lookups`：日期、任务、组件、查的什么、查到的条目（相对框架的 `知识/`）。
+命令当场核对组件和条目在知识框架里。各模块关卡再核一遍，并要求该模块每个该查的组件至少有一条记录（查到的条目里哪些内容要逐项回答见下面“必答清单”）：
 C1 `需求要素`，C2 `板级架构模式`、`接口约定`，C3 `接口约定`（任务 C3.3），C4 `计算方法`、`器件参数`，C5 `失效与故障分析`，设计网表里有对外连接器时 C5 另加 `需求要素`（EMC 端口矩阵查 `需求要素/环境与电磁等级/`）（`check_module.py C4 --block` 不核）。关卡不判查得对不对、用没用上。
 任务 C3.1 选了哪个典型电路的哪种方案另记在 `scheme-criteria.json`，没有适用方案由块文件抽出。
 
-没查到的记录由 `knowledge_gaps.py` 抽进知识缺口清单（见[交付与设计报告](delivery-report.md)）。知识包条目日后勘误时，按 `found` 可以找出用过它的设计。
+没查到的记录由 `knowledge_gaps.py` 抽进知识缺口清单（见[交付与设计报告](delivery-report.md)）。知识框架的条目日后勘误时，按 `found` 可以找出用过它的设计。
 
 ## 必答清单
 
@@ -57,15 +77,15 @@ python3 scripts/knowledge_checklist.py check <设计目录> [--module C1|C4] [--
 `build` 写出的每项有 `entry`、`kind`、`id`、`text`（C4 的方案项另有 `block`、`scheme`），这些不改；只填 `disposition`、`where`、`reason`：
 `covered` 在 `where` 列出落实在哪（列表），`not_applicable` 在 `reason` 写本板为什么没有这种情况。不能因为没做就写不适用。
 `check_module.py C1`、`C4` 的关卡核对：清单里的项齐全，每项有处置，`where` 里的编号和位号在记录里存在；`C4 --block` 只核该块选定方案的项。
-没有标注典型电路的块（`circuit` 没写）不产生方案项。条目文字变了（知识同步之后），对应项的 `id` 跟着变，原处置作废：重跑 `build` 后补写。
+没有标注典型电路的块（`circuit` 没写）不产生方案项。条目文字变了（框架更新之后），对应项的 `id` 跟着变，原处置作废：重跑 `build` 后补写。
 接口约定的参数模板、器件失效方式还没有进必答清单；各类内容核对到哪一步见 `docs/knowledge-coverage.md`。
 
 ## 典型电路
 
-典型电路文件在 `references/knowledge/典型电路/<知识域>/<功能>.md`（文件名在各知识域之间不重复，标注和检索只用文件名），条目格式见那里的 `README.md`：头部是功能、适用范围、电路类型（设计准则库词表的电路类型名，`references/shared/vocabulary.json`），
+典型电路文件在框架的 `知识/典型电路/<知识域>/<功能>.md`（文件名在各知识域之间不重复，标注和检索只用文件名），条目格式见那里的 `README.md`：头部是功能、适用范围、电路类型（设计准则库词表的电路类型名，框架的 `知识/设计准则/准则登记/词表.json`），
 `## 来源清单` 给来源编号（S1、S2……，正文写 `S1 p4`），`## 选方案时比较的量` 是几种方案的比较表，`## 实现方案` 下每个 `### ` 是一个实现方案（适用范围、核心器件类、必需外围、必算项、落实规则、已知坑、来源）。
 只有 `## 实现方案` 一节下的 `### ` 算实现方案；其他节里的三级标题不算。只有指路、没有实现方案的条目（如 `reviewed-bias-and-latch`）不作候选。
-用 `scripts/find_parts.py --circuits <关键词>` 检索（匹配文件名、标题、功能和实现方案名）；全部条目见 `references/knowledge/索引/条目总表.md`。
+用 `scripts/find_parts.py --circuits <关键词>` 检索（匹配文件名、标题、功能和实现方案名）；全部条目见框架的 `索引/条目总表.md`。
 
 ## 规则
 
@@ -77,7 +97,7 @@ python3 scripts/knowledge_checklist.py check <设计目录> [--module C1|C4] [--
   每个关键块还写 `decisive: [{condition, value}]`（条件及本板取值）和 `candidates: [{name, source, status, reason, circuit?, unverified?}]`：`source` 是沿用 datasheet/review/test/user 格式的非空来源列表，`status` 为 `selected` 或 `rejected`，`reason` 写选中或淘汰的理由；恰有一个选定方案，`unverified: true` 的候选不能选定。单候选另写 `only_viable` 说明查过哪些资料及只有一种可行的原因。`circuit` 是与页计划 `circuits` 一致的 `文件名#方案名`；省略时以 `name` 与该引用或其方案名精确比较。没有页计划时跳过一致性核对。
   每块写 `block`、`block_id`（所属功能块，`architecture.json` 的 `blocks[].id`；`block_circuits.py` 按它把方案抽进块文件）、`circuit_types`、`device_kinds`、`ports`（有对外端口为 true）和 `criteria`；`criteria` 只列会淘汰某个候选的规则，每项写 `id`、`excludes`（排除的候选）、
   `basis`（`requirement`、`standard`、`datasheet_abs_max` 能硬排除，只来自工程推论的写 `inference`，不作硬排除）、`how`（选定方案怎样满足）、`defer`（留给 2.2 的数值名）；每个 `defer` 名要在任务 C4.2 闭合：引用该规则（`guidelines` 含它）的某条计算里有一项带 `value`、`operator`、`limit` 的核对，其 `name` 含这个数值名，或其 `defer` 字段（字符串或列表）写它；否则报未闭合，规则挂在没算这一项的计算上只算形式覆盖（整板评测基线 2026-11-07：校准板“SM712 钳位对收发器总线额定”留给 2.2，CALC-RS485 没算）；
-  `standard` 只用于 `nature` 为 `shall`/`should` 的规则（见设计准则库 `references/shared/guideline-criteria.json`）；`method` 是工程方法，`project` 是项目输入，按实际依据写 `requirement` 或 `inference`。
+  `standard` 只用于 `nature` 为 `shall`/`should` 的规则（见框架的准则登记 `知识/设计准则/准则登记/`）；`method` 是工程方法，`project` 是项目输入，按实际依据写 `requirement` 或 `inference`。
   `datasheet_abs_max` 只指器件手册 Absolute Maximum Ratings 表里的值，推荐工作条件不算。
   没有排除候选的规则不写进 `criteria`，放 `searched`。
   `criteria` 为空时 `searched` 写明查过的范围。以下仅为格式示例，test 来源不代表工程证据：

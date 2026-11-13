@@ -1,4 +1,5 @@
 """Condition inputs of a calculation have a source (user 2026-11-04; Matrix R2 CALC-CH-START's hidden 1 A)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import ast
 import json
 import sys

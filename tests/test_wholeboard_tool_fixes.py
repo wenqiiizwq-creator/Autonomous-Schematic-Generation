@@ -1,5 +1,6 @@
 """Tool issues from the whole-board baseline (ASG 128178e, 2026-11-07; runs in 评测记录/ASG/2026-11-07-wholeboard-128178e,
 improvement 9 of 评测记录/ASG/2026-11-07-wholeboard-128178e/分析与改进方案.md in the 原理图设计规范 folder). One class per issue, each with the failing case it fixes."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import io
 import json
@@ -69,7 +70,7 @@ class SelectManyValuesTests(unittest.TestCase):
                                                                'circuit_types': ['POE_PD'], 'device_kinds': []}}))
             ids = lambda text: [line.split()[0] for line in text.splitlines()]
             got = output(select_guidelines.main, ['--scope', str(closure)])[1]
-            expected = [r['id'] for r in guideline_criteria.select(guideline_criteria.load(guideline_criteria.BUNDLE_PATH),
+            expected = [r['id'] for r in guideline_criteria.select(guideline_criteria.load(),
                                                                    'industrial_telecom', ['POE_PD'], [])]
             self.assertEqual(expected, ids(got))
 

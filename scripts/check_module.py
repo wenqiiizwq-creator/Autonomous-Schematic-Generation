@@ -6,7 +6,7 @@
   python3 check_module.py return <设计目录> --from C4.2 --to C3.3 --reason … --evidence …
                                                              回到上游重做时在 record/modules.json 的 returns 记一条（P7）
   python3 check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query … [--found 计算方法/<知识域>/x.md ...]
-                                                             查知识包后在 record/modules.json 的 knowledge_lookups 记一条；
+                                                             查知识框架后在 record/modules.json 的 knowledge_lookups 记一条；
                                                              不写 --found 表示没查到
   python3 check_module.py status <设计目录>                  列出已记模块：OK、STALE（上游变了）、MODIFIED（产出改过未重验）
   python3 check_module.py report <设计目录>                  单独运行（record/task.json 带 modules）时写 模块报告.md
@@ -35,6 +35,7 @@ from architecture import check_architecture
 import block_circuits
 import blocks
 import knowledge_checklist
+import knowledge_source
 import render_design_report as report
 from schematic_layout import component_requirements
 
@@ -62,9 +63,8 @@ MODULE_REPORT = '模块报告.md'
 # What a module run delivers (workflow-handoff.md 角色): the drawing only when C6 ran.
 MODULE_TOP = (MODULE_REPORT, 'record', '设计资料', '原理图')
 SCHEMATIC_FILES = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
-KNOWLEDGE = Path(__file__).resolve().parent.parent / 'references' / 'knowledge'
-# The knowledge package components each module looks up before it designs (knowledge-package.md). The gate only checks
-# that the lookup was recorded and that the entries it names are in the package; which typical circuit task C3.1 chose
+# The knowledge framework components each module looks up before it designs (knowledge-package.md). The gate only checks
+# that the lookup was recorded and that the entries it names are in the framework's 知识/; which typical circuit task C3.1 chose
 # is in the scheme records. A board with external connectors (EMC port matrix) adds CONNECTOR_LOOKUPS to C5.
 LOOKUPS = {'C1': ('需求要素',), 'C2': ('板级架构模式', '接口约定'), 'C3': ('接口约定',), 'C4': ('计算方法', '器件参数'),
            'C5': ('失效与故障分析',)}
@@ -408,15 +408,16 @@ def lookup_row_problems(row):
     where = '%s %s' % (task, component)
     if not (isinstance(task, str) and TASK.match(task)):
         return ['knowledge_lookups：task 写任务编号，例如 C4.2（现为 %r）' % task]
-    if not (isinstance(component, str) and (KNOWLEDGE / component).is_dir()):
-        return ['knowledge_lookups %s：component 不是知识包的组件' % where]
+    if not (isinstance(component, str) and component in knowledge_source.COMPONENTS
+            and (knowledge_source.knowledge_dir() / component).is_dir()):
+        return ['knowledge_lookups %s：component 不是知识框架的组件' % where]
     if not text(row.get('query')):
         return ['knowledge_lookups %s：query 写查的什么' % where]
     if not isinstance(found, list):
         return ['knowledge_lookups %s：found 是条目路径的列表，没查到写 []' % where]
-    return ['knowledge_lookups %s：%s 不是知识包 %s/ 里的条目' % (where, entry, component) for entry in found
+    return ['knowledge_lookups %s：%s 不是知识框架 知识/%s/ 里的条目' % (where, entry, component) for entry in found
             if not (isinstance(entry, str) and entry.startswith(component + '/') and '..' not in entry
-                    and (KNOWLEDGE / entry).is_file())]
+                    and (knowledge_source.knowledge_dir() / entry).is_file())]
 
 
 def lookup_problems(root, module):
@@ -428,7 +429,7 @@ def lookup_problems(root, module):
     problems = [p for row in rows for p in lookup_row_problems(row)]
     seen = {row.get('component') for row in rows}
     wanted = LOOKUPS.get(module, ()) + (CONNECTOR_LOOKUPS.get(module, ()) if has_connectors(root) else ())
-    return problems + ['%s 没有查知识包 %s/ 的记录（check_module.py lookup；没查到也记）' % (module, c)
+    return problems + ['%s 没有查知识框架 知识/%s/ 的记录（check_module.py lookup；没查到也记）' % (module, c)
                        for c in wanted if c not in seen]
 
 
@@ -444,7 +445,7 @@ def has_connectors(root):
 
 
 def record_lookup(root, task, component, query, found, detail):
-    """One knowledge package lookup goes into record/modules.json `knowledge_lookups`. Returns the problems."""
+    """One knowledge framework lookup goes into record/modules.json `knowledge_lookups`. Returns the problems."""
     row = {'date': datetime.date.today().isoformat(), 'task': task, 'component': component, 'query': query,
            'found': list(found or [])}
     if text(detail):
@@ -581,10 +582,10 @@ def main(argv=None):
     ap.add_argument('--to', dest='target', help='return：回到的任务，如 C3.3')
     ap.add_argument('--reason', help='return：原因')
     ap.add_argument('--evidence', help='return：依据（计算编号、手册页码、检查输出）')
-    ap.add_argument('--task', help='lookup：查知识包的任务，如 C4.2')
-    ap.add_argument('--component', help='lookup：知识包的组件，如 计算方法')
+    ap.add_argument('--task', help='lookup：查知识框架的任务，如 C4.2')
+    ap.add_argument('--component', help='lookup：知识框架的组件，如 计算方法')
     ap.add_argument('--query', help='lookup：查的什么')
-    ap.add_argument('--found', nargs='*', default=[], help='lookup：查到的条目（相对 references/knowledge/）；没查到不写')
+    ap.add_argument('--found', nargs='*', default=[], help='lookup：查到的条目（相对知识框架的 知识/）；没查到不写')
     ap.add_argument('--detail', help='lookup：补充说明（可选）')
     args = ap.parse_args(argv)
     if args.module == 'lookup':

@@ -1,4 +1,5 @@
 """Task C3.1: key functional blocks list the rules that can exclude a candidate scheme (record/scheme-criteria.json)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import json
 import re
 import subprocess
@@ -106,7 +107,7 @@ def test_report_marks_inference_as_not_a_hard_exclusion():
     assert report.render_scheme_criteria(None) == []
 
 
-def test_the_example_in_knowledge_package_passes_the_check():
+def test_the_example_in_the_knowledge_framework_doc_passes_the_check():
     assert check(document_example()) == []
 
 

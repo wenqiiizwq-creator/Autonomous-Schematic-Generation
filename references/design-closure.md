@@ -161,8 +161,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - 每条需求至少出现在一条计算的 `requirements` 里，或写 `no_check_reason`（认证范围、取舍优先级这类不对应电路的需求）；
       否则记 `requirement_without_check`。成本需求要有一条物料成本估算：单价按 `model` 写，`reason` 写价格来源和日期；
       估算超过目标，或设计要拿成本换余量时，按[需求澄清](requirement-clarifications.md)停下来问用户。
-  - **`derating_version: 1`**（新设计，与 `parameter_version` 2 或 3 一起；用户 2026-10-27）：器件应力按[器件应力规范](shared/stress-spec.md)
-    判，降额值取[降额规范](shared/derating-rules.md)中本项目等级那一列，规则数据在 `derating-rules.json`。
+  - **`derating_version: 1`**（新设计，与 `parameter_version` 2 或 3 一起；用户 2026-10-27）：器件应力按应力判法（框架 G10 目录的 `应力判法.md`）
+    判，降额值取降额规范（框架 G10 目录的 `降额规范.md`）中本项目等级那一列，规则数据在 `降额值.json`。
     - `derating`（在 `requirements.json`）：`{level, source}`。`level` 是 `I`/`II`/`III`（缺记 `derating_level_missing`）；`source` 写 `req:<需求编号>`，
       或用户暂缓时 `clarification:<需求澄清编号>`（该澄清的答复是 `DEFERRED`），否则记 `derating_level_without_source`。
     - **查到什么程度**：只审写出来的应力（用户 2026-10-27：每颗器件都有降额规则过于严苛，统一到余量审核规则上来），
@@ -175,7 +175,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       常规件不逐颗核对，规格写出的最低额定 = 最坏应力 ÷ 本级降额系数。
     - **电阻写额定功率**（用户 2026-10-27：设计时考虑功耗，除阻值和精度外还要写上功率等级，作为给以后的约束；与 schematic-review
       的无源应力预判同一判据）：电阻的最坏功耗 V²/R_min（R_min 取公差下限，未写公差按 ±5 %）超过按已写字段能买到的最弱件的降额值
-      ——封装最弱档（[commodity-floors.json](shared/commodity-floors.json) 的片式电阻，没写封装按 0402）× 本级 RES-SMD-P 取值（[derating-rules.json](shared/derating-rules.json)；等级未定按设计准则库工程取值 `unset_level`，即 I 级）——时，功耗要考虑：
+      ——封装最弱档（框架 G10 目录的 `常规件最弱档.json` 的片式电阻，没写封装按 0402）× 本级 RES-SMD-P 取值（框架 G10 目录的 `降额值.json`；等级未定按设计准则库工程取值 `unset_level`，即 I 级）——时，功耗要考虑：
       写一条 `ref` 为该电阻、`unit` 为 `W` 或 `mW` 的功耗检查，并在设计网表的 `value` 写成 `阻值/公差/额定功率[/额定电压][/封装]`
       （如 `620/1%/0.125W`；或写在一个只含功率的字段里），额定功率取 ≥ 最坏功耗 ÷ 本级 RES-SMD-P 取值的标准档。
       写了功耗检查而没写额定功率的，审计记 `resistor_power_rating_missing`（给出最低额定）。功耗不要考虑的电阻不用写额定功率。
@@ -194,15 +194,15 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       应力风险（点名规则的，或按唯一适用规则重算的）满足下面任一条时不只是降额偏离，检查另写 `work_item`，指向一件未关闭的
       `design`（`open`）或 `validation`（`open`/`handoff`）待办，该待办写 `consequence_class`/`occurrence`，推出的等级不低于要求：
       - 项目等级比最宽一级（III）严，且应力超过 III 级的降额值（降额规范任何一级都不允许）——至少 P2；
-      - 离额定的余量小于估算所需的余量——P1。温度类判据（`max_c`、`tj_percent`、`margin_c`，`rating` 为最高结温）取共用层
+      - 离额定的余量小于估算所需的余量——P1。温度类判据（`max_c`、`tj_percent`、`margin_c`，`rating` 为最高结温）取框架的
         G02 工程取值 `est_junction_margin`（20 ℃，凭估算判器件损坏所需的结温余量）；其他应力取该检查的 `uncertainty`
         （相对额定），没写不按余量判。
-      阈值都取共用层（降额表的等级取值、G02 工程取值），脚本不另设数。缺 `work_item` 记 `severe_stress_without_work_item`，
+      阈值都取框架的（降额表的等级取值、G02 工程取值），脚本不另设数。缺 `work_item` 记 `severe_stress_without_work_item`，
       待办阶段/状态不对记 `severe_stress_work_item_not_open`，等级不够记 `severe_stress_work_item_severity`。审计在该条
       `stress_risks` 里加 `required_severity`、`loosest_limit`、`margin_to_rating`，`derating.severe_thresholds` 写所用阈值；
       报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
-      应力超幅是[器件应力规范](shared/stress-spec.md)判定表中的一档，这里是它在 ASG 设计记录里的写法。
-  - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：共用设计准则（G01–G09，见[共用设计准则库](shared/guideline-criteria.md)）。
+      应力超幅是应力判法（框架 G10 目录的 `应力判法.md`）判定表中的一档，这里是它在 ASG 设计记录里的写法。
+  - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：设计准则（G01–G09，见框架的准则登记（`知识/设计准则/准则登记/`））。
     `guideline_scope`（在 `requirements.json`）写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
     计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表）。
@@ -217,7 +217,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     每个连接器位号都写到；没登记或不齐记 `design_document_incomplete`（INCOMPLETE，打包被拒），`carrier` 写了别的名字记 `guideline_carrier_unknown`。
     审计在 `guidelines.documents` 列出两份文档的核对结果。
     设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。
-    [知识包](knowledge-package.md) 里典型电路的电路类型和可选落实规则只作方案比较参考，不扩展或约束 `guideline_scope`；本板的功能电路类型和器件类别决定准则适用范围，普通引用覆盖要求不变。
+    [知识框架的用法](knowledge-package.md) 里典型电路的电路类型和可选落实规则只作方案比较参考，不扩展或约束 `guideline_scope`；本板的功能电路类型和器件类别决定准则适用范围，普通引用覆盖要求不变。
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
     （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
     记 `placeholder_value`；位号带 `?` 记 `unannotated_reference`。值写设计值，料号写手册订货信息里的完整订货码。

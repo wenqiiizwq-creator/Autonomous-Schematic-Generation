@@ -2,6 +2,7 @@
 
 All part numbers and guarantees below are synthetic test data, not approved parts.
 """
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import ast
 import copy
 import csv
@@ -346,8 +347,8 @@ class PerformanceTests(unittest.TestCase):
         self.intent['components'][0]['footprint'] = 'Resistor_SMD:R_0805_2012Metric'   # 100 V × 0.75
         self.assertFalse(any('R1（' in h for h in cr.requirement_hints(self.record, self.intent)))
 
-    def test_the_voltage_floors_are_the_shared_layers(self):
-        # 2026-11-02 (user: 最弱档收进共用层): the same file SR's passive_stress reads
+    def test_the_voltage_floors_are_the_frameworks(self):
+        # the same file SR's passive_stress reads: the framework's 常规件最弱档.json
         import guideline_criteria
         floors = guideline_criteria.commodity_floors()['chip_resistor']['packages']
         self.assertEqual({p: v['voltage_v'] for p, v in floors.items()}, cr.RESISTOR_VOLTAGE_FLOORS)

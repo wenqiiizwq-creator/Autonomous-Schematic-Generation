@@ -1,5 +1,6 @@
 """Process issues from the industrial I/O calibration board run (~/Documents/ASG-calibration/industrial-io-rs485-can/
 record/issues.md; user 2026-11-02: 这里面找到的问题，请提醒主对话进行修改). Each fix has a failing and a passing case."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 from pathlib import Path

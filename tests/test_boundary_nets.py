@@ -1,4 +1,5 @@
 """Nets declared to leave the design (boundary_nets): global label on one page, contract row, ERC waiver only for them."""
+from framework_guard import skip_without_framework  # noqa: E402
 import json
 import sys
 import tempfile
@@ -73,6 +74,7 @@ class DeclarationTests(unittest.TestCase):
         self.assertEqual([], pages['B']['external'])
         self.assertNotIn('boundary_nets', pages['B']['intent'])
 
+    @skip_without_framework
     def test_design_closure_audit_checks_the_contract(self):
         from test_derating_audit import DeratingAuditTests
         from audit_design_closure import sha256

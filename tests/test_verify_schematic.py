@@ -1,4 +1,5 @@
 """One-shot drawing gate runner on the recipe fixture pair."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 import subprocess

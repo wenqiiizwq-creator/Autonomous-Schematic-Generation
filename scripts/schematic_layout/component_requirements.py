@@ -39,19 +39,19 @@ PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额
 # A spec-bought common part closes once each requirement is in its exported BOM/XML RequirementSpec; finding the part
 # and checking its guarantees is handed to procurement (user 2026-10-28: 先改前四条; 同意按此做).
 BOM_SPEC = 'by_bom_spec'
-# Commodity chip-resistor floor voltages (V) from the shared layer (commodity-floors.json, the bytes SR's passive_stress reads): a working
+# Commodity chip-resistor floor voltages (V) from the framework (常规件最弱档.json, the data SR's passive_stress reads): a working
 # voltage within the package's weakest part derated by RES-SMD-V constrains nothing (SR passes it with no rating
 # written). The record names no derating level, so the rule library's unset_level (I, the strictest) applies (user 2026-10-29:
 # 类似这种单一的规则，都先不要，全都并入到降额规范里面去).
-import guideline_criteria   # scripts/ is on the path whenever ASG runs; the shared layer is read, not copied
+import guideline_criteria   # scripts/ is on the path whenever ASG runs
+import knowledge_source
 RESISTOR_VOLTAGE_FLOORS = {p: v['voltage_v'] for p, v in guideline_criteria.commodity_floors()['chip_resistor']['packages'].items()}
 ASSUMED_PACKAGE = guideline_criteria.engineering_value('assumed_resistor_package')
-DERATING_RULES = Path(__file__).resolve().parents[2] / 'references' / 'shared' / 'derating-rules.json'
 
 
 def voltage_share():
     """RES-SMD-V at the rule library's unset_level (a G01 engineering value, from the derating spec since 2026-11-02)."""
-    spec = json.loads(DERATING_RULES.read_text(encoding='utf-8'))
+    spec = json.loads(knowledge_source.derating_path().read_text(encoding='utf-8'))
     level = guideline_criteria.engineering_value('unset_level')
     return next(r for r in spec['rules'] if r['id'] == 'RES-SMD-V')['values'][level]
 

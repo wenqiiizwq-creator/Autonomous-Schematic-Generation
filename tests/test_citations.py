@@ -1,4 +1,5 @@
 """Datasheet citations are checked against the cited file and page; unshown values are listed, not blocking."""
+from framework_guard import skip_without_framework  # noqa: E402
 import json
 import os
 from pathlib import Path
@@ -70,6 +71,7 @@ class CitationTests(unittest.TestCase):
         self.assertEqual('NOT_CHECKED', r['status'])
         self.assertIn('找不到知识库', r['reason'])
 
+    @skip_without_framework
     def test_values_without_pdftotext_are_said_to_be_unchecked(self):
         from audit_design_closure import audit_citations
         real = shutil.which
@@ -79,6 +81,7 @@ class CitationTests(unittest.TestCase):
             summary = audit_citations({}, calc, {}, [], lambda *a: self.fail(a))
         self.assertEqual(['没有 pdftotext，Datasheet/08/Vendor - PART.pdf 的数值没核对'], summary['not_checked'])
 
+    @skip_without_framework
     def test_closure_audit_fails_a_wrong_page_and_lists_an_unshown_value(self):
         from audit_design_closure import audit_citations
         errors = []

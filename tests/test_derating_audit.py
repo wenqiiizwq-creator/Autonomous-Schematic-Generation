@@ -2,6 +2,7 @@
 project's level; a stress over the derated value but within the rating passes with a stress risk and an improvement, one
 over the rating fails; only the stresses written are checked, and a stress against a rating that names no rule is a hint;
 the level is a requirement and says where it was decided."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import ast
 import json
 from pathlib import Path
@@ -22,7 +23,7 @@ def setUpModule():
     global _env
     # the installed shared guideline rules would ask every record here for its guideline scope; test_guideline_closure
     # covers that with its own library
-    library = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+    library = guideline_criteria.load()
     library.update(library_version='0.0.0', specs={}, criteria=[],
                    content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria.json'
@@ -289,8 +290,8 @@ class DeratingAuditTests(unittest.TestCase):
         self.add_resistor('1k/1%', 0.03, footprint='Resistor_SMD:R_1206_3216Metric')   # 0.125 × 0.5 × 0.8 = 0.05
         self.assertNotIn('resistor_power_rating_missing', self.codes())
 
-    def test_the_floors_are_the_shared_layers(self):
-        # 2026-11-02 (user: 最弱档收进共用层): the same file SR's passive_stress reads, no copy in either skill
+    def test_the_floors_are_the_frameworks(self):
+        # the same file SR's passive_stress reads: the framework's 常规件最弱档.json, no copy in either skill
         import guideline_criteria
         floors = guideline_criteria.commodity_floors()['chip_resistor']['packages']
         self.assertEqual({p: v['power_w_70c'] for p, v in floors.items()}, adc.RESISTOR_FLOORS)

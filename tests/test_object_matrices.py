@@ -1,5 +1,6 @@
 """对全部对象核对的矩阵与保护逻辑状态表（整板评测 2026-11-07：复位门限只对 MCU、存储温度、低边防反接断开地回路、
 软件正常关断误置锁）。行和格由设计网表列出，缺结论是设计没做完，结论与检查矛盾或检查没点名对象是记录错误。"""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import copy
 import json
 from pathlib import Path
@@ -20,7 +21,7 @@ _env = None
 def setUpModule():
     global _env
     from unittest import mock
-    library = guideline_criteria.load(guideline_criteria.BUNDLE_PATH)
+    library = guideline_criteria.load()
     library.update(library_version='0.0.0', specs={}, criteria=[],
                    content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria-matrices.json'

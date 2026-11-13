@@ -1,4 +1,5 @@
 """find_parts.py searches the HardwareWiki raw library: catalog rows, unindexed PDFs, design examples."""
+from framework_guard import skip_without_framework  # noqa: E402
 import json
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / 'scripts'))
 import find_parts
+import knowledge_source
 
 CLI = HERE.parent / 'scripts' / 'find_parts.py'
 
@@ -110,6 +112,7 @@ class FindPartsTests(unittest.TestCase):
             r = subprocess.run([sys.executable, str(CLI), '--wiki', str(self.wiki), '--file', str(other)], capture_output=True, text=True)
             self.assertEqual(1, r.returncode)
 
+    @skip_without_framework
     def test_patterns_are_searchable_and_each_approach_has_sources_and_pitfalls(self):
         r = find_parts.search_circuits(['反激'])
         self.assertIn('qr-flyback', [x['id'] for x in r['results']])
@@ -117,7 +120,7 @@ class FindPartsTests(unittest.TestCase):
         index = find_parts.circuit_index()
         self.assertGreaterEqual(len(index), 16)
         self.assertNotIn('README', index)
-        # knowledge package format (references/knowledge/典型电路/README.md): only the ### headings under 「## 实现方案」
+        # knowledge framework format (知识/典型电路/README.md): only the ### headings under 「## 实现方案」
         # are approaches; sources are 「## 来源清单」 numbers (S1 p4). The pointer entry has no approach.
         self.assertEqual(['反馈丢失，输出升高', '使能脚悬空'],
                          [h for h in ('反馈丢失，输出升高', '使能脚悬空') if h not in index['power-rail-test-break']['implementations']])
@@ -126,7 +129,7 @@ class FindPartsTests(unittest.TestCase):
             if not info['implementations']:
                 self.assertEqual('reviewed-bias-and-latch', pid)
                 continue
-            body = (find_parts.CIRCUITS_DIR.parents[2] / info['file']).read_text(encoding='utf-8')
+            body = (knowledge_source.knowledge_dir() / info['file']).read_text(encoding='utf-8')
             self.assertIn('\n## 来源清单\n', body, pid)
             section_text = body.split('\n## 实现方案\n', 1)[1].split('\n## ', 1)[0]
             for section in section_text.split('\n### ')[1:]:

@@ -1,6 +1,7 @@
 """User 2026-11-08 (按草案实施): only the guideline rules that rule out a scheme candidate, change a selection or enter a
 calculation are implemented one by one; an uncited rule raises nothing. A board with external connectors carries the FMEA
 and the EMC port matrix, each with all its sections and every connector (references/guideline-evidence-groups.md)."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import json
 from pathlib import Path
 import sys

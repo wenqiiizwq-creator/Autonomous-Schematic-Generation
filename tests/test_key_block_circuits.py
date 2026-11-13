@@ -1,4 +1,5 @@
 """Key functional blocks name a typical circuit and approach, or none; a none block's scheme comparison covers the library hits."""
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import sys
 from pathlib import Path
 

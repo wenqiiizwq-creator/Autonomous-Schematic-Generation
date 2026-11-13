@@ -4,6 +4,7 @@ Industrial I/O calibration board, 2026-11-03 (user: 按建议执行): binding_ve
 without the datasheet name and type. The rows below are shaped like the TI, ST and pin-out text that board's
 datasheets give; nothing is filled from the symbol, and a pin the table does not type stays unfilled.
 """
+import framework_required  # noqa: F401  没配知识框架时本模块整个跳过
 import sys
 import unittest
 from pathlib import Path
