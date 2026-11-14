@@ -47,6 +47,7 @@ PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（
 维护约定：
 
 - 纲要改动先写草案交人确认，确认后在 [纲要确认记录](docs/outline-approvals.md) 最上面加一行，`python3 scripts/check_ledger.py` 核对。
+- 文档和任务的数量不设上限（2026-11-12 取消了每个模块至多 5 个任务的限制），加内容时保持逻辑清晰：一件事只写在一处，每个任务有给定输入、产出和做完的标志，按主流程读下来不用来回找。
 - 每处改动附复现问题的合成测试，`python3 -m unittest discover -s tests` 全部通过才提交。
 
 ## 免责声明

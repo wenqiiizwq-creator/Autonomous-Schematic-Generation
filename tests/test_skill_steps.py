@@ -50,7 +50,7 @@ class SkillStepTests(unittest.TestCase):
     def test_module_tasks_are_numbered_in_order(self):
         for title, tasks in body_sections()[:6]:
             module = title.split()[0]
-            self.assertTrue(1 <= len(tasks) <= 5, title)
+            self.assertTrue(tasks, title)   # no upper limit on tasks per module (user 2026-11-12: 取消这个定量的限制)
             self.assertEqual(['%s.%d' % (module, k) for k in range(1, len(tasks) + 1)], [num for num, _, _ in tasks], title)
 
     def test_every_task_ends_with_its_done_mark(self):

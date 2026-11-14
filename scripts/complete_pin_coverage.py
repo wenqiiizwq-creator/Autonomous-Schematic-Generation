@@ -6,7 +6,7 @@
 2. 库里类型为 no_connect 的脚（TPS26630RGE NC 19–24）：设计网表没写的补进 `no_connect`；已接进网络的只列出，不改——
    KiCad ERC 会报接了线的 no_connect 脚，手册允许接时改项目符号把它设成 passive。
 
-    python3 complete_pin_coverage.py record/electrical-intent.json [--symbol-dir 原理图] [--write]
+    python3 complete_pin_coverage.py record/electrical-intent.json [--symbol-dir 设计方案] [--write]
 """
 import argparse
 import json

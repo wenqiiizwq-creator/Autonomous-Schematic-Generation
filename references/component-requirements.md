@@ -127,7 +127,7 @@ asg_skill_dir=/path/to/autonomous-schematic-generation
 cd /绝对路径/交付目录
 python3 -B "$asg_skill_dir/scripts/audit_component_requirements.py" record/component-requirements.json \
   --intent record/electrical-intent.json --artifact-root /绝对路径/交付目录 \
-  --project-intent record/electrical-intent.json --write-bom 原理图/BOM.csv \
+  --project-intent record/electrical-intent.json --write-bom 设计方案/BOM.csv \
   --out record/component-requirements-prepare.json
 ```
 

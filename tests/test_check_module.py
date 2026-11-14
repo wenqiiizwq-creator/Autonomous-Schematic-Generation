@@ -355,8 +355,8 @@ class ModuleRunTests(unittest.TestCase):
         self.assertIn('功能块 2 个', report_text)
         (self.root / check_module.MODULE_REPORT).write_text(report_text, encoding='utf-8')
         self.assertEqual([], check_module.check_delivery(self.root))
-        (self.root / '原理图').mkdir()
-        self.assertTrue(any('原理图' in e for e in check_module.check_delivery(self.root)))
+        (self.root / '设计方案').mkdir()
+        self.assertTrue(any('设计方案' in e for e in check_module.check_delivery(self.root)))
 
     def test_pack_design_hands_a_module_run_to_the_module_check(self):
         import pack_design

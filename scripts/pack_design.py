@@ -3,7 +3,8 @@
 
     <delivery>/
       设计报告.md     render_design_report.py
-      原理图/         KiCad project, schematic.pdf, netlist.xml, BOM.csv
+      设计方案/       one KiCad project: schematic (+ schematic.pdf, netlist.xml, BOM.csv) and, once the PCB stage
+                      starts, the board in the same folder (.kicad_pcb, .kicad_dru and the PCB stage's own files)
       设计资料/       design documents that stay valid across versions
       record/         intent, design closure (+ audit), summary.json, visual review,
                       cited calculations and page scripts, manifest.json
@@ -35,7 +36,10 @@ from find_parts import library_index, locate_file, old_wiki_problem  # noqa: E40
 from render_design_report import REPORT, render  # noqa: E402
 from schematic_layout.component_requirements import package_audit  # noqa: E402
 
-TOP = (REPORT, '原理图', '设计资料', 'record')
+TOP = (REPORT, '设计方案', '设计资料', 'record')
+# Schematic and board are one standard KiCad project in 设计方案/ (user 2026-11-13, AD9361 board); the folders of
+# earlier layouts are named so an old delivery is told what to do with them.
+RENAMED_TOP = {'原理图': '改名为 设计方案/', 'PCB设计': '板子文件并入 设计方案/（与原理图同一个 KiCad 工程）'}
 SCHEMATIC = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
 # sr-review: an independent schematic-review run of this version kept with the records it reviewed
 # (industrial I/O calibration board 2026-11-03: the SR report lives in record/sr-review/ and packing refused it).
@@ -191,19 +195,23 @@ def check(root, inputs=()):
     errors = []
     present = {p.name for p in root.iterdir() if not p.name.startswith('.')} if root.is_dir() else set()
     extra = sorted(present - set(TOP))
+    for name in extra:
+        if name in RENAMED_TOP:
+            errors.append('%s/ 是旧的交付目录结构：%s' % (name, RENAMED_TOP[name]))
+    extra = [name for name in extra if name not in RENAMED_TOP]
     if extra:
         errors.append('only %s belong at the top level; move these to the work directory or reference them '
                       'with --input: %s' % (', '.join(TOP), ', '.join(extra)))
     for name in TOP:
         if name not in present:
             errors.append('missing %s%s' % (name, '; run render_design_report.py' if name == REPORT else ''))
-    sch = root / '原理图'
+    sch = root / '设计方案'
     if sch.is_dir():
         if not list(sch.glob('*.kicad_pro')):
-            errors.append('原理图/ has no .kicad_pro')
+            errors.append('设计方案/ has no .kicad_pro')
         for name in SCHEMATIC:
             if not (sch / name).is_file():
-                errors.append('原理图/%s is missing' % name)
+                errors.append('设计方案/%s is missing' % name)
     record = root / 'record'
     if record.is_dir():
         # The other records are the report's to require; it names each one missing.
@@ -238,6 +246,12 @@ def check(root, inputs=()):
             docs = [p['item'] for p in result.get('pending', []) if p.get('code') == 'design_document_incomplete']
             if docs:
                 errors.append('design-closure.json: 必写的设计文档不齐（%s）；见 references/guideline-evidence-groups.md' % '；'.join(docs))
+            # downstream_version 1 (user 2026-11-13: 照草案写入): a rule closing after the schematic is handed on in the
+            # downstream constraint table or held not applicable with a reason.
+            rules = [p['item'] for p in result.get('pending', []) if p.get('code') == 'downstream_constraint_missing']
+            if rules:
+                errors.append('design-closure.json: 下游约束表缺 %d 条关闭阶段在原理图之后的准则（%s%s）；写一行，或写不适用理由；'
+                              '见 references/design-closure.md“下游约束”' % (len(rules), '；'.join(rules[:3]), ' 等' if len(rules) > 3 else ''))
             # SKILL.md C5.2: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
             cells = [p['item'] for p in result.get('pending', []) if p.get('code') in ('matrix_cell_missing', 'matrix_cell_failed')]
             if cells:

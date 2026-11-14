@@ -134,7 +134,7 @@ python3 scripts/fill_pin_maps.py <交付目录> [--pages U301=28-34] [--write] [
 **缺符号时从手册引脚表生成**（校准板、PoE 2026-11-07 都手写了生成脚本；Matrix 自建符号上下边引脚名在角上压到左右引脚名）：
 
 ```sh
-python3 scripts/make_symbol.py 引脚表.json --out 原理图/项目.kicad_sym      # CSV 表头 number,name,type[,side]，CSV 加 --name
+python3 scripts/make_symbol.py 引脚表.json --out 设计方案/项目.kicad_sym      # CSV 表头 number,name,type[,side]，CSV 加 --name
 ```
 
 逐物理脚写引脚号、手册名和类型（`datasheet_type` 同一套代码，或 KiCad 类型），`side` 可选 L/R/T/B（不写时电源在上、地在下、输出在右、其余在左）。

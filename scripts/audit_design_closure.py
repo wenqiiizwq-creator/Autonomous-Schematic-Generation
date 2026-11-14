@@ -725,7 +725,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
                     rule, derated = implied
                     risks.append({'calculation': key, 'check': c.get('name'), 'ref': ref, 'rule': rule['id'],
                                   'value': c.get('value'), 'limit': derated, 'rating': c.get('limit'),
-                                  'unit': c.get('unit'), 'improvement': c.get('improvement')})
+                                  'unit': c.get('unit'), 'improvement': c.get('improvement'), 'measure': rule['measure']})
                     audit_severe_stress(where, c, risks[-1], rule, c.get('limit'), level, work or {}, error)
                     if not text(c.get('improvement')):
                         error('stress_risk_without_improvement', '%s：应力超过 %s 级 %s 的降额值 %g %s，写 improvement'
@@ -752,7 +752,7 @@ def audit_derating(record, intent, calculations, requirements, clarifications, e
             if derating_deviation(c):
                 risks.append({'calculation': key, 'check': c.get('name'), 'ref': ref, 'rule': rule['id'],
                               'value': c.get('value'), 'limit': c.get('limit'), 'rating': c.get('rating'),
-                              'unit': c.get('unit'), 'improvement': c.get('improvement')})
+                              'unit': c.get('unit'), 'improvement': c.get('improvement'), 'measure': rule['measure']})
                 audit_severe_stress(where, c, risks[-1], rule, c.get('rating'), level, work or {}, error)
                 if not text(c.get('improvement')):
                     error('stress_risk_without_improvement', where + '：写 improvement（换额定更高的件或降低应力）')
@@ -1096,8 +1096,12 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         error('guideline_unknown', gid)
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
         error('guideline_cited_not_applicable', '%s：设计准则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
+    # A row of the downstream constraint table hands a rule on as a work item does (downstream_version 1).
+    tabled = {g for row in (read_downstream_table(evidence or {}, read)[1] if read else [])
+              for g in GUIDELINE_ID.findall(row['依据'])}
     for gid in found['downstream']:
-        if gid in found['covered'] and gid not in by_work and not (classes.get(gid) == 'handoff' and gid in by_evidence):
+        if gid in found['covered'] and gid not in by_work and gid not in tabled and not (
+                classes.get(gid) == 'handoff' and gid in by_evidence):
             error('guideline_downstream_without_work_item', '%s：关闭阶段在原理图之后，用一件待办交给下游' % gid)
     found['uncited'] = found.pop('uncovered')
     found.pop('by_coverage', None)
@@ -1113,7 +1117,7 @@ def audit_documents(record, evidence, error, need, groups=None, intent=None, cal
     by_carrier = {}
     for key, row in evidence.items():
         name = row.get('carrier')
-        if name is None:
+        if name is None or name == DOWNSTREAM_CARRIER:   # read by audit_downstream
             continue
         if name not in carriers:
             error('guideline_carrier_unknown', '%s：carrier %s 不是必写的设计文档（%s）' % (key, name, '/'.join(carriers)))
@@ -1131,6 +1135,127 @@ def audit_documents(record, evidence, error, need, groups=None, intent=None, cal
             need('design_document_incomplete', '%s（%s）：%s' % (name, spec['title'], '；'.join(trouble)))
         found[name] = {'evidence': keys, 'objects': objects, 'problems': trouble}
     return found
+
+
+# --- Downstream constraints (downstream_version 1) ------------------------------------------------------------------
+# AD9361 board, 2026-11-13 (user: 照草案写入, docs/草案-下游约束表.md): U301 at an estimated 104 °C junction against 85 °C
+# derated got a heat sink only in an `improvement` cell and a validation item "measure it on the sample"; PCB and the
+# enclosure were never told, and the 31 applicable rules that close after the schematic (G08-047 thermal interface table,
+# G06-024 creepage, ...) were listed and handed to no one. Every board carries 设计资料/下游约束表.md (`carrier: DOWNSTREAM`):
+# one row per constraint PCB, the enclosure, the sample, production or firmware has to meet.
+DOWNSTREAM_CARRIER = 'DOWNSTREAM'
+DOWNSTREAM_RECEIVERS = ('PCB', '结构', '样机验证', '生产', '固件')
+DOWNSTREAM_COLUMNS = ('编号', '接收方', '对象', '约束', '依据', '验收')
+DOWNSTREAM_ROW_ID = re.compile(r'^D-\d+$')
+GUIDELINE_ID = re.compile(r'(?<![A-Za-z0-9])G\d{2}-\d{3}(?![0-9])')
+
+
+def markdown_table_rows(lines, columns):
+    """Data rows ({column: cell}) of every table whose header names all `columns`."""
+    rows = []
+    split = lambda line: [c.strip() for c in line.strip().strip('|').split('|')]   # noqa: E731
+    for i, line in enumerate(lines[:-1]):
+        if not (line.lstrip().startswith('|') and MD_RULE.match(lines[i + 1])):
+            continue
+        head = split(line)
+        index = {col: next((k for k, h in enumerate(head) if col in h), None) for col in columns}
+        if None in index.values():
+            continue
+        j = i + 2
+        while j < len(lines) and lines[j].lstrip().startswith('|'):
+            cells = split(lines[j])
+            if re.sub(r'[|\s:-]', '', lines[j]):
+                rows.append({col: cells[k] if k < len(cells) else '' for col, k in index.items()})
+            j += 1
+    return rows
+
+
+def read_downstream_table(evidence, read):
+    """(evidence ids, rows, problems) of the downstream constraint table registered with `carrier: DOWNSTREAM`."""
+    keys = [k for k, row in evidence.items() if row.get('carrier') == DOWNSTREAM_CARRIER]
+    rows, problems = [], []
+    for key in keys:
+        path = read(evidence[key].get('path')) if read else None
+        if path is None:
+            problems.append('%s 的文件读不到' % key)
+            continue
+        lines = path.read_text(encoding='utf-8', errors='replace').splitlines() + ['']
+        rows += markdown_table_rows(lines, DOWNSTREAM_COLUMNS)
+    return keys, rows, problems
+
+
+def downstream_rows(rows, error):
+    """{row id: row with `receivers` and `cites`} after checking each row is complete."""
+    table = {}
+    for row in rows:
+        rid = row['编号']
+        if not DOWNSTREAM_ROW_ID.match(rid):
+            error('downstream_row_incomplete', '编号 %r 要写成 D-<序号>' % rid)
+            continue
+        if rid in table:
+            error('duplicate_id', 'downstream:' + rid)
+        receivers = [r for r in re.split(r'[、/+＋，,\s]+', row['接收方']) if r]
+        missing = [c for c in ('接收方', '对象', '约束', '依据', '验收') if not row[c] or row[c] in ('-', '—')]
+        unknown = [r for r in receivers if r not in DOWNSTREAM_RECEIVERS]
+        if missing:
+            error('downstream_row_incomplete', '%s 缺 %s' % (rid, '、'.join(missing)))
+        if unknown:
+            error('downstream_row_incomplete', '%s 的接收方 %s 不在 %s 之内' % (rid, '、'.join(unknown), '/'.join(DOWNSTREAM_RECEIVERS)))
+        table[rid] = dict(row, receivers=receivers, cites=sorted(set(GUIDELINE_ID.findall(row['依据']))))
+    return table
+
+
+def resolved_in_schematic(c, work):
+    """A stress risk the schematic itself will fix: its work item is an unclosed design item."""
+    item = work.get(c.get('work_item')) if isinstance(c.get('work_item'), str) else None
+    return bool(item) and item.get('stage') == 'design' and item.get('status') != 'closed'
+
+
+def audit_downstream(record, evidence, read, calculations, work, risks, guidelines, error, need, closure):
+    """downstream_version 1 (references/design-closure.md 下游约束): the table exists and its rows are complete; every
+    applicable rule closing after the schematic has a row or a not-applicable reason; a temperature stress risk or any severe
+    stress not fixed by a design item names the rows that carry its boundary (`downstream` on the check), and each names it."""
+    if record.get('downstream_version') is None:
+        return {'status': 'NOT_DECLARED'}
+    if record['downstream_version'] != 1:
+        error('schema', 'downstream_version must be 1')
+        return {'status': 'NOT_DECLARED'}
+    keys, rows, problems = read_downstream_table(evidence, read) if closure else ([], [], [])
+    table = downstream_rows(rows, error)
+    for p in problems:
+        error('downstream_unreadable', p)
+    for d in risks:
+        c = next((k for k in (calculations.get(d['calculation']) or {}).get('checks') or []
+                  if isinstance(k, dict) and k.get('name') == d.get('check')), {})
+        if not (d.get('measure') in TEMPERATURE_MEASURES or d.get('required_severity')) or resolved_in_schematic(c, work):
+            continue
+        where = '%s:%s' % (d['calculation'], d.get('check'))
+        named = c.get('downstream')
+        if not (isinstance(named, list) and named and all(isinstance(x, str) for x in named)):
+            error('stress_risk_without_downstream', '%s：%s 超过降额值，又不靠改原理图解决；把所需的边界（结到环境热阻目标、'
+                  '散热面和路径等）写成下游约束表的一行，检查写 downstream: [D-x]' % (where, d.get('ref') or ''))
+            continue
+        d['downstream'] = named
+        for rid in named if closure else ():   # the table is module C5's (task C5.2)
+            if rid not in table:
+                error('downstream_unknown_row', '%s：下游约束表没有 %s' % (where, rid))
+            elif not mentions(table[rid]['依据'], d['calculation']):
+                error('downstream_row_not_citing', '%s：%s 的依据要写计算 %s' % (where, rid, d['calculation']))
+    if not closure:
+        return {'status': 'NOT_CHECKED'}
+    if not keys:
+        need('design_document_incomplete', '%s（下游约束表）：没有登记（证据条目写 carrier: %s，文件 设计资料/下游约束表.md）'
+             % (DOWNSTREAM_CARRIER, DOWNSTREAM_CARRIER))
+    cited = {g for row in table.values() for g in row['cites']}
+    missing = []
+    if isinstance(guidelines, dict):
+        missing = [g for g in guidelines.get('downstream') or []
+                   if g not in cited and g not in (guidelines.get('not_applicable') or {})]
+        for gid in missing:
+            need('downstream_constraint_missing', '%s：关闭阶段在原理图之后，下游约束表没有引用它的行；写一行，或在 '
+                 'guideline_scope.not_applicable 写理由' % gid)
+    return {'status': 'INCOMPLETE' if (missing or not keys) else 'PASS', 'evidence': keys,
+            'rows': list(table.values()), 'missing_guidelines': missing}
 
 
 # --- Placeholders, part identity binding, unused pins and rail voltages (binding_version 1) ---------------------------
@@ -1802,6 +1927,9 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
                                           and not Path(p).is_absolute() else None, documents=closure)
     elif guideline_criteria.load()['criteria']:
         need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
+    downstream = audit_downstream(record, evidence, lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
+                                  and not Path(p).is_absolute() else None, calculations, work,
+                                  (derating or {}).get('stress_risks') or [], guidelines, error, need, closure)
     convergence = {'status': 'NOT_ASSESSED'}
     if 'convergence_version' in record:
         if record['convergence_version'] != 1:
@@ -1818,7 +1946,7 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
             'counts': {k: len(v) for k, v in tables.items()}, 'convergence': convergence,
             'calculation_basis': derived, 'citations': citations, 'derating': derating,
             'operating_inputs': inputs_found, 'estimate_margins': margins,
-            'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED',
+            'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED', 'downstream': downstream,
             'binding': binding, 'matrices': matrices,
             'boundary_nets': boundary,
             'unspecified_operations': sorted(k for k, v in points.items() if v.get('specified') is False),

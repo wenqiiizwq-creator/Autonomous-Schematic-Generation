@@ -12,7 +12,7 @@ side 写 L/R/T/B，不写时 PWR/PWR_OUT 在上、GND 在下、O/OD/OS/PWR_OUT �
 生成的符号满足 ASG 的符号完整性与引脚文字检查：2.54 mm 栅格；叠脚上方留出竖排脚号的空行；左右引脚名之间、
 上下引脚与左右引脚名之间按文字宽度留空（Matrix 2026-11-07 #20：上下边引脚名在角上压到左右引脚名）。
 
-    python3 make_symbol.py pins.json --out 原理图/项目.kicad_sym [--library 项目]
+    python3 make_symbol.py pins.json --out 设计方案/项目.kicad_sym [--library 项目]
 输出文件已存在时按符号名替换或追加，其余符号不动。设计网表里用 <library>:<name> 引用。
 """
 import argparse

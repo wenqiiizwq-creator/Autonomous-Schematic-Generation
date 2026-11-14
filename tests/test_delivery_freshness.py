@@ -7,7 +7,7 @@ import tempfile
 import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from check_delivery_freshness import check
+from check_delivery_freshness import check, evidence_sha256
 
 class FreshnessTests(unittest.TestCase):
     def setUp(self):
@@ -28,11 +28,11 @@ class FreshnessTests(unittest.TestCase):
         self.path.write_text(json.dumps(self.m))
         return check(self.path)
     def test_record_manifest_resolves_from_delivery_folder(self):
-        sch=self.base/'原理图';sch.mkdir();record=self.base/'record';record.mkdir()
+        sch=self.base/'设计方案';sch.mkdir();record=self.base/'record';record.mkdir()
         for n in list(self.m['inputs'])+list(self.m['outputs']):(self.base/n).rename(sch/n)
-        self.m['root']='原理图/board.kicad_sch'
-        for section in ('inputs','outputs'):self.m[section]={'原理图/'+k:v for k,v in self.m[section].items()}
-        self.m['roles']={k:['原理图/'+x for x in v] for k,v in self.m['roles'].items()}
+        self.m['root']='设计方案/board.kicad_sch'
+        for section in ('inputs','outputs'):self.m[section]={'设计方案/'+k:v for k,v in self.m[section].items()}
+        self.m['roles']={k:['设计方案/'+x for x in v] for k,v in self.m['roles'].items()}
         self.path=record/'delivery-evidence.json'
         self.assertEqual(self.result()['status'],'FRESH')
     def test_fresh_is_not_design_pass(self):
@@ -54,6 +54,17 @@ class FreshnessTests(unittest.TestCase):
     def test_local_library_omission_rejected(self):
         (self.base/'symbols').mkdir();(self.base/'symbols/Local.kicad_sym').write_text('library')
         self.assertNotEqual(self.result()['status'],'FRESH')
+    def test_board_rules_in_the_shared_project_do_not_stale_the_schematic(self):
+        # User 2026-11-13: schematic and board share the .kicad_pro in 设计方案/. Its board section is the board's own;
+        # net classes are read by the schematic too.
+        pro = self.base/'board.kicad_pro'
+        pro.write_text(json.dumps({'meta': {}, 'board': {'rules': 1}, 'net_settings': {'classes': []}}))
+        self.m['inputs']['board.kicad_pro'] = evidence_sha256(pro)
+        self.assertEqual(self.result()['status'], 'FRESH')
+        pro.write_text(json.dumps({'meta': {}, 'board': {'rules': 2, 'tracks': [0.2]}, 'net_settings': {'classes': []}}, indent=2))
+        self.assertEqual(self.result()['status'], 'FRESH')
+        pro.write_text(json.dumps({'meta': {}, 'board': {'rules': 2}, 'net_settings': {'classes': [{'name': 'RF50'}]}}))
+        self.assertNotEqual(self.result()['status'], 'FRESH')
     def test_missing_output_rejected(self):
         (self.base/'net.xml').unlink();self.assertNotEqual(self.result()['status'],'FRESH')
 

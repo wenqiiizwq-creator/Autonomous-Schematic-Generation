@@ -202,6 +202,22 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       `stress_risks` 里加 `required_severity`、`loosest_limit`、`margin_to_rating`，`derating.severe_thresholds` 写所用阈值；
       报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
       应力超幅是应力判法（框架 G10 目录的 `应力判法.md`）判定表中的一档，这里是它在 ASG 设计记录里的写法。
+      挂 validation 待办只表示样机上确认；要靠 PCB、结构实现的边界另按下面的 `downstream_version` 写进下游约束表，两者不互相代替。
+  - **`downstream_version: 1`**（AD9361 板，用户 2026-11-13：照草案写入，`docs/草案-下游约束表.md`）：原理图阶段定下、要由
+    PCB、结构、样机、生产或固件落实的要求写进 `设计资料/下游约束表.md`，登记为证据并写 `carrier: DOWNSTREAM`。
+    表头含 `编号 | 接收方 | 对象 | 约束 | 依据 | 验收`：编号 `D-<序号>`；接收方取 `PCB`/`结构`/`样机验证`/`生产`/`固件`，
+    可写几个（用顿号分）；约束写定量边界，不写“注意散热”这类无数的话；依据写计算编号和准则编号；验收写测什么、什么工况、门限多少。
+    审计（只在写了 `downstream_version` 时）：
+    - 温度类应力风险（`max_c`、`tj_percent`、`margin_c`）和任何应力超幅，`work_item` 不是未关闭的 design 待办（即不靠改原理图解决）的，
+      检查写 `downstream: [D-x]`，缺记 `stress_risk_without_downstream`；整板审计时该行要存在（`downstream_unknown_row`）
+      且依据里写这条计算（`downstream_row_not_citing`）。热类的行写所需的结到环境热阻 =（降额后结温上限 − 环境温度）÷ 功耗，
+      以及散热面、路径、所在面或朝向（G08-047）。
+    - 整板审计：没登记这份表记 `design_document_incomplete`；适用准则里 `closing_stage` 不是 `schematic` 的，每条至少一行在依据里写它的编号，
+      或在 `guideline_scope.not_applicable` 写理由，缺记 `downstream_constraint_missing`；两者都让打包拒绝。
+      行缺列、编号或接收方不合法记 `downstream_row_incomplete`。表里写了一条下游准则，等同于用待办把它交给下游。
+    - 报告“技术转交要求”按接收方分组列出各行，挂在应力超幅上的排前面；结论写各接收方的行数。
+    - 审计只核行在、行写全、依据指对；热阻目标等数值算得对不对由 SR 审查核（G08-047 的审查方法）。
+    没写 `downstream_version` 的旧记录不核这些，结果写 `NOT_DECLARED`；新设计必须写。
   - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：设计准则（G01–G09，见框架的准则登记（`知识/设计准则/准则登记/`））。
     `guideline_scope`（在 `requirements.json`）写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。

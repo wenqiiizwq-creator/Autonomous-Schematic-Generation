@@ -831,7 +831,7 @@ def artifact_audit(root, intent, schematic=None, pdf=None, xml=None, bom=None, p
 
 def package_audit(root, intent):
     root = Path(root)
-    folder = root / '原理图'
+    folder = root / '设计方案'
     config_path = root / 'record' / 'deliver.json'
     native = None
     if config_path.is_file():

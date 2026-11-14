@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import CURRENT_VERSIONS, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import CURRENT_VERSIONS, DOWNSTREAM_RECEIVERS, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 from architecture import check_architecture  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
@@ -340,10 +340,10 @@ def check_visual_items(root, visual, summary=None):
     A finished review names the PDF it was made on (R6 redraw: an earlier PDF's review read as finished).
     """
     errors = []
-    pdf = root / '原理图' / 'schematic.pdf'
+    pdf = root / '设计方案' / 'schematic.pdf'
     if visual.get('status') == 'REVIEWED' and pdf.is_file() and visual.get('pdf_sha256') != render_sha256(pdf):
-        errors.append('visual-review.json 的 pdf_sha256 不是本版 原理图/schematic.pdf 的（render_design_report.py --pdf-sha256 '
-                      '原理图/schematic.pdf 给出）：按本版 PDF 重新审阅，做完前 status 写 REVIEW_PENDING')
+        errors.append('visual-review.json 的 pdf_sha256 不是本版 设计方案/schematic.pdf 的（render_design_report.py --pdf-sha256 '
+                      '设计方案/schematic.pdf 给出）：按本版 PDF 重新审阅，做完前 status 写 REVIEW_PENDING')
     if any(w in str(visual.get('method', '')) for w in CARRIED_OVER):
         errors.append('visual-review.json 的 method 写了沿用上一版：没改动的页面也要按本版 PDF 重新看')
     done = {}
@@ -360,14 +360,14 @@ def check_visual_items(root, visual, summary=None):
             errors.append('%s：处置“%s”沿用上一版：没改动的页面也要按本版 PDF 重新看' % (name, carried[0][:30]))
         if not items:
             continue
-        sch = root / '原理图' / str(name)
+        sch = root / '设计方案' / str(name)
         if not text(name) or not sch.is_file():
-            errors.append('第 %s 页：有图面待审对象但找不到原理图/%s' % (page.get('page'), name))
+            errors.append('第 %s 页：有图面待审对象但找不到设计方案/%s' % (page.get('page'), name))
             continue
         try:
             refs = symbol_refs(sch)
         except (OSError, ValueError) as error:
-            errors.append('原理图/%s 读不出来：%s' % (name, error))
+            errors.append('设计方案/%s 读不出来：%s' % (name, error))
             continue
         for item in items:
             key = str(item.get('item', ''))
@@ -1098,12 +1098,27 @@ def render(root, notes=None, title=None):
                                                  len(v.get('missing') or []), len(v.get('failed') or []))
             for k, v in matrices.items() if isinstance(v, dict)))
     derating = audit.get('derating') if isinstance(audit.get('derating'), dict) else None
+    downstream = audit.get('downstream') if isinstance(audit.get('downstream'), dict) else {}
+    downstream_rows = [r for r in downstream.get('rows') or [] if isinstance(r, dict)]
+    row_severity, calc_rows = {}, {}
+    for d in (derating or {}).get('stress_risks') or []:
+        for rid in d.get('downstream') or []:
+            calc_rows.setdefault(d['calculation'], []).append(rid)
+            if d.get('required_severity'):
+                row_severity[rid] = min(row_severity.get(rid, 'P9'), d['required_severity'])
     if derating:
         risks, hints = derating.get('stress_risks') or [], derating.get('hints') or []
         out.append('- **降额等级**：%s（%s，见 stress-spec.md）。%s%s' % (
             LEVEL_NAMES.get(derating.get('level'), '未定'), derating.get('source') or '没有写来源',
             '合格但有风险（应力）%d 处，见“应力风险”。' % len(risks) if risks else '写出的应力都在降额值以内。',
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
+    if downstream.get('status') not in (None, 'NOT_DECLARED', 'NOT_CHECKED'):
+        counts = Counter(r for row in downstream_rows for r in row['receivers'])
+        out.append('- **技术转交**：下游约束表 %d 行（%s），其中挂在应力超幅上的 %d 行；另有转交待办 %d 件。见“技术转交要求”。%s' % (
+            len(downstream_rows), '、'.join('%s %d' % (r, counts[r]) for r in DOWNSTREAM_RECEIVERS if counts[r]) or '无',
+            len(row_severity), len(handoffs),
+            '关闭阶段在原理图之后的准则还有 %d 条没交出（%s）。' % (len(downstream['missing_guidelines']), '、'.join(
+                downstream['missing_guidelines'][:5])) if downstream.get('missing_guidelines') else ''))
     guidelines = audit.get('guidelines') if isinstance(audit.get('guidelines'), dict) else None
     if guidelines and guidelines.get('applicable'):
         out.append('- **共用规范**：%s，适用 %d 条，其中计算、选型、待办或证据引用 %d 条，写明不适用 %d 条；'
@@ -1263,6 +1278,9 @@ def render(root, notes=None, title=None):
             for label, value in fields:
                 if text(value):
                     out.append('- **%s**：%s' % (label, value))
+            carried = sorted({rid for cid in w.get('calculations') or [] for rid in calc_rows.get(cid, [])})
+            if carried:
+                out.append('- **实现交给后续环节**：%s（见“技术转交要求”）' % '、'.join(carried))
             if gap:
                 out.append('- **缺失资料**：')
                 for m in w['missing']:
@@ -1295,7 +1313,28 @@ def render(root, notes=None, title=None):
                             out.append('%d. %s（%s）' % (n, q, w['id']))
                 out.append('')
 
-    if handoffs:
+    if downstream_rows:
+        # downstream_version 1 (user 2026-11-13: 照草案写入): the downstream constraint table grouped by receiver, rows that
+        # carry a severe stress first; the validation and PCB handoff items follow.
+        out += ['## 技术转交要求', '',
+                '原理图阶段定下、要由后续环节落实的要求，来自 `设计资料/下游约束表.md`，按接收方分组；挂在应力超幅上的排在前面。'
+                '原理图交付时将本节一并转交对应接收方。', '']
+        for receiver in [r for r in DOWNSTREAM_RECEIVERS if any(r in row['receivers'] for row in downstream_rows)]:
+            group = sorted((row for row in downstream_rows if receiver in row['receivers']),
+                           key=lambda row: (row_severity.get(row['编号'], 'P9'), int(row['编号'][2:])))
+            out += ['### %s（%d 条）' % (receiver, len(group)), '', '| 编号 | 对象 | 约束 | 依据 | 验收 |', '|---|---|---|---|---|']
+            for row in group:
+                tag = '**应力超幅 %s** ' % row_severity[row['编号']] if row['编号'] in row_severity else ''
+                out.append('| %s | %s | %s%s | %s | %s |' % (row['编号'], cell(row['对象']), tag, cell(row['约束']),
+                                                          cell(row['依据']), cell(row['验收'])))
+            out.append('')
+        if handoffs:
+            out += ['### 样机与 PCB 的转交待办', '', '| 责任方 | 环节 | 要落实的要求 |', '|---|---|---|']
+            for w in handoffs:
+                out.append('| %s | %s | %s |' % (cell(w.get('owner') or '未指定'), STAGES.get(w.get('stage'), ''),
+                                                cell(w.get('action') or '')))
+            out.append('')
+    elif handoffs:
         out += ['## 技术转交要求', '',
                 '下列要求在 PCB、结构、样机测试等后续环节落实，不属于原理图未完成项。原理图交付时将本表一并转交对应责任方。', '',
                 '| 责任方 | 环节 | 要落实的要求 |', '|---|---|---|']
@@ -1351,12 +1390,12 @@ def render(root, notes=None, title=None):
                     '应力超过 %s 级的降额值至少 P2；离额定的余量小于估算所需的余量（温度类 %g ℃，即设计准则 G02 '
                     'est_junction_margin；其他应力取该检查的 uncertainty）为 P1。' % (
                         severe.get('loosest_level'), severe.get('loosest_level'), severe.get('junction_margin_c')), '']
-        out += ['| 计算 | 位号 | 降额规则 | 应力 / 降额值 / 额定 | 改进 | 超幅待办 |', '|---|---|---|---|---|---|']
+        out += ['| 计算 | 位号 | 降额规则 | 应力 / 降额值 / 额定 | 改进 | 超幅待办 | 下游约束 |', '|---|---|---|---|---|---|---|']
         for d in risks:
             owed = ('%s 要求 %s' % (d.get('work_item') or '缺', d['required_severity'])) if d.get('required_severity') else '—'
-            out.append('| %s | %s | %s | %s / %s / %s %s | %s | %s |' % (d['calculation'], d.get('ref') or '', d['rule'], num(d.get('value')),
-                                                                   num(d.get('limit')), num(d.get('rating')), d.get('unit') or '',
-                                                                   cell(d.get('improvement') or ''), owed))
+            out.append('| %s | %s | %s | %s / %s / %s %s | %s | %s | %s |' % (
+                d['calculation'], d.get('ref') or '', d['rule'], num(d.get('value')), num(d.get('limit')), num(d.get('rating')),
+                d.get('unit') or '', cell(d.get('improvement') or ''), owed, '、'.join(d.get('downstream') or []) or '—'))
         out.append('')
     if margins:
         out += ['## 余量不足以覆盖估计误差', '',
@@ -1442,10 +1481,10 @@ def render(root, notes=None, title=None):
             '| 未关闭项：设计未完成 / 外部资料缺口 | %d / %d |' % (stage_status.get(('design', 'open'), 0), stage_status.get(('external', 'open'), 0)),
         ] + (['| 未关闭项：用户暂缓的需求 | %d |' % stage_status[('requirement', 'open')]]
              if stage_status.get(('requirement', 'open')) else []) + [
-            '| 技术转交要求 | %d |' % len(handoffs),
+            '| 技术转交要求 | %d |' % (len(handoffs) + len(downstream_rows)),
             '| 已关闭的待办 | %d |' % sum(v for (s, st), v in stage_status.items() if st == 'closed'), '']
     out += ['## 详细记录', '',
-            '原理图在 `原理图/`（KiCad 工程、PDF、网表、BOM）。`record/` 里是生成这份报告用的记录：'
+            '原理图在 `设计方案/`（KiCad 工程、PDF、网表、BOM；PCB 环节的板子也在这个工程里）。`record/` 里是生成这份报告用的记录：'
             '`electrical-intent.json` 是设计网表，`requirements.json` 是需求清单，`design-closure.json` 是需求追溯、待办和计算的处理情况，'
             '`summary.json` 是自动检查结果，`visual-review.json` 是图面审阅记录，`manifest.json` 记录用到的需求、'
             '原厂资料和前一版设计的位置与校验码。', '']

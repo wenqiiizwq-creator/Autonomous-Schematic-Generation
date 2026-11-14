@@ -37,7 +37,7 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
  def test_duplicate_declaration_rejected(self):self.i['reviewed_circuit_supply']*=2;self.assertRaises(ValueError,declarations,self.i)
  def test_review_path_escape_fails(self):self.i['reviewed_circuit_supply'][0]['evidence']['path']='../review.md';self.assertEqual(self.run_case()['status'],'FAIL')
  def test_review_kept_outside_schematic_folder_resolves_from_artifact_root(self):
-  sch=self.p/'原理图';sch.mkdir();rec=self.p/'record'/'evidence';rec.mkdir(parents=True)
+  sch=self.p/'设计方案';sch.mkdir();rec=self.p/'record'/'evidence';rec.mkdir(parents=True)
   self.ev.rename(rec/'review.md');self.i['reviewed_circuit_supply'][0]['evidence']['path']='record/evidence/review.md'
   f=sch/'n.xml';f.write_text(xml(self.n,{'D1':('Device','D','D'),'C1':('Device','C','10u')}))
   self.assertEqual(judge(f,self.i,{'FLGX1':'#FLG1'})['status'],'FAIL')

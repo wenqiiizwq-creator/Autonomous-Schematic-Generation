@@ -36,10 +36,10 @@ class Delivery:
         self.env = mock.patch.dict(os.environ, {temp_framework.knowledge_source.ENV_VAR: str(framework)})
         self.env.start()
         self.record = self.root / 'record'
-        for d in ('原理图', '设计资料', 'record/evidence'):
+        for d in ('设计方案', '设计资料', 'record/evidence'):
             (self.root / d).mkdir(parents=True)
         for name in ('board.kicad_pro', 'board.kicad_sch', 'schematic.pdf', 'netlist.xml', 'BOM.csv'):
-            (self.root / '原理图' / name).write_text('x')
+            (self.root / '设计方案' / name).write_text('x')
         (self.root / '设计资料' / '方案与选型依据.md').write_text('# basis')
         (self.record / 'evidence' / 'design.md').write_text('regulator design basis')
         self.write('electrical-intent.json', {'components': [{'ref': 'U1', 'value': 'XYZ100', 'mpn': 'XYZ100',
@@ -90,7 +90,7 @@ class Delivery:
         self.write('summary.json', {'status': 'INCOMPLETE', 'sheets': ['a', 'b'], 'gates': {
             'erc': {'status': 'PASS', 'violations': 0}, 'intent_netlist': {'status': 'PASS', 'errors': 0},
             'geometry': {'status': 'INSUFFICIENT'}, 'design_closure': {'status': 'INCOMPLETE'}}})
-        self.pdf = render_sha256(self.root / '原理图' / 'schematic.pdf')
+        self.pdf = render_sha256(self.root / '设计方案' / 'schematic.pdf')
         self.write('visual-review.json', {'status': 'REVIEWED', 'pdf_sha256': self.pdf, 'pages': [
             {'page': 1, 'file': 'board.kicad_sch', 'paths': ['VIN to VOUT'], 'problems': []}]})
         self.write('page-plan.json', {'schema_version': 1, 'pages': [
@@ -744,7 +744,7 @@ class DesignReportTests(unittest.TestCase):
 
     def test_a_finished_review_names_this_versions_pdf(self):
         """R6 redraw: a review made on the previous export read as finished; KiCad's export time does not count."""
-        pdf = self.d.root / '原理图' / 'schematic.pdf'
+        pdf = self.d.root / '设计方案' / 'schematic.pdf'
         pdf.write_bytes(b'%PDF-1.5 /CreationDate (D:2026:10:23:10:00:00) page')
         review = json.loads((self.d.record / 'visual-review.json').read_text())
         review['pdf_sha256'] = render_sha256(pdf)
@@ -762,7 +762,7 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('visual-review.json 的 method 写了沿用上一版：没改动的页面也要按本版 PDF 重新看', self.d.report()[1])
 
     def test_every_render_review_item_is_dispositioned_from_this_pdf(self):
-        (self.d.root / '原理图' / 'board.kicad_sch').write_text(
+        (self.d.root / '设计方案' / 'board.kicad_sch').write_text(
             '(kicad_sch (version 20250114) (generator "t") (uuid "r") (paper "A4") (lib_symbols)\n'
             '(symbol (lib_id "Device:R") (at 0 0 0) (uuid "aaa") (property "Reference" "R1" (at 0 0 0)))\n'
             '(symbol (lib_id "Device:R") (at 0 10 0) (uuid "bbb") (property "Reference" "U1" (at 0 0 0))))\n')
@@ -959,7 +959,7 @@ class PackDesignTests(unittest.TestCase):
         errors, manifest = self.run_pack()
         self.assertEqual(errors, [])
         self.assertEqual(manifest['inputs']['requirements']['kind'], 'directory')
-        self.assertIn('原理图/schematic.pdf', manifest['packed'])
+        self.assertIn('设计方案/schematic.pdf', manifest['packed'])
         self.assertTrue((self.d.record / 'manifest.json').is_file())
         import knowledge_source
         self.assertEqual(sorted(manifest['knowledge_release']), ['fingerprint', 'read_date'])
@@ -973,6 +973,26 @@ class PackDesignTests(unittest.TestCase):
         self.assertTrue(any('README.md' in e for e in errors))
         self.assertTrue(any('record/baseline-v05/' in e for e in errors))
         self.assertFalse(any('run.log' in e for e in errors), errors)
+
+    def test_the_board_packs_inside_the_design_folder(self):
+        # User 2026-11-13 (AD9361 board): schematic and board are one KiCad project in 设计方案/; the board and the PCB
+        # stage's own files sit beside the schematic and ASG does not check them.
+        design = self.d.root / '设计方案'
+        (design / 'board.kicad_pcb').write_text('x')
+        (design / 'board.kicad_dru').write_text('x')
+        (design / '制造文件').mkdir()
+        errors, _ = self.run_pack()
+        self.assertFalse(any('kicad_pcb' in e or '制造文件' in e for e in errors), errors)
+
+    def test_folders_of_the_old_layout_are_named(self):
+        for old in ('原理图', 'PCB设计'):
+            (self.d.root / old).mkdir()
+        errors, _ = self.run_pack()
+        self.assertTrue(any(e.startswith('原理图/ 是旧的交付目录结构') for e in errors), errors)
+        self.assertTrue(any(e.startswith('PCB设计/ 是旧的交付目录结构') for e in errors), errors)
+        (self.d.root / 'PCB').mkdir()
+        errors, _ = self.run_pack()
+        self.assertTrue(any(e.startswith('only ') and e.endswith(': PCB') for e in errors), errors)
 
     def test_an_sr_review_folder_is_a_delivery_folder(self):
         # Industrial I/O calibration board 2026-11-03: the SR run of this version sits in record/sr-review/.
@@ -1048,9 +1068,9 @@ class PackDesignTests(unittest.TestCase):
         self.assertFalse(any('R1' in e for e in errors), errors)
 
     def test_missing_schematic_outputs_fail(self):
-        (self.d.root / '原理图' / 'BOM.csv').unlink()
+        (self.d.root / '设计方案' / 'BOM.csv').unlink()
         errors, _ = self.run_pack()
-        self.assertIn('原理图/BOM.csv is missing', errors)
+        self.assertIn('设计方案/BOM.csv is missing', errors)
 
 
 if __name__ == '__main__':

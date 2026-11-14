@@ -11,6 +11,25 @@ from pathlib import Path
 from schematic_layout.native_hierarchy import NativeHierarchy
 
 REQUIRED_ROLES = {'netlist', 'erc', 'geometry', 'render'}
+# The KiCad project file is shared by the schematic and the board in 设计方案/ (user 2026-11-13). Its `board` section holds
+# only the board's design rules, so the evidence hashes the project without it: a board-rule edit leaves the schematic
+# evidence fresh, while net classes and everything else the schematic reads still count.
+BOARD_ONLY = ('board',)
+
+
+def evidence_sha256(path):
+    """SHA-256 a delivery's evidence records for one file; a .kicad_pro is hashed without its board-only sections."""
+    path = Path(path)
+    if path.suffix == '.kicad_pro':
+        try:
+            project = json.loads(path.read_text(encoding='utf-8'))
+        except ValueError:
+            project = None
+        if isinstance(project, dict):
+            shared = {k: v for k, v in project.items() if k not in BOARD_ONLY}
+            return hashlib.sha256(json.dumps(shared, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
 
 def check(manifest_path):
     manifest_path = Path(manifest_path).resolve()
@@ -38,7 +57,7 @@ def check(manifest_path):
                     raise ValueError('Invalid SHA256 for ' + name)
                 if not path.is_file():
                     errors.append({'kind': 'missing_file', 'path': name})
-                elif hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+                elif evidence_sha256(path) != expected:
                     errors.append({'kind': 'changed_' + section, 'path': name})
         if not isinstance(m['roles'], dict):
             raise ValueError('roles must be an object')

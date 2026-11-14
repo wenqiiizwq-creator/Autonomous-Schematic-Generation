@@ -7,8 +7,8 @@
 | 位置 | 放什么 | 不放什么 |
 |---|---|---|
 | `设计报告.md` | `render_design_report.py` 生成 | 手写的 README、说明、HTML |
-| `原理图/` | `.kicad_pro`、根图与各页 `.kicad_sch`、项目符号库/封装库及库表、`schematic.pdf`、`netlist.xml`、`BOM.csv` | 草稿图、旧版图 |
-| `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`磁件设计单.md`；`PCB与结构要求.md` 只在需求要求时写，PCB 要求平时由 `pcb` 阶段的技术转交待办带给下游 | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
+| `设计方案/` | 一个标准 KiCad 工程：`.kicad_pro`、根图与各页 `.kicad_sch`、项目符号库/封装库及库表、`schematic.pdf`、`netlist.xml`、`BOM.csv`；后续 PCB 环节的板子（同名 `.kicad_pcb`、`.kicad_dru` 及 PCB 环节自己的文件、子目录）放在同一目录、共用 `.kicad_pro` | 草稿图、旧版图、原理图副本 |
+| `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`磁件设计单.md`；`下游约束表.md` 每块板都写（PCB、结构、样机、生产、固件要落实的要求，见 design-closure.md 的 `downstream_version`） | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
 | `record/` | 见下表 | 日志、历史快照、审查方的其他文件（本版独立审查报告放 `sr-review/`） |
 
 `record/` 内容：
@@ -25,7 +25,7 @@
 | `page-plan.json` | 分页方案：`{"schema_version": 1, "pages": [{"file", "reader_tasks": [...], "blocks": {块名: [位号]}, "key_blocks": [关键块名], "circuits": {块名: "典型电路#实现方案"}}]}`；本页每个器件属于一个功能块，关键块标注知识框架 `知识/典型电路/` 里的典型电路与实现方案，库里没有适用的写 `none`，常规块可不标；显式标注均检查（第一页架构页免标） |
 | `selection.json` | 核心器件选型：每个角色的位号、决定性条件、≥2 个候选（选中/淘汰理由、相对知识库的手册路径）；每个 U/Q/T 器件都要属于一个角色；选定候选写外部依赖，依赖未公开资料时附 2–3 个方案、建议和用户的决定，格式见 [核心器件选型](core-part-selection.md) |
 | `scheme-criteria.json` | 任务 C3.1 关键功能块的候选比较；何时必须有、字段与格式示例见 [知识框架的用法](knowledge-package.md) 的规则一节 |
-| `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要有非空处置，写出在本版 PDF 上看到了什么；引脚文字的条目按库符号列，处置里要写明看的是 `render_review_refs` 里的哪一只，在一页处置过的库符号别的页不必再写；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `原理图/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 原理图/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
+| `visual-review.json` | 图面审阅：`{"status": "REVIEWED/REVIEW_PENDING/REWORK_REQUIRED", "pdf_sha256", "pages": [{"page", "file", "paths", "problems", "render_review_items": [{"item", "disposition"}]}]}`；每页 `paths` 不少于读者任务数；`summary.json` 的 `geometry.render_review_items` 列出的每个图面待审对象都要有非空处置，写出在本版 PDF 上看到了什么；引脚文字的条目按库符号列，处置里要写明看的是 `render_review_refs` 里的哪一只，在一页处置过的库符号别的页不必再写；没改动的页面也按本版 PDF 重新看，处置、路径和 `method` 不写“沿用”“同上一版”；`REVIEWED` 时 `pdf_sha256` 必须是本版 `设计方案/schematic.pdf` 去掉导出时间后的 SHA-256（`render_design_report.py --pdf-sha256 设计方案/schematic.pdf` 给出），PDF 图面变了就要重新审阅 |
 | `delivery-evidence.json` | 导出后有没有再改过的核对记录 |
 | `calculations/` | 本版设计还在依赖的计算（不管是哪一版算的），作废的不带 |
 | `interfaces.json` | 任务 C3.3 接口定稿：每条跨块流向源块要保证、负载块能接受的范围（模块 C3，格式见 [能力模块](modules.md)） |
@@ -99,9 +99,9 @@ python3 <skill>/scripts/deliver.py <交付目录>
 `verify`（`verify_schematic.py` 的其余参数）、`inputs`（打包登记的需求、原厂资料、上一版）、`check_inputs`（可选，重放的输入核对命令）、
 `title`（可选）。格式见脚本说明。
 
-顺序固定：准备 → 待办审计 → 出图（替换 `原理图/` 里的 KiCad 工程，BOM 等其他文件保留）→ 自动检查
-（KiCad 导出进 `原理图/`，自动检查结果进 `record/`，各页几何进 `record/evidence/geometry-*.json`）→ 生成报告 →
-交付证据（本次运行写出的文件是输出，`原理图/`、`设计资料/`、`record/` 里其余文件是输入）→ 证据新鲜度 → 打包 → 输入核对。
+顺序固定：准备 → 待办审计 → 出图（只替换 `设计方案/` 里的原理图文件；`.kicad_pro` 里新工程没有的段——板子规则、网络类——从旧文件保留，BOM、板子和 PCB 环节的文件不动）→ 自动检查
+（KiCad 导出进 `设计方案/`，自动检查结果进 `record/`，各页几何进 `record/evidence/geometry-*.json`）→ 生成报告 →
+交付证据（本次运行写出的文件是输出，`设计方案/` 里的原理图文件（`.kicad_sch`、`.kicad_sym`、`.kicad_pro`、库表、网表、PDF、BOM）和 `设计资料/`、`record/` 里其余文件是输入；`.kicad_pro` 去掉只属于板子的 `board` 段后计校验值，板子文件和 `.kicad_prl` 不登记：只改板子不会让交付证据过期，改网络类会）→ 证据新鲜度 → 打包 → 输入核对。
 `inputs` 同时传给待办审计、自动检查和打包，三处按同一组资料目录找证据。每步的状态从它写出的结果读，不看退出码；
 只有 PASS、DONE、有条件通过、未完成、AUTOMATED_PASS、FRESH 继续往下，其余状态、没写出结果或命令出错都停下并说明是哪一步。
 下面的分步命令仍然可用。
@@ -113,7 +113,7 @@ python3 <skill>/scripts/deliver.py <交付目录>
 导出后的任何清理、图形、标签或字段改动都使旧的导出和 PASS 作废，要重新导出再写本记录。
 
 最终导出/检查之后，把 `delivery-evidence.json` 存在工程根目录或交付目录的 `record/` 中；放在 `record/` 时其中的路径相对于交付目录
-（如 `原理图/board.kicad_sch`）：
+（如 `设计方案/board.kicad_sch`）：
 
 ```json
 {
@@ -139,7 +139,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
   --input datasheets=<原厂资料目录>
 ```
 
-检查失败就修正后重跑，直到 PASS：顶层只能有上面四样；`原理图/` 和 `record/` 的必需文件齐全；
+检查失败就修正后重跑，直到 PASS：顶层只能有上面四样（旧结构的 `原理图/`、`PCB设计/` 会提示改名为 `设计方案/` 或并入；板子在 `设计方案/` 里，ASG 不检查）；`设计方案/` 和 `record/` 的必需文件齐全；
 `设计资料/` 里的表格（有位号列的 CSV）和装配文件（JSON 的 `ref`/`refs`/`fit`/`dnp`）提到的位号都在设计网表里，
 表格给出的型号（mpn）和值（value）与设计网表一致；`设计资料/*.md` 正文里写成“位号 型号”的（如“U801 LTC4367”：位号字母是设计网表用到的前缀，紧随的词含数字和大写字母、至少 4 个字符，不是带单位的数值如 100uF、不是 Pin3/4 这类词加编号），位号要在设计网表里，型号要与该位号的 mpn 对得上（忽略大小写和连字符，可省封装/变体后缀和 SN74 这类系列前缀：LM5069-1 对 LM5069MM-1/NOPB、LVC07A 对 SN74LVC07APWR），否则按文件和行号报错（Matrix R2：器件改成 LTC4367 后 `供电路径复核.md` 还写着“U801 LM5060”）；表格行（`|` 开头）和代码块不核，其余说明文字（只提位号不写型号、写功能描述）不在自动检查范围，改设计时要人工清理；
 `record/` 只有允许的子目录；没有日志和超大文件；`design-closure.json` 在交付目录内重新审核不出错，且没有 `design_document_incomplete`（有对外连接器的板 FMEA 与 EMC 端口矩阵齐全，见[必写的设计文档](guideline-evidence-groups.md)；没引用的适用准则不挡打包），也没有 `matrix_cell_missing`、`matrix_cell_failed`（`object_matrices.py` 列出的矩阵与状态表逐格有结论且满足）；

@@ -64,7 +64,7 @@ READS = {('C5', 'C3'): (architecture.INTERFACES,), ('C6', 'C3'): (block_circuits
 TASK = re.compile(r'^C[1-6]\.[1-9]$')
 MODULE_REPORT = '模块报告.md'
 # What a module run delivers (workflow-handoff.md 角色): the drawing only when C6 ran.
-MODULE_TOP = (MODULE_REPORT, 'record', '设计资料', '原理图')
+MODULE_TOP = (MODULE_REPORT, 'record', '设计资料', '设计方案')
 SCHEMATIC_FILES = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
 # The knowledge framework components each module looks up before it designs (knowledge-package.md). The gate only checks
 # that the lookup was recorded and that the entries it names are in the framework's 知识/; which typical circuit task C3.1 chose
@@ -606,7 +606,7 @@ def module_report(root):
         out.append('- 设计网表：器件 %d 个，网络 %d 个' % (len(intent.get('components') or []), len(intent.get('nets') or {})))
     if 'C6' in run:
         plan = load(record, 'page-plan.json')[0] or {}
-        out.append('- C6：图页 %d 页，原理图在 原理图/' % len(plan.get('pages') or []))
+        out.append('- C6：图页 %d 页，原理图在 设计方案/' % len(plan.get('pages') or []))
     work = [w for w in closure.get('work_items') or [] if isinstance(w, dict) and w.get('status') == 'open']
     inputs = [w for w in work if w.get('stage') == 'input']
     out += ['', '## 给定输入的问题（input 待办）', '']
@@ -634,17 +634,17 @@ def check_delivery(root):
         return ['record/task.json 没有 modules：整板交付用 pack_design.py']
     run, _ = scope
     present = {p.name for p in root.iterdir() if not p.name.startswith('.')}
-    allowed = set(MODULE_TOP) if 'C6' in run else set(MODULE_TOP) - {'原理图'}
+    allowed = set(MODULE_TOP) if 'C6' in run else set(MODULE_TOP) - {'设计方案'}
     extra = sorted(present - allowed)
     if extra:
         errors.append('单独运行 %s 的交付目录只放 %s：%s 不该在这里' % ('–'.join((run[0], run[-1])), '、'.join(sorted(allowed)), '、'.join(extra)))
-    for name in (MODULE_REPORT, 'record') + (('原理图',) if 'C6' in run else ()):
+    for name in (MODULE_REPORT, 'record') + (('设计方案',) if 'C6' in run else ()):
         if name not in present:
             errors.append('缺少 %s' % name)
     if 'C6' in run:
         for name in SCHEMATIC_FILES:
-            if not (root / '原理图' / name).is_file():
-                errors.append('原理图/%s 缺失' % name)
+            if not (root / '设计方案' / name).is_file():
+                errors.append('设计方案/%s 缺失' % name)
     states = status(root)
     for module in run:
         found, _ = gate(module, root, write=False)

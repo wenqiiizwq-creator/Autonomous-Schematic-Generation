@@ -61,10 +61,10 @@ class DeliverTests(unittest.TestCase):
         deliver.HERE = self.stubs
         self.addCleanup(setattr, deliver, 'HERE', self.old_here)
         self.root = base / 'v1'
-        for d in ('原理图', '设计资料', 'record/evidence', 'record/scripts'):
+        for d in ('设计方案', '设计资料', 'record/evidence', 'record/scripts'):
             (self.root / d).mkdir(parents=True)
-        (self.root / '原理图' / 'board.kicad_sch').write_text('old')
-        (self.root / '原理图' / 'BOM.csv').write_text('ref,value')
+        (self.root / '设计方案' / 'board.kicad_sch').write_text('old')
+        (self.root / '设计方案' / 'BOM.csv').write_text('ref,value')
         (self.root / '设计资料' / '方案.md').write_text('basis')
         (self.root / 'record' / 'evidence' / 'geometry-stale.json').write_text('{}')
         for name in ('electrical-intent.json', 'design-closure.json'):
@@ -74,7 +74,7 @@ class DeliverTests(unittest.TestCase):
             {'status': 'REVIEWED', 'pdf_sha256': hashlib.sha256(b'%PDF').hexdigest()}))
         make = "import sys,pathlib; p=pathlib.Path(sys.argv[1])/'schematic'; p.mkdir(parents=True); (p/'board.kicad_sch').write_text('new')"
         self.config = {'schema_version': 1, 'generate': {'command': [sys.executable, '-c', make, '{out}'], 'schematic': 'schematic'},
-                       'root': '原理图/board.kicad_sch', 'verify': ['--expected-pages', '1'],
+                       'root': '设计方案/board.kicad_sch', 'verify': ['--expected-pages', '1'],
                        'inputs': {'requirements': str(base)}}
         self.write_config()
 
@@ -98,22 +98,49 @@ class DeliverTests(unittest.TestCase):
         self.assertEqual((0, None), (code, failure))
         self.assertEqual(['待办审计', '出图', '自动检查', '知识缺口清单', '生成报告', '交付证据', '证据新鲜度', '打包'],
                          [s['step'] for s in steps])
-        self.assertEqual('new', (self.root / '原理图' / 'board.kicad_sch').read_text())
-        self.assertTrue((self.root / '原理图' / 'BOM.csv').is_file())
+        self.assertEqual('new', (self.root / '设计方案' / 'board.kicad_sch').read_text())
+        self.assertTrue((self.root / '设计方案' / 'BOM.csv').is_file())
         self.assertFalse((self.root / 'record' / 'evidence' / 'geometry-stale.json').exists())
         evidence = json.loads((self.root / 'record' / 'delivery-evidence.json').read_text())
-        self.assertEqual('原理图/board.kicad_sch', evidence['root'])
-        self.assertIn('原理图/board.kicad_sch', evidence['inputs'])
+        self.assertEqual('设计方案/board.kicad_sch', evidence['root'])
+        self.assertIn('设计方案/board.kicad_sch', evidence['inputs'])
         self.assertIn('设计资料/方案.md', evidence['inputs'])
         self.assertIn('record/deliver.json', evidence['inputs'])
-        for out in ('record/design-closure-audit.json', 'record/summary.json', 'record/knowledge-gaps.json', '原理图/netlist.xml', '设计报告.md',
-                    'record/evidence/geometry-board.json', '原理图/BOM.csv'):
+        for out in ('record/design-closure-audit.json', 'record/summary.json', 'record/knowledge-gaps.json', '设计方案/netlist.xml', '设计报告.md',
+                    'record/evidence/geometry-board.json', '设计方案/BOM.csv'):
             self.assertIn(out, evidence['outputs'])
             self.assertNotIn(out, evidence['inputs'])
         self.assertEqual(['record/evidence/geometry-board.json'], evidence['roles']['geometry'])
         # The closure audit kept is the run's own audit step, not a second run inside the verifier.
         self.assertEqual('INCOMPLETE', json.loads((self.root / 'record' / 'design-closure-audit.json').read_text())['status'])
         self.assertEqual(['record/visual-review.json'], evidence['roles']['visual_review'])
+
+    def test_a_new_drawing_keeps_the_board_in_the_same_project(self):
+        # User 2026-11-13 (AD9361 board): the board shares the KiCad project in 设计方案/. A new drawing replaces the
+        # schematic only, keeps the board's sections of .kicad_pro, and the board never becomes a delivery input.
+        design = self.root / '设计方案'
+        (design / 'board.kicad_pcb').write_text('pcb')
+        (design / 'board.kicad_dru').write_text('rules')
+        (design / 'scripts').mkdir()
+        (design / 'scripts' / 'route.py').write_text('x')
+        (design / 'board.kicad_pro').write_text(json.dumps({'meta': {'version': 0}, 'board': {'rules': 1},
+                                                             'net_settings': {'classes': []}}))
+        make = ("import sys,json,pathlib; p=pathlib.Path(sys.argv[1])/'schematic'; p.mkdir(parents=True); "
+                "(p/'board.kicad_sch').write_text('new'); (p/'board.kicad_pro').write_text(json.dumps({'meta': {'version': 1}}))")
+        self.config['generate']['command'] = [sys.executable, '-c', make, '{out}']
+        self.write_config()
+        code, _, failure = self.run_deliver()
+        self.assertEqual((0, None), (code, failure))
+        project = json.loads((design / 'board.kicad_pro').read_text())
+        self.assertEqual({'meta': {'version': 1}, 'board': {'rules': 1}, 'net_settings': {'classes': []}}, project)
+        self.assertEqual('pcb', (design / 'board.kicad_pcb').read_text())
+        self.assertEqual('rules', (design / 'board.kicad_dru').read_text())
+        self.assertTrue((design / 'scripts' / 'route.py').is_file())
+        evidence = json.loads((self.root / 'record' / 'delivery-evidence.json').read_text())
+        self.assertIn('设计方案/board.kicad_sch', evidence['inputs'])
+        self.assertIn('设计方案/board.kicad_pro', evidence['inputs'])   # hashed without its board section
+        for board in ('设计方案/board.kicad_pcb', '设计方案/board.kicad_dru', '设计方案/scripts/route.py'):
+            self.assertNotIn(board, evidence['inputs'])
 
     def test_fail_stops_the_run_at_that_step(self):
         code, steps, failure = self.run_deliver({'verify_schematic': 'FAIL'})
@@ -125,7 +152,7 @@ class DeliverTests(unittest.TestCase):
     def test_audit_fail_stops_before_drawing(self):
         code, steps, _ = self.run_deliver({'audit_design_closure': 'FAIL'})
         self.assertEqual((1, '待办审计'), (code, steps[-1]['step']))
-        self.assertEqual('old', (self.root / '原理图' / 'board.kicad_sch').read_text())
+        self.assertEqual('old', (self.root / '设计方案' / 'board.kicad_sch').read_text())
 
     def test_record_problems_in_the_report_stop_before_evidence(self):
         code, steps, failure = self.run_deliver({'render_design_report': 1})
