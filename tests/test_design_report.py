@@ -495,7 +495,7 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('市电/高压侧的安规件 F1', found[0])
 
     def test_architecture_is_required_and_checked(self):
-        # SKILL.md task C2.1, module C2 (user 2026-11-09 “确认写入”).
+        # references/module-c2-architecture.md task C2.1, module C2 (user 2026-11-09 “确认写入”).
         arch = json.loads((self.d.record / 'architecture.json').read_text())
         (self.d.record / 'architecture.json').unlink()
         _, problems = self.d.report()
@@ -938,7 +938,7 @@ class PackDesignTests(unittest.TestCase):
         self.assertIn('EMC（EMC 端口矩阵）', errors[0])
 
     def test_matrix_cells_without_conclusion_cannot_be_packed(self):
-        # SKILL.md C5.2 done mark: no matrix or state-table cell is missing or failing; the audit only marks it pending.
+        # references/module-c5-board-closure.md C5.2 done mark: no matrix or state-table cell is missing or failing; the audit only marks it pending.
         import pack_design
         real = pack_design.audit
 

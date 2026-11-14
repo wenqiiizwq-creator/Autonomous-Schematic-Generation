@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""知识缺口清单 record/knowledge-gaps.json（SKILL.md「能力目标」第 7 项、「报告与打包」）。
+"""知识缺口清单 record/knowledge-gaps.json（SKILL.md「能力目标」第 7 项、references/module-delivery.md「报告与打包」）。
 
   python3 knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]
 

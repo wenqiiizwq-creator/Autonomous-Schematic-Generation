@@ -146,4 +146,4 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
 报告用到的记录没有问题——可读性或几何检查 FAIL 也算问题（画图问题要改图到 PASS），打包失败；
 通过后写 `record/manifest.json`。`datasheets` 目录里还不在原件总库（知识框架里的 `原件/`，它指向 HardwareWiki/raw）的 PDF
 （同哈希或同文件名都算在库，`find_parts.py --file <pdf>` 可查）不挡打包，列进 manifest 的 `datasheets_to_file` 并打印出来，
-设计完成后提示用户复制进原件总库（SKILL.md 任务 C4.1 的资料规则）。
+设计完成后提示用户复制进原件总库（[任务 C4.1](module-c4-detailed-design.md) 的资料规则）。

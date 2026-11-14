@@ -1,26 +1,42 @@
 """SKILL.md 主流程: the six capability modules C1–C6 and then 交付, each module's tasks numbered Cn.1, Cn.2 … and each
-task ending with 做完的标志, matching the 架构 module table (user:2026-10-26; modules user:2026-11-09 “确认写入”)."""
+task ending with 做完的标志, matching the 架构 module table (user:2026-10-26; modules user:2026-11-09 “确认写入”).
+The 主流程 body is one file per module (references/module-*.md, in check_ledger.MODULE_FILES order), linked from the
+SKILL.md 主流程 table."""
 from pathlib import Path
 import re
+import sys
 import unittest
 
-SKILL = (Path(__file__).resolve().parents[1] / 'SKILL.md').read_text(encoding='utf-8')
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+from check_ledger import MODULE_FILES  # noqa: E402
+
+SKILL = (ROOT / 'SKILL.md').read_text(encoding='utf-8')
 MODULES = ['C%d' % k for k in range(1, 7)]
 
 
 def body_sections():
-    """[(section title, [(task number or None, task name, text)])] of 主流程."""
-    flow = SKILL.split('\n## 主流程\n', 1)[1].split('\n## ', 1)[0]
+    """[(section title, [(task number or None, task name, text)])] of 主流程, one module file each."""
     sections = []
-    for block in re.split(r'\n(?=### )', flow)[1:]:
-        title = block.splitlines()[0][4:].strip()
+    for name in MODULE_FILES:
+        block = (ROOT / name).read_text(encoding='utf-8')
+        title = block.splitlines()[0][2:].strip()
         tasks = []
-        for text in re.split(r'\n(?=#### )', block)[1:]:
-            head = text.splitlines()[0][5:].strip()
+        for text in re.split(r'\n(?=## )', block)[1:]:
+            head = text.splitlines()[0][3:].strip()
             m = re.match(r'^(C\d\.\d+) (.+)$', head)
             tasks.append((m.group(1), m.group(2), text) if m else (None, head, text))
         sections.append((title, tasks))
     return sections
+
+
+def flow_table():
+    """SKILL.md 主流程 table: [(module, linked detail file)]."""
+    flow = SKILL.split('\n## 主流程\n', 1)[1].split('\n## ', 1)[0]
+    return [(cells[0].split()[0], re.search(r'\]\(([^)]+)\)', cells[-1]).group(1))
+            for cells in ([c.strip() for c in line.strip().strip('|').split('|')] for line in flow.splitlines()
+                          if line.startswith('|'))
+            if re.match(r'^(C\d |交付)', cells[0])]
 
 
 def table_modules():
@@ -59,6 +75,9 @@ class SkillStepTests(unittest.TestCase):
                 last = [p for p in re.split(r'\n\s*\n', text.strip()) if p.strip()][-1]
                 self.assertTrue(last.startswith('做完的标志：'), '%s %s' % (num, name))
 
+    def test_flow_table_links_each_module_file_in_order(self):
+        self.assertEqual(list(zip(MODULES + ['交付'], MODULE_FILES)), flow_table())
+
     def test_architecture_table_matches_the_body(self):
         body = [(title.split()[0], [num for num, _, _ in tasks]) for title, tasks in body_sections()[:6]]
         self.assertEqual(body, table_modules())
@@ -69,7 +88,7 @@ class SkillStepTests(unittest.TestCase):
             '写完运行 `check_scheme_criteria.py <设计目录>`，无问题再结束任务 C3.1。'))
 
     def test_design_steps_never_write_new_datasheets_into_the_library(self):
-        # SKILL.md C4.1 资料规则 (2026-11-04); Matrix R3 S01: references and the cadence still said to file into HardwareWiki.
+        # references/module-c4-detailed-design.md C4.1 资料规则 (2026-11-04); Matrix R3 S01: references and the cadence still said to file into HardwareWiki.
         root = Path(__file__).resolve().parents[1]
         docs = [root / 'SKILL.md'] + sorted((root / 'references').rglob('*.md'))
         stale = re.compile(r'同时存入\s*HardwareWiki|规则存入库里|读过的手册都在知识库里')

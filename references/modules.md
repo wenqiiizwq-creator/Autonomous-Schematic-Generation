@@ -1,6 +1,7 @@
 # 能力模块：关卡、交接文件与指纹
 
 SKILL.md「架构」把 ASG 分成六个能力模块，P7 规定了模块契约。本页说明怎样落实：每个模块的关卡查什么、`architecture.json` 怎么写、`modules.json` 记什么。
+各模块逐项任务与做完的标志在各自的细则文件：[C1](module-c1-requirements.md)、[C2](module-c2-architecture.md)、[C3](module-c3-block-circuits.md)、[C4](module-c4-detailed-design.md)、[C5](module-c5-board-closure.md)、[C6](module-c6-schematic.md)、[交付](module-delivery.md)。
 
 ## 关卡
 

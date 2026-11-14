@@ -241,7 +241,7 @@ def check(root, inputs=()):
                 errors.append('design-closure.json fails inside the delivery (cited evidence must be in this folder, '
                               'paths relative to it, or in an --input): ' + '; '.join('%s %s' % (e['code'], e['item'])
                                                                     for e in result['errors'][:5]))
-            # SKILL.md C5.2 (user 2026-11-08: 按草案实施): an uncited rule no longer blocks; a board with external connectors
+            # references/module-c5-board-closure.md C5.2 (user 2026-11-08: 按草案实施): an uncited rule no longer blocks; a board with external connectors
             # carries its FMEA and EMC port matrix with every section and connector.
             docs = [p['item'] for p in result.get('pending', []) if p.get('code') == 'design_document_incomplete']
             if docs:
@@ -252,7 +252,7 @@ def check(root, inputs=()):
             if rules:
                 errors.append('design-closure.json: 下游约束表缺 %d 条关闭阶段在原理图之后的准则（%s%s）；写一行，或写不适用理由；'
                               '见 references/design-closure.md“下游约束”' % (len(rules), '；'.join(rules[:3]), ' 等' if len(rules) > 3 else ''))
-            # SKILL.md C5.2: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
+            # references/module-c5-board-closure.md C5.2: the matrices and state tables have no cell without a conclusion or failing (2026-11-07).
             cells = [p['item'] for p in result.get('pending', []) if p.get('code') in ('matrix_cell_missing', 'matrix_cell_failed')]
             if cells:
                 errors.append('design-closure.json: 矩阵与状态表有 %d 格缺结论或不满足（%s%s）；按 object_matrices.py 列出的格逐格写结论，'
@@ -320,7 +320,7 @@ def main(argv=None):
     for e in errors:
         print('ERROR:', e)
     for pdf in (manifest or {}).get('datasheets_to_file') or []:
-        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, SKILL.md task C4.1)'
+        print('TO_FILE:', pdf, '(not in the library %s yet; copy it there after delivery, references/module-c4-detailed-design.md task C4.1)'
               % (args.wiki or source_library()))
     print('FAIL' if errors else 'PASS')
     return 1 if errors else 0

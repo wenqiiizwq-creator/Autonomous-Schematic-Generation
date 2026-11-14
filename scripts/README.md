@@ -16,7 +16,7 @@ cover. `verify_schematic.py` runs every
 automated drawing gate on a saved root sheet (ERC, intent partitions and
 identity, hierarchy/PDF, symbol integrity, readability, per-sheet geometry,
 an optional reference contract) and writes `summary.json`. Usage, options and
-`AUTOMATED_PASS` semantics are in SKILL.md task C6.4; the low-level single-page
+`AUTOMATED_PASS` semantics are in references/module-c6-schematic.md task C6.4; the low-level single-page
 generator is described in [`schematic-generation.md`](../references/schematic-generation.md).
 
 `blocks.py merge <design>` merges the block designs in `record/blocks/` (task C4.4) by board net name into

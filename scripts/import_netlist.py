@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""把一份 KiCad XML 网表转成设计网表，供单独运行 C6 时用（SKILL.md 任务 C6.1，references/modules.md）。
+"""把一份 KiCad XML 网表转成设计网表，供单独运行 C6 时用（references/module-c6-schematic.md 任务 C6.1，references/modules.md）。
 
   python3 import_netlist.py <netlist.xml> --out record/electrical-intent.json \\
       [--source-schematic 根图.kicad_sch --library-dir 设计资料/symbols]

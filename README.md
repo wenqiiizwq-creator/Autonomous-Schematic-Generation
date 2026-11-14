@@ -7,7 +7,7 @@ Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claud
 模块可以按给定输入单独运行，也可以串联；上游变化后按指纹重跑受影响的模块。
 ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 
-模块划分，各模块的任务、给定输入和产出只写在 [SKILL.md](SKILL.md) 的「架构」与「主流程」，本页不重复；
+模块划分，各模块的任务、给定输入和产出只写在 [SKILL.md](SKILL.md) 的「架构」与「主流程」（主流程是一张模块表，各模块的任务与做完的标志在它链接的 `references/module-*.md`），本页不重复；
 各脚本做什么见 [scripts/README.md](scripts/README.md)。
 
 其他：多页核对用 `audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；

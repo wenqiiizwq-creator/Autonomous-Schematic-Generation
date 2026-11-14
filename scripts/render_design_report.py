@@ -270,7 +270,7 @@ def unexplained_none(scheme, circuits_dir=None):
 
 def check_page_plan(plan, intent, visual, circuits_dir=None, root=None, scheme=None, explain_none=True, typical=True):
     """Every drawn page has a plan (reader tasks, blocks of parts, the pattern of each block) and a review that traced each task.
-    `typical=False` is C6 run alone on a given netlist (SKILL.md task C6.1): no block files, so no typical-circuit labels."""
+    `typical=False` is C6 run alone on a given netlist (references/module-c6-schematic.md task C6.1): no block files, so no typical-circuit labels."""
     if not isinstance(plan, dict) or plan.get('schema_version') != 1 or not isinstance(plan.get('pages'), list):
         return ['page-plan.json 必须是 schema_version 1、带 pages 列表的对象']
     errors = []
@@ -309,7 +309,7 @@ def check_page_plan(plan, intent, visual, circuits_dir=None, root=None, scheme=N
                 elif ref in placed:
                     errors.append('%s：%s 同时在功能块“%s”和“%s”里' % (name, ref, placed[ref], block))
                 placed[ref] = block
-        cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (SKILL.md task C6.3)
+        cover = index == 0 and len(plan['pages']) > 1          # the first page is the System_block cover (references/module-c6-schematic.md task C6.3)
         if typical and not cover and 'system_block' not in name.lower():
             errors += check_block_circuits(name, blocks, page.get('circuits'), implementations, key_blocks=key_blocks, scheme=scheme, circuits_dir=circuits_dir,
                                              explain_none=explain_none)
@@ -814,7 +814,7 @@ def check_deferred(where, gid, defer, closure):
 
 
 def check_scheme_criteria(data, closure, bundle=None, plan=None, deferred=True):
-    """record/scheme-criteria.json (SKILL.md task C3.1): required when guideline_scope names a key-block circuit type.
+    """record/scheme-criteria.json (references/module-c3-block-circuits.md task C3.1): required when guideline_scope names a key-block circuit type.
     Each key circuit type of the scope is in some block; each listed rule exists, is active and is triggered by that
     block's types and kinds (with the G07 port rules when the block has external ports); a block with no rule says
     what it searched. `plan` adds the page-plan cross-check (module C6); `deferred` checks that the values left to task
@@ -827,7 +827,7 @@ def check_scheme_criteria(data, closure, bundle=None, plan=None, deferred=True):
     page_keys = {b for p in pages if isinstance(p, dict) and isinstance(p.get('key_blocks'), list)
                  for b in p['key_blocks'] if isinstance(b, str)}
     if data is None:
-        return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见 SKILL.md 任务 C3.1）'
+        return ['缺少 record/scheme-criteria.json：关键功能块（%s）定方案时要写会淘汰候选的规则或查过的范围（见任务 C3.1）'
                 % '、'.join(key or sorted(page_keys))] if key or page_keys else []
     if not isinstance(data, dict) or data.get('version') != 1 or not isinstance(data.get('blocks'), list) or not data['blocks']:
         return ['scheme-criteria.json 要写 version 1 和非空的 blocks 列表（见 delivery-report.md）']
@@ -913,7 +913,7 @@ def render_scheme_criteria(data):
         if text(b.get('only_viable')):
             out += ['', '%s：只有一种可行方案，%s' % (cell(b.get('block')), cell(b['only_viable'])), '']
     out += ['', '## 方案阶段对照的规则', '',
-           '关键功能块定方案时找出的会淘汰候选的规则（SKILL.md 任务 C3.1）。这里的结论不代替任务 C4.2 的核算，'
+           '关键功能块定方案时找出的会淘汰候选的规则（任务 C3.1）。这里的结论不代替任务 C4.2 的核算，'
            '留给 2.2 的数值由引用该规则的计算关闭；依据为工程推论的不作硬排除。', '',
            '| 功能块 | 设计准则 | 排除的候选 | 依据 | 选定方案怎样满足 | 留给 2.2 核算 |', '|---|---|---|---|---|---|']
     for b in blocks:
@@ -949,7 +949,7 @@ def render(root, notes=None, title=None):
         closure, split = merge_requirements(closure, data['requirements.json'] or {})
         problems += ['需求记录 %s：%s' % kv for kv in split]
     audit = data['design-closure-audit.json'] or {}
-    # SKILL.md task C2.1 (module C2, user 2026-11-09): the architecture and block specifications are a record.
+    # references/module-c2-architecture.md task C2.1 (module C2, user 2026-11-09): the architecture and block specifications are a record.
     arch, problem = load(record / 'architecture.json') if (record / 'architecture.json').exists() else (None, None)
     if problem:
         problems.append(problem)
