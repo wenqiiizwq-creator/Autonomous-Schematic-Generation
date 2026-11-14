@@ -45,14 +45,14 @@ const START = { type: 'object', required: ['stage', 'reason'], properties: { sta
 const common = `全程中文。技能目录 ${SKILL}（只读，不改其中任何文件）。设计目录 ${a.workdir}，各模块的产出写在这里；交付目录 ${a.delivery}（顶层只有 设计报告.md、设计方案/、设计资料/、record/；设计方案/ 是原理图和 PCB 共用的标准 KiCad 工程，其中板子文件属 PCB 环节，不改不删）。
 输入：${a.inputs}`
 
-function workPrompt(s, feedback) {
+function workPrompt(s, feedback, fromDown) {
   return `${common}
 ${a.review ? `这是一次改版：审查报告在 ${a.review}。按 SKILL.md“选择工作流”里“收到审查意见”一行办：每条意见找到负责的模块，从该模块重做并写明原因，下游按指纹重跑。本阶段只处置落在本模块的意见和上游重做带来的变化。\n` : ''}
 你只做设计流程的 ${s.id} 这一个模块。先读 ${SKILL}/SKILL.md 和本模块细则 references/${s.file}，再读细则指到的参考文件。上游模块的产出已在设计目录里；先看设计目录里已有什么，接着做，不重做已完成且有效的部分。
 只做本模块：不做下游模块的事，不改上游模块的产出。发现上游产出有错或不够，返回 upstream，在 upstream_stage 写该回到第几个阶段（1–6 对应 C1–C6），summary 写清错在哪里。
 本模块做完的标志以细则为准，关卡命令自己先跑到通过。
 需要人确认或答复的地方（需求澄清、选型确认、设计未定项的决定）：任务书里有答复或代答授权的按任务书办；没有的不要自己替人决定，返回 needs_input，把问题写进 questions（每条写清要定什么、有哪些选项、你的建议和依据）。
-${feedback ? `上一轮关卡没过，原因：\n${feedback}\n先处置这些再继续。\n` : ''}
+${fromDown ? `下游模块做不下去，指出本模块的产出有错或不够（本模块自己的关卡通过不等于下游够用）：\n${fromDown}\n本轮先按这些改本模块的产出，改完重跑本模块关卡。认为某条不该由本模块改的，在 summary 里逐条写明理由。\n` : ''}${feedback ? `上一轮关卡没过，原因：\n${feedback}\n先处置这些再继续。\n` : ''}
 返回：status 为 done（本模块全部做完且自查关卡通过）、partial（工作量大，本轮做了一部分，进度已写进设计目录，下一轮接着做；C4 可以一轮做一块）、needs_input 或 upstream。summary 写本轮做了什么、还剩什么。`
 }
 function gatePrompt(s) {
@@ -75,13 +75,15 @@ if (a.review && !a.start) {
 }
 
 const done = []
-let backtracks = 0
+let backtracks = 0, carry = ''
 for (let i = from - 1; i < STAGES.length; i++) {
   const s = STAGES[i]
   phase(s.title)
   let feedback = '', passed = false, back = 0
+  const fromDown = carry
+  carry = ''
   for (let round = 1; round <= s.rounds; round++) {
-    const w = await agent(workPrompt(s, feedback), { label: `${s.id} 第${round}轮`, phase: s.title, schema: WORK })
+    const w = await agent(workPrompt(s, feedback, fromDown), { label: `${s.id}${fromDown ? ' 回改' : ''} 第${round}轮`, phase: s.title, schema: WORK })
     if (!w) return { status: 'stopped', stage: s.n, done }
     if (w.status === 'needs_input') return { status: 'needs_input', stage: s.n, questions: w.questions || [], summary: w.summary, done }
     if (w.status === 'upstream') { back = w.upstream_stage || s.n - 1; feedback = w.summary; break }
@@ -94,6 +96,7 @@ for (let i = from - 1; i < STAGES.length; i++) {
   if (back) {
     if (back >= s.n || ++backtracks > 3) return { status: 'blocked', stage: s.n, reason: `需要回到上游但无法继续：${feedback}`, done }
     log(`${s.id} 发现上游问题，回到第 ${back} 个阶段：${feedback}`)
+    carry = feedback
     i = back - 2
     continue
   }
