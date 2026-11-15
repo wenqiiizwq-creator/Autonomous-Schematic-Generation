@@ -76,6 +76,12 @@ def requirement_items(body):
             for header, rows in tables(lines) if header and header[0] == '条件' for row in rows if row and row[0]]
 
 
+def unnumbered(title):
+    """A scheme title without its ordinal: the block file may name 「2. 集成 eFuse」 as 「集成 eFuse」 (H-001 rerun
+    2026-11-15: the missing ordinal sent C4 back to C3)."""
+    return re.sub(r'^\d+[.、．]\s*', '', title.strip())
+
+
 def scheme_items(body, scheme):
     """The second-level bullets under 必算项 / 必需外围 / 已知坑 of one 「### scheme」 of a typical circuit; None when
     the entry has no such implementation."""
@@ -83,7 +89,7 @@ def scheme_items(body, scheme):
     seen = False
     for line in sections(body).get('实现方案', []):
         if line.startswith('### '):
-            inside, kind = line[4:].strip() == scheme, None
+            inside, kind = unnumbered(line[4:]) == unnumbered(scheme), None
             seen = seen or inside
         elif inside and line.startswith('- **'):
             kind = next((k for k in SCHEME_KINDS if line.startswith('- **%s**' % k)), None)

@@ -70,6 +70,9 @@ def test_items_are_drawn_from_the_entry_text():
     assert k.scheme_items(CIRCUIT, '方案甲') == [('必需外围', '输出电容'), ('必算项', '压差，见 线性稳压器'), ('必算项', '功耗')]
     assert k.scheme_items(CIRCUIT, '方案乙') == [('必算项', '电流'), ('已知坑', '反灌')]
     assert k.scheme_items(CIRCUIT, '没有的方案') is None
+    numbered = CIRCUIT.replace('### 方案甲', '### 1. 方案甲')      # the block file may leave the ordinal out
+    assert k.scheme_items(numbered, '方案甲') == k.scheme_items(CIRCUIT, '方案甲')
+    assert k.scheme_items(CIRCUIT, '2. 方案乙') == k.scheme_items(CIRCUIT, '方案乙')
     assert k.method_items(METHOD) == [('取值步骤', '第 1 步：最低输入'), ('取值步骤', '第 2 步：功耗'), ('算完核对', '调整区：G03-034。')]
     rows = k.keyed({'entry': 'x.md'}, [('必算项', '功耗'), ('必算项', '功耗'), ('已知坑', '功耗')])
     assert len({r['id'] for r in rows}) == 3 and rows[1]['id'] == rows[0]['id'] + '-2'

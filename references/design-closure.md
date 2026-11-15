@@ -305,7 +305,8 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - `supervised_rails`：电压监控/复位器件（库目录“Supervisor/电压监控”、TPS38xx、MAX8xx 等系列，或 `ComponentRole: supervisor`）接到的每条
       `power` 轨，连同经 `filtered_supply` 从它派生的轨，× 轨上每颗 IC/光耦负载：`{rail, cells: [{ref, calc, check}]}`。
       检查名要有门限类的词（门限、阈值、复位、欠压、UV、BOR……），否则 `matrix_check_not_about_criterion`：稳压精度“+3V3 下限 对 YT9218 3.135 V”
-      不顶“复位门限 对 YT9218”。热插拔欠压门限这类别的监督可以自己加一行 `rail`，同样逐格核。
+      不顶“复位门限 对 YT9218”。名字里没有这类词、但这条检查确实核了这一项时，在这一格写 `criterion_reason`（为什么它核的就是这项），
+      关卡放行并把这一格列为提示 `matrix_check_named_otherwise`，不必回到 C4 改名；`port_stress` 的格同样。热插拔欠压门限这类别的监督可以自己加一行 `rail`，同样逐格核。
     - `temperature`：表头 `operating`、`storage` 各写 `{min, max, source}`，`source` 是 `req:<需求编号>`（需求文字要写出这个范围，
       如“−45～+70 ℃”）或 `clarification:<编号>`；`rows` 每行 `{refs, operating, storage}`，每颗器件（测试点、机械件除外）正好在一行。
       温度写 `{min, max, source}`：`source` 引手册页（`datasheet:<库内路径>#p<页>`，按手册引用核对），或写 `spec` 表示这个范围已写进

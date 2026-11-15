@@ -158,6 +158,12 @@ class SupervisedRailTests(unittest.TestCase):
         _, errors, _ = run(self.rails([{'ref': 'U3', 'calc': 'C-RST', 'check': '+3V3 下限 对 YT9218 3.135 V'}]))
         self.assertIn('matrix_check_not_about_criterion', codes(errors))
 
+    def test_a_check_under_another_name_is_cited_with_a_reason_and_listed(self):
+        _, errors, pending = run(self.rails([{'ref': 'U3', 'calc': 'C-RST', 'check': '+3V3 下限 对 YT9218 3.135 V',
+                                              'criterion_reason': '这条检查的限值取的就是复位芯片的释放门限上限'}]))
+        self.assertNotIn('matrix_check_not_about_criterion', codes(errors))
+        self.assertIn('matrix_check_named_otherwise', codes(pending))
+
     def test_written_verdict_must_follow_the_check(self):
         _, errors, _ = run(self.rails([{'ref': 'U3', 'calc': 'C-RST', 'check': '复位门限下限 对 YT9218 最低 3.135 V', 'verdict': 'ok'}]))
         self.assertIn('matrix_verdict_contradicts_check', codes(errors))

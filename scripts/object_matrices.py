@@ -309,7 +309,7 @@ def find_check(calculations, cid, name):
     return None
 
 
-def cell_verdict(cell, where, calculations, holds, error, objects=(), board=None, about=None):
+def cell_verdict(cell, where, calculations, holds, error, objects=(), board=None, about=None, need=None):
     """'ok'/'fail'/'not_applicable'，没写结论时 None。objects：这一格必须点名的位号。"""
     if not isinstance(cell, dict):
         return None
@@ -333,8 +333,15 @@ def cell_verdict(cell, where, calculations, holds, error, objects=(), board=None
                       % (where, check.get('name'), ref))
                 return None
         if about is not None and not about[1].search(str(check.get('name') or '')):
-            error('matrix_check_not_about_criterion', '%s：检查“%s”核的不是%s（名字里没有对应的词）' % (where, check.get('name'), about[0]))
-            return None
+            # The name is the calculation's (C4); the cell is the matrix's (C5). A check that does cover the criterion
+            # under another name is cited with the reason, not sent back to be renamed (H-001 rerun 2026-11-15).
+            if not text(cell.get('criterion_reason')):
+                error('matrix_check_not_about_criterion', '%s：检查“%s”核的不是%s（名字里没有对应的词；这条检查确实核了它时，'
+                      '在这一格写 criterion_reason 说明为什么）' % (where, check.get('name'), about[0]))
+                return None
+            if need is not None:
+                need('matrix_check_named_otherwise', '%s：检查“%s”的名字里没有%s类的词，按这一格的 criterion_reason 引用：%s'
+                     % (where, check.get('name'), about[0], cell['criterion_reason']))
         derived = 'ok' if holds(check) else 'fail'
         if verdict is not None and verdict != derived:
             error('matrix_verdict_contradicts_check', '%s：写 %s，检查推出 %s' % (where, verdict, derived))
@@ -393,7 +400,7 @@ def audit(record, intent, calculations, evidence, requirements, holds, error, ne
             where = '受监督轨 %s（%s）的门限 × %s %s 最低工作电压' % (rail, '、'.join(info['supervisors']), ref,
                                                          board.comps[ref].get('value') or '')
             count('supervised_rails', cell_verdict(cells.get(ref), where, calculations, holds, error, (ref,), board,
-                                                   ('门限', THRESHOLD_WORDS)), where)
+                                                   ('门限', THRESHOLD_WORDS), need), where)
         for ref in cells:
             if ref not in info['loads']:
                 error('matrix_unknown_object', '受监督轨 %s：%s 不是这条轨上的负载' % (rail, ref))
@@ -406,7 +413,7 @@ def audit(record, intent, calculations, evidence, requirements, holds, error, ne
                         error('matrix_unknown_object', where)
                         continue
                     count('supervised_rails', cell_verdict(c, where, calculations, holds, error, (c.get('ref'),), board,
-                                                           ('门限', THRESHOLD_WORDS)), where)
+                                                           ('门限', THRESHOLD_WORDS), need), where)
 
     # 温度
     temp = tables.get('temperature') if isinstance(tables.get('temperature'), dict) else {}
@@ -465,13 +472,13 @@ def audit(record, intent, calculations, evidence, requirements, holds, error, ne
             for ref, nets in info['objects'].items():
                 w = '%s %s × %s %s（%s）' % (where, s['id'], ref, board.comps[ref].get('value') or '', '、'.join(nets))
                 count('port_stress', cell_verdict(cells.get((s['id'], ref)), w, calculations, holds, error, (ref,), board,
-                                                  (s['kind'], STRESS_KINDS[s['kind']])), w)
+                                                  (s['kind'], STRESS_KINDS[s['kind']]), need), w)
         breaks = {(b.get('via'), b.get('port')): b for b in row.get('return_paths') or [] if isinstance(b, dict)}
         for b in info['return_breaks']:
             for peer in b['ports']:
                 w = '%s 回线 %s 经 %s 才接 %s：经 %s 的地回路' % (where, b['net'], b['via'], b['to'], peer)
                 count('port_stress', cell_verdict(breaks.get((b['via'], peer)), w, calculations, holds, error, (peer,), board,
-                                                  ('地回路', RETURN_WORDS)), w)
+                                                  ('地回路', RETURN_WORDS), need), w)
         for key in cells:
             if key[1] not in info['objects'] or key[0] not in {s['id'] for s in stresses}:
                 error('matrix_unknown_object', '%s：格 %s × %s 不在矩阵里' % (where, key[0], key[1]))
