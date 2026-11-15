@@ -1555,11 +1555,76 @@ def audit_net_voltages(record, intent, requirements, calculations, error):
         if rating is not None and rating < top:
             error('capacitor_rating_below_net_voltage' if kind == 'capacitor' else 'tvs_vrwm_below_net_voltage',
                   '%s：%s %g V 低于 %s 的最高电压 %g V' % (c['ref'], '额定电压' if kind == 'capacitor' else 'VRWM', rating, rail, top))
+        elif kind == 'capacitor' and rating is not None:
+            audit_rating_above_need(record, c, rating, rail, top, error)
     return maxima
+
+
+# Standard MLCC voltage ratings from the lowest commonly stocked one (G10 R13: the rating is the lowest standard step meeting
+# the derating; user 2026-11-15, AD9361 board: 1～10 µF parts on a 7 V rail rated 25 V by a "twice the rail" habit).
+MLCC_VOLTS = (6.3, 10, 16, 25, 35, 50, 63, 100, 200, 250, 500, 630, 1000)
+# Below about 1 µF a higher voltage rating costs nothing in an MLCC's size or price; the check is for the parts where it does.
+RATING_CHECK_MIN_F = 1e-6
+
+
+def audit_rating_above_need(record, comp, rating, rail, top, error):
+    """G10 R13: an MLCC of 1 µF or more rated two or more standard steps above the lowest step meeting the derating
+    (CAP-MLCC-CHIP-V at the board's level, unset_level when none) states why in grade_reason (DC-bias capacitance worked
+    out per G03-010, same price and supply, the datasheet, one part number for the board)."""
+    from schematic_layout.recipes import capacitance
+    if not part_classes.DIELECTRIC.search(part_classes.spec_text(comp)) or (capacitance(comp.get('value')) or 0) < RATING_CHECK_MIN_F \
+            or text(comp.get('grade_reason')):
+        return
+    level = ((record.get('derating') or {}) if isinstance(record.get('derating'), dict) else {}).get('level')
+    level = level if level in stress_check.LEVELS else guideline_criteria.engineering_value('unset_level')
+    share = load_derating()[0]['CAP-MLCC-CHIP-V']['values'][level]
+    steps = [v for v in MLCC_VOLTS if v * share >= top]
+    above = MLCC_VOLTS[MLCC_VOLTS.index(steps[0]) + 2:] if steps else ()
+    if above and rating >= above[0]:
+        error('capacitor_rating_above_need_without_reason',
+              '%s：额定 %g V，%s 最高 %g V 按 %s 级降额（CAP-MLCC-CHIP-V %g）%g V 就够；按 G10 R13 取够用的一档，'
+              '或在器件上写 grade_reason（直流偏压降容按 G03-010 算过、同价同供货、手册要求、整板统一物料等）'
+              % (comp['ref'], rating, rail, top, level, share, steps[0]))
 
 
 AMBIENT_WORDS = re.compile(r'环境温度|工作温度|贮存|存储温度|储存温度|运输温度')
 SUPPLY_LISTS = ('external_supply', 'filtered_supply', 'reviewed_circuit_supply')
+
+
+def required_temperature(requirements):
+    """(lowest, highest) ℃ of the ambient and storage ranges the requirements give, or (None, None)."""
+    wanted = [r for req in requirements.values() if isinstance(req, dict) and AMBIENT_WORDS.search(str(req.get('text') or ''))
+              for r in object_matrices.temperature_ranges(req.get('text'))]
+    return (min(a for a, _ in wanted), max(b for _, b in wanted)) if wanted else (None, None)
+
+
+# Class II MLCC dielectrics whose capacitance stays within ±15 % over their range, by rated range (EIA; Samsung MLCC 2024
+# p6). G03-036 accepts any of them for decoupling; which one is G08-006's: the lowest that covers the temperature.
+STABLE_CLASS_II = {'X5R': (-55, 85), 'X7R': (-55, 125), 'X8R': (-55, 150)}
+
+
+def audit_grade_reasons(intent, requirements, error):
+    """G08-006 (user 2026-11-15, AD9361 board: every MLCC was X7R for a 0～45 ℃ board, chosen because the guideline's
+    example named it, not derived from the conditions of use): a part's grade is derived from the requirement's range
+    plus the rise where it sits, and one above that states why (grade_reason: same price and supply, a local hot spot,
+    the datasheet, one part number for the board). Checked here for the MLCC dielectric, whose grades form a ladder; an
+    MLCC whose code is above the lowest stable code covering the requirement's ambient and storage range needs a reason.
+    The rise where the part sits is not known at C4, so a hot spot is a reason to write, not a computation."""
+    lo, hi = required_temperature(requirements)
+    if lo is None:
+        return
+    enough = [code for code, (a, b) in sorted(STABLE_CLASS_II.items(), key=lambda kv: kv[1][1]) if a <= lo and b >= hi]
+    if not enough:
+        return
+    for comp in intent.get('components') or []:
+        if not isinstance(comp, dict) or part_classes.kind_of(comp)[0] != 'capacitor':
+            continue
+        codes = {m.upper() for m in part_classes.DIELECTRIC.findall(part_classes.spec_text(comp))}
+        chosen = [c for c in codes if c in STABLE_CLASS_II]
+        if len(chosen) == 1 and STABLE_CLASS_II[chosen[0]][1] > STABLE_CLASS_II[enough[0]][1] and not text(comp.get('grade_reason')):
+            error('grade_above_requirement_without_reason',
+                  '%s：介质 %s 高于需求 %g～%g ℃ 所需的 %s；按 G08-006 选够用的一档，或在器件上写 grade_reason'
+                  '（同价同供货、局部热点、手册要求、整板统一物料等）' % (comp.get('ref'), chosen[0], lo, hi, enough[0]))
 
 
 def audit_spec_temperature(intent, requirements, error):
@@ -1567,16 +1632,15 @@ def audit_spec_temperature(intent, requirements, error):
     narrower than the ambient and storage ranges the requirements give. Task C5.2's temperature matrix takes these parts'
     range from the specification (source: spec) and cannot write it (handoff run H-001, 2026-11-14: 32 problems of the
     first C5 gate were this one, and the module went back to C4)."""
-    wanted = [r for req in requirements.values() if isinstance(req, dict) and AMBIENT_WORDS.search(str(req.get('text') or ''))
-              for r in object_matrices.temperature_ranges(req.get('text'))]
-    lo, hi = (min(a for a, _ in wanted), max(b for _, b in wanted)) if wanted else (None, None)
+    lo, hi = required_temperature(requirements)
+    wanted = lo is not None
     for ref in object_matrices.expected(intent)['temperature']:
         comp = next(c for c in intent.get('components') or [] if isinstance(c, dict) and c.get('ref') == ref)
         if text(comp.get('datasheet')):
             continue
         stated = object_matrices.temperature_ranges(part_classes.spec_text(comp))
         if not stated:
-            error('spec_temperature_missing', '%s：按规格采购的件在 Specification 写额定的工作及存储温度范围（如 −55～+125 ℃）' % ref)
+            error('spec_temperature_missing', '%s：按规格采购的件在 Specification 写器件额定的工作及存储温度范围（按所选器件写，如 X5R 介质为 −55～+85 ℃）' % ref)
         elif wanted and not any(a <= lo and b >= hi for a, b in stated):
             error('spec_temperature_narrower_than_requirement',
                   '%s：Specification 写的温度范围没有覆盖需求的 %g～%g ℃（写器件的额定范围，不是使用条件）' % (ref, lo, hi))
@@ -1617,6 +1681,7 @@ def audit_binding(record, intent, artifact_root, requirements, calculations, err
         # C4 only: from C5 on the temperature matrix judges each part's range (and may find it not applicable). The
         # power-source check is the C4 module gate's (check_module.gate, all block designs merged); C6's ERC follows.
         audit_spec_temperature(intent, requirements, error)
+        audit_grade_reasons(intent, requirements, error)
         return {'net_voltages': 'NOT_CHECKED', 'pin_dispositions': len(record.get('pin_dispositions') or [])}
     maxima = audit_net_voltages(record, intent, requirements, calculations, error)
     return {'net_voltages': maxima, 'pin_dispositions': len(record.get('pin_dispositions') or [])}

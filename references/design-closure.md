@@ -290,7 +290,10 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       来源不对记 `net_voltage_without_source`。一端在回流网络（`net_roles` 为 `return`，或名字是 GND/VSS/RTN 类）、另一端在写了最高电压的网络上的电容，
       额定电压（性能记录的 `working_voltage`/`rated_voltage` 下限，或值/规格字段里写的电压）低于它记 `capacitor_rating_below_net_voltage`；
       TVS 的 VRWM（性能记录的 `working_voltage` 下限，或按 VRWM 命名的系列 SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF、PESD/PTVS<a>V<b> 从型号读出）
-      低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍按 `derating_version` 写在计算里；这里只拦额定低于工作电压的错。
+      低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍按 `derating_version` 写在计算里；这里拦额定低于工作电压的错，
+      也拦反方向的：1 µF 及以上的 MLCC 额定比按降额（`CAP-MLCC-CHIP-V`，本板等级，未定按 `unset_level`）够用的最低标准档（6.3 V 起）高出两档及以上，
+      又没在器件上写 `grade_reason` 的，记 `capacitor_rating_above_need_without_reason`（G10 R13；用户 2026-11-15，AD9361 板 +5 V 轨按“留一倍”取了 25 V）。
+      1 µF 以下的耐压高几档不影响尺寸和价格，不查。
     - 审计在 `binding` 列出各网络最高电压和处置行数。
   - **`matrix_version: 1`：对全部对象核对的矩阵与保护逻辑状态表**（整板评测基线 2026-11-07：6 个漏项里 3 个是同一条判据
     只核了一个对象——复位门限只对 MCU 的 2.0 V 核、没对 YT9218 的 3.135 V；−45 ℃ 存储只写“由器件额定覆盖”；防反接只看功率路径、
@@ -306,7 +309,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - `temperature`：表头 `operating`、`storage` 各写 `{min, max, source}`，`source` 是 `req:<需求编号>`（需求文字要写出这个范围，
       如“−45～+70 ℃”）或 `clarification:<编号>`；`rows` 每行 `{refs, operating, storage}`，每颗器件（测试点、机械件除外）正好在一行。
       温度写 `{min, max, source}`：`source` 引手册页（`datasheet:<库内路径>#p<页>`，按手册引用核对），或写 `spec` 表示这个范围已写进
-      每颗器件的规格（设计网表 `Specification`/值字段要写出不窄于它的“−55～+125 ℃”，否则 `matrix_temperature_not_in_spec`）。
+      每颗器件的规格（设计网表 `Specification`/值字段要写出不窄于它的器件额定范围，按所选器件写，如 X5R 介质为“−55～+85 ℃”，否则 `matrix_temperature_not_in_spec`）。
       骨架给关键/特殊器件各一行、常规件按类型一行，可以再拆。器件范围不覆盖需求范围是 `matrix_cell_failed`。
     - `port_stress`：每个连接器一行。`stresses: [{id, kind, source}]`（`kind` 取 surge、esd、eft、reverse_polarity、overvoltage、short、
       miswire、hot_plug；`source` 写需求或标准），或 `no_stress_reason`（箱内、板上调试座）。格是应力 × 路径上每颗器件：端口网络上的，
