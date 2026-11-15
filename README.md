@@ -20,7 +20,7 @@ ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 python3 scripts/verify_schematic.py board.kicad_sch --intent electrical-intent.json --out runs/verify-01
 python3 scripts/deliver.py <交付目录>          # 参数在 <交付目录>/record/deliver.json
 
-python3 -m unittest discover -s tests -v
+python3 tests/run.py                          # 测试；--all 跑全部，见“设计约定”
 ```
 
 `AUTOMATED_PASS` 仅表示自动检查通过；图面审阅和数据手册审查仍须完成。
@@ -48,7 +48,10 @@ PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（
 
 - 纲要改动先写草案交人确认，确认后在 [纲要确认记录](docs/outline-approvals.md) 最上面加一行，`python3 scripts/check_ledger.py` 核对。
 - 文档和任务的数量不设上限（2026-11-12 取消了每个模块至多 5 个任务的限制），加内容时保持逻辑清晰：一件事只写在一处，每个任务有给定输入、产出和做完的标志，按主流程读下来不用来回找。
-- 每处改动附复现问题的合成测试，`python3 -m unittest discover -s tests` 全部通过才提交。
+- 每处改动附复现问题的合成测试，`python3 tests/run.py` 通过才提交。它按工作区的改动决定跑哪些：改动涉及画图代码
+  （`scripts/schematic_layout/`、画图测试用到的脚本、画图测试本身、`tests/fixtures/`）时跑全部测试；不涉及时不跑那些
+  要建图并用 KiCad 导出的画图测试（名单在 `tests/run.py` 的 `DRAWING`），其余全跑。`--all` 跑全部：换 KiCad 版本、
+  或拿不准改动会不会影响出图时用。新加的测试默认每次都跑；只有建图或调 KiCad、明显拖慢的才加进 `DRAWING`。
 
 ## 免责声明
 
