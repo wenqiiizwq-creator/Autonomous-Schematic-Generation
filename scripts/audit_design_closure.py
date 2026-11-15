@@ -10,7 +10,6 @@ import json
 import math
 import re
 from pathlib import Path
-from design_frontier import frontier
 import guideline_criteria
 import knowledge_source
 import object_matrices
@@ -2057,20 +2056,13 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
     downstream = audit_downstream(record, evidence, lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
                                   and not Path(p).is_absolute() else None, calculations, work,
                                   (derating or {}).get('stress_risks') or [], guidelines, error, need, closure)
-    convergence = {'status': 'NOT_ASSESSED'}
-    if 'convergence_version' in record:
-        if record['convergence_version'] != 1:
-            error('schema', 'convergence_version must be 1')
-        else:
-            convergence = frontier(work, evidence)
-            errors.extend(convergence['errors'])
     status = 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS'
     return {'status': status, 'module': module or 'C5',
             'scope': 'Declared design evidence and dependency consistency; not physics, native ERC or visual approval',
             'intent_sha256': sha256(intent_path), 'errors': errors, 'pending': pending,
             'severities': {k: severity_of(v) for k, v in work.items() if v.get('status') == 'open' and severity_of(v)},
             'pcb_handoffs': [k for k, v in work.items() if v.get('stage') == 'pcb' and v.get('status') == 'handoff'],
-            'counts': {k: len(v) for k, v in tables.items()}, 'convergence': convergence,
+            'counts': {k: len(v) for k, v in tables.items()},
             'calculation_basis': derived, 'citations': citations, 'derating': derating,
             'operating_inputs': inputs_found, 'estimate_margins': margins,
             'guidelines': guidelines if guidelines is not None else 'NOT_CHECKED', 'downstream': downstream,

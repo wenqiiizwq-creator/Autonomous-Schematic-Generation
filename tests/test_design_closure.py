@@ -294,23 +294,6 @@ class DesignClosureTests(unittest.TestCase):
                                             action='确定待机功耗上限', assumption='按待机 ≤0.1W 设计')
         self.assertIn('unfinished_design_handoff', self.codes())
 
-    def test_convergence_keeps_independent_design_executable(self):
-        self.record['convergence_version'] = 1
-        self.record['work_items'][0].update(status='open', blocked_by=[], owner='engineering', consequence_class='margin', occurrence='normal',
-                                            action='Calculate remaining regulator bounds')
-        self.record['requirements'][0]['status'] = 'conditional'
-        result = self.run_audit()
-        self.assertEqual('INCOMPLETE', result['status'])
-        self.assertEqual(['W1'], result['convergence']['ready_design_actions'])
-        self.assertEqual('CONTINUE_DESIGN', result['convergence']['status'])
-
-    def test_convergence_rejects_malformed_external_fallback(self):
-        self.external()
-        self.record['convergence_version'] = 1
-        self.record['requirements'][0]['status'] = 'conditional'
-        self.record['work_items'][0].update(blocked_by=[], fallback_work=[], fallback_evidence=[{}])
-        self.assertIn('convergence_unassessed_fallback', self.codes())
-
     def pcb_handoff(self):
         self.record['work_items'].append(dict(id='PCB1', stage='pcb', status='handoff',
             scope='footprint_library', electrical_preconditions=['W1'],
