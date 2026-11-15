@@ -209,3 +209,6 @@ python3 scripts/check_module.py return <设计目录> --from C4.2 --to C3.3 --re
 ```
 
 它写进 `record/modules.json` 的 `returns`：日期、发现问题的任务、回到的任务、原因和依据。交付时 `knowledge_gaps.py` 把它们抽进知识缺口清单（见 [交付与设计报告](delivery-report.md)）；查知识框架的记录在同一文件的 `knowledge_lookups`，没查到的也抽进清单（见 [知识框架的用法](knowledge-package.md)）。
+
+每次跑模块关卡（`check_module.py C1`…`C6`），`record/gate-log.jsonl` 追加一行：时间、模块、块、报出的每条问题；通过时问题为空。这个文件只追加、没有检查读它。
+`python3 scripts/gate_hits.py <设计目录> [<设计目录> ...]` 把一块或几块板的记录汇总成表：每条规则报过多少个不同的问题、出现在多少次关卡运行和多少块板里。哪些规则常拦住设计、哪些从不命中，以这张表为准。

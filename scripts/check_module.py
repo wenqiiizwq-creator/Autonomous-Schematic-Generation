@@ -399,6 +399,22 @@ def record_module(root, module, given):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+GATE_LOG = 'gate-log.jsonl'
+
+
+def log_gate(root, module, block, problems):
+    """One line per gate run in record/gate-log.jsonl: when, which module, and every problem it reported. Which rules
+    stop a design, and how often, is read from these (gate_hits.py); nothing checks this file."""
+    record = Path(root) / 'record'
+    if not record.is_dir():
+        return
+    row = {'at': datetime.datetime.now().isoformat(timespec='seconds'), 'module': module, 'problems': problems}
+    if block:
+        row['block'] = block
+    with (record / GATE_LOG).open('a', encoding='utf-8') as out:
+        out.write(json.dumps(row, ensure_ascii=False) + '\n')
+
+
 def record_return(root, source, target, reason, evidence):
     """P7: going back to an upstream module is recorded in record/modules.json `returns`. Returns the problems."""
     problems = [] if TASK.match(source or '') and TASK.match(target or '') and source != target else \
@@ -712,6 +728,7 @@ def main(argv=None):
         print('FAIL' if errors else 'PASS')
         return 1 if errors else 0
     problems, notes = gate(args.module, args.design_root, block=args.block)
+    log_gate(args.design_root, args.module, args.block, problems)
     for note in notes:
         print('PENDING:', note)
     for problem in problems:

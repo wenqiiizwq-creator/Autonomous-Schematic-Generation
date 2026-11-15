@@ -268,6 +268,19 @@ class FingerprintTests(unittest.TestCase):
         problems, _ = check_module.gate('C2', self.root)
         self.assertTrue(any('architecture.json' in p for p in problems))
 
+    def test_every_gate_run_is_logged_and_tallied_by_rule(self):
+        import gate_hits
+        (self.record / 'architecture.json').unlink()
+        self.assertEqual(1, check_module.main(['C2', str(self.root)]))
+        self.assertEqual(1, check_module.main(['C2', str(self.root)]))
+        rows = [json.loads(line) for line in (self.record / check_module.GATE_LOG).read_text(encoding='utf-8').splitlines()]
+        self.assertEqual(['C2', 'C2'], [r['module'] for r in rows])
+        self.assertTrue(all(any('architecture.json' in p for p in r['problems']) for r in rows))
+        gates, failed, hits = gate_hits.tally([self.root])
+        self.assertEqual((2, 2), (gates, failed))
+        (name, hit), = [(n, h) for n, h in hits.items() if 'architecture.json' in n]
+        self.assertEqual((1, 2), (len(hit['problems']), hit['runs']))       # the same problem twice is one problem
+
     def test_gate_needs_a_recorded_lookup_of_each_component_and_entries_that_exist(self):
         (self.record / 'modules.json').unlink()
         problems, _ = check_module.gate('C2', self.root)
