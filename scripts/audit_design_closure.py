@@ -270,6 +270,22 @@ def calculation_basis(row, vendor_items=(), deferred_items=()):
     return 'supported', None, []
 
 
+def derived_calculations(record):
+    """{calculation id: {conclusion, rests_on, coverage}} the record follows to (the values audit_calculation_v2 wants
+    written); refresh.py writes them."""
+    work = {w['id']: w for w in record.get('work_items') or [] if isinstance(w, dict) and text(w.get('id'))}
+    vendor, deferred = vendor_items_of(work), vendor_items_of(work, 'requirement')
+    out = {}
+    for row in record.get('calculations') or []:
+        if not isinstance(row, dict) or not text(row.get('id')):
+            continue
+        conclusion, rests_on, _ = calculation_basis(row, vendor.get(row['id'], []), deferred.get(row['id'], []))
+        omitted = row.get('omitted_terms') if isinstance(row.get('omitted_terms'), list) else []
+        partial = any(isinstance(o, dict) and o.get('kind') == 'not_calculated' for o in omitted)
+        out[row['id']] = {'conclusion': conclusion, 'rests_on': rests_on, 'coverage': 'partial' if partial else 'bounded'}
+    return out
+
+
 def vendor_items_of(work, stage='external'):
     """{calculation id: [open work item ids of this stage naming it]}; external by default."""
     found = {}

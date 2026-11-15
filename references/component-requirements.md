@@ -134,7 +134,7 @@ python3 -B "$asg_skill_dir/scripts/audit_component_requirements.py" record/compo
   --out record/component-requirements-prepare.json
 ```
 
-Python API 位于 `scripts/schematic_layout/component_requirements.py`。准备动作显式执行；审核不会自动改写过期输出。
+Python API 位于 `scripts/schematic_layout/component_requirements.py`。审核本身不改写任何文件；把性能合同和字段投影进块设计（没有块设计时是设计网表）由 `refresh.py` 做，C4 关卡运行前自动执行（见 [能力模块](modules.md)“派生量”），不手工同步。来源的 `sha256` 不属于派生量：它表示所引的文件或计算按现在的内容核过，变了要重新核对后登记。
 投影内容没变时不重写设计网表（再跑一遍不会使 design-closure 的 `intent_sha256` 过期，PoE 2026-11-07）；内容变了会提示 `PROJECTED`，这时按新文件重写 `intent_sha256` 再跑闭环审计，所以先投影、后定 closure。投影把电容/电阻的值换成合同标称值时，原值里的耐压、介质、容差、封装等写进 `fields.Specification`，不丢（Matrix 2026-11-07）。
 `project` 增加版本标记、每个位号的合同快照和 `RequirementSpec/ProcurementMode/SelectionStatus/SelectedSpec/RequirementsSHA256/Performance` 字段。
 物理设计身份和采购核准状态分开（Matrix R3 S07）：按型号采购（`procurement.mode: mpn`）的候选，`selection.mpn` 和 `selection.datasheet`

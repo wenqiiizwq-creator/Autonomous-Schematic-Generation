@@ -140,6 +140,20 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 `python3 scripts/blocks.py merge <设计目录>` 读 `record/blocks/` 和 `record/architecture.json`，按网络名合并，写出 `record/electrical-intent.json`。块内网络重名、端口没有对端、位号重复、同一网络各块的角色或电压不一致都报错，按原因回到 C4 或 C2。
 `blocks.py roundtrip <整板网表> --plan <分页方案>` 把已有整板网表按分页方案的功能块拆开再合回去逐脚比对，只用来验证块格式。
 
+### 派生量
+
+能从别的记录按规则推出的内容不手工维护。`python3 scripts/refresh.py <设计目录> [--module C4|C5]` 把它们重写到最新，内容没变的文件不动；`check_module.py C4`、`check_module.py C5` 运行关卡前先自动执行本模块的那一部分，并打印 `REFRESHED:` 列出改写了什么。
+
+| 模块 | 派生量 | 从哪里推出 |
+|---|---|---|
+| C4 | 块设计里各器件的性能合同与字段（没有块设计时写进设计网表） | `component-requirements.json` |
+| C4 | 每条计算的 `conclusion`、`rests_on`、`coverage` | 该计算的检查、参数、遗漏项和待办 |
+| C5 | `electrical-intent.json`（C5.1 已生成之后） | 各块的块设计 |
+| C5 | `design-closure.json` 的 `intent_sha256` | `electrical-intent.json` |
+| C5 | 需求追溯里写了 `design_supported`、却挂着结论不是 `supported` 的计算的，改为 `conditional` | 计算的结论 |
+
+不属于派生量、不会被改写的：来源的 `sha256`、图面审阅的 PDF 哈希、`reviewed_circuit_supply` 的绑定。它们表示某人按当时的内容核对过，内容变了要重新核对后登记。性能记录本身有错时投影跳过并打印 `SKIPPED:`，错误由关卡列出。
+
 ## modules.json 与过期判定
 
 ```json

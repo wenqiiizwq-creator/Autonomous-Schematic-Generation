@@ -727,6 +727,14 @@ def main(argv=None):
             print('ERROR:', error)
         print('FAIL' if errors else 'PASS')
         return 1 if errors else 0
+    if args.module in ('C4', 'C5'):
+        # What follows from other records by rule is brought up to date first; the gate judges what was written.
+        import refresh
+        done, skipped = refresh.refresh(args.design_root, args.module)
+        for line in done:
+            print('REFRESHED:', line)
+        for line in skipped:
+            print('SKIPPED:', line)
     problems, notes = gate(args.module, args.design_root, block=args.block)
     log_gate(args.design_root, args.module, args.block, problems)
     for note in notes:

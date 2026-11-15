@@ -615,14 +615,15 @@ def keep_ratings(comp, nominal):
         fields['Specification'] = ' '.join(([spec] if spec else []) + missing)
 
 
-def project(intent, record, root, inputs=None):
-    """Explicit preparation API. No checking path calls this function to repair outputs."""
+def project(intent, record, root, inputs=None, digest=None):
+    """Preparation API: audit() never calls it. refresh.py does, before a gate. `digest` is the projection digest of the
+    whole record when `record` is one block's part of it."""
     errors, _ = record_errors(record, intent, root, inputs)
     if errors:
         raise ValueError('; '.join(errors))
     result = copy.deepcopy(intent)
     result['component_requirements_version'] = VERSION
-    sha = projection_digest(record)
+    sha = digest or projection_digest(record)
     entries = {e['ref']: e for e in record['components']}
     for comp in result['components']:
         if comp['ref'] not in entries:
