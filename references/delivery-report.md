@@ -7,8 +7,8 @@
 | 位置 | 放什么 | 不放什么 |
 |---|---|---|
 | `设计报告.md` | `render_design_report.py` 生成 | 手写的 README、说明、HTML |
-| `设计方案/` | 一个标准 KiCad 工程：`.kicad_pro`、根图与各页 `.kicad_sch`、项目符号库/封装库及库表、`schematic.pdf`、`netlist.xml`、`BOM.csv`；后续 PCB 环节的板子（同名 `.kicad_pcb`、`.kicad_dru` 及 PCB 环节自己的文件、子目录）放在同一目录、共用 `.kicad_pro` | 草稿图、旧版图、原理图副本 |
-| `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`磁件设计单.md`；`下游约束表.md` 每块板都写（PCB、结构、样机、生产、固件要落实的要求，见 design-closure.md 的 `downstream_version`） | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
+| `设计方案/` | 一个标准 KiCad 工程：`.kicad_pro`、根图与各页 `.kicad_sch`、库表（全局库没有的器件才有项目符号库）、`schematic.pdf`、`netlist.xml`、`BOM.csv`；工程冻结的库副本在 `库快照/`（Hardware-Library 的 `tools/project_snapshot.py` 生成，它在 `sym-lib-table` 里的条目出图时保留、不计交付证据）；后续 PCB 环节的板子（同名 `.kicad_pcb`、`.kicad_dru` 及 PCB 环节自己的文件、子目录）放在同一目录、共用 `.kicad_pro` | 草稿图、旧版图、原理图副本 |
+| `设计资料/` | 跨版本有效、每版更新的设计文档，名字固定：如 `方案与选型依据.md`、`器件选型与用法依据.md`、`磁件设计单.md`；`下游约束表.md` 每块板都写（PCB、结构、样机、生产、固件要落实的要求，见 design-closure.md 的 `downstream_version`）；`需求基线.md` 每块板都有，`deliver.py` 调 `requirement_baseline.py` 从 `record/requirements.json` 生成、不手写（需求条文与来源、澄清中给定或采纳的条文及答复人与日期、用户暂缓的澄清、降额等级），是交给独立审查和 PCB 等后续环节的需求基线，与记录不一致时 `pack_design.py` 拒绝打包 | 按版本号命名的说明（`v12…`、`v16…`），把仍有效的内容并入固定文档 |
 | `record/` | 见下表 | 日志、历史快照、审查方的其他文件（本版独立审查报告放 `sr-review/`） |
 
 `record/` 内容：

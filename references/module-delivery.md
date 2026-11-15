@@ -21,10 +21,16 @@
 ```
 <交付目录>/
   设计报告.md     唯一给人看的文件：render_design_report.py 由记录生成，notes.json 的摘要与说明和记录按同一套专业术语写
-  设计方案/       一个标准 KiCad 工程：根图、各页、项目符号库与封装库、schematic.pdf、netlist.xml、BOM.csv；
+  设计方案/       一个标准 KiCad 工程：根图、各页、schematic.pdf、netlist.xml、BOM.csv；符号按 lib_id 取自 KiCad 全局
+                  库表里的库（如 Hardware-Library：新器件先在那里建好再引用）和 KiCad 标准库，全局库没有的才生成项目符号库；
+                  库快照/ 是工程冻结的库副本（Hardware-Library 的 tools/project_snapshot.py 生成，ASG 不写），
+                  出图时保留它在 sym-lib-table 里的条目，这些条目不算交付证据；
                   后续 PCB 环节的板子（.kicad_pcb、.kicad_dru 及其自己的文件）放在同一目录、共用 .kicad_pro，
                   ASG 重新出图只换原理图、保留板子与工程文件里的板子设置，板子文件不算交付证据
   设计资料/       跨版本有效、每版更新的设计文档（方案与选型依据、FMEA、EMC 端口矩阵、下游约束表、磁件设计单等；其他按需求选做）
+                  需求基线.md 每块板都有，交付时由 requirement_baseline.py 从 record/requirements.json 生成、不手写：
+                  需求条文与来源、需求澄清中用户给定或采纳的条文及答复人与日期、用户暂缓的澄清、降额等级；
+                  它是交给独立审查和 PCB 等后续环节的需求基线（后续环节不读 record/），与记录不一致时拒绝打包
   record/         设计网表、分页方案、待办处理情况、自检结果、图面审阅、本版用到的计算、知识缺口清单、
                   图页脚本、manifest.json（需求、原厂资料按路径+SHA-256 登记，不复制；记知识框架的读取日期与指纹）
 ```

@@ -1,6 +1,7 @@
 """Single-sheet native KiCad writer driven by separate intent and layout JSON."""
 
 import copy
+import functools
 import hashlib
 import json
 import math
@@ -38,11 +39,64 @@ def digest(data):
     ).hexdigest()
 
 
+def kicad_version():
+    """major.minor of the kicad-cli ASG runs, or None."""
+    import subprocess
+    from .native import find_cli
+    cli = find_cli()
+    try:
+        out = subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=30).stdout if cli else ""
+    except (OSError, subprocess.SubprocessError):
+        out = ""
+    version = re.search(r"(\d+)\.(\d+)", out)
+    return "%s.%s" % version.groups() if version else None
+
+
+def kicad_config_dirs():
+    """The user configuration folder of the KiCad that ASG runs: <base>/<major.minor of kicad-cli>, where base is
+    KICAD_CONFIG_HOME when set (KiCad adds the version folder under it too), so a nightly build's folder (10.99) never
+    stands in for the release's (10.0)."""
+    name = kicad_version()
+    if not name:
+        return []
+    if os.environ.get("KICAD_CONFIG_HOME"):
+        bases = [Path(os.environ["KICAD_CONFIG_HOME"]).expanduser()]
+    else:
+        bases = [Path.home() / "Library/Preferences/kicad", Path.home() / ".config/kicad"]
+    return [b / name for b in bases if (b / name).is_dir()]
+
+
+@functools.lru_cache(maxsize=None)
+def global_symbol_dirs():
+    """Folders of the libraries in the user's global KiCad symbol library table, so a design can use a shared library
+    such as Hardware-Library by nickname (user 2026-11-13: symbols come from the global library, a project keeps only a
+    frozen snapshot). Only entries whose file is named after the nickname are usable here (Libraries looks up
+    <nickname>.kicad_sym); ${VAR} in a URI is filled from the environment, then from kicad_common.json."""
+    for config in kicad_config_dirs():
+        table = config / "sym-lib-table"
+        if not table.is_file():
+            continue
+        env = {}
+        try:
+            env = (json.loads((config / "kicad_common.json").read_text(encoding="utf-8")).get("environment") or {}).get("vars") or {}
+        except (OSError, ValueError):
+            pass
+        env = {**{k: v for k, v in env.items() if isinstance(v, str)}, **os.environ}
+        dirs = []
+        for nick, uri in re.findall(r'\(lib \(name "([^"]+)"\)\s*\(type "KiCad"\)\s*\(uri "([^"]+)"\)', table.read_text(encoding="utf-8")):
+            path = Path(re.sub(r"\$\{(\w+)\}", lambda m: env.get(m.group(1), m.group(0)), uri)).expanduser()
+            if path.name == nick + ".kicad_sym" and path.is_file():
+                dirs.append(str(path.parent))
+        return tuple(dirs)
+    return ()
+
+
 def library_dirs(extra=()):
     candidates = list(extra)
     candidates += [
         v for k, v in os.environ.items() if re.fullmatch(r"KICAD(?:\d+)?_SYMBOL_DIR", k)
     ]
+    candidates += list(global_symbol_dirs())
     candidates += [
         "/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols",
         "/usr/share/kicad/symbols",

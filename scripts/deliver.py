@@ -26,6 +26,7 @@ packing. Exit 0 only when every step finished.
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -34,7 +35,8 @@ from pathlib import Path
 
 from schematic_layout.component_requirements import artifact_audit
 from render_design_report import render_sha256
-from check_delivery_freshness import evidence_sha256
+from check_delivery_freshness import LIB_ROW, evidence_sha256, snapshot_rows
+import requirement_baseline
 
 HERE = Path(__file__).resolve().parent
 KICAD_FILES = ('*.kicad_sch', '*.kicad_pro', '*.kicad_prl', '*.kicad_sym', 'sym-lib-table', 'netlist.xml', 'schematic.pdf')
@@ -86,12 +88,19 @@ def copy_schematic(source, target):
         raise StepFailed('出图：%s 里没有生成 .kicad_sch' % source)
     target.mkdir(exist_ok=True)
     kept = {p.name: json.loads(p.read_text(encoding='utf-8')) for p in target.glob('*.kicad_pro')}
+    table = target / 'sym-lib-table'
+    snapshot = snapshot_rows(table.read_text(encoding='utf-8')) if table.is_file() else []
     for pattern in KICAD_FILES:
         for old in target.glob(pattern):
             old.unlink()
     for new in source.iterdir():
         if new.is_file():
             shutil.copy2(new, target / new.name)
+    if snapshot:     # the project's frozen library copy (库快照/) keeps its rows next to the new drawing's own
+        own = [m.group(0).strip() for m in LIB_ROW.finditer(table.read_text(encoding='utf-8'))] if table.is_file() else []
+        names = {re.search(r'\(name "([^"]*)"', r).group(1) for r in own}
+        rows = own + [r for r in snapshot if re.search(r'\(name "([^"]*)"', r).group(1) not in names]
+        table.write_text('(sym_lib_table\n  (version 7)\n' + ''.join('  %s\n' % r for r in rows) + ')\n', encoding='utf-8')
     for name, old in kept.items():
         path = target / name
         if path.is_file():
@@ -233,6 +242,12 @@ def deliver(root, log=print, for_review=False):
         run(skill('knowledge_gaps.py', root, *declared), root, '知识缺口清单')
         written.append('record/knowledge-gaps.json')
         step('知识缺口清单', 'DONE')
+
+        # The requirement baseline later stages read (they do not read record/): clauses plus decided clarifications.
+        if (record / 'requirements.json').is_file():
+            requirement_baseline.main([str(root)])
+            written.append(requirement_baseline.NAME)
+            step('需求基线', 'DONE')
 
         notes = record / 'notes.json'
         report = subprocess.run(skill('render_design_report.py', root, *(['--notes', notes] if notes.is_file() else []),

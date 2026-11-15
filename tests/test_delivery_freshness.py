@@ -65,6 +65,14 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(self.result()['status'], 'FRESH')
         pro.write_text(json.dumps({'meta': {}, 'board': {'rules': 2}, 'net_settings': {'classes': [{'name': 'RF50'}]}}))
         self.assertNotEqual(self.result()['status'], 'FRESH')
+    def test_a_table_holding_only_the_library_snapshot_is_not_an_untracked_input(self):
+        # User 2026-11-13: symbols come from the global library; the project's frozen copy in 库快照/ is not evidence.
+        table = self.base/'sym-lib-table'
+        snap = '(lib (name "Hardware-Library") (type "KiCad") (uri "${KIPRJMOD}/库快照/Hardware-Library.kicad_sym") (options "") (descr ""))'
+        table.write_text('(sym_lib_table\n  (version 7)\n  %s\n)\n' % snap)
+        self.assertEqual(self.result()['status'], 'FRESH')
+        table.write_text('(sym_lib_table\n  (version 7)\n  %s\n  %s\n)\n' % (snap, snap.replace('Hardware-Library', 'Own').replace('库快照/', '')))
+        self.assertNotEqual(self.result()['status'], 'FRESH')
     def test_missing_output_rejected(self):
         (self.base/'net.xml').unlink();self.assertNotEqual(self.result()['status'],'FRESH')
 

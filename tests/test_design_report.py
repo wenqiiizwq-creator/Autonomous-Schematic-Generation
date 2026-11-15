@@ -14,6 +14,7 @@ from audit_design_closure import audit, sha256
 from render_design_report import check_selection, num, render, render_sha256, REPORT
 from pack_design import pack
 import knowledge_gaps
+import requirement_baseline
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_citations import pdf
 from current_record import make_current, write_record
@@ -864,9 +865,18 @@ class PackDesignTests(unittest.TestCase):
     def gaps(self):
         knowledge_gaps.main([str(self.d.root)])
 
-    def run_pack(self):
+    def run_pack(self, baseline=True):
         self.gaps()
+        if baseline and (self.d.root / 'record' / 'requirements.json').is_file():      # deliver.py writes it before packing
+            requirement_baseline.main([str(self.d.root)])
         return pack(self.d.root, {'requirements': str(self.inputs)})
+
+    def test_a_delivery_without_its_requirement_baseline_is_not_packed(self):
+        if not (self.d.root / 'record' / 'requirements.json').is_file():
+            self.skipTest('the fixture keeps its requirements in design-closure.json')
+        errors = self.run_pack(baseline=False)
+        errors = errors[0] if isinstance(errors, tuple) else errors
+        self.assertTrue(any('需求基线.md' in e for e in errors), errors)
 
     def test_the_knowledge_gap_list_is_extracted_not_written(self):
         path = self.d.root / 'record' / knowledge_gaps.FILE
@@ -890,6 +900,7 @@ class PackDesignTests(unittest.TestCase):
         (sheets / 'X - XYZ100.pdf').write_bytes(b'%PDF-copy')
         (sheets / 'Y - ABC200.pdf').write_bytes(b'%PDF-new')
         self.gaps()
+        requirement_baseline.main([str(self.d.root)])
         errors, manifest = pack(self.d.root, {'requirements': str(self.inputs), 'datasheets': str(sheets)}, raw)
         self.assertEqual([], errors)
         self.assertEqual(['Y - ABC200.pdf'], manifest['datasheets_to_file'])

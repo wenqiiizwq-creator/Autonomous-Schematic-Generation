@@ -7,6 +7,7 @@ ERC, geometry, visual review or electrical qualification passed.
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from schematic_layout.native_hierarchy import NativeHierarchy
 
@@ -15,10 +16,20 @@ REQUIRED_ROLES = {'netlist', 'erc', 'geometry', 'render'}
 # only the board's design rules, so the evidence hashes the project without it: a board-rule edit leaves the schematic
 # evidence fresh, while net classes and everything else the schematic reads still count.
 BOARD_ONLY = ('board',)
+# A project's frozen library copy lives in 库快照/ (Hardware-Library tools/project_snapshot.py, user 2026-11-13) and its
+# rows in sym-lib-table point there. The schematic embeds its symbols, so those rows are not schematic evidence.
+SNAPSHOT_DIR = '库快照'
+LIB_ROW = re.compile(r'\(lib \(name "[^"]*"\).*?\(uri "([^"]*)"\).*?\)\s*(?=\(lib |\)\s*$)', re.S)
+
+
+def snapshot_rows(text):
+    """The rows of a library table that point into the project's 库快照/."""
+    return [m.group(0).strip() for m in LIB_ROW.finditer(text) if '/%s/' % SNAPSHOT_DIR in m.group(1)]
 
 
 def evidence_sha256(path):
-    """SHA-256 a delivery's evidence records for one file; a .kicad_pro is hashed without its board-only sections."""
+    """SHA-256 a delivery's evidence records for one file: a .kicad_pro without its board-only sections, a sym-lib-table
+    by its library rows without the ones pointing into 库快照/."""
     path = Path(path)
     if path.suffix == '.kicad_pro':
         try:
@@ -28,6 +39,10 @@ def evidence_sha256(path):
         if isinstance(project, dict):
             shared = {k: v for k, v in project.items() if k not in BOARD_ONLY}
             return hashlib.sha256(json.dumps(shared, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+    if path.name == 'sym-lib-table':
+        text = path.read_text(encoding='utf-8')
+        rows = [m.group(0).strip() for m in LIB_ROW.finditer(text) if m.group(0).strip() not in snapshot_rows(text)]
+        return hashlib.sha256('\n'.join(rows).encode('utf-8')).hexdigest()
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
@@ -75,6 +90,9 @@ def check(manifest_path):
         ancillary = [root.with_suffix('.kicad_pro'), root.parent / 'sym-lib-table']
         ancillary += list((root.parent / 'symbols').glob('*.kicad_sym'))
         for path in ancillary:
+            if path.name == 'sym-lib-table' and path.is_file() and not [  # only 库快照 rows: nothing the schematic evidence covers
+                    r for r in LIB_ROW.finditer(path.read_text(encoding='utf-8')) if '/%s/' % SNAPSHOT_DIR not in r.group(1)]:
+                continue
             if path.is_file() and path.relative_to(base).as_posix() not in m['inputs']:
                 errors.append({'kind': 'untracked_project_input', 'path': path.relative_to(base).as_posix()})
     except (OSError, ValueError, TypeError, KeyError, IndexError) as exc:

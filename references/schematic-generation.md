@@ -97,7 +97,7 @@ python3 scripts/check_schematic_geometry.py \
   --output output/rc-filter-run-01/geometry-recheck.json
 ```
 
-自动发现不够时用 `--symbol-dir /path/to/symbols`（可重复）或 `--kicad-cli /path/to/kicad-cli`。新的输出工程得到一份本地
+自动发现包括 `KICAD*_SYMBOL_DIR`、KiCad 全局符号库表里登记的库（按 kicad-cli 版本找配置目录，`KICAD_CONFIG_HOME` 优先；`${HW_LIB_ROOT}` 这类变量从环境或 `kicad_common.json` 取；如 Hardware-Library）和 KiCad 标准库；不够时用 `--symbol-dir /path/to/symbols`（可重复）或 `--kicad-cli /path/to/kicad-cli`。新的输出工程得到一份本地
 `sym-lib-table`，绑定实际读取的库；不碰全局 KiCad 配置。这些绝对库路径换机器后需要重新绑定。
 
 - 复制的设计网表/布图输入可以复现失败。

@@ -32,6 +32,7 @@ from audit_design_closure import audit, load_task, read_requirements  # noqa: E4
 import check_module  # noqa: E402
 import knowledge_gaps  # noqa: E402
 import knowledge_source  # noqa: E402
+import requirement_baseline  # noqa: E402
 from find_parts import library_index, locate_file, old_wiki_problem  # noqa: E402
 from render_design_report import REPORT, render  # noqa: E402
 from schematic_layout.component_requirements import package_audit  # noqa: E402
@@ -220,6 +221,13 @@ def check(root, inputs=()):
         for p in record.iterdir():
             if p.is_dir() and p.name not in RECORD_DIRS:
                 errors.append('record/%s/ is not a delivery folder (allowed: %s)' % (p.name, ', '.join(RECORD_DIRS)))
+    if (record / 'requirements.json').is_file():
+        try:
+            stale = requirement_baseline.problem(root)
+        except (OSError, ValueError) as error:
+            stale = 'record/requirements.json cannot be read: %s' % error
+        if stale:
+            errors.append(stale)
     intent, closure = record / 'electrical-intent.json', record / 'design-closure.json'
     if intent.is_file():
         try:

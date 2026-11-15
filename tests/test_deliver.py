@@ -115,6 +115,34 @@ class DeliverTests(unittest.TestCase):
         self.assertEqual('INCOMPLETE', json.loads((self.root / 'record' / 'design-closure-audit.json').read_text())['status'])
         self.assertEqual(['record/visual-review.json'], evidence['roles']['visual_review'])
 
+    def test_the_requirement_baseline_is_written_from_the_record_and_packed_only_when_current(self):
+        import requirement_baseline
+        (self.root / 'record' / 'requirements.json').write_text(json.dumps({
+            'evidence': [{'id': 'E1', 'path': '需求/需求.md', 'sha256': 'ab', 'locator': '§1'}],
+            'requirements': [{'id': 'R1', 'text': '输出 3.3 V', 'evidence': ['E1']},
+                             {'id': 'CL-A', 'text': '门限 2.97 V', 'evidence': ['E1']}],
+            'clarifications': [
+                {'id': 'CL-A', 'requirement_ids': ['R1'], 'question': '门限', 'proposed_requirement': '门限 2.97 V',
+                 'answer': {'decision': 'ADOPTED_PROPOSAL', 'text': '门限 2.97 V', 'by': '张三', 'date': '2026-11-15'}},
+                {'id': 'CL-B', 'requirement_ids': ['R1'], 'question': '纹波带宽', 'proposed_requirement': '20 MHz',
+                 'answer': {'decision': 'DEFERRED', 'by': '张三', 'date': '2026-11-15'}}],
+            'derating': {'level': 'II', 'source': 'req:R1'}}, ensure_ascii=False))
+        code, steps, _ = self.run_deliver()
+        self.assertEqual(0, code)
+        self.assertIn({'step': '需求基线', 'status': 'DONE'}, steps)
+        text = (self.root / '设计资料' / '需求基线.md').read_text()
+        self.assertIn('| R1 | 输出 3.3 V | 需求/需求.md（§1） |', text)
+        self.assertIn('| CL-A | 门限 2.97 V | 需求澄清（涉及 R1）：采纳建议，张三 2026-11-15 |', text)
+        self.assertIn('| CL-B | R1 | 纹波带宽 | 20 MHz |', text)          # deferred: an assumption, not a clause
+        self.assertIn('降额等级：II 级', text)
+        evidence = json.loads((self.root / 'record' / 'delivery-evidence.json').read_text())
+        self.assertIn('设计资料/需求基线.md', evidence['outputs'])
+        self.assertIsNone(requirement_baseline.problem(self.root))
+        (self.root / '设计资料' / '需求基线.md').write_text(text + '手改\n')
+        self.assertIn('不一致', requirement_baseline.problem(self.root))
+        (self.root / '设计资料' / '需求基线.md').unlink()
+        self.assertIn('缺少', requirement_baseline.problem(self.root))
+
     def test_a_new_drawing_keeps_the_board_in_the_same_project(self):
         # User 2026-11-13 (AD9361 board): the board shares the KiCad project in 设计方案/. A new drawing replaces the
         # schematic only, keeps the board's sections of .kicad_pro, and the board never becomes a delivery input.
