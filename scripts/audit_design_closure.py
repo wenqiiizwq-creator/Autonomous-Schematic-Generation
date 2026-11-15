@@ -1558,6 +1558,53 @@ def audit_net_voltages(record, intent, requirements, calculations, error):
     return maxima
 
 
+AMBIENT_WORDS = re.compile(r'环境温度|工作温度|贮存|存储温度|储存温度|运输温度')
+SUPPLY_LISTS = ('external_supply', 'filtered_supply', 'reviewed_circuit_supply')
+
+
+def audit_spec_temperature(intent, requirements, error):
+    """A part bought to a specification (no datasheet) states its rated temperature range in the specification, no
+    narrower than the ambient and storage ranges the requirements give. Task C5.2's temperature matrix takes these parts'
+    range from the specification (source: spec) and cannot write it (handoff run H-001, 2026-11-14: 32 problems of the
+    first C5 gate were this one, and the module went back to C4)."""
+    wanted = [r for req in requirements.values() if isinstance(req, dict) and AMBIENT_WORDS.search(str(req.get('text') or ''))
+              for r in object_matrices.temperature_ranges(req.get('text'))]
+    lo, hi = (min(a for a, _ in wanted), max(b for _, b in wanted)) if wanted else (None, None)
+    for ref in object_matrices.expected(intent)['temperature']:
+        comp = next(c for c in intent.get('components') or [] if isinstance(c, dict) and c.get('ref') == ref)
+        if text(comp.get('datasheet')):
+            continue
+        stated = object_matrices.temperature_ranges(part_classes.spec_text(comp))
+        if not stated:
+            error('spec_temperature_missing', '%s：按规格采购的件在 Specification 写额定的工作及存储温度范围（如 −55～+125 ℃）' % ref)
+        elif wanted and not any(a <= lo and b >= hi for a, b in stated):
+            error('spec_temperature_narrower_than_requirement',
+                  '%s：Specification 写的温度范围没有覆盖需求的 %g～%g ℃（写器件的额定范围，不是使用条件）' % (ref, lo, hi))
+
+
+def audit_power_sources(intent, root, error):
+    """A net with a power-input pin has something that drives it: a power-output pin, or a supply declaration
+    (external_supply, filtered_supply, reviewed_circuit_supply). KiCad's ERC reports the same thing as
+    power_pin_not_driven, but only once the schematic is drawn in C6 (handoff run H-001, 2026-11-14: a rail behind a
+    P-channel switch sent C6 back to C4). Pin types are read from the pin maps of record/reference-input.json. Judged on
+    the whole board by the C4 module gate (all block designs merged), not on one block alone."""
+    try:
+        maps = json.loads((Path(root) / 'record' / 'reference-input.json').read_text(encoding='utf-8')).get('pin_maps') or {}
+    except (OSError, ValueError, AttributeError):
+        return                                                    # audit_pin_maps reports the file
+    kinds = {'%s.%s' % (ref, number): set(pin.get('types') or [])
+             for ref, spec in maps.items() if isinstance(spec, dict)
+             for number, pin in (spec.get('pins') or {}).items() if isinstance(pin, dict)}
+    declared = {d.get('net') for key in SUPPLY_LISTS for d in intent.get(key) or [] if isinstance(d, dict)}
+    for name, pins in sorted(net_table(intent).items()):
+        if name in declared:
+            continue
+        fed = sorted(p for p in pins if 'power_in' in kinds.get(p, ()))
+        if fed and not any('power_out' in kinds.get(p, ()) for p in pins):
+            error('power_pin_without_source', '%s：%s 是电源输入脚，网络上没有电源输出脚，也没有供电声明（%s）；'
+                  '经分立器件供出的轨写 reviewed_circuit_supply' % (name, '、'.join(fed), '/'.join(SUPPLY_LISTS)))
+
+
 def audit_binding(record, intent, artifact_root, requirements, calculations, error, need, boundary=(), closure=True):
     """binding_version 1 (user 2026-11-02): the generation-side guard for the defect classes of the 86 boards. Identity,
     pin maps and pin dispositions belong to module C4 (tasks C4.1, C4.4); net voltages to task C5.1 (module C5, `closure`)."""
@@ -1567,6 +1614,9 @@ def audit_binding(record, intent, artifact_root, requirements, calculations, err
     audit_pin_maps(intent, root, bases, error, need)
     audit_pin_dispositions(record, intent, error, boundary)
     if not closure:
+        # C4 only: from C5 on the temperature matrix judges each part's range (and may find it not applicable). The
+        # power-source check is the C4 module gate's (check_module.gate, all block designs merged); C6's ERC follows.
+        audit_spec_temperature(intent, requirements, error)
         return {'net_voltages': 'NOT_CHECKED', 'pin_dispositions': len(record.get('pin_dispositions') or [])}
     maxima = audit_net_voltages(record, intent, requirements, calculations, error)
     return {'net_voltages': maxima, 'pin_dispositions': len(record.get('pin_dispositions') or [])}

@@ -342,6 +342,10 @@ def gate(module, root, write=True, block=None):
                 requirements = requirements_for(requirements, {c.get('ref') for c in intent.get('components') or []})
             result = component_requirements.audit(intent, requirements, root, digest=digest)
             problems += ['component-requirements.json：%s' % e for e in result.get('errors') or []]
+        if not block:
+            # Every block design is written: a power-input pin with nothing driving its net is found here, not by C6's ERC.
+            closure_audit.audit_power_sources(json.loads(intent_path.read_text(encoding='utf-8')), root,
+                                              lambda code, item: problems.append('块设计 %s：%s' % (code, item)))
         intent_path.unlink(missing_ok=True)
     if module == 'C6':
         plan, problem = load(record, 'page-plan.json')
