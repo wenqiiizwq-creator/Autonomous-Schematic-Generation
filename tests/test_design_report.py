@@ -182,12 +182,6 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('### X 公司应用支持', asks)
         self.assertIn('1. 全温下过压门限的范围（W-FW）', asks)
 
-    def test_external_item_without_gap_record_is_a_problem(self):
-        del self.d.closure['gap_version']
-        self.d.write('design-closure.json', self.d.closure)
-        _, problems = self.d.report()
-        self.assertTrue(any('gap_version 2' in p for p in problems), problems)
-
     def ask_user(self, decision='DEFERRED'):
         c = self.d.closure
         proposal = '待机功耗 ≤0.1 W（230 Vac 空载）'
@@ -258,12 +252,6 @@ class DesignReportTests(unittest.TestCase):
         text, problems = self.d.report()
         self.assertIn('需求澄清 CL-STBY 还没有答复：要当场问用户，答复写回需求清单后再往下设计（见 requirement-clarifications.md）', problems)
         self.assertIn('| 还没有答复 |', text.split('## 需求澄清记录')[1].split('\n## ')[0])
-
-    def test_calculations_without_parameter_sources_are_a_problem(self):
-        del self.d.closure['parameter_version']
-        self.d.write('design-closure.json', self.d.closure)
-        _, problems = self.d.report()
-        self.assertTrue(any('parameter_version 3' in p for p in problems), problems)
 
     def test_version_2_reports_what_each_calculation_rests_on(self):
         c1 = self.d.closure['calculations'][0]
@@ -341,16 +329,6 @@ class DesignReportTests(unittest.TestCase):
         make_current(self.d.closure)
         self.d.write('design-closure.json', self.d.closure)
         return c1
-
-    def test_an_older_closure_record_is_refused(self):
-        # user 2026-11-08: only the current versions are read; an older record is rewritten, not reported version by version.
-        self.d.closure['parameter_version'] = 2
-        del self.d.closure['matrix_version']
-        self.d.write('design-closure.json', self.d.closure)
-        text, problems = self.d.report()
-        self.assertTrue(any(p.startswith('design-closure.json 是旧版本记录（parameter_version 2、matrix_version 缺）') for p in problems),
-                        problems)
-        self.assertNotIn('记录版本', text)
 
     def test_the_rule_by_rule_tables_stay_in_the_record(self):
         # user 2026-11-08: the report keeps the decisions; each rule's citation stays in design-closure-audit.json.

@@ -11,7 +11,7 @@
 在 `design-closure.json` 的 `traceability` 为 `requirements.json` 的每条需求写追溯：功能路径、承担器件、状态和依赖的待办，用需求编号引用；不能批量挂整板位号代替追溯。
 
 做完的标志：`blocks.py merge` 无错误，`electrical-intent.json` 由它生成；每条需求在 `traceability` 有功能路径和承担器件（或写明理由的空列表）；每条电源轨写了最高电压；
-`object_matrices.py` 按本版设计网表列出的矩阵与状态表逐格有结论（`matrix_version 1` 的审计没有 `matrix_cell_missing`、`matrix_cell_failed` 和 `matrix_*` 错误）。
+`object_matrices.py` 按本版设计网表列出的矩阵与状态表逐格有结论（审计没有 `matrix_cell_missing`、`matrix_cell_failed` 和 `matrix_*` 错误）。
 
 ## C5.2 全板闭合核对
 

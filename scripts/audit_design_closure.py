@@ -54,8 +54,8 @@ def threshold_part(c):
 WINDOW_SIDES = ('no_false_trip', 'protection')
 # The record versions this audit reads (user 2026-11-08: 记账和留档的都从 ASG 里面清理掉). An older record is not read
 # version by version any more: it fails as outdated and is rewritten in the current format (design-closure.md).
-CURRENT_VERSIONS = {'parameter_version': 3, 'gap_version': 2, 'derating_version': 1, 'uncertainty_version': 1,
-                    'binding_version': 1, 'matrix_version': 1, 'trace_version': 1}
+# The record carries no format versions: the audit reads one format, the current one. Version fields left in an older
+# record are ignored.
 # trace_version 1 (user 2026-11-09: 按草案写入): module C1's product is record/requirements.json (requirement text and
 # source, clarifications, derating level, guideline scope); design-closure.json keeps each requirement's traceability
 # (module C5), keyed by the requirement id. The audit merges the two into one view of the record.
@@ -1875,10 +1875,6 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
             error(code, item)
     if record.get('schema_version') != 1:
         error('schema', 'schema_version must be 1')
-    for key, current in CURRENT_VERSIONS.items():
-        if record.get(key) != current:
-            error('outdated_record', '%s 是 %s，只读现行版本 %d：按 design-closure.md 的现行格式重写记录' % (
-                key, record.get(key, '缺'), current))
     if intent_path is None:
         raise ValueError('--intent is required except for module C1')
     # The record binds the whole-board netlist (task C5.1); module C4 audits the block designs before it exists.

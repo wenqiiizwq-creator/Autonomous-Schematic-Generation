@@ -19,7 +19,7 @@
 | 待办 | `design-closure.json` 的 `work_items` 中的一条，任何状态 | |
 | 未关闭项 | 状态为 `open` 的待办（`handoff` 计入技术转交，不算未关闭项） | |
 | 独立审查 | 由 schematic-review 技能或其他审查方做的审查；ASG 只做自检 | |
-| 设计成立、依赖工程估计、依赖厂家资料 | 计算结论的三档，由参数和门槛的依据推出（`parameter_version: 2`/`3`），见 [design-closure.md](design-closure.md) | |
+| 设计成立、依赖工程估计、依赖厂家资料 | 计算结论的三档，由参数和门槛的依据推出，见 [design-closure.md](design-closure.md) | |
 | 后果等级 | 由 `consequence_class` 和 `occurrence` 按规则推出的 P0–P3，见 [design-closure.md](design-closure.md) | |
 | 引用待人工核对 | 所引手册页的文字里没找到的数值，需对照原页确认 | |
 | 白话说明 | 不再使用：notes 与记录按本表同一套术语写 | 白话 |

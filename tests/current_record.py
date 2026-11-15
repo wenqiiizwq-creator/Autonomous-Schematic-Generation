@@ -8,14 +8,13 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from audit_design_closure import (C1_SECTIONS, CURRENT_VERSIONS, REQUIREMENT_FIELDS, REQUIREMENTS_FILE,  # noqa: E402
+from audit_design_closure import (C1_SECTIONS, REQUIREMENT_FIELDS, REQUIREMENTS_FILE,  # noqa: E402
                                   TRACE_FIELDS, sha256)
 
 NA = {'verdict': 'not_applicable', 'reason': '测试夹具，与本例无关'}
 
 
 def make_current(record, intent=None, root=None):
-    record.update(CURRENT_VERSIONS)
     reqs = [r['id'] for r in record.get('requirements') or [] if isinstance(r, dict)]
     if reqs:
         record.setdefault('derating', {'level': 'III', 'source': 'req:' + reqs[0]})

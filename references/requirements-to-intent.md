@@ -102,7 +102,7 @@ C4 每块写一个块设计 `record/blocks/<块>.json`（任务 C4.4），C5 用
 }
 ```
 
-- 每个物理引脚要么在一个网络里，要么在 `no_connect`；NC 要有手册依据，逐脚写进 `design-closure.json` 的 `pin_dispositions`（手册规定未用时悬空、接地还是上下拉，见 [design-closure.md](design-closure.md) 的 `binding_version`）。
+- 每个物理引脚要么在一个网络里，要么在 `no_connect`；NC 要有手册依据，逐脚写进 `design-closure.json` 的 `pin_dispositions`（手册规定未用时悬空、接地还是上下拉，见 [design-closure.md](design-closure.md) 的“料号、手册、引脚与网络电压的绑定”）。
 - `fields.Circuit` 是器件所属的功能块，由合并写成块名；`pages.page_intents()` 默认据此拆页，分页另有安排时用 `page_of` 映射。
 - `mpn`、`datasheet`、普通 `fields` 会作为隐藏属性写进原理图，`verify_schematic.py` 逐字段比对，值一律写字符串。
   新[器件性能流程](component-requirements.md)从单一记录生成 IR 与 BOM；版本标记为 `component_requirements_version: 1`。

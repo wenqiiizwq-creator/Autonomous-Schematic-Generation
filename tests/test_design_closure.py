@@ -465,15 +465,11 @@ class ParameterSourceTests(unittest.TestCase):
             'alternatives': [{'approach': '小信号 MOS 缓冲', 'specified': True, 'feasible': False, 'reason': '占位'}]}]
         return self.record['calculations'][0], self.record['operating_points'][0]
 
-    def test_an_older_record_fails_and_is_rewritten_in_the_current_format(self):
-        # user 2026-11-08: the audit no longer reads older versions one by one.
-        self.run_audit()
-        self.record['parameter_version'] = 2
-        del self.record['matrix_version']
-        result = audit(self.record, self.intent, self.root)
-        self.assertEqual('FAIL', result['status'])
-        self.assertEqual(['parameter_version', 'matrix_version'],
-                         [e['item'].split()[0] for e in result['errors'] if e['code'] == 'outdated_record'])
+    def test_the_record_carries_no_format_versions(self):
+        # user 2026-11-15 (简化不必要的版本记录): one format is read; version fields in a record are ignored.
+        before = self.run_audit()
+        self.record.update(parameter_version=2, matrix_version=7)
+        self.assertEqual(before['errors'], audit(self.record, self.intent, self.root)['errors'])
         del self.record['calculations'][0]['parameters']
         self.assertIn('missing_parameters', {e['code'] for e in audit(self.record, self.intent, self.root)['errors']})
 

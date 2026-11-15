@@ -60,11 +60,9 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 
 `design-closure.json` 是设计审查记录的索引，不复制计算预检的数值模型。
 
-只读现行版本：`parameter_version: 3`、`gap_version: 2`、`derating_version: 1`、`uncertainty_version: 1`、
-`binding_version: 1`、`matrix_version: 1`、`trace_version: 1` 七个都要写。缺一个或版本更旧，审计记 `outdated_record`（FAIL），报告提出问题，
-`pack_design.py` 拒绝打包：按本页的现行格式重写记录，不再逐版兼容旧记录（用户 2026-11-08）。
+记录不写格式版本号：审计只读本页的现行格式，旧记录里留着的版本字段不读。
 
-**`trace_version: 1`**（用户 2026-11-09：按草案写入）：需求清单是模块 C1 的产品，单独放在 `record/requirements.json`
+**需求清单与需求追溯分两个文件**（用户 2026-11-09：按草案写入）：需求清单是模块 C1 的产品，单独放在 `record/requirements.json`
 （需求条文与来源、`clarifications`、`derating`、`guideline_version` 与 `guideline_scope`，格式见 [能力模块](modules.md)）。
 `design-closure.json` 不再写这些区段，只在 `traceability` 为每条需求写追溯（任务 C5.1）：`requirement`（需求编号）、`status`、
 `implementation`、`refs`、`depends_on`，需要时 `no_check_reason`。审计把两个文件合起来核对，`--requirements` 默认取同目录的
@@ -74,8 +72,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 
 ```json
 {
-  "schema_version": 1, "parameter_version": 3, "gap_version": 2, "derating_version": 1, "uncertainty_version": 1,
-  "binding_version": 1, "matrix_version": 1, "trace_version": 1,
+  "schema_version": 1,
   "intent_sha256": "<electrical-intent.json 的 SHA256>",
   "coverage": "complete",
   "evidence": [
@@ -115,9 +112,9 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   `contract` 文档在交付目录或声明的输入里存在（`boundary_contract_missing`），该网络在文档的表格里有一行
   （`boundary_net_not_in_contract`）；声明本身格式错、网络不存在或重复记 `boundary_schema`。审计结果的 `boundary_nets` 列出声明的网络。
 - `clarifications`（在 `requirements.json`）：问用户的需求问题和答复，给定或采纳的以同编号、`text` 等于答复写进 `requirements`；字段与核对见 [需求澄清](requirement-clarifications.md)。
-- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb` / `input`（单独运行模块时给定输入有问题：写 `upstream` 出问题的上游模块 C1–C5 和 `given` 给定的文件，只在任务书带 `modules` 时允许，见 [能力模块](modules.md)）；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的 `gap_version 2` 写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
+- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb` / `input`（单独运行模块时给定输入有问题：写 `upstream` 出问题的上游模块 C1–C5 和 `given` 给定的文件，只在任务书带 `modules` 时允许，见 [能力模块](modules.md)）；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的“资料缺口”写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
 - 计算：`coverage` 为 `bounded` / `partial`；`conclusion` 为 `supported` / `conditional` / `failed`。无适用计算时提供 `no_calculations_reason`，不能用空列表绕过。
-  - **结论由记录推出**（`parameter_version: 2`）：审计按下表推出结论，写的 `conclusion`/`rests_on` 与推出的不一致记
+  - **结论由记录推出**：审计按下表推出结论，写的 `conclusion`/`rests_on` 与推出的不一致记
     `conclusion_not_derived`。这三个字段（`conclusion`、`rests_on`、`coverage`）由 `refresh.py` 按下表写，C4 关卡运行前自动执行，不必手填。报告按三档计数，分“依赖厂家资料的计算”“依赖工程估计的计算”两节列出每条依赖的参数或项。
 
     | 记录里有 | `conclusion` | `rests_on` | 报告用语 |
@@ -138,7 +135,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     检查在各项取有利端时算出的写 `scenario: "best"`（另有 `worst`、`nominal`）。最好情景也不满足，等厂家资料关不掉：
     要有一件未关闭的 `design` 待办在 `calculations` 里写这条计算，并在 `redesign` 写改设计的候选（改什么、预计效果），
     缺了记 `best_case_failed_without_redesign`。改设计本身由用户批准后实施，报告这样标注。
-  - **工程估计的不确定度**（`uncertainty_version: 1`，与 `parameter_version` 2 或 3 一起；R10：96.9 对 97.6 V、0.297 对 0.3 T
+  - **工程估计的不确定度**（R10：96.9 对 97.6 V、0.297 对 0.3 T
     靠估计过关，余量比估计误差还小；用户 2026-10-28：判风险）：每个 `model` 参数写 `uncertainty`（相对值，0–1，0.1 即 ±10 %，
     缺记 `model_without_uncertainty`）。用到它的检查，余量占门槛的比例小于计算里最大的 `uncertainty` 时（检查可写自己传播后的
     `uncertainty` 代替），合格但有风险：结论照常推出，检查写 `improvement`（加大余量或收紧估计，缺记
@@ -146,7 +143,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     不挡交付。降额检查的余量对额定算（R12：降额值已是这个量的那一份余量，不再叠加）；门槛为 0 或 `==` 的检查不比。
     检查写 `estimates`（它用到的 `model` 参数名，不依赖估计写 `[]`）时只按这些参数的不确定度比较；既没写 `uncertainty` 也没写 `estimates`
     时取整条计算最大的一个，`estimate_margins` 的 `uncertainty_from` 记 `calculation_max`，报错提示写 `estimates`（工业校准板，2026-11-02）。
-  - **`parameter_version: 3`**（新设计；R8，2026-10-27：“20 J 采购资格”“60 V 筛查值”这类自己定的门槛和手册额定、需求指标写法一样，
+  - **门槛的依据**（R8，2026-10-27：“20 J 采购资格”“60 V 筛查值”这类自己定的门槛和手册额定、需求指标写法一样，
     成本目标写着“在选型记录中估算”却没算）。在版本 2 之上：
     - 每条 `checks` 写门槛的依据 `limit_basis` 和出处：`requirement`（`limit_source` 写 `req:<需求编号>`）、`guaranteed`/`typical`
       （`limit_source` 写 `datasheet:<库内路径>#p<页>`，门槛数值也按引用核对）、`standard`（`limit_source` 写 `standard:<标准号 条款>`）、
@@ -161,7 +158,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - 每条需求至少出现在一条计算的 `requirements` 里，或写 `no_check_reason`（认证范围、取舍优先级这类不对应电路的需求）；
       否则记 `requirement_without_check`。成本需求要有一条物料成本估算：单价按 `model` 写，`reason` 写价格来源和日期；
       估算超过目标，或设计要拿成本换余量时，按[需求澄清](requirement-clarifications.md)停下来问用户。
-  - **`derating_version: 1`**（新设计，与 `parameter_version` 2 或 3 一起；用户 2026-10-27）：器件应力按应力判法（框架 G10 目录的 `应力判法.md`）
+  - **降额核对**（用户 2026-10-27）：器件应力按应力判法（框架 G10 目录的 `应力判法.md`）
     判，降额值取降额规范（框架 G10 目录的 `降额规范.md`）中本项目等级那一列，规则数据在 `降额值.json`。
     - `derating`（在 `requirements.json`）：`{level, source}`。`level` 是 `I`/`II`/`III`（缺记 `derating_level_missing`）；`source` 写 `req:<需求编号>`，
       或用户暂缓时 `clarification:<需求澄清编号>`（该澄清的答复是 `DEFERRED`），否则记 `derating_level_without_source`。
@@ -237,7 +234,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
     （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），
     记 `placeholder_value`；位号带 `?` 记 `unannotated_reference`。值写设计值，料号写手册订货信息里的完整订货码。
-  - **工况输入的来源**（`parameter_version` 2、3 的记录都核，不另设版本；用户 2026-11-04：Matrix R2 的 CALC-CH-START 把 1 A 启动负载写死在脚本和参数名里，
+  - **工况输入的来源**（用户 2026-11-04：Matrix R2 的 CALC-CH-START 把 1 A 启动负载写死在脚本和参数名里，
     没人给过这个数，换成需求的单路 1.5 A 结论就反了）。工况是板子外面定的量：负载、源阻抗、环境温度、输入电压窗、外部瞬态、线缆。词表与判法在 `scripts/operating_inputs.py`。
     - **`input_role`**：计算参数写 `input_role`（`startup_load`、`load_capacitance`、`load_demand`、`source_impedance`、`input_window`、`ambient_temperature`、
       `external_transient`、`cable_topology`）就声明它是工况，审计核来源，没有来源记 `operating_input_without_source`。接受的来源：
@@ -265,7 +262,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       审计查不出取错：声明 1 A 也通过，只在核对清单 `multiple_candidates` 和报告里列出需求写的其他值和理由，由人看。
     - **查不到的**：有来源不等于取对了，同上。
       没写成计算的工况、按比例藏在系数里的量（×1.2）只有声明后才查。
-  - **`binding_version: 1`**（新设计；用户 2026-11-02：把这86块板子上找到的问题……进行改进）：料号、手册、符号脚、未用脚和电源轨电压绑在一起核。
+  - **料号、手册、引脚与网络电压的绑定**（用户 2026-11-02：把这86块板子上找到的问题……进行改进）：料号、手册、符号脚、未用脚和电源轨电压绑在一起核。
     - 值为空也记 `placeholder_value`（机械件、测试点、连接器除外）。
     - 值像型号（字母加数字）时，值与 `mpn` 要一个是另一个的前段，否则 `part_value_contradicts_mpn`（LM5163DDA 对 LM5164DDA）；
       晶体的值与料号都写出频率时要相同，否则 `crystal_frequency_contradicts_mpn`（16 MHz 对 ABM8-24.000MHZ）。
@@ -290,18 +287,18 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       来源不对记 `net_voltage_without_source`。一端在回流网络（`net_roles` 为 `return`，或名字是 GND/VSS/RTN 类）、另一端在写了最高电压的网络上的电容，
       额定电压（性能记录的 `working_voltage`/`rated_voltage` 下限，或值/规格字段里写的电压）低于它记 `capacitor_rating_below_net_voltage`；
       TVS 的 VRWM（性能记录的 `working_voltage` 下限，或按 VRWM 命名的系列 SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF、PESD/PTVS<a>V<b> 从型号读出）
-      低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍按 `derating_version` 写在计算里；这里拦额定低于工作电压的错，
+      低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍写在计算里；这里拦额定低于工作电压的错，
       也拦反方向的：1 µF 及以上的 MLCC 额定比按降额（`CAP-MLCC-CHIP-V`，本板等级，未定按 `unset_level`）够用的最低标准档（6.3 V 起）高出两档及以上，
       又没在器件上写 `grade_reason` 的，记 `capacitor_rating_above_need_without_reason`（G10 R13；用户 2026-11-15，AD9361 板 +5 V 轨按“留一倍”取了 25 V）。
       1 µF 以下的耐压高几档不影响尺寸和价格，不查。
     - 审计在 `binding` 列出各网络最高电压和处置行数。
-  - **`matrix_version: 1`：对全部对象核对的矩阵与保护逻辑状态表**（整板评测基线 2026-11-07：6 个漏项里 3 个是同一条判据
+  - **对全部对象核对的矩阵与保护逻辑状态表**（整板评测基线 2026-11-07：6 个漏项里 3 个是同一条判据
     只核了一个对象——复位门限只对 MCU 的 2.0 V 核、没对 YT9218 的 3.135 V；−45 ℃ 存储只写“由器件额定覆盖”；防反接只看功率路径、
     没看低边 MOS 断开地回路；另 1 个是软件正常关断时“PG 先于 FLT 失效”的固件判据会不会误置锁没有列）。
     行和格由 `scripts/object_matrices.py` 从设计网表列出，设计者不挑对象，只逐格写结论：
     `python3 <skill>/scripts/object_matrices.py skeleton --intent electrical-intent.json --closure design-closure.json --out matrices.json`
     输出全部行和格（已写的结论原样保留），每格的 `candidates` 列出名字点到这个对象、又核这条判据的现有检查，只作提示，
-    不是结论。把 `matrix_version: 1` 与 `matrices` 写进 `design-closure.json`。四张表：
+    不是结论。把 `matrices` 写进 `design-closure.json`。四张表：
     - `supervised_rails`：电压监控/复位器件（库目录“Supervisor/电压监控”、TPS38xx、MAX8xx 等系列，或 `ComponentRole: supervisor`）接到的每条
       `power` 轨，连同经 `filtered_supply` 从它派生的轨，× 轨上每颗 IC/光耦负载：`{rail, cells: [{ref, calc, check}]}`。
       检查名要有门限类的词（门限、阈值、复位、欠压、UV、BOR……），否则 `matrix_check_not_about_criterion`：稳压精度“+3V3 下限 对 YT9218 3.135 V”
@@ -341,7 +338,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - 设计网表里的稳压管、TVS、基准源都必须出现在某条计算的 `refs` 里：按 lib_id（含 Zener/TVS/TL431/LM4040/Ref 等）、
     value 或 mpn 的系列前缀（1N47、BZX、SMBJ、PESD、TLV431、LM385 等）识别，通用符号画的其他阈值器件在 `fields.ComponentRole` 写 `threshold`；
     否则审计报 `threshold_part_uncalculated`。设计资料里写的阈值（如“对应30V包络”）必须与这条计算的数字一致。
-- **参数来源**（`"parameter_version": 3`）：
+- **参数来源**：
   每条计算加非空 `parameters`，每项 `{name, value, unit, basis, ref, source, locator}`。`basis` 取：
   - `guaranteed`：手册保证的 MIN/MAX；`typical`：手册典型值。两者都要 `ref`（位号）和 `source`
     `datasheet:<库内路径>#p<页>` 加 `locator`（表名/参数符号/条件）。
@@ -365,7 +362,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - `constant`：物理常数（铜电阻率），写 `reason`。
   - `unspecified`：手册没给的器件参数。`source`/`locator` 写查过的位置，`operating_point` 指向一条 `specified: false` 的工作点；
     `value` 可留空。含 `typical` 或 `unspecified` 的计算不能是 `supported`。
-- **工作点**（`operating_points`，与 `parameter_version` 一起检查）：`{id, refs, pins, mode, specified, source, locator}`。
+- **工作点**（`operating_points`）：`{id, refs, pins, mode, specified, source, locator}`。
   `specified: true` 时 `source`/`locator` 指向手册规定这种用法的位置；`specified: false` 时指向查过但没有规定的位置，
   还要 `alternatives`（每项 `{approach, specified, feasible, reason}`）和 `work_item`（external 厂家确认待办）。
   有 `specified` 且 `feasible` 的替代做法时，审计报 `unspecified_operation_with_specified_alternative`（FAIL）。
@@ -376,7 +373,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
    "work_item": "W-OPTO",
    "alternatives": [{"approach": "小信号 MOS 缓冲", "specified": true, "feasible": false, "reason": "……"}]}
   ```
-- **资料缺口**（`"gap_version": 2`）：
+- **资料缺口**：
   每件未关闭的 external 待办写：
   - `missing`：非空列表，每项 `{source, given, needed}`。`source` 是发现缺口的位置：`datasheet:<库内路径>#p<页>`、
     `review:<审查目录>/<待办编号>` 或 `user:<日期>`；`given` 写手册给了什么（含测试条件），`needed` 写设计还需要什么。

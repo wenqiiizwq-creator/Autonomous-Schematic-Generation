@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import CURRENT_VERSIONS, DOWNSTREAM_RECEIVERS, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import DOWNSTREAM_RECEIVERS, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 from architecture import check_architecture  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
@@ -965,10 +965,6 @@ def render(root, notes=None, title=None):
     work = {w['id']: w for w in closure.get('work_items') or [] if isinstance(w, dict) and text(w.get('id'))}
     requirements = [r for r in closure.get('requirements') or [] if isinstance(r, dict)]
     calculations = [c for c in closure.get('calculations') or [] if isinstance(c, dict)]
-    outdated = ['%s %s' % (k, closure.get(k, '缺')) for k, v in CURRENT_VERSIONS.items() if closure.get(k) != v]
-    if closure and outdated:
-        problems.append('design-closure.json 是旧版本记录（%s）：只读现行格式（%s），按 design-closure.md 重写' % (
-            '、'.join(outdated), '、'.join('%s %d' % kv for kv in CURRENT_VERSIONS.items())))
     if closure:
         reasons = Counter(' '.join(p['reason'].split()) for c in calculations for p in c.get('parameters') or []
                           if isinstance(p, dict) and p.get('basis') == 'model' and text(p.get('reason')))
