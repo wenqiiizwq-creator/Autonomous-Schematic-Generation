@@ -67,17 +67,19 @@ def digest(value):
                                      separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
+def without_source_hashes(value):
+    if isinstance(value, dict):
+        return {k: without_source_hashes(v) for k, v in value.items() if not (k == 'sha256' and 'path' in value)}
+    if isinstance(value, list):
+        return [without_source_hashes(v) for v in value]
+    return value
+
+
 def projection_digest(record):
     """RequirementsSHA256: the record's content without its sources' file hashes. Those are checked against the files on
     their own (source_errors); editing a calculation script left the drawn requirements unchanged yet changed the field
     and the PDF, so the visual review had to be bound again (calibration board #26, 2026-11-02)."""
-    def strip(value):
-        if isinstance(value, dict):
-            return {k: strip(v) for k, v in value.items() if not (k == 'sha256' and 'path' in value)}
-        if isinstance(value, list):
-            return [strip(v) for v in value]
-        return value
-    return digest(strip(record))
+    return digest(without_source_hashes(record))
 
 
 def finite(value):
@@ -115,6 +117,15 @@ def declared_inputs(root, inputs=None):
     return {}
 
 
+CLOSURE = 'record/design-closure.json'
+
+
+def calculation_digests(closure):
+    """{calculation id: sha256 of that calculation alone} of a design-closure.json: what a source citing it is hashed by."""
+    data = json.loads(Path(closure).read_text(encoding='utf-8'))
+    return {c['id']: digest(c) for c in data.get('calculations') or [] if isinstance(c, dict) and text(c.get('id'))}
+
+
 def source_errors(source, root, guaranteed=False, inputs=None):
     if not isinstance(source, dict) or not all(text(source.get(k)) for k in ('path', 'sha256', 'locator')):
         return ['source needs path, sha256 and locator']
@@ -132,7 +143,17 @@ def source_errors(source, root, guaranteed=False, inputs=None):
         permitted = path.is_relative_to(base)
     if not permitted or not path.is_file():
         return ['source outside declared evidence roots or missing: ' + raw]
-    if hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
+    if path == Path(root).resolve() / CLOSURE:
+        # The closure is written by several modules after this record (C5 adds traceability and the matrices, another
+        # block adds its calculations): a hash of the whole file went stale without the cited calculation changing, and
+        # the C4 gate then failed on every requirement (H-001 rerun 2026-11-15, 46 of 47).
+        found = calculation_digests(path).get(source.get('calculation'))
+        if found is None:
+            return ['source in %s names its calculation: "calculation": "<计算 id>", sha256 of that calculation '
+                    '(audit_component_requirements.py --calculation-hashes)' % CLOSURE]
+        if found != source['sha256']:
+            return ['source changed: %s 计算 %s' % (source['path'], source['calculation'])]
+    elif hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
         return ['source changed: ' + source['path']]
     if guaranteed:
         if source.get('kind') not in ('manufacturer', 'controlled_standard') or not text(source.get('quote')):
@@ -685,7 +706,9 @@ def audit(intent, record, root, bom=None, xml=None, schematic=None, pdf=None, pr
         comp = comps[ref]
         fields = fields_for(entry, sha)
         expected[ref] = fields
-        if comp.get('performance_contract') != entry:
+        # Source hashes are checked against the files (record_errors): registering one again must not make the netlist
+        # and every block design that carries the contract stale (H-001 rerun 2026-11-15).
+        if without_source_hashes(comp.get('performance_contract')) != without_source_hashes(entry):
             errors.append(f'{ref}: stale/missing projected performance contract')
         nominal = nominal_value(entry)
         if nominal is not None and comp.get('value') != nominal:

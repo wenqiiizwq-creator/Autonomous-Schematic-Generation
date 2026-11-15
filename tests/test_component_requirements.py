@@ -186,6 +186,13 @@ class PerformanceTests(unittest.TestCase):
         (self.root / 'calculation.txt').write_text('changed calculation')
         self.assertTrue(any('source changed' in e for e in cr.audit(projected, self.record, self.root)['errors']))
 
+    def test_registering_a_source_hash_again_leaves_the_projection_current(self):
+        projected = self.project()
+        (self.root / 'calculation.txt').write_text('changed calculation')
+        for req in self.record['components'][0]['requirements']:
+            req['source']['sha256'] = hashlib.sha256((self.root / 'calculation.txt').read_bytes()).hexdigest()
+        self.assertEqual([], cr.audit(projected, self.record, self.root)['errors'])
+
     def test_changed_requirement_invalidates_projection(self):
         projected = self.project()
         self.record['components'][0]['requirements'][1]['value'] = 1.5
@@ -402,6 +409,28 @@ class PerformanceTests(unittest.TestCase):
         self.assertTrue(cr.source_errors(source, self.root))
         source['path'] = 'input:requirements/../calculation.txt'
         self.assertTrue(cr.source_errors(source, self.root, inputs={'requirements': input_dir}))
+
+    def test_a_source_in_the_design_closure_follows_its_calculation_only(self):
+        closure = self.root / 'record' / 'design-closure.json'
+        closure.parent.mkdir(exist_ok=True)
+        data = {'calculations': [{'id': 'C-A', 'checks': [{'name': 'R1 功耗', 'value': 1}]}, {'id': 'C-B', 'checks': []}]}
+        write = lambda: closure.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+        write()
+        source = {'path': 'record/design-closure.json', 'calculation': 'C-A', 'locator': '计算 C-A：R1 功耗',
+                  'sha256': cr.calculation_digests(closure)['C-A']}
+        self.assertEqual([], cr.source_errors(source, self.root))
+        data['traceability'] = [{'requirement': 'REQ-1'}]           # C5 writes its sections
+        data['calculations'][1]['checks'].append({'name': 'another block'})
+        data['calculations'].reverse()
+        write()
+        self.assertEqual([], cr.source_errors(source, self.root))
+        data['calculations'][1]['checks'][0]['value'] = 2
+        write()
+        self.assertEqual(['source changed: record/design-closure.json 计算 C-A'], cr.source_errors(source, self.root))
+        whole = dict(source, sha256=hashlib.sha256(closure.read_bytes()).hexdigest())
+        del whole['calculation']
+        self.assertIn('names its calculation', cr.source_errors(whole, self.root)[0])
+        self.assertIn('names its calculation', cr.source_errors(dict(source, calculation='C-X'), self.root)[0])
 
     def test_typical_quote_cannot_be_relabelled_guaranteed(self):
         intent, record = fixture(self.root, True)

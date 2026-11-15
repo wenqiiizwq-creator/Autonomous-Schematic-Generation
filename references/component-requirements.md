@@ -57,6 +57,9 @@
 同一记录里的精确标称值（`capacitance`/`inductance`/`resistance` 的 `eq`）必须满足同一量的上下界，有效容量下限也约束标称容量：`capacitance eq 100 nF` 配 `effective_capacitance ge 1 uF` 记错（86 块板里 100 nF 顶替手册要求的 1 µF、4.7 µF）。
 完整定义的电容要写 `working_voltage` 或 `rated_voltage` 的 `ge` 要求，TVS 要写 `working_voltage`（VRWM）的 `ge` 要求，数值取所在节点的最坏最高电压（86 块板：25 V 电容跨 30 V 输入、SMBJ33A 并在 36 V 轨上）。
 每个 `source` 写 `path`、文件内容 `sha256`、`locator`（页码、表/图、计算项或条款）。
+来源是 `record/design-closure.json` 里的一条计算时，另写 `calculation`（该计算的 `id`），`sha256` 只按这一条计算算，
+不按整个文件：这个文件后面还会被别的块和 C5 接着写，所引的计算没变，来源就不算变。哈希用
+`audit_component_requirements.py --calculation-hashes record/design-closure.json [计算 id ...]` 列出；改了某条计算，只需重新登记引用它的来源。
 路径相对交付目录；也可写 `input:datasheets/子目录/手册.pdf` 引用已声明输入。
 输入通过 `--input NAME=PATH` 或 `record/deliver.json.inputs` 登记，不能读取未声明的任意文件冒充证据。
 保留原始手册在外部资料目录，不为这项流程把整份手册重复塞进交付包；必要摘页可以在 `record/evidence/`。
