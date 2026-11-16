@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """The ASG outline changes only with a person's approval.
 
-The 纲要 (SKILL.md 「ASG 纲要（核心标准）」 and 「主流程」 (the module table), the whole of the seven module
-files references/module-*.md the 主流程 body lives in, references/drawing-recipes.md 「绘图纲要」) is hashed; the
-newest row of docs/outline-approvals.md must carry the current hash and a `user:<date>`.
+The 纲要 is SKILL.md 「ASG 纲要（核心标准）」 and nothing else: the module table, the module files
+references/module-*.md and the drawing rules are its elaboration and change without this record (user 2026-11-16).
+The section is hashed; the newest row of docs/outline-approvals.md must carry the current hash and a `user:<date>`.
 """
 
 import hashlib
@@ -13,15 +13,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RECORD = ROOT / 'docs' / 'outline-approvals.md'
-# The 主流程 body: one file per module, then 交付 (SKILL.md 主流程 links them in this order).
+# The 主流程 body: one file per module, then 交付 (SKILL.md 主流程 links them in this order). Not part of the outline.
 MODULE_FILES = ('references/module-c1-requirements.md', 'references/module-c2-architecture.md',
                 'references/module-c3-block-circuits.md', 'references/module-c4-detailed-design.md',
                 'references/module-c5-board-closure.md', 'references/module-c6-schematic.md',
                 'references/module-delivery.md')
-# (file, heading) of each outline section; a section runs to the next level-2 heading. heading None is the whole file.
-OUTLINE = ((('SKILL.md', '## ASG 纲要（核心标准）'), ('SKILL.md', '## 主流程'))
-           + tuple((name, None) for name in MODULE_FILES)
-           + (('references/drawing-recipes.md', '## 绘图纲要（怎样决定结构）'),))
+# (file, heading) of each outline section; a section runs to the next level-2 heading.
+OUTLINE = (('SKILL.md', '## ASG 纲要（核心标准）'),)
 APPROVED = re.compile(r'^user:\d{4}-\d{2}-\d{2}$')
 
 
@@ -29,9 +27,6 @@ def outline_hash(root=ROOT):
     digest = hashlib.sha256()
     for name, heading in OUTLINE:
         text = (root / name).read_text(encoding='utf-8')
-        if heading is None:
-            digest.update(text.strip().encode('utf-8'))
-            continue
         start = text.find('\n' + heading + '\n')
         if start < 0:
             raise ValueError('%s: heading %r not found' % (name, heading))

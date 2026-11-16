@@ -181,10 +181,14 @@ class PerformanceTests(unittest.TestCase):
         projected['components'][0]['fields']['Tolerance'] = '1%'
         self.assertTrue(any('ambiguous' in e for e in cr.audit(projected, self.record, self.root)['errors']))
 
-    def test_changed_calculation_invalidates_evidence(self):
+    def test_a_source_is_a_pointer_and_carries_no_hash(self):
         projected = self.project()
         (self.root / 'calculation.txt').write_text('changed calculation')
-        self.assertTrue(any('source changed' in e for e in cr.audit(projected, self.record, self.root)['errors']))
+        for req in self.record['components'][0]['requirements']:
+            req['source'].pop('sha256', None)
+        self.assertEqual([], cr.audit(projected, self.record, self.root)['errors'])
+        (self.root / 'calculation.txt').unlink()
+        self.assertTrue(any('missing' in e for e in cr.audit(projected, self.record, self.root)['errors']))
 
     def test_registering_a_source_hash_again_leaves_the_projection_current(self):
         projected = self.project()
@@ -269,9 +273,14 @@ class PerformanceTests(unittest.TestCase):
         self.assertIn('实际器件类型', category(mov)[1])
         self.assertEqual(SPECIAL, part_class(mov))
 
-    def test_screening_is_required_and_purpose_driven(self):
-        self.record['screening'] = []
-        with self.assertRaisesRegex(ValueError, 'screening must cover'):
+    def test_screening_and_the_parameter_list_may_be_left_out(self):
+        # A part with a performance record is bought to its contract, one without to the standard specification.
+        del self.record['screening']
+        del self.record['components'][0]['required_parameters']
+        projected = self.project()
+        self.assertEqual([], cr.audit(projected, self.record, self.root)['errors'])
+        self.record['screening'] = [{'refs': ['R1'], 'decision': 'standard', 'reason': '普通上拉'}]
+        with self.assertRaisesRegex(ValueError, 'contradicts performance contract'):
             self.project()
 
     def bom_spec(self):
@@ -416,18 +425,16 @@ class PerformanceTests(unittest.TestCase):
         data = {'calculations': [{'id': 'C-A', 'checks': [{'name': 'R1 功耗', 'value': 1}]}, {'id': 'C-B', 'checks': []}]}
         write = lambda: closure.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
         write()
-        source = {'path': 'record/design-closure.json', 'calculation': 'C-A', 'locator': '计算 C-A：R1 功耗',
-                  'sha256': cr.calculation_digests(closure)['C-A']}
+        source = {'path': 'record/design-closure.json', 'calculation': 'C-A', 'locator': '计算 C-A：R1 功耗'}
         self.assertEqual([], cr.source_errors(source, self.root))
         data['traceability'] = [{'requirement': 'REQ-1'}]           # C5 writes its sections
         data['calculations'][1]['checks'].append({'name': 'another block'})
         data['calculations'].reverse()
+        data['calculations'][1]['checks'][0]['value'] = 2           # the calculation itself is revised
         write()
         self.assertEqual([], cr.source_errors(source, self.root))
-        data['calculations'][1]['checks'][0]['value'] = 2
-        write()
-        self.assertEqual(['source changed: record/design-closure.json 计算 C-A'], cr.source_errors(source, self.root))
-        whole = dict(source, sha256=hashlib.sha256(closure.read_bytes()).hexdigest())
+        self.assertIn('names its calculation', cr.source_errors(dict(source, calculation='C-X'), self.root)[0])
+        whole = dict(source)
         del whole['calculation']
         self.assertIn('names its calculation', cr.source_errors(whole, self.root)[0])
         self.assertIn('names its calculation', cr.source_errors(dict(source, calculation='C-X'), self.root)[0])
@@ -597,9 +604,6 @@ class DesignSheetTests(unittest.TestCase):
         other.write_text(SHEET, encoding='utf-8')
         self.prop['source'].update(path='设计资料/other.md', sha256=hashlib.sha256(other.read_bytes()).hexdigest())
         self.assertTrue(any("fields.DesignSheet" in e for e in self.errors()))
-        self.setUp()
-        (self.root / '设计资料' / '磁件设计单.md').write_text(SHEET + '\n改过\n', encoding='utf-8')
-        self.assertTrue(any('source changed' in e for e in self.errors()))
 
     def test_only_a_custom_magnetic_is_bought_to_a_design_sheet(self):
         del self.intent['components'][0]['fields']['DesignSheet']

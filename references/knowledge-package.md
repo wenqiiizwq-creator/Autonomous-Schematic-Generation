@@ -92,7 +92,7 @@ python3 scripts/check_module.py lookup <设计目录> --task C4.1 --component �
 | C4 | 各块块文件里选定的 `典型电路#实现方案` | 该方案的每条必算项 | `design-closure.json` 的计算编号 |
 | C4 | 同上 | 该方案的每条必需外围 | 块设计里的位号 |
 | C4 | 同上 | 该方案的每条已知坑 | 怎样避开的说明 |
-| C4 | 任务 C4.x 查阅记录里 `计算方法/` 下的条目 | 取值顺序的每一步、算完之后的核对的每一条 | `design-closure.json` 的计算编号 |
+| C4 | 任务 C4.x 查阅记录里 `计算方法/` 下的条目 | 取值顺序整条一项、算完之后的核对的每一条 | `design-closure.json` 的计算编号 |
 
 ```bash
 python3 scripts/knowledge_checklist.py build <设计目录>                 # 按当前记录列出每一项，已写的处置保留
@@ -101,7 +101,18 @@ python3 scripts/knowledge_checklist.py check <设计目录> [--module C1|C4] [--
 
 `build` 写出的每项有 `entry`、`kind`、`id`、`text`（C4 的方案项另有 `block`、`scheme`），这些不改；只填 `disposition`、`where`、`reason`：
 `covered` 在 `where` 列出落实在哪（列表），`not_applicable` 在 `reason` 写本板为什么没有这种情况。不能因为没做就写不适用。
-`check_module.py C1`、`C4` 的关卡核对：清单里的项齐全，每项有处置，`where` 里的编号和位号在记录里存在；`C4 --block` 只核该块选定方案的项。
+
+清单只问与本板有关的项：
+
+| 写法 | 用在哪 | 效果 |
+|---|---|---|
+| `"applies": ["指示灯", "状态输出"]` | 需求要素条目里标了“适用前提：X”的小节 | 只问 `applies` 里列了的前提；没列的（医疗、车载、军用等）不问，不用写理由。`build` 会列出条目里出现过哪些前提 |
+| `"groups": [{"module": "C1", "entry": "需求要素/全板/板内负载.md", "reason": "…"}]` | 整个条目与本板无关；或加 `"group": "<三级标题>"` 只对条目里的一节 | 这一组的项都不用答 |
+| 条件项 `"disposition": "not_required"`，`reason` 写一句 | 需求没有要求这一条，本设计不做 | 不用写 `where`，不用另提需求澄清 |
+
+计算方法条目的取值顺序整条只有一项（`取值顺序`），`where` 写照它算的计算编号；各步不逐项写处置。算完之后的核对仍逐条写。
+选定方案自己的项（有 `scheme` 的必算项、必需外围、已知坑）不筛、不能成组回答、不能写 `not_required`。
+`check_module.py C1`、`C4` 的关卡核对：清单里的项齐全，没有成组回答的每项有处置，`where` 里的编号和位号在记录里存在；`C4 --block` 只核该块选定方案的项。
 没有标注典型电路的块（`circuit` 没写）不产生方案项。条目文字变了（框架更新之后），对应项的 `id` 跟着变，原处置作废：重跑 `build` 后补写。
 接口约定的参数模板、器件失效方式还没有进必答清单；各类内容核对到哪一步见 `docs/knowledge-coverage.md`。
 

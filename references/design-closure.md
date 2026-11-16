@@ -68,7 +68,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   "intent_sha256": "<electrical-intent.json 的 SHA256>",
   "coverage": "complete",
   "evidence": [
-    {"id": "E1", "path": "design-basis.md", "sha256": "<SHA256>", "locator": "第2节，R1功能路径和计算"}
+    {"id": "E1", "path": "design-basis.md", "locator": "第2节，R1功能路径和计算"}
   ],
   "traceability": [
     {"requirement": "R1", "status": "conditional", "implementation": "U1 输出路径；固件故障态尚待证实",
@@ -398,7 +398,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
    "action": "按最小 ESR 与最大输出电容积分 Q701 的 VDS-ID-t，对照 SOA 与瞬态热阻核结温"}
   ```
 - 待办的 `progress`：design 阶段未关闭的待办写本版做到哪（算了什么、定了什么、还差什么），不能等于 `action`；审查回复 `DESIGN` 引用的待办没有它就不算处理。
-- 所有证据 path 相对于 `--artifact-root`，不得逃逸该目录；必须有哈希和页码/章节/行号定位。需求源、数据手册和计算结论都纳入相应证据。`refs` 必须存在于设计网表中；纯使用/验证条件可为空但须说明实现/交接。
+- 所有证据 path 相对于 `--artifact-root`，不得逃逸该目录；必须有页码/章节/行号定位，不写哈希。需求源、数据手册和计算结论都纳入相应证据。`refs` 必须存在于设计网表中；纯使用/验证条件可为空但须说明实现/交接。
 
 ```bash
 python3 <skill>/scripts/audit_design_closure.py design-closure.json \

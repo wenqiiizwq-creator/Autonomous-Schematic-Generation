@@ -108,7 +108,8 @@ class DesignClosureTests(unittest.TestCase):
     def test_stale_intent_and_source_are_rejected(self):
         self.intent.write_text(json.dumps({'components': [{'ref': 'U1'}, {'ref': 'U2'}]}))
         self.source.write_text('Changed without re-review')
-        self.assertTrue({'stale_intent', 'stale_evidence'} <= self.codes())
+        self.assertIn('stale_intent', self.codes())
+        self.assertNotIn('stale_evidence', self.codes())
 
     def test_missing_source_and_unknown_references_are_rejected(self):
         self.source.unlink()

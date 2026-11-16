@@ -113,7 +113,7 @@ def test_build_lists_every_item_and_keeps_what_was_answered(design):
     assert found == []
     assert [(r['entry'], r['kind']) for r in data['C1']] == [('需求要素/端口/口.md', '条件')] * 2
     assert [(r.get('block'), r['kind']) for r in data['C4']] == [
-        ('PSU', '必需外围'), ('PSU', '必算项'), ('PSU', '必算项'), (None, '取值步骤'), (None, '取值步骤'), (None, '算完核对')]
+        ('PSU', '必需外围'), ('PSU', '必算项'), ('PSU', '必算项'), (None, '取值顺序'), (None, '算完核对')]
     answer(design, 'C1', lambda row: {'disposition': 'covered', 'where': ['REQ-001']})
     again, _ = k.build(design)
     assert {r['disposition'] for r in again['C1']} == {'covered'} and {r['disposition'] for r in again['C4']} == {''}
@@ -162,3 +162,95 @@ def test_every_framework_entry_of_the_checked_kinds_yields_items():
         body = k.circuit_file(stem).read_text(encoding='utf-8')
         for name in info['implementations']:
             assert k.scheme_items(body, name), (stem, name)
+
+
+GROUPED = '''# 板
+
+## 安全
+
+| 条件 | 决定什么 | 没写时 | 准则 |
+|---|---|---|---|
+| 人员类别 | 绝缘等级 | 必须问 | G06 |
+| 可靠性指标 | 做不做预计 | 需求写了才做 | G08 |
+
+### 医疗设备
+
+适用前提：医疗
+
+| 条件 | 决定什么 | 没写时 | 准则 |
+|---|---|---|---|
+| 应用部分类型 | 隔离级别 | 必须问 | G06 |
+| 漏电流预算 | Y 电容 | 必须问 | G06 |
+'''
+BRANCHED = '''# 防反接
+
+## 取值顺序
+
+### 一、二极管
+
+| 步 | 定什么 | 算式 |
+|---|---|---|
+| 1 | 反向耐压 | a |
+
+### 二、MOS 管
+
+| 步 | 定什么 | 算式 |
+|---|---|---|
+| 2 | 栅源电压 | b |
+'''
+
+
+def test_rows_carry_the_group_the_precondition_and_what_to_do_when_unwritten():
+    rows = k.requirement_rows(GROUPED)
+    assert [r[2] for r in rows] == [{'unwritten': '必须问'}, {'unwritten': '需求写了才做'},
+                                    {'group': '医疗设备', 'precondition': '医疗', 'unwritten': '必须问'}] * 1 + [
+                                    {'group': '医疗设备', 'precondition': '医疗', 'unwritten': '必须问'}]
+    assert k.requirement_items(GROUPED) == [r[:2] for r in rows]
+    assert [r[2] for r in k.method_rows(BRANCHED)] == [{'group': '一、二极管'}, {'group': '二、MOS 管'}]
+
+
+def test_only_declared_preconditions_are_asked_and_an_unrequired_condition_needs_no_clarification(design):
+    knowledge = knowledge_source.knowledge_dir()
+    (knowledge / '需求要素/全板').mkdir(parents=True)
+    (knowledge / '需求要素/全板/板.md').write_text(GROUPED, encoding='utf-8')
+    (knowledge / '计算方法/电源变换/反.md').write_text(BRANCHED, encoding='utf-8')
+    path = design / 'record' / 'modules.json'
+    data = json.loads(path.read_text(encoding='utf-8'))
+    data['knowledge_lookups'] = [{'task': 'C1.1', 'component': '需求要素', 'query': '板', 'found': ['需求要素/全板/板.md']},
+                                 {'task': 'C4.2', 'component': '计算方法', 'query': '反', 'found': ['计算方法/电源变换/反.md']}]
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    (design / 'record' / 'block-circuits' / 'PSU.json').unlink()
+
+    def write(change):
+        target = design / 'record' / k.FILE
+        data = json.loads(target.read_text(encoding='utf-8'))
+        change(data)
+        target.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    built, _ = k.build(design)
+    assert len(built['C1']) == 4 and [r['kind'] for r in built['C4']] == ['取值顺序']      # two steps, one item
+    assert len(k.problems(design, 'C1')) == 2          # the medical rows are not asked of a board that is not medical
+    write(lambda d: d.update(applies=['医疗']))
+    assert len(k.problems(design, 'C1')) == 4
+    write(lambda d: d.update(applies=[]))
+    write(lambda d: [r.update(disposition='not_required') for r in d['C1']])
+    assert all('reason 写为什么可以不做' in p for p in k.problems(design, 'C1')) and len(k.problems(design, 'C1')) == 2
+    write(lambda d: [r.update(reason='需求没有可靠性指标，本板不做预计') for r in d['C1']])
+    assert k.problems(design, 'C1') == []              # no clarification, no where
+    write(lambda d: [r.update(disposition='not_required', reason='x') for r in d['C4']])
+    assert any('只用于需求要素的条件' in p for p in k.problems(design, 'C4'))
+    write(lambda d: d.update(groups=[{'module': 'C4', 'entry': '计算方法/电源变换/反.md', 'reason': '本板没有防反接'}]))
+    assert k.problems(design, 'C4') == []
+    write(lambda d: d.update(applies=['指示灯']))
+    again, _ = k.build(design)                          # a rebuild keeps what was declared
+    assert again['groups'] and again['applies'] == ['指示灯']
+    write(lambda d: d.update(groups=[{'module': 'C4', 'entry': '计算方法/电源变换/反.md'}]))
+    assert any('reason' in p for p in k.problems(design, 'C4'))
+
+
+def test_a_selected_scheme_is_never_answered_as_a_group(design):
+    k.build(design)
+    target = design / 'record' / k.FILE
+    data = json.loads(target.read_text(encoding='utf-8'))
+    data['groups'] = [{'module': 'C4', 'entry': '典型电路/电源变换/reg.md', 'reason': '不想答'}]
+    target.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    assert sum('还没有写处置' in p for p in k.problems(design, 'C4', 'PSU')) == 3

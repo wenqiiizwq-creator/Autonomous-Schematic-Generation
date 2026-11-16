@@ -106,8 +106,8 @@ C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项�
 
 ### 纲要的修改
 
-本节（架构、核心原则）、主流程（本文件的模块表与 `references/module-*.md` 七个细则文件）的步骤、任务与做完的标志，以及绘图纲要的每一条，任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
-`scripts/` 和 `references/` 中的实现细节可以直接修改，但一旦与纲要冲突，就先写纲要草案交人确认。
+纲要只有本节。本节的任何增、删、改或重排，都须先把改动草案交给人确认后才能写入。
+主流程的模块表、`references/module-*.md` 七个细则文件、绘图纲要和 `scripts/`、`references/` 里的其余内容都是本节的展开，可以直接修改；一旦与本节冲突，就先写纲要草案交人确认。
 经确认的改动在 `docs/outline-approvals.md` 加一条，写确认日期、用户原话和改后纲要哈希
 （`python3 scripts/check_ledger.py --outline-hash` 输出当前哈希）；纲要文字与最新确认的哈希不一致时 `check_ledger.py` 报 FAIL。
 

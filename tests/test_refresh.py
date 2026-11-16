@@ -37,15 +37,6 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual([], cr.audit(self.read('electrical-intent.json'), record, self.root)['errors'])
         self.assertEqual(([], []), refresh.refresh(self.root, 'C4'))
 
-    def test_a_changed_source_is_not_registered_again(self):
-        intent, record = fixture(self.root)
-        self.write('electrical-intent.json', intent)
-        self.write('component-requirements.json', record)
-        (self.root / 'calculation.txt').write_text('changed calculation')
-        done, skipped = refresh.refresh(self.root)
-        self.assertEqual(record, self.read('component-requirements.json'))
-        self.assertTrue(any('source changed' in line for line in skipped), skipped)
-
     def test_conclusion_coverage_intent_hash_and_requirement_status_follow_the_record(self):
         check = {'name': 'R1 功耗', 'value': 1, 'operator': '<=', 'limit': 2, 'unit': 'W'}
         self.write('electrical-intent.json', {'components': []})

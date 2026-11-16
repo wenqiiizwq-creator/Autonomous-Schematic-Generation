@@ -120,15 +120,15 @@ def declared_inputs(root, inputs=None):
 CLOSURE = 'record/design-closure.json'
 
 
-def calculation_digests(closure):
-    """{calculation id: sha256 of that calculation alone} of a design-closure.json: what a source citing it is hashed by."""
+def calculation_ids(closure):
+    """Ids of the calculations in a design-closure.json: what a source citing that file names."""
     data = json.loads(Path(closure).read_text(encoding='utf-8'))
-    return {c['id']: digest(c) for c in data.get('calculations') or [] if isinstance(c, dict) and text(c.get('id'))}
+    return {c['id'] for c in data.get('calculations') or [] if isinstance(c, dict) and text(c.get('id'))}
 
 
 def source_errors(source, root, guaranteed=False, inputs=None):
-    if not isinstance(source, dict) or not all(text(source.get(k)) for k in ('path', 'sha256', 'locator')):
-        return ['source needs path, sha256 and locator']
+    if not isinstance(source, dict) or not all(text(source.get(k)) for k in ('path', 'locator')):
+        return ['source needs path and locator']
     base = Path(root).resolve()
     raw = source['path']
     if raw.startswith('input:'):
@@ -144,17 +144,11 @@ def source_errors(source, root, guaranteed=False, inputs=None):
     if not permitted or not path.is_file():
         return ['source outside declared evidence roots or missing: ' + raw]
     if path == Path(root).resolve() / CLOSURE:
-        # The closure is written by several modules after this record (C5 adds traceability and the matrices, another
-        # block adds its calculations): a hash of the whole file went stale without the cited calculation changing, and
-        # the C4 gate then failed on every requirement (H-001 rerun 2026-11-15, 46 of 47).
-        found = calculation_digests(path).get(source.get('calculation'))
-        if found is None:
-            return ['source in %s names its calculation: "calculation": "<计算 id>", sha256 of that calculation '
-                    '(audit_component_requirements.py --calculation-hashes)' % CLOSURE]
-        if found != source['sha256']:
-            return ['source changed: %s 计算 %s' % (source['path'], source['calculation'])]
-    elif hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
-        return ['source changed: ' + source['path']]
+        # A source is a pointer, not a snapshot: the record names the calculation it rests on and the gate checks that
+        # the calculation is there. Hand-written hashes of it went stale whenever another module wrote the same file
+        # (H-001 rerun 2026-11-15, 46 of 47 requirements) and said nothing about whether the requirement still held.
+        if source.get('calculation') not in calculation_ids(path):
+            return ['source in %s names its calculation: "calculation": "<计算 id>"' % CLOSURE]
     if guaranteed:
         if source.get('kind') not in ('manufacturer', 'controlled_standard') or not text(source.get('quote')):
             return ['guarantee needs manufacturer/controlled_standard evidence and an exact quote']
@@ -371,11 +365,14 @@ def entry_errors(entry, comp=None):
             if missing:
                 errors.append(f'{param}: pulse conditions missing {sorted(missing)}')
     errors += bound_errors(entry, requirements)
+    # required_parameters repeats the parameters of `requirements`; left out, it is taken from them. Written, it says
+    # which parameters the purpose calls for, and a complete definition covers exactly those.
     needed = entry.get('required_parameters')
-    if not isinstance(needed, list) or not needed or any(not text(p) for p in needed):
-        errors.append('required_parameters must list the purpose-driven calculation outputs')
-    elif entry.get('definition_status') == 'complete' and set(needed) != seen:
-        errors.append('complete definition must cover exactly required_parameters')
+    if needed is not None:
+        if not isinstance(needed, list) or not needed or any(not text(p) for p in needed):
+            errors.append('required_parameters must list the purpose-driven calculation outputs')
+        elif entry.get('definition_status') == 'complete' and set(needed) != seen:
+            errors.append('complete definition must cover exactly required_parameters')
     if comp is not None:
         from .part_classes import kind_of, part_class, KEY, SAFETY_C, category, MAGNETICS, design_sheet
         kind, conflict = kind_of(comp)
@@ -548,12 +545,13 @@ def record_errors(record, intent, root, inputs=None):
             screened.add(ref)
             if (ref in by_ref) != (row['decision'] == 'contract'):
                 errors.append(f'{ref}: screening decision contradicts performance contract')
-            comp = comps.get(ref, {})
-            trigger = ' '.join(str(x) for x in (comp.get('value', ''), comp.get('fields', {}).get('Specification', '')))
-            if row['decision'] == 'standard' and re.search(r'pulse|surge|脉冲|浪涌', trigger, re.I):
-                errors.append(f'{ref}: pulse duty cannot be screened out without a performance contract')
-    if screened != set(comps):
-        errors.append('purpose screening must cover every component: ' + str(sorted(set(comps) - screened)))
+    # A part without a performance record is bought to the standard specification, one with a record to its contract:
+    # the screening table only repeated that for every part (H-001 2026-11-16: five rows, every part `contract`). It
+    # is optional; a row still written is checked against the records.
+    for ref, comp in comps.items():
+        trigger = ' '.join(str(x) for x in (comp.get('value', ''), comp.get('fields', {}).get('Specification', '')))
+        if ref not in by_ref and re.search(r'pulse|surge|脉冲|浪涌', trigger, re.I):
+            errors.append(f'{ref}: pulse duty cannot be screened out without a performance contract')
     return errors, pending
 
 
@@ -581,6 +579,16 @@ def requirement_hints(record, intent):
                         continue   # a shared duration or temperature is a plain condition, not a copied sentence
                     shared.setdefault((key, ' '.join(str(value).split())), set()).add(entry['ref'])
     hints = []
+    passives = [e for e in record.get('components', []) if e.get('kind') in ('resistor', 'capacitor')]
+    plain = [r for r in comps if re.match(r'[RC]\d', r)]
+    if len(plain) >= 6 and len(passives) == len(plain):
+        hints.append('%d 颗电阻电容都写了性能合同，全板没有一颗按标准规格：只取标称值的上拉、下拉、栅极电阻和普通去耦'
+                     '不用写合同（不写性能记录就是按标准规格）' % len(plain))
+    drifting = [e['ref'] for e in passives if e.get('kind') == 'resistor'
+                and {'tcr', 'long_term_drift'} & set(e.get('required_parameters') or [])]
+    if len(drifting) >= 3:
+        hints.append('%d 颗电阻写了温漂或长期漂移要求（%s）：计算没有拿它们当输入的不用写'
+                     % (len(drifting), '、'.join(drifting[:6]) + ('等' if len(drifting) > 6 else '')))
     if loose:
         hints.append('%d 颗电阻的工作电压要求不超过封装最弱常用件耐压 × RES-SMD-V %g%%，不起约束作用，可以不写：%s'
                      % (len(loose), share * 100, '、'.join(loose[:6]) + ('等' if len(loose) > 6 else '')))

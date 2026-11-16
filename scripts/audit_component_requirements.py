@@ -3,16 +3,13 @@
 
 Preparation is explicit (--project-intent/--write-bom) and precedes drawing and the design closure's intent_sha256.
 It rewrites the IR only when the projection changes it; default operation only audits and writes nothing but --out.
-
-audit_component_requirements.py --calculation-hashes record/design-closure.json [计算 id ...] prints the sha256 a source
-citing each calculation carries.
 """
 import argparse
 import json
 import sys
 from pathlib import Path
 
-from schematic_layout.component_requirements import audit, calculation_digests, project, write_bom
+from schematic_layout.component_requirements import audit, project, write_bom
 
 
 def write_projection(intent, path):
@@ -31,15 +28,6 @@ def write_projection(intent, path):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
-    if argv[:1] == ['--calculation-hashes']:
-        found = calculation_digests(argv[1])
-        missing = [name for name in argv[2:] if name not in found]
-        for name in argv[2:] or found:
-            if name in found:
-                print('%s  %s' % (found[name], name))
-        if missing:
-            print('没有这些计算：' + '、'.join(missing), file=sys.stderr)
-        return 1 if missing else 0
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('record', type=Path)
     ap.add_argument('--intent', type=Path, required=True)

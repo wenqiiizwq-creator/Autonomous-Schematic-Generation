@@ -6,8 +6,19 @@
 
 ## 先按用途筛选，再计算
 
-`screening` 按功能块分组覆盖每个位号一次，写 `refs`、`decision: standard/contract` 和具体 `reason`。
-普通上拉、已核实适用工况的标准去耦可以分组采用受控标准规格；不要为每个普通件增加全参数计算或两家候选的形式要求。
+**默认按标准规格，只给偏离默认的器件写性能记录**。`components` 里没有记录的器件就是按标准规格采购，标称值和封装写在块设计的 `value`、`footprint` 里；
+有记录的按记录里的性能要求采购。`screening` 不用写（写了的行仍与记录核对）；`required_parameters` 不用写，不写时取 `requirements` 里出现的参数。
+不要为每个普通件增加全参数计算或两家候选的形式要求。
+
+电阻、电容、指示灯、排针这类常规件，只有同时满足下面两条才写性能记录（H-001 2026-11-16：16 颗器件全部写了记录，
+6 颗电阻每颗都写了容差、温漂、长期漂移，共 83 条要求）：
+
+1. 某条计算的检查拿这颗器件标称值以外的某个参数当输入或限值（放电电阻的脉冲能量、分压电阻的总偏差、输出电容偏压后的有效容量）；
+2. 该封装最常用的料不一定满足这个参数（常规件最弱档见框架降额与应力目录的 `常规件最弱档.json`）。
+
+只取标称值的（上拉、下拉、栅极串联电阻、指示灯限流电阻且电流窗口宽于常规 1 % 电阻的总偏差）不写记录。
+写记录的器件只列计算里实际用到的参数：计算没有拿温漂、长期漂移当输入的不写这两项。
+全板的电阻电容都写了记录，或三颗以上电阻都写了温漂或长期漂移时，审计结果 `hints` 给提示，不挡交付。
 实际依赖耗能、脉冲、温漂、偏压后有效容量等性能的，写 `contract`，在 `components` 建对应性能记录。
 先从用途/电路工况决定 `required_parameters`，再填计算结果，不能反过来只列现成手册容易找到的参数。
 
@@ -17,7 +28,7 @@
 
 ## 数据格式
 
-顶层 `schema_version: 1`、`screening`、`components`。每个性能记录包含：
+顶层 `schema_version: 1`、`components`（`screening` 可不写）。每个性能记录包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -56,10 +67,8 @@
 `datasheet` 用于核心器件手册直接规定的外围值（输出/旁路电容最小值、规定的外接电阻），`source.kind` 写 `manufacturer`。
 同一记录里的精确标称值（`capacitance`/`inductance`/`resistance` 的 `eq`）必须满足同一量的上下界，有效容量下限也约束标称容量：`capacitance eq 100 nF` 配 `effective_capacitance ge 1 uF` 记错（86 块板里 100 nF 顶替手册要求的 1 µF、4.7 µF）。
 完整定义的电容要写 `working_voltage` 或 `rated_voltage` 的 `ge` 要求，TVS 要写 `working_voltage`（VRWM）的 `ge` 要求，数值取所在节点的最坏最高电压（86 块板：25 V 电容跨 30 V 输入、SMBJ33A 并在 36 V 轨上）。
-每个 `source` 写 `path`、文件内容 `sha256`、`locator`（页码、表/图、计算项或条款）。
-来源是 `record/design-closure.json` 里的一条计算时，另写 `calculation`（该计算的 `id`），`sha256` 只按这一条计算算，
-不按整个文件：这个文件后面还会被别的块和 C5 接着写，所引的计算没变，来源就不算变。哈希用
-`audit_component_requirements.py --calculation-hashes record/design-closure.json [计算 id ...]` 列出；改了某条计算，只需重新登记引用它的来源。
+每个 `source` 写 `path`、`locator`（页码、表/图、计算项或条款），不写哈希：来源是指向，不是快照，关卡只核文件在、所指的计算在。
+来源是 `record/design-closure.json` 里的一条计算时，另写 `calculation`（该计算的 `id`）。改了某条计算，引用它的性能要求由设计者按新结果重看，不需要重新登记。
 路径相对交付目录；也可写 `input:datasheets/子目录/手册.pdf` 引用已声明输入。
 输入通过 `--input NAME=PATH` 或 `record/deliver.json.inputs` 登记，不能读取未声明的任意文件冒充证据。
 保留原始手册在外部资料目录，不为这项流程把整份手册重复塞进交付包；必要摘页可以在 `record/evidence/`。

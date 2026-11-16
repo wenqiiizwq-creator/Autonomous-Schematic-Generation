@@ -1,9 +1,9 @@
-import copy, hashlib, json, os, shutil, sys, tempfile, unittest
+import copy, json, os, shutil, sys, tempfile, unittest
 from unittest import mock
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from schematic_layout.external_supply import judge
-from schematic_layout.circuit_supply import binding, declarations
+from schematic_layout.circuit_supply import declarations
 from test_filtered_supply import xml
 from schematic_layout.native import compare_netlist
 from schematic_layout import citations
@@ -15,7 +15,7 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.p=Path(self.tmp.name)
   self.ev=self.p/'review.md';self.ev.write_text('SRC1: connector, diode polarity and capacitor return reviewed. Scope: source semantics only.')
   self.i={'components':[{'ref':'D1','lib_id':'Device:D','value':'D'},{'ref':'C1','lib_id':'Device:C','value':'10u'}], 'nets':[{'name':'IN','pins':['D1.2']},{'name':'VCC','pins':['D1.1','C1.1']},{'name':'GND','pins':['C1.2']}], 'net_roles':{'VCC':'power'}}
-  d={'net':'VCC','pin':'D1.1','refs':['D1','C1'],'reason':'diode supply reviewed','evidence':{'path':'review.md','sha256':hashlib.sha256(self.ev.read_bytes()).hexdigest(),'locator':'SRC1'},'binding_sha256':binding(self.i,['D1','C1'])}
+  d={'net':'VCC','pin':'D1.1','refs':['D1','C1'],'reason':'diode supply reviewed','evidence':{'path':'review.md','locator':'SRC1'}}
   self.i['reviewed_circuit_supply']=[d]
   self.n={'IN':[('D1','2','passive')],'VCC':[('D1','1','passive'),('C1','1','passive'),('FLGX1','1','power_out')],'GND':[('C1','2','passive')]}
  def run_case(self):
@@ -23,9 +23,12 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
   return judge(f,self.i,{'FLGX1':'#FLG1'})
  def test_bound_review_passes_without_changing_passive_pin_types(self):self.assertEqual(self.run_case()['status'],'PASS')
  def test_missing_review_fails(self):self.ev.unlink();self.assertEqual(self.run_case()['status'],'FAIL')
- def test_stale_document_fails(self):self.ev.write_text('changed');self.assertEqual(self.run_case()['status'],'FAIL')
+ def test_document_without_the_locator_fails(self):self.ev.write_text('changed');self.assertEqual(self.run_case()['status'],'FAIL')
  def test_locator_fails(self):self.i['reviewed_circuit_supply'][0]['evidence']['locator']='absent';self.assertEqual(self.run_case()['status'],'FAIL')
- def test_stale_parameter_fails(self):self.i['components'][1]['value']='22u';self.assertEqual(self.run_case()['status'],'FAIL')
+ def test_review_carries_no_binding_hash(self):self.i['components'][1]['value']='22u';self.assertEqual(self.run_case()['status'],'PASS')
+ def test_hashes_of_older_records_are_accepted_and_not_read(self):
+  d=self.i['reviewed_circuit_supply'][0];d['binding_sha256']='0'*64;d['evidence']['sha256']='0'*64
+  self.assertEqual(self.run_case()['status'],'PASS')
  def test_reversed_native_diode_fails(self):self.n['IN'][0]=('D1','1','passive');self.n['VCC'][0]=('D1','2','passive');self.assertEqual(self.run_case()['status'],'FAIL')
  def test_disconnected_return_is_the_netlist_gates(self):
   self.n['IN']+=self.n.pop('GND');self.assert_netlist_gate_catches()
@@ -51,7 +54,7 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
   framework=temp_framework.with_raw(self.p/'framework',raw)
   env=mock.patch.dict(os.environ,{temp_framework.knowledge_source.ENV_VAR:str(framework)});env.start();self.addCleanup(env.stop)
   citations._pages.clear();citations._texts.clear()
-  d=self.i['reviewed_circuit_supply'][0];d['refs']=['D1'];d['basis']=basis;d['binding_sha256']=binding(self.i,['D1'])
+  d=self.i['reviewed_circuit_supply'][0];d['refs']=['D1'];d['basis']=basis
   return self.run_case()
  @unittest.skipUnless(shutil.which('pdfinfo'),'poppler is not installed')
  def test_single_component_with_datasheet_basis_passes(self):
@@ -66,7 +69,6 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
 
  def test_explicit_empty_mpn_remains_empty(self):
   for c in self.i['components']:c['mpn']=''
-  d=self.i['reviewed_circuit_supply'][0];d['binding_sha256']=binding(self.i,d['refs'])
   text=xml(self.n,{'D1':('Device','D','D'),'C1':('Device','C','10u')}).replace('<libsource','<fields><field name="MPN"/></fields><libsource')
   f=self.p/'n.xml';f.write_text(text)
   self.assertEqual(judge(f,self.i,{'FLGX1':'#FLG1'})['status'],'PASS')
@@ -81,7 +83,7 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
  def test_extra_native_short_is_the_netlist_gates(self):
   self.n['IN'].append(('C1','2','passive'));self.assert_netlist_gate_catches()
  def test_declared_nc_must_remain_singleton_with_native_nc_marker(self):
-  self.i['no_connect']=['D1.3'];self.i['reviewed_circuit_supply'][0]['binding_sha256']=binding(self.i,['D1','C1'])
+  self.i['no_connect']=['D1.3']
   self.n['unconnected-D1']=[('D1','3','passive+no_connect')]
   self.assertEqual(self.run_case()['status'],'PASS')
   self.n['unconnected-D1'].append(('U2','1','input'))

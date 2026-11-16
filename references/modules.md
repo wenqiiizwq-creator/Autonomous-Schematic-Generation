@@ -81,7 +81,7 @@ C4 每块写一个块设计 `record/blocks/<块>.json`，不写整板网表；C5
 
 ```json
 {"schema_version": 1,
- "evidence": [{"id": "E-REQ", "path": "需求/需求规格.md", "sha256": "<SHA256>", "locator": "§3"}],
+ "evidence": [{"id": "E-REQ", "path": "需求/需求规格.md", "locator": "§3"}],
  "requirements": [{"id": "R1", "text": "24 V 输入，输出 3.3 V 1 A，隔离 1500 Vrms", "evidence": ["E-REQ"]}],
  "clarifications": [],
  "derating": {"level": "II", "source": "req:R1"},
@@ -151,7 +151,7 @@ C3 照旧手写工作记录 `scheme-criteria.json` 和 `selection.json`，每块
 | C5 | `design-closure.json` 的 `intent_sha256` | `electrical-intent.json` |
 | C5 | 需求追溯里写了 `design_supported`、却挂着结论不是 `supported` 的计算的，改为 `conditional` | 计算的结论 |
 
-不属于派生量、不会被改写的：来源的 `sha256`、图面审阅的 PDF 哈希、`reviewed_circuit_supply` 的绑定。它们表示某人按当时的内容核对过，内容变了要重新核对后登记。性能记录本身有错时投影跳过并打印 `SKIPPED:`，错误由关卡列出。
+不属于派生量、不会被改写的：图面审阅的 PDF 哈希，它表示某人按这一版图看过，图变了要重新看过后登记。来源、证据和 `reviewed_circuit_supply` 不写哈希，只写指向（路径和定位）。性能记录本身有错时投影跳过并打印 `SKIPPED:`，错误由关卡列出。
 
 ## modules.json 与过期判定
 

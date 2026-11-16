@@ -1845,8 +1845,6 @@ def audit_evidence(evidence, root, inputs, error):
         path = resolve(p, root, inputs)
         if path is None:
             error('evidence_missing_or_outside_root', key)
-        elif row.get('sha256') != sha256(path):
-            error('stale_evidence', key)
 
 
 def audit(record, intent_path, artifact_root, inputs=None, module=None, requirements=None, open_ports=()):

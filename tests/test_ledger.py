@@ -43,13 +43,8 @@ class OutlineApprovalTests(unittest.TestCase):
             skill.write_text(skill.read_text(encoding='utf-8').replace('P1 证据', 'P1 证据改'), encoding='utf-8')
             self.assertNotEqual(check_ledger.outline_hash(), check_ledger.outline_hash(root))
             skill.write_text((check_ledger.ROOT / 'SKILL.md').read_text(encoding='utf-8'), encoding='utf-8')
-            # The 主流程 body moved into the module files; their whole text stays in the outline.
-            for name in check_ledger.MODULE_FILES:
-                module = root / name
-                before = module.read_text(encoding='utf-8')
-                module.write_text(before + '\n补一句。\n', encoding='utf-8')
-                self.assertNotEqual(check_ledger.outline_hash(), check_ledger.outline_hash(root), name)
-                module.write_text(before, encoding='utf-8')
+            # Only the 纲要 section counts: the module table below it changes without an approval row.
+            skill.write_text(skill.read_text(encoding='utf-8').replace('\n## 主流程\n', '\n## 主流程\n\n补一句。\n'), encoding='utf-8')
             self.assertEqual(check_ledger.outline_hash(), check_ledger.outline_hash(root))
 
     def test_cli(self):

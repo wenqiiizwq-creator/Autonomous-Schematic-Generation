@@ -431,6 +431,8 @@ def gate(module, root, write=True, block=None):
     if not block:
         problems += lookup_problems(root, module)
         notes += declaration_notes(root, module)
+        if module == 'C1':
+            notes += clarification_notes(root)
     if module in ('C1', 'C4'):
         # The items of the knowledge entries the design used are each answered (knowledge_checklist.py).
         problems += knowledge_checklist.problems(root, module, block)
@@ -559,6 +561,22 @@ def consulted(root):
     found = {e for r in rows if isinstance(r, dict) for e in r.get('found') or [] if isinstance(e, str)}
     scheme = root / 'record' / 'scheme-criteria.json'
     return found, scheme.read_text(encoding='utf-8') if scheme.is_file() else ''
+
+
+def clarification_notes(root):
+    """A note (never a failure) when more requirements came from adopted clarifications than from the requirement
+    document: each adopted clause is something the circuit must then meet (H-001 2026-11-16: 12 written, 22 adopted)."""
+    try:
+        rows = json.loads((root / 'record' / 'requirements.json').read_text(encoding='utf-8')).get('requirements') or []
+    except (OSError, ValueError):
+        return []
+    adopted = sum(1 for r in rows if isinstance(r, dict) and r.get('clarifications'))
+    written = len(rows) - adopted
+    if adopted <= max(written, 3):
+        return []
+    return ['clarifications_outnumber_requirements：由澄清采纳成的需求 %d 条，多于需求原文的 %d 条；逐条看：答哪一种都不改图的撤掉'
+            '（必答清单写 not_required 或写成假设），建议条文比原文更严的改成最宽松读法，多做的保护列为可选项'
+            '（requirement-clarifications.md“建议条文不加严”）' % (adopted, written)]
 
 
 def declaration_notes(root, module):

@@ -1016,9 +1016,6 @@ class PackDesignTests(unittest.TestCase):
         errors, manifest = self.run_pack()
         self.assertEqual(errors, [])
         self.assertNotIn('requirements/spec.md', manifest['packed'])
-        spec.write_text('changed')
-        errors, _ = self.run_pack()
-        self.assertTrue(any('stale_evidence E2' in e for e in errors), errors)
 
     def test_design_documents_must_name_parts_the_design_has(self):
         docs = self.d.root / '设计资料'

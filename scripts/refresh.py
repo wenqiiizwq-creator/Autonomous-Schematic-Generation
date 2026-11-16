@@ -11,8 +11,7 @@ runs this first; the audits then judge what the designer wrote. Derived, by modu
       design-closure.json intent_sha256;
       a traced requirement written design_supported that rests on a calculation not supported becomes conditional.
 
-Not derived, never touched: a source's sha256 (it says the cited file or calculation was read as it is now), the
-visual review's PDF hash, a reviewed circuit supply's binding. Without --module both parts run.
+Not derived, never touched: the visual review's PDF hash. Without --module both parts run.
 """
 import argparse
 import hashlib

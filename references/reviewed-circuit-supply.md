@@ -6,20 +6,19 @@
 声明来源前，先看源数据和独立写出的设计网表。记录能量输入、回流路径、极性、导通/启动状态、禁用/故障状态
 和供电负载限值。反馈、阈值、基准测量或其他信号网络不能用这个机制。只有 power 角色不算证据。
 
-`reviewed_circuit_supply` 每条恰好有 `net`、输出 `pin`、`refs`、`reason`、`binding_sha256` 和
-`evidence: {path, sha256, locator}`，可选 `basis`。`refs` 列出来源路径上所有相关器件，一般至少两个。
+`reviewed_circuit_supply` 每条有 `net`、输出 `pin`、`refs`、`reason` 和
+`evidence: {path, locator}`，可选 `basis`。不写哈希。`refs` 列出来源路径上所有相关器件，一般至少两个。
 网络由单个器件自己驱动、来源路径上没有第二个器件时（IC 内部开关驱动的开关节点，如 Matrix R2 的 `SW_12`），
 `refs` 只写这一个位号，并用 `basis: "datasheet:<库内路径>#p<页>"` 引出手册上说明该引脚由内部开关驱动的那一页；
 不要为凑够两个位号把输入电容等不在来源路径上的器件写进去。审计按 [手册引用](../scripts/schematic_layout/citations.py)
 核对该页存在（找不到知识库时不核，记 NOT_CHECKED 不拦），页不存在记 `circuit_basis_citation`。证据是 artifact root
 （`verify_schematic.py --artifact-root`，通常是交付目录，复核文档可放在 `record/evidence/`；默认是根图所在目录）
-内一份可读的复核文档，哈希和确切定位必须对得上。
-复核写完后用 `schematic_layout.circuit_supply.binding(intent, refs)` 计算绑定值。它绑定器件身份、值、字段、
-参与网络的完整分区和 NC 声明。电气改动后不重新打开复核，就不能刷新绑定值。
+内一份可读的复核文档，文档里要找得到所写的定位。
+来源路径上的器件或连接改了，由设计者重看这份复核；关卡不替设计者判断复核是否过期。
 
 设计网表把该网的角色声明为 power 或 return。在复核过的输出端恰好放一个 `Sheet.power_flag()`。
 `page_intents` 把声明带到输出引脚所在的页。整板的导出审计核对：复核过的器件已装配、没有冲突的 KiCad 电源输出脚、
-标记数量、输出网络名、当前的来源文档和电路绑定。缺失、过期、未连接、信号网络或未复核的声明都 FAIL。
+标记数量、输出网络名和来源文档。缺失、未连接、信号网络或未复核的声明都 FAIL。
 这项检查不解析工程论证，也不证明它正确；设计依据要另外论证来源语义和工作限值。报告里明确写出这个区别。
 器件身份和引脚连接归 `intent_netlist` 检查项。
 
