@@ -137,6 +137,8 @@ python3 scripts/fill_pin_maps.py <交付目录> [--pages U301=28-34] [--write] [
 python3 scripts/make_symbol.py 引脚表.json --out 设计方案/项目.kicad_sym      # CSV 表头 number,name,type[,side]，CSV 加 --name
 ```
 
+同名电源脚里有要悬空（NC）的（如模块的 SW 脚手册要求不接外部元件），生成符号时加 `--no-stack`：画图器不接受悬空的叠脚（H-001 2026-11-16，C6 为此退回 C4 一次）。
+
 逐物理脚写引脚号、手册名和类型（`datasheet_type` 同一套代码，或 KiCad 类型），`side` 可选 L/R/T/B（不写时电源在上、地在下、输出在右、其余在左）。
 同名同类型的电源/地脚合成叠脚 `[a,b]`（`--no-stack` 不合），NC 和信号脚不合；本体按引脚名文字宽度留空，上下边引脚放在左右引脚名之间，
 叠脚上方留竖排引脚号的空行，全部在 2.54 mm 栅格上。生成的符号过符号完整性和原生引脚文字检查；引脚表仍按上节照手册写（不从符号回抄），

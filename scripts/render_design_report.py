@@ -179,6 +179,9 @@ def banned_terms(path=TERMINOLOGY):
 def check_terms(texts):
     """Records and notes use the terms in references/terminology.md."""
     words = banned_terms()
+    # The skill's own task names are not the banned word in them (task C3.3 is 接口定稿; H-001 2026-11-16: delivery
+    # went back to C4 for a calculation note citing it).
+    texts = [(where, v.replace('接口定稿', '')) for where, v in texts]
     found = ['%s（%s）' % (quote(where, v), '、'.join(w for w in words if w in v))
              for where, v in texts if any(w in v for w in words)]
     if not found:
