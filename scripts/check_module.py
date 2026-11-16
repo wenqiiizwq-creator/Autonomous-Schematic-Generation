@@ -356,6 +356,14 @@ def gate(module, root, write=True, block=None):
             evidence = {e.get('id'): e for e in merged(closure, requirements).get('evidence') or [] if isinstance(e, dict)}
             problems += report.check_selection(selection, {}, root, evidence)
         problems += block_circuits.run(root, write=write)
+        known = report.circuit_implementations()
+        for key, data in block_circuits.read_dir(record)[0].items():
+            for entry in data.get('schemes') or []:
+                ref = ((entry.get('selected') or {}).get('circuit') or '') if isinstance(entry, dict) else ''
+                pid, _, approach = ref.partition('#')
+                if ref and ref != 'none' and (pid not in known or approach not in known[pid]):
+                    problems.append('块 %s 选定方案的 circuit “%s” 不是典型电路里的实现方案（写 <文件名>#<“## 实现方案”下的 ### 标题原文>%s）'
+                                    % (key, ref, '；%s 有：%s' % (pid, '、'.join(sorted(known[pid]))) if pid in known else ''))
         # Task C3.3: the interface freeze reads the block files just written.
         arch, _ = load(record, 'architecture.json')
         files, _ = block_circuits.read_dir(record)
