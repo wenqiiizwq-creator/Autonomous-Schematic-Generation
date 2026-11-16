@@ -333,7 +333,7 @@ class DesignReportTests(unittest.TestCase):
     def test_the_rule_by_rule_tables_stay_in_the_record(self):
         # user 2026-11-08: the report keeps the decisions; each rule's citation stays in design-closure-audit.json.
         audit_out = json.loads((self.d.record / 'design-closure-audit.json').read_text())
-        audit_out['guidelines'] = {'library_version': '1.9.8', 'applicable': ['G01-001', 'G07-001'],
+        audit_out['guidelines'] = {'applicable': ['G01-001', 'G07-001'],
                                    'covered': {'G01-001': ['calc:C1'], 'G07-001': ['work:W-TEST']}, 'not_applicable': {},
                                    'uncovered': [], 'downstream': ['G07-001'],
                                    'identity': {}}

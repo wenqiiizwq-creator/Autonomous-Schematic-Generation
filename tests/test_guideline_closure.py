@@ -160,8 +160,6 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['guideline_scope']['circuit_types'] = ['RS-485']
         self.assertIn('guideline_scope', self.codes(self.run_audit()))
         self.record['guideline_scope']['circuit_types'] = ['RS485']
-        self.record['guideline_scope']['library_version'] = '9.9.9'
-        self.assertNotIn('guideline_scope', self.codes(self.run_audit()))
 
     def test_a_library_with_rules_asks_for_the_scope_and_an_empty_one_does_not(self):
         del self.record['guideline_scope']

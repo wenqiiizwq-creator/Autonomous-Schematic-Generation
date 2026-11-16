@@ -304,13 +304,12 @@ def select(bundle, baseline=None, circuit_types=(), device_kinds=(), typed_only=
 
 
 def scope_errors(scope, bundle):
-    """A design's declared scope (ASG design-closure.json guideline_scope): the library version it was written
-    against (a record), its baseline and the circuit types and device kinds it has, in the bundle's vocabulary, and the rules
+    """A design's declared scope (ASG design-closure.json guideline_scope): its baseline and the circuit types and device kinds it has, in the bundle's vocabulary, and the rules
     it holds not applicable with a reason."""
     if not isinstance(scope, dict):
         return ['scope is not an object']
     errors = []
-    extra = set(scope) - {'library_version', 'baseline', 'circuit_types', 'device_kinds', 'not_applicable'}
+    extra = set(scope) - {'baseline', 'circuit_types', 'device_kinds', 'not_applicable'}
     if extra:
         errors.append('scope has unknown fields %s' % sorted(extra))
     vocabulary = bundle['vocabulary']
