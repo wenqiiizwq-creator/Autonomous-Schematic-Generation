@@ -55,7 +55,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
 记录不写格式版本号：审计只读本页的现行格式，旧记录里留着的版本字段不读。
 
 **需求清单与需求追溯分两个文件**（用户 2026-11-09：按草案写入）：需求清单是模块 C1 的产品，单独放在 `record/requirements.json`
-（需求条文与来源、`clarifications`、`derating`、`guideline_version` 与 `guideline_scope`，格式见 [能力模块](modules.md)）。
+（需求条文与来源、`clarifications`、`derating` 与 `guideline_scope`，格式见 [能力模块](modules.md)）。
 `design-closure.json` 不再写这些区段，只在 `traceability` 为每条需求写追溯（任务 C5.1）：`requirement`（需求编号）、`status`、
 `implementation`、`refs`、`depends_on`，需要时 `no_check_reason`。审计把两个文件合起来核对，`--requirements` 默认取同目录的
 `requirements.json`。`design-closure.json` 里还有 `requirements`、`clarifications`、`derating`、`guideline_scope` 的记 `outdated_record`；
@@ -191,12 +191,12 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       `stress_risks` 里加 `required_severity`、`loosest_limit`、`margin_to_rating`，`derating.severe_thresholds` 写所用阈值；
       报告“应力风险”一节写明阈值并列出每处要求的等级和待办。项目等级就是 III 级时只按余量判。
       应力超幅是应力判法（框架 G10 目录的 `应力判法.md`）判定表中的一档，这里是它在 ASG 设计记录里的写法。
-      挂 validation 待办只表示样机上确认；要靠 PCB、结构实现的边界另按下面的 `downstream_version` 写进下游约束表，两者不互相代替。
-  - **`downstream_version: 1`**（AD9361 板，用户 2026-11-13：照草案写入，`docs/草案-下游约束表.md`）：原理图阶段定下、要由
+      挂 validation 待办只表示样机上确认；要靠 PCB、结构实现的边界另按下面的“下游约束表”写进表里，两者不互相代替。
+  - **下游约束表**（AD9361 板，用户 2026-11-13：照草案写入，`docs/草案-下游约束表.md`）：原理图阶段定下、要由
     PCB、结构、样机、生产或固件落实的要求写进 `设计资料/下游约束表.md`，登记为证据并写 `carrier: DOWNSTREAM`。
     表头含 `编号 | 接收方 | 对象 | 约束 | 依据 | 验收`：编号 `D-<序号>`；接收方取 `PCB`/`结构`/`样机验证`/`生产`/`固件`，
     可写几个（用顿号分）；约束写定量边界，不写“注意散热”这类无数的话；依据写计算编号和准则编号；验收写测什么、什么工况、门限多少。
-    审计（只在写了 `downstream_version` 时）：
+    审计：
     - 温度类应力风险（`max_c`、`tj_percent`、`margin_c`）和任何应力超幅，`work_item` 不是未关闭的 design 待办（即不靠改原理图解决）的，
       检查写 `downstream: [D-x]`，缺记 `stress_risk_without_downstream`；整板审计时该行要存在（`downstream_unknown_row`）
       且依据里写这条计算（`downstream_row_not_citing`）。热类的行写所需的结到环境热阻 =（降额后结温上限 − 环境温度）÷ 功耗，
@@ -206,8 +206,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       行缺列、编号或接收方不合法记 `downstream_row_incomplete`。表里写了一条下游准则，等同于用待办把它交给下游。
     - 报告“技术转交要求”按接收方分组列出各行，挂在应力超幅上的排前面；结论写各接收方的行数。
     - 审计只核行在、行写全、依据指对；热阻目标等数值算得对不对由 SR 审查核（G08-047 的审查方法）。
-    没写 `downstream_version` 的旧记录不核这些，结果写 `NOT_DECLARED`；新设计必须写。
-  - **`guideline_version: 1`**（用户 2026-10-31：请开始执行这个方案）：设计准则（G01–G09，见框架的准则登记（`知识/设计准则/准则登记/`））。
+  - **设计准则**（用户 2026-10-31：请开始执行这个方案）：设计准则（G01–G09，见框架的准则登记（`知识/设计准则/准则登记/`））。
     `guideline_scope`（在 `requirements.json`）写 `library_version`（已装设计准则库的版本）、`baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
     `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
     计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表）。
@@ -221,7 +220,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     有对外连接器的板必须写 FMEA 和 EMC 端口矩阵（[必写的设计文档](guideline-evidence-groups.md)）：证据条目写 `carrier: FMEA`/`carrier: EMC`，审计核必备章节齐全、非空、
     每个连接器位号都写到；没登记或不齐记 `design_document_incomplete`（INCOMPLETE，打包被拒），`carrier` 写了别的名字记 `guideline_carrier_unknown`。
     审计在 `guidelines.documents` 列出两份文档的核对结果。
-    设计准则库有规则而记录没有 `guideline_version` 时记 `guideline_scope_missing`；设计准则库为空时不核对。
+    设计准则库有规则而记录没有 `guideline_scope` 时记 `guideline_scope_missing`；设计准则库为空时不核对。
     [知识框架的用法](knowledge-package.md) 里典型电路的电路类型和可选落实规则只作方案比较参考，不扩展或约束 `guideline_scope`；本板的功能电路类型和器件类别决定准则适用范围，普通引用覆盖要求不变。
   - **占位值**（不分记录版本，2026-11-02，86 块开源板 DOC-D01/DEV-D01/DOC-Q01）：设计网表的值是库默认名或占位
     （`R`、`R_Small`、`C`、`Crystal_GND24` 等 `Device:` 库符号名，`-`、`?`、`xx`、`TBD`），或料号/型号含通配符（`BZT52Bxx`、`BQ769x2` 里的小写 x、`?`、`*`），

@@ -254,7 +254,7 @@ def check(root, inputs=()):
             docs = [p['item'] for p in result.get('pending', []) if p.get('code') == 'design_document_incomplete']
             if docs:
                 errors.append('design-closure.json: 必写的设计文档不齐（%s）；见 references/guideline-evidence-groups.md' % '；'.join(docs))
-            # downstream_version 1 (user 2026-11-13: 照草案写入): a rule closing after the schematic is handed on in the
+            # The downstream constraint table (user 2026-11-13: 照草案写入): a rule closing after the schematic is handed on in the
             # downstream constraint table or held not applicable with a reason.
             rules = [p['item'] for p in result.get('pending', []) if p.get('code') == 'downstream_constraint_missing']
             if rules:

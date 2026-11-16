@@ -322,7 +322,12 @@ class SevereStressTests(unittest.TestCase):
         calc['checks'] = [{'name': 'U1 结温', 'value': 146.2, 'operator': '<=', 'limit': 95, 'unit': '℃', 'ref': 'U1',
                            'derating_rule': 'IC-SW-TJ', 'rating': 150, 'limit_basis': 'standard',
                            'limit_source': 'standard:derating-rules#IC-SW-TJ', 'improvement': '贴壳散热',
-                           'rating_source': 'datasheet:Datasheet/08/TI - LM70880-Q1.pdf#p6'}]
+                           'rating_source': 'datasheet:Datasheet/08/TI - LM70880-Q1.pdf#p6', 'downstream': ['D-1']}]
+        table = base.root / '下游约束表.md'             # the boundary PCB and the enclosure have to meet (test_downstream_constraints)
+        table.write_text('| 编号 | 接收方 | 对象 | 约束 | 依据 | 验收 |\n|---|---|---|---|---|---|\n'
+                         '| D-1 | 结构 | U1 | 结到环境热阻 ≤ 21.9 ℃/W | C-TJ | 满载实测 |\n', encoding='utf-8')
+        base.record['evidence'] = [e for e in base.record['evidence'] if e.get('carrier') != 'DOWNSTREAM'] + [
+            {'id': 'E-DS', 'path': table.name, 'sha256': sha256(table), 'locator': '全表', 'carrier': 'DOWNSTREAM'}]
 
     @property
     def check(self):

@@ -1,4 +1,4 @@
-"""downstream_version 1 (user 2026-11-13: 照草案写入, docs/草案-下游约束表.md). AD9361 board: U301 at an estimated
+"""The downstream constraint table (user 2026-11-13: 照草案写入, docs/草案-下游约束表.md). AD9361 board: U301 at an estimated
 104 °C junction against 85 °C derated carried a heat sink only in an `improvement` cell and a validation item "measure it on
 the sample"; PCB and the enclosure were never told, and the rules closing after the schematic were handed to no one.
 Every board carries 设计资料/下游约束表.md: a temperature stress risk, or any severe stress, not fixed in the schematic names
@@ -40,7 +40,9 @@ class StressRiskTests(unittest.TestCase):
         self.addCleanup(case.doCleanups)
         self.case, self.base = case, case.base
         case.item()                                    # validation item, damage, fault: P1 — enough before this change
-        self.base.record['downstream_version'] = 1
+        del self.check['downstream']                   # the case here: nothing handed on yet, the table is empty
+        self.base.record['evidence'] = [e for e in self.base.record['evidence'] if e.get('carrier') != 'DOWNSTREAM']
+        (self.base.root / '下游约束表.md').unlink()
 
     @property
     def check(self):
@@ -52,12 +54,6 @@ class StressRiskTests(unittest.TestCase):
     def codes(self):
         r = self.result()
         return {e['code'] for e in r['errors']} | {p['code'] for p in r['pending']}
-
-    def test_an_undeclared_record_is_unchanged(self):
-        del self.base.record['downstream_version']
-        result = self.result()
-        self.assertEqual(set(), {e['code'] for e in result['errors']})
-        self.assertEqual({'status': 'NOT_DECLARED'}, result['downstream'])
 
     def test_a_validation_item_alone_does_not_hand_the_boundary_on(self):
         self.assertIn('stress_risk_without_downstream', self.codes())
@@ -71,7 +67,6 @@ class StressRiskTests(unittest.TestCase):
         self.check['downstream'] = ['D-1']
         codes = self.codes()
         self.assertIn('downstream_unknown_row', codes)
-        self.assertIn('design_document_incomplete', codes)
         write_table(self.base.root, self.base.record, TJ_ROW)
         result = self.result()
         self.assertEqual(set(), {e['code'] for e in result['errors']}, result['errors'])
@@ -115,7 +110,6 @@ class GuidelineTests(unittest.TestCase):
         for key in ('GUIDELINE_CRITERIA', 'GUIDELINE_CRITERIA_TESTING'):
             os.environ.pop(key, None)
         base.GuidelineClosureTests.setUp(self)
-        self.record['downstream_version'] = 1
 
     def pending(self, result=None):
         return [p['item'] for p in (result or self.run_audit())['pending'] if p['code'] == 'downstream_constraint_missing']

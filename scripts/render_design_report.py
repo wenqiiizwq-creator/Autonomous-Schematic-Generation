@@ -1108,7 +1108,7 @@ def render(root, notes=None, title=None):
             LEVEL_NAMES.get(derating.get('level'), '未定'), derating.get('source') or '没有写来源',
             '合格但有风险（应力）%d 处，见“应力风险”。' % len(risks) if risks else '写出的应力都在降额值以内。',
             '另有 %d 处应力比较没点名降额规则（提示）。' % len(hints) if hints else ''))
-    if downstream.get('status') not in (None, 'NOT_DECLARED', 'NOT_CHECKED'):
+    if downstream.get('status') not in (None, 'NOT_CHECKED'):
         counts = Counter(r for row in downstream_rows for r in row['receivers'])
         out.append('- **技术转交**：下游约束表 %d 行（%s），其中挂在应力超幅上的 %d 行；另有转交待办 %d 件。见“技术转交要求”。%s' % (
             len(downstream_rows), '、'.join('%s %d' % (r, counts[r]) for r in DOWNSTREAM_RECEIVERS if counts[r]) or '无',
@@ -1310,7 +1310,7 @@ def render(root, notes=None, title=None):
                 out.append('')
 
     if downstream_rows:
-        # downstream_version 1 (user 2026-11-13: 照草案写入): the downstream constraint table grouped by receiver, rows that
+        # The downstream constraint table (user 2026-11-13: 照草案写入): the downstream constraint table grouped by receiver, rows that
         # carry a severe stress first; the validation and PCB handoff items follow.
         out += ['## 技术转交要求', '',
                 '原理图阶段定下、要由后续环节落实的要求，来自 `设计资料/下游约束表.md`，按接收方分组；挂在应力超幅上的排在前面。'

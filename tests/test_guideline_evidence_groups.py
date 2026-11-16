@@ -56,6 +56,9 @@ EMC = '''# EMC 端口矩阵
 setUpModule, tearDownModule = base.setUpModule, base.tearDownModule
 
 
+DOWNSTREAM = '| 编号 | 接收方 | 对象 | 约束 | 依据 | 验收 |\n|---|---|---|---|---|---|\n'
+
+
 class DesignDocumentTests(unittest.TestCase):
     """The record of test_guideline_closure, with a connector J1 added."""
     run_audit, codes = base.GuidelineClosureTests.run_audit, base.GuidelineClosureTests.codes
@@ -67,6 +70,7 @@ class DesignDocumentTests(unittest.TestCase):
             {'ref': 'J1', 'lib_id': 'Connector:Conn_01x02', 'value': 'Conn_01x02'}]}))
         self.record['intent_sha256'] = sha256(self.intent)
         self.record['calculations'][0]['guidelines'] = ['G01-001', 'G04-001']
+        self.write_doc('downstream.md', DOWNSTREAM, 'DOWNSTREAM')
 
     def run_docs(self):
         return self.run_audit(LIB)
@@ -116,11 +120,16 @@ class DesignDocumentTests(unittest.TestCase):
                              (FMEA.replace('J1', 'J10'), '没写到 J1')):
             with self.subTest(word=word):
                 self.record['evidence'] = self.record['evidence'][:1]
+                self.write_doc('downstream.md', DOWNSTREAM, 'DOWNSTREAM')
                 self.write_doc('fmea.md', broken, 'FMEA')
                 self.write_doc('emc.md', EMC, 'EMC')
                 problem = self.incomplete(self.run_docs())
                 self.assertEqual(len(problem), 1, problem)
                 self.assertIn(word, problem[0])
+
+    def test_a_board_without_the_downstream_table_is_named(self):
+        self.record['evidence'] = self.record['evidence'][:1]
+        self.assertTrue(any(p.startswith('DOWNSTREAM（下游约束表）：没有登记') for p in self.incomplete(self.run_docs())))
 
     def test_an_unknown_document_name_is_an_error(self):
         self.write_doc('fmea.md', FMEA, '失效分析')

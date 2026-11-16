@@ -60,7 +60,7 @@ class GuidelineClosureTests(unittest.TestCase):
         self.intent.write_text(json.dumps({'components': [{'ref': 'U1', 'lib_id': 'Interface:RS485', 'value': 'X'}]}))
         (self.root / 'design.txt').write_text('evidence\n')
         self.record = {
-            'schema_version': 1, 'coverage': 'complete', 'intent_sha256': sha256(self.intent), 'guideline_version': 1,
+            'schema_version': 1, 'coverage': 'complete', 'intent_sha256': sha256(self.intent),
             'guideline_scope': {'library_version': LIBRARY['library_version'], 'baseline': 'industrial_telecom',
                                 'circuit_types': ['RS485'], 'device_kinds': [],
                                 'not_applicable': []},
@@ -165,7 +165,7 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertIn('guideline_scope', self.codes(self.run_audit()))
 
     def test_a_library_with_rules_asks_for_the_scope_and_an_empty_one_does_not(self):
-        del self.record['guideline_version'], self.record['guideline_scope']
+        del self.record['guideline_scope']
         self.assertIn('guideline_scope_missing', self.codes(self.run_audit()))
         empty = dict(LIBRARY, criteria=[], content_sha256=guideline_criteria.content_sha256([]))
         result = self.run_audit(empty)

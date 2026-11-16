@@ -22,4 +22,4 @@
 做完的标志：`record/requirements.json` 的每条需求有编号、条文和来源；必答清单 C1 的每个条件都有处置；每个需求澄清都有答复
 （用户给定、采纳建议或明确暂缓），给定和采纳的已成为需求清单里的一条需求，或并入已有需求并在该需求里引用这条澄清。有未答复的需求澄清不进入 C4。
 降额等级已定（需求给定、用户答复或写明的假设），记入 `requirements.json`。
-设计准则库有准则时，产品基线、功能电路类型与器件类别记入 `requirements.json` 的 `guideline_scope`（`guideline_version: 1`）。
+设计准则库有准则时，产品基线、功能电路类型与器件类别记入 `requirements.json` 的 `guideline_scope`。

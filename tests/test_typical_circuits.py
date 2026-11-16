@@ -104,7 +104,7 @@ class PatternClosureTests(unittest.TestCase):
         self.intent.write_text(json.dumps({'components': [{'ref': 'U1', 'lib_id': 'Regulator:X', 'value': 'X'}]}))
         (self.root / 'design.txt').write_text('evidence\n')
         self.record = {
-            'schema_version': 1, 'coverage': 'complete', 'intent_sha256': sha256(self.intent), 'guideline_version': 1,
+            'schema_version': 1, 'coverage': 'complete', 'intent_sha256': sha256(self.intent),
             'guideline_scope': {'library_version': TEST_LIBRARY['library_version'], 'baseline': 'industrial_telecom',
                                 'circuit_types': ['POWER_CONVERTER'], 'device_kinds': ['fuse'], 'not_applicable': []},
             'evidence': [{'id': 'E1', 'path': 'design.txt', 'sha256': sha256(self.root / 'design.txt'), 'locator': 'l1'}],

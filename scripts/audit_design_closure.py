@@ -59,7 +59,7 @@ WINDOW_SIDES = ('no_false_trip', 'protection')
 # source, clarifications, derating level, guideline scope); design-closure.json keeps each requirement's traceability
 # (module C5), keyed by the requirement id. The audit merges the two into one view of the record.
 REQUIREMENTS_FILE = 'requirements.json'
-C1_SECTIONS = ('clarifications', 'derating', 'guideline_version', 'guideline_scope')
+C1_SECTIONS = ('clarifications', 'derating', 'guideline_scope')
 REQUIREMENT_FIELDS = ('id', 'text', 'evidence', 'clarifications')
 TRACE_FIELDS = ('status', 'implementation', 'refs', 'depends_on', 'no_check_reason')
 # Where each number in a calculation comes from. A device parameter cites the datasheet page it was read from; one the
@@ -1069,7 +1069,7 @@ def audit_carrier(spec, files, objects):
 
 def audit_guidelines(record, calculations, work, error, need, library=None, artifact_root=None, evidence=None,
                      requirements=None, groups=None, intent=None, read=None, documents=True):
-    """guideline_version 1: the shared guideline rules this design triggers (知识/设计准则/工具/包说明/guideline-criteria.md).
+    """The shared guideline rules this design triggers (知识/设计准则/工具/包说明/guideline-criteria.md).
     Only the rules that rule out a scheme candidate, change a selection or enter a calculation are implemented one by one
     (user 2026-11-08: 按草案实施); the others are design actions followed without a citation each. The audit lists the
     applicable and the cited rules for review and raises nothing for an uncited one. A cited rule exists and applies; a
@@ -1111,7 +1111,7 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
         error('guideline_unknown', gid)
     for gid in sorted(set(cited) - set(found['applicable']) - set(found['unknown_cited'])):
         error('guideline_cited_not_applicable', '%s：设计准则库判它不适用；补 guideline_scope 的电路类型或器件类别，或去掉引用' % gid)
-    # A row of the downstream constraint table hands a rule on as a work item does (downstream_version 1).
+    # A row of the downstream constraint table hands a rule on as a work item does .
     tabled = {g for row in (read_downstream_table(evidence or {}, read)[1] if read else [])
               for g in GUIDELINE_ID.findall(row['依据'])}
     for gid in found['downstream']:
@@ -1152,7 +1152,7 @@ def audit_documents(record, evidence, error, need, groups=None, intent=None, cal
     return found
 
 
-# --- Downstream constraints (downstream_version 1) ------------------------------------------------------------------
+# --- Downstream constraints -------------------------------------------------------------------------------------------
 # AD9361 board, 2026-11-13 (user: 照草案写入, docs/草案-下游约束表.md): U301 at an estimated 104 °C junction against 85 °C
 # derated got a heat sink only in an `improvement` cell and a validation item "measure it on the sample"; PCB and the
 # enclosure were never told, and the 31 applicable rules that close after the schematic (G08-047 thermal interface table,
@@ -1227,14 +1227,9 @@ def resolved_in_schematic(c, work):
 
 
 def audit_downstream(record, evidence, read, calculations, work, risks, guidelines, error, need, closure):
-    """downstream_version 1 (references/design-closure.md 下游约束): the table exists and its rows are complete; every
+    """references/design-closure.md 下游约束: the table exists and its rows are complete; every
     applicable rule closing after the schematic has a row or a not-applicable reason; a temperature stress risk or any severe
     stress not fixed by a design item names the rows that carry its boundary (`downstream` on the check), and each names it."""
-    if record.get('downstream_version') is None:
-        return {'status': 'NOT_DECLARED'}
-    if record['downstream_version'] != 1:
-        error('schema', 'downstream_version must be 1')
-        return {'status': 'NOT_DECLARED'}
     keys, rows, problems = read_downstream_table(evidence, read) if closure else ([], [], [])
     table = downstream_rows(rows, error)
     for p in problems:
@@ -1824,12 +1819,12 @@ def audit_requirements(record, artifact_root, inputs=None):
     clarifications = audit_clarifications(record, requirements, None, error, artifact_root)
     derating_level(record, requirements, clarifications, error)
     guideline_scope = 'NOT_CHECKED'
-    if record.get('guideline_version') == 1:
+    if 'guideline_scope' in record:
         for problem in guideline_criteria.scope_errors(record.get('guideline_scope'), guideline_criteria.load()):
             error('guideline_scope', problem)
         guideline_scope = 'CHECKED'
     elif guideline_criteria.load()['criteria']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
+        need('guideline_scope_missing', '写 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
     status = 'FAIL' if errors else 'INCOMPLETE' if pending else 'PASS'
     return {'status': status, 'module': 'C1', 'scope': 'Requirements, clarifications, derating level and guideline scope',
             'errors': errors, 'pending': pending, 'counts': {k: len(v) for k, v in tables.items()},
@@ -2043,16 +2038,13 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
     if record.get('coverage') != 'complete':
         need('partial_review', 'Not all requirements/design obligations reviewed')
     guidelines = None
-    if 'guideline_version' in record:
-        if record['guideline_version'] != 1:
-            error('schema', 'guideline_version must be 1')
-        else:
-            guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
-                                          requirements=requirements,
-                                          intent=intent, read=lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
-                                          and not Path(p).is_absolute() else None, documents=closure)
+    if 'guideline_scope' in record:
+        guidelines = audit_guidelines(record, calculations, work, error, need, artifact_root=artifact_root, evidence=evidence,
+                                      requirements=requirements,
+                                      intent=intent, read=lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
+                                      and not Path(p).is_absolute() else None, documents=closure)
     elif guideline_criteria.load()['criteria']:
-        need('guideline_scope_missing', '写 guideline_version 1 和 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
+        need('guideline_scope_missing', '写 guideline_scope（知识/设计准则/工具/包说明/guideline-criteria.md）')
     downstream = audit_downstream(record, evidence, lambda p: resolve(p, root, inputs) if isinstance(p, str) and p
                                   and not Path(p).is_absolute() else None, calculations, work,
                                   (derating or {}).get('stress_risks') or [], guidelines, error, need, closure)

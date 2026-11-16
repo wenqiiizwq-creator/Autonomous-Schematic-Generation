@@ -906,13 +906,13 @@ class PackDesignTests(unittest.TestCase):
                  'circuit_types': ['I2C'], 'device_kinds': ['resistor'], 'not_applicable': []}
 
         def repack():
-            self.d.closure.update(guideline_version=1, guideline_scope=scope)
+            self.d.closure.update(guideline_scope=scope)
             make_current(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root)
             self.d.write('design-closure.json', self.d.closure)
             result = audit(self.d.closure, self.d.record / 'electrical-intent.json', self.d.root)
             self.d.write('design-closure-audit.json', result)
             (self.d.root / REPORT).write_text(self.d.report()[0])
-            return result, [e for e in self.run_pack()[0] if '准则' in e or '必写的设计文档' in e]
+            return result, [e for e in self.run_pack()[0] if ('准则' in e and '下游约束表' not in e) or '必写的设计文档' in e]
 
         result, errors = repack()
         self.assertTrue(result['guidelines']['uncited'])

@@ -1,7 +1,7 @@
 """Bring a minimal test record of design-closure.json to the current format (user 2026-11-08: the audit reads only
 CURRENT_VERSIONS). Fills in only what the format asks for and the test does not care about, so the test's own case is
-the only finding: version keys, a derating level, one constant per calculation, limit sources, part values, a
-temperature matrix of not-applicable cells and an empty reference input."""
+the only finding: a derating level, one constant per calculation, limit sources, part values, a
+temperature matrix of not-applicable cells, an empty downstream constraint table and an empty reference input."""
 import copy
 import json
 from pathlib import Path
@@ -45,6 +45,16 @@ def make_current(record, intent=None, root=None):
         rows = matrices['temperature']['rows'] if isinstance(matrices.get('temperature'), dict) else []
         listed = {r for row in rows for r in row.get('refs') or []}
         rows += [{'refs': [r], 'operating': NA, 'storage': NA} for r in refs if r not in listed]
+    evidence = record.get('evidence')
+    if root is not None and isinstance(evidence, list) and not any(
+            isinstance(e, dict) and e.get('carrier') == 'DOWNSTREAM' for e in evidence):
+        folder = Path(root) / '设计资料'            # every board registers one; an empty table hands nothing on
+        table = (folder if folder.is_dir() else Path(root)) / '下游约束表.md'
+        if not table.exists():
+            table.write_text('# 下游约束表\n\n| 编号 | 接收方 | 对象 | 约束 | 依据 | 验收 |\n|---|---|---|---|---|---|\n',
+                             encoding='utf-8')
+        evidence.append({'id': 'E-DOWNSTREAM', 'path': table.relative_to(root).as_posix(), 'sha256': sha256(table), 'locator': '全表',
+                         'carrier': 'DOWNSTREAM'})
     if root is not None:
         path = Path(root) / 'record' / 'reference-input.json'
         if not path.exists():
