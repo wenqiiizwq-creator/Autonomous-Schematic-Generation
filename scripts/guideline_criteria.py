@@ -6,7 +6,7 @@
 汇编成内存里的汇编文件（bundle）。本文件和 scripts/stress_check.py 是技能自己的代码，只用标准库，另外只导入 knowledge_source。
 
     python3 guideline_criteria.py check [BUNDLE]                      校验汇编结果（不给文件就校验框架里汇编出的）
-    python3 guideline_criteria.py build --from DIR --vocabulary PATH [--library-version V] --out PATH
+    python3 guideline_criteria.py build --from DIR --vocabulary PATH --out PATH
                                                                   只从 DIR 的直接子登记文件汇编（显式词表）
     python3 guideline_criteria.py select [BUNDLE] [--baseline B] [--circuit-type T ...] [--device-kind K ...]
                                                                   列出适用准则
@@ -16,7 +16,6 @@
 import argparse
 import copy
 import datetime
-import hashlib
 import json
 import os
 import re
@@ -46,14 +45,6 @@ PREVIEW_WORDS = ('公开预览', '非全文', 'preview')   # 公开预览不能�
 
 def _text(value):
     return isinstance(value, str) and bool(value.strip())
-
-
-def content_sha256(rules, values=None):
-    """Hash of the rules, and of the engineering values when there are any (a bundle without values keeps the
-    rules-only hash)."""
-    content = {'criteria': rules, 'engineering_values': values} if values else rules
-    return hashlib.sha256(json.dumps(content, ensure_ascii=False, sort_keys=True,
-                                     separators=(',', ':')).encode('utf-8')).hexdigest()
 
 
 def cited_values(rule):
@@ -94,7 +85,7 @@ def _assembled():
     paths = sorted(registry.glob('G0*_准则登记.json')) + [vocab]
     key = (str(registry),) + tuple((str(p), p.stat().st_mtime_ns, p.stat().st_size) for p in paths)
     if _CACHE.get('key') != key:
-        bundle = build(registry, None, vocab)
+        bundle = build(registry, vocab)
         errors = bundle_errors(bundle, vocab)
         if errors:
             raise ValueError('知识框架的准则登记汇编不过：\n' + '\n'.join(errors))
@@ -217,8 +208,6 @@ def bundle_errors(bundle, vocabulary_path=None):
     errors = []
     if bundle.get('schema_version') != BUNDLE_SCHEMA_VERSION:
         errors.append('schema_version must be %d' % BUNDLE_SCHEMA_VERSION)
-    if not _text(bundle.get('library_version')):
-        errors.append('library_version is required')
     vocabulary = bundle.get('vocabulary')
     if not (isinstance(vocabulary, dict) and all(isinstance(vocabulary.get(k), list) for k in TRIGGERS)):
         return errors + ['vocabulary lists %s' % '/'.join(TRIGGERS)]
@@ -254,8 +243,6 @@ def bundle_errors(bundle, vocabulary_path=None):
         if isinstance(rule, dict):
             for name in sorted(cited_values(rule) - set(values)):
                 errors.append('%s: cites engineering value %s, which the bundle does not hold' % (rule.get('id'), name))
-    if bundle.get('content_sha256') != content_sha256(rules, values):
-        errors.append('content_sha256 does not match the rules')
     return errors
 
 
@@ -367,9 +354,8 @@ def coverage(bundle, applicable, cited, not_applicable=None, answered=None):
     return found
 
 
-def build(registry_dir, library_version=None, vocabulary_path=None):
-    """Build direct child registries only (tests may build a subset). library_version defaults to
-    'framework-' + the first 12 hex digits of content_sha256, so it follows the content and nothing else.
+def build(registry_dir, vocabulary_path=None):
+    """Build direct child registries only (tests may build a subset).
     Existing import callers may omit vocabulary_path; the framework vocabulary is then used."""
 
     base = vocabulary(vocabulary_path)
@@ -391,10 +377,9 @@ def build(registry_dir, library_version=None, vocabulary_path=None):
             values[name] = dict(entry, spec=registry['spec'])
     rules.sort(key=lambda r: str(r.get('id')))
     values = dict(sorted(values.items()))
-    digest = content_sha256(rules, values)
-    bundle = {'schema_version': BUNDLE_SCHEMA_VERSION, 'library_version': library_version or 'framework-' + digest[:12],
+    bundle = {'schema_version': BUNDLE_SCHEMA_VERSION,
               'default_baseline': base['default_baseline'], 'vocabulary': base['vocabulary'], 'specs': specs,
-              'content_sha256': digest, 'criteria': rules}
+              'criteria': rules}
     if values:
         bundle['engineering_values'] = values
     return bundle
@@ -412,7 +397,6 @@ def main(argv=None):
     make = sub.add_parser('build')
     make.add_argument('--from', dest='source', required=True)
     make.add_argument('--vocabulary', required=True)
-    make.add_argument('--library-version')
     make.add_argument('--out', required=True)
     pick = sub.add_parser('select')
     pick.add_argument('bundle', nargs='?')
@@ -427,7 +411,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == 'build':
-            bundle = build(args.source, args.library_version, args.vocabulary)
+            bundle = build(args.source, args.vocabulary)
             errors = bundle_errors(bundle, args.vocabulary)
             if not errors:
                 Path(args.out).write_text(dump(bundle), encoding='utf-8')
@@ -450,7 +434,7 @@ def main(argv=None):
             kind = coverage_class(rule)
             print('%s  %s  [%s]%s' % (rule['id'], rule['title'], rule['closing_stage'], '' if kind == 'item' else '  coverage=' + kind))
     else:
-        print('%s: %d criteria, library %s' % (args.command, len(bundle['criteria']), bundle['library_version']))
+        print('%s: %d criteria' % (args.command, len(bundle['criteria'])))
     return 0
 
 

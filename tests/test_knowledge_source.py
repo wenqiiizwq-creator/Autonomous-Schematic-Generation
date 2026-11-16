@@ -136,15 +136,13 @@ class SmallFramework(unittest.TestCase):
         self.assertEqual(g.bundle_errors(library), [])
         self.assertEqual(library['default_baseline'], 'base')
 
-    def test_build_and_library_version_follow_the_content(self):
+    def test_build_follows_the_registries(self):
         registry, vocab = ks.registry_dir(), ks.vocabulary_path()
         built = g.build(registry, vocabulary_path=vocab)
-        self.assertEqual(built['library_version'], 'framework-' + built['content_sha256'][:12])
-        self.assertEqual(built, g.build(registry, None, vocab))
-        self.assertEqual(g.build(registry, '9.9.9', vocab)['library_version'], '9.9.9')
+        self.assertEqual(built, g.build(registry, vocab))
         second = make_framework(self.tmp / 'fw2', registries=('G02', 'G03'))
         more = g.build(second / '知识/设计准则/准则登记', vocabulary_path=second / '知识/设计准则/准则登记/词表.json')
-        self.assertNotEqual(more['library_version'], built['library_version'])
+        self.assertNotEqual(more['criteria'], built['criteria'])
         self.assertEqual(g.build(second / '知识/设计准则/准则登记',
                                  vocabulary_path=second / '知识/设计准则/准则登记/词表.json'), more)
 
@@ -155,8 +153,7 @@ class SmallFramework(unittest.TestCase):
         data['criteria'][0]['title'] = 'renamed'
         path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
         after = g.load()
-        self.assertNotEqual(before['content_sha256'], after['content_sha256'])
-        self.assertNotEqual(before['library_version'], after['library_version'])
+        self.assertNotEqual(before['criteria'], after['criteria'])
         data['criteria'][0]['status'] = 'nonsense'
         path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
         with self.assertRaisesRegex(ValueError, 'status'):
@@ -196,7 +193,6 @@ class RealFramework(unittest.TestCase):
         self.assertEqual(g.bundle_errors(library), [])
         self.assertTrue(library['criteria'])
         self.assertTrue(library['engineering_values'])
-        self.assertEqual(library['library_version'], 'framework-' + library['content_sha256'][:12])
         self.assertIn(library['default_baseline'], library['vocabulary']['baselines'])
 
     def test_shared_versions_records_the_read_date_and_derating_version(self):

@@ -901,7 +901,7 @@ class PackDesignTests(unittest.TestCase):
         # user 2026-11-08 (按草案实施): A1 is gone; a board with external connectors carries FMEA and the EMC port matrix.
         import guideline_criteria
         library = guideline_criteria.load()
-        scope = {'library_version': library['library_version'], 'baseline': 'industrial_telecom',
+        scope = {'baseline': 'industrial_telecom',
                  'circuit_types': ['I2C'], 'device_kinds': ['resistor'], 'not_applicable': []}
 
         def repack():

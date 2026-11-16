@@ -25,7 +25,7 @@ def closure(types=('POWER_PROTECTION', 'DC_24V'), kinds=('tvs', 'mosfet'), calcu
     if calculations is None:
         calculations = [{'id': 'CALC-CLAMP', 'guidelines': ['G07-022', 'G07-023', 'G07-030'],
                          'checks': [closing_check(n + ' 对 下游绝对最大值') for n in ('负向浪涌残压', '负向残压', '钳位器件脉冲能量')]}]
-    return {'guideline_scope': {'library_version': BUNDLE['library_version'], 'baseline': 'industrial_telecom',
+    return {'guideline_scope': {'baseline': 'industrial_telecom',
                                 'circuit_types': list(types), 'device_kinds': list(kinds)},
             'calculations': calculations}
 

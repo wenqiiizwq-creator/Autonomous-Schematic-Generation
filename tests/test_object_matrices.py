@@ -23,8 +23,7 @@ def setUpModule():
     global _env
     from unittest import mock
     library = guideline_criteria.load()
-    library.update(library_version='0.0.0', specs={}, criteria=[],
-                   content_sha256=guideline_criteria.content_sha256([], library.get('engineering_values')))
+    library.update(specs={}, criteria=[])
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria-matrices.json'
     empty.write_text(guideline_criteria.dump(library), encoding='utf-8')
     _env = mock.patch.dict('os.environ', {**temp_framework.without_raw(),   # 没有原件总库

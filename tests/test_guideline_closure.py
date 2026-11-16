@@ -41,7 +41,6 @@ def card(rid, **changes):
 def library(*cards):
     out = copy.deepcopy(guideline_criteria.load())
     out['criteria'] = sorted(cards, key=lambda r: r['id'])
-    out['content_sha256'] = guideline_criteria.content_sha256(out['criteria'])
     return out
 
 
@@ -61,7 +60,7 @@ class GuidelineClosureTests(unittest.TestCase):
         (self.root / 'design.txt').write_text('evidence\n')
         self.record = {
             'schema_version': 1, 'coverage': 'complete', 'intent_sha256': sha256(self.intent),
-            'guideline_scope': {'library_version': LIBRARY['library_version'], 'baseline': 'industrial_telecom',
+            'guideline_scope': {'baseline': 'industrial_telecom',
                                 'circuit_types': ['RS485'], 'device_kinds': [],
                                 'not_applicable': []},
             'evidence': [{'id': 'E1', 'path': 'design.txt', 'sha256': sha256(self.root / 'design.txt'), 'locator': 'l1'}],
@@ -167,7 +166,7 @@ class GuidelineClosureTests(unittest.TestCase):
     def test_a_library_with_rules_asks_for_the_scope_and_an_empty_one_does_not(self):
         del self.record['guideline_scope']
         self.assertIn('guideline_scope_missing', self.codes(self.run_audit()))
-        empty = dict(LIBRARY, criteria=[], content_sha256=guideline_criteria.content_sha256([]))
+        empty = dict(LIBRARY, criteria=[])
         result = self.run_audit(empty)
         self.assertNotIn('guideline_scope_missing', self.codes(result))
         self.assertEqual(result['guidelines'], 'NOT_CHECKED')
