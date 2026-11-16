@@ -314,6 +314,10 @@ def audit_clarifications(record, requirements, work, error, root=None):
         for field in ('found_in', 'question', 'requirement_text', 'proposed_requirement'):
             if not text(row.get(field)):
                 error('schema', key + ':needs ' + field)
+        # A limit the proposal writes is where it comes from (2026-11-16: a 10 µA limit proposed with no reason, adopted
+        # by delegation, ended as an open vendor item): the peer's or load's parameter, a standard, a guaranteed value.
+        if re.search(r'\d', str(row.get('proposed_requirement') or '')) and not text(row.get('proposal_basis')):
+            error('proposal_limit_without_basis', key)
         ids = row.get('requirement_ids')
         if not isinstance(ids, list) or not all(isinstance(r, str) for r in ids):
             error('schema', key + ':requirement_ids must be a string list')

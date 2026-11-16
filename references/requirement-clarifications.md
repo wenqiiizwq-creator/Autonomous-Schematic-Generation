@@ -3,7 +3,7 @@
 需求没说清、而设计要靠它定时，**当场问用户**，用户答复后**马上写回需求清单**，再按定下的需求往下设计；
 不把“需求没定”留到交付时才问（2026-10-27，用户：在 ASG 的设计中遇到需求未明的问题时，也应该及时和用户沟通）。
 问题和答复写在 `record/requirements.json`（模块 C1 的产品）的 `clarifications`，本页是它的字段与核对约定。
-与 schematic-review 共享的字段：`id`、`requirement_ids`、`question`、`requirement_text`、`proposed_requirement`、`answer`（`decision`、`text`、`by`、`date`、`source`、`requirement_files`）；`found_in`、`merged_into` 是 ASG 独有字段。
+与 schematic-review 共享的字段：`id`、`requirement_ids`、`question`、`requirement_text`、`proposed_requirement`、`answer`（`decision`、`text`、`by`、`date`、`source`、`requirement_files`）；`found_in`、`proposal_basis`、`merged_into` 是 ASG 独有字段。
 两边对暂缓（`DEFERRED`）的处理不同：ASG 按建议条文设计并挂 `requirement` 待办；交给审查方后，这些需求不审，列在审查报告“本次不审的范围”里。
 
 ## 问什么
@@ -63,6 +63,7 @@
   "question": "5 V 输出最大连续电流没给，电感饱和电流、限流门限和损耗没有依据",
   "requirement_text": "需求规格 Rev A §3.2：“输出能驱动常见负载”，未给最大电流",
   "proposed_requirement": "5 V 输出最大连续电流 2 A（25～60 ℃），峰值 3 A 持续不超过 100 ms",
+  "proposal_basis": "2 A：需求 §2 列出的三路负载额定电流之和 1.6 A 加 25 %；3 A/100 ms：其中电机负载手册的启动电流与持续时间",
   "answer": {"decision": "ADOPTED_PROPOSAL", "text": "5 V 输出最大连续电流 2 A（25～60 ℃），峰值 3 A 持续不超过 100 ms",
              "by": "用户", "date": "2026-10-27",
              "source": {"source": "对话记录", "locator": "2026-10-27 需求澄清第 1 问"},
@@ -77,6 +78,11 @@
   `proposed_requirement` 写建议补进需求的条文，要具体到可验收的数值、工况或允许/禁止的行为，有多个口径时写推荐项并注明其他选项。
   门限、动作点、跳变点写成允许范围，两个方向的行为各给界限：写“输出低于 2.90 V 时必须拉低，高于 3.10 V 时必须为高阻，其间不作要求”，
   不写“高于 2.97 V 后为高阻，低于时拉低”（一个点值没有器件能恰好做到，设计只能自己取读法）。
+- `proposal_basis` 写建议条文里每个限值的来由：对端或负载的哪个参数（需求原文、对端手册）、哪条标准、哪个器件的保证值，或由它们算出的结果。
+  “留余量”“保守取值”“常见值”不算来由。说不出来由的限值不写进建议条文：只提问题，写明这个量大致在什么量级、它决定设计里的哪一处，由用户给数；
+  代答只能采纳建议条文，不会替用户补这个数，所以没有来由的数一旦写进去就成了需求，后面每一步都要为它找依据。
+  例：对端上拉 10 kΩ 到 3.3 V 时，本板未上电流入 PG 引脚的电流上限由对端能承受多少定，需求没给就问，不自拟“10 µA”。
+  建议条文不含数值的不写这一项。
 - 还没答复时不写 `answer`。答复写 `decision`、`text`（定下的需求，或暂缓的原话）、`by`、`date` 和能定位的 `source`
   （对话记录或任务书 `clarification_answers` 里的一处）。`by` 写真实答复人或角色，不虚构。
 
@@ -96,6 +102,7 @@
 |---|---|
 | `clarification_unanswered` | 问题还没有答复 |
 | `adopted_text_differs` | 采纳建议，但答复文字与建议条文不一致 |
+| `proposal_limit_without_basis` | 建议条文里写了数值，却没有 `proposal_basis` 说明限值的来由 |
 | `clarification_not_written_back` | 给定或采纳的需求没有以同编号、同文字写进 `requirements`；或答复写了 `merged_into: <需求编号>`（并入已有需求，不再复制一条同编号需求），而那条需求的 `clarifications` 没列它、文字不含答复（或 `merged_quote` 引的那段，答复里的数都要在其中） |
 | `deferred_without_requirement_item` | 暂缓的问题没有对应的未关闭 `requirement` 待办 |
 | `deferred_requirement_claimed_supported` | 暂缓涉及的需求写成了有设计依据 |

@@ -152,7 +152,8 @@ class DesignClosureTests(unittest.TestCase):
     def clarification(self, decision=None, answer=None):
         """One requirement question put to the user (requirement-clarifications.md), answered when decision is given."""
         q = {'id': 'CL-STBY', 'requirement_ids': ['R1'], 'found_in': '2.2', 'question': '待机功耗上限没给，启动电阻取值没有依据',
-             'requirement_text': '需求规格 §3：未提及待机功耗', 'proposed_requirement': '待机功耗 ≤0.1 W（230 Vac 空载）'}
+             'requirement_text': '需求规格 §3：未提及待机功耗', 'proposed_requirement': '待机功耗 ≤0.1 W（230 Vac 空载）',
+             'proposal_basis': '0.1 W：能效标准对这一功率档的空载限值'}
         if decision:
             q['answer'] = {'decision': decision, 'text': answer or q['proposed_requirement'], 'by': '用户', 'date': '2026-10-27',
                            'source': {'source': '对话记录', 'locator': '2026-10-27 需求澄清第 1 问'}}
@@ -160,6 +161,16 @@ class DesignClosureTests(unittest.TestCase):
                 q['answer']['requirement_files'] = {'decision': 'KEPT'}
         self.record['clarifications'] = [q]
         return q
+
+    def test_a_limit_in_the_proposal_says_where_it_comes_from(self):
+        """A proposed clause that writes a number carries proposal_basis; a clause without a number needs none."""
+        q = self.clarification('ADOPTED_PROPOSAL')
+        self.written_back(q['proposed_requirement'])
+        self.assertNotIn('proposal_limit_without_basis', self.codes())
+        del q['proposal_basis']
+        self.assertIn('proposal_limit_without_basis', self.codes())
+        q['proposed_requirement'] = q['answer']['text'] = self.record['requirements'][-1]['text'] = '待机功耗由用户给定上限'
+        self.assertNotIn('proposal_limit_without_basis', self.codes())
 
     def written_back(self, text):
         self.record['requirements'].append({'id': 'CL-STBY', 'status': 'design_supported', 'text': text, 'refs': ['U1'],

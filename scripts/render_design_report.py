@@ -138,7 +138,7 @@ def prose(closure, notes):
             found.append(('需求 %s 实现说明' % r.get('id'), r.get('implementation')))
     for q in closure.get('clarifications') or []:
         if isinstance(q, dict):
-            for field in ('question', 'requirement_text', 'proposed_requirement'):
+            for field in ('question', 'requirement_text', 'proposed_requirement', 'proposal_basis'):
                 found.append(('需求澄清 %s %s' % (q.get('id'), field), q.get(field)))
             found.append(('需求澄清 %s 答复' % q.get('id'), (q.get('answer') or {}).get('text')))
     for field in ('summary', 'changes'):
@@ -1198,7 +1198,7 @@ def render(root, notes=None, title=None):
             files = answer.get('requirement_files') or {}
             out.append('| %s | %s | %s | %s | %s | %s | %s | %s |' % (
                 q.get('id'), cell(q.get('requirement_text') or ''), cell(q.get('question') or ''),
-                cell(q.get('proposed_requirement') or ''),
+                cell((q.get('proposed_requirement') or '') + ('（限值的来由：%s）' % q['proposal_basis'] if q.get('proposal_basis') else '')),
                 cell('%s：%s' % (DECISIONS.get(answer.get('decision'), answer.get('decision')), answer.get('text', '')) if answer else '还没有答复'),
                 cell('%s %s' % (answer.get('by', ''), answer.get('date', '')) if answer else ''),
                 '、'.join(q.get('requirement_ids') or []),

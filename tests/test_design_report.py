@@ -187,7 +187,7 @@ class DesignReportTests(unittest.TestCase):
         proposal = '待机功耗 ≤0.1 W（230 Vac 空载）'
         c['clarifications'] = [{'id': 'CL-STBY', 'requirement_ids': ['R-OUT'], 'found_in': '2.2',
                                 'question': '待机功耗上限没给，启动电阻取值没有依据', 'requirement_text': '需求规格 §3：未提及待机功耗',
-                                'proposed_requirement': proposal}]
+                                'proposed_requirement': proposal, 'proposal_basis': '能效标准的空载限值'}]
         if decision:
             c['clarifications'][0]['answer'] = {'decision': decision, 'text': '先按建议设计，量产前再定', 'by': '产品负责人',
                                                 'date': '2026-10-27', 'source': {'source': '对话记录', 'locator': '2026-10-27 第 1 问'}}
@@ -215,7 +215,7 @@ class DesignReportTests(unittest.TestCase):
         self.assertIn('- **设计假设**：待机功耗 ≤0.1 W（230 Vac 空载）', section)
         self.assertIn('| 未关闭项：用户暂缓的需求 | 1 |', text)
         record = text.split('## 需求澄清记录')[1].split('\n## ')[0]
-        self.assertIn('| CL-STBY | 需求规格 §3：未提及待机功耗 | 待机功耗上限没给，启动电阻取值没有依据 | 待机功耗 ≤0.1 W（230 Vac 空载） '
+        self.assertIn('| CL-STBY | 需求规格 §3：未提及待机功耗 | 待机功耗上限没给，启动电阻取值没有依据 | 待机功耗 ≤0.1 W（230 Vac 空载）（限值的来由：能效标准的空载限值） '
                       '| 用户暂缓：先按建议设计，量产前再定 | 产品负责人 2026-10-27 | R-OUT |', record)
 
     def test_calculation_on_a_deferred_requirement_has_its_own_tier(self):

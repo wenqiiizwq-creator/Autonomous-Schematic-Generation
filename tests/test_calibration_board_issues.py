@@ -94,6 +94,7 @@ class MergedClarificationTests(Fixture):
         self.record['clarifications'] = [{
             'id': 'CL-485', 'found_in': '需求 2.3', 'question': '速率和线长？', 'requirement_text': '未写',
             'proposed_requirement': 'RS-485 速率 115.2 kbit/s，线长 1200 m。', 'requirement_ids': ['R1'],
+            'proposal_basis': '速率与线长：对端设备说明书',
             'answer': {'decision': 'ADOPTED_PROPOSAL', 'text': 'RS-485 速率 115.2 kbit/s，线长 1200 m。', 'by': 'user',
                        'date': '2026-11-02', 'source': {'source': 'chat', 'locator': '第 3 问'},
                        'requirement_files': {'decision': 'KEPT'}, 'merged_into': 'R1'}}]
