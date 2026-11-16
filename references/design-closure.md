@@ -104,7 +104,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   `contract` 文档在交付目录或声明的输入里存在（`boundary_contract_missing`），该网络在文档的表格里有一行
   （`boundary_net_not_in_contract`）；声明本身格式错、网络不存在或重复记 `boundary_schema`。审计结果的 `boundary_nets` 列出声明的网络。
 - `clarifications`（在 `requirements.json`）：问用户的需求问题和答复，给定或采纳的以同编号、`text` 等于答复写进 `requirements`；字段与核对见 [需求澄清](requirement-clarifications.md)。
-- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb` / `input`（单独运行模块时给定输入有问题：写 `upstream` 出问题的上游模块 C1–C5 和 `given` 给定的文件，只在任务书带 `modules` 时允许，见 [能力模块](modules.md)）；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的“资料缺口”写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
+- `work_items`：阶段 `requirement`（等用户定需求）/ `design` / `external` / `validation` / `pcb` / `input`（单独运行模块时给定输入有问题：写 `upstream` 出问题的上游模块 C1–C5 和 `given` 给定的文件，只在任务书带 `modules` 时允许，见 [能力模块](modules.md)）；状态 `open` / `closed` / `handoff`；`validation` 与 `pcb` 允许 `handoff`。未关闭项需 owner/action；`open` 项还需 `consequence_class`（不做的后果：`safety` 安全 / `damage` 器件损坏 / `function` 功能失效 / `margin` 性能余量 / `optimization` 优化）和 `occurrence`（何时出现：`normal` 正常工作 / `condition` 特定工况 / `fault` 仅故障时），等级由审计按规则推出，不手填：安全 P0；器件损坏 P0，仅故障时 P1；功能失效 P1，仅故障时 P2；性能余量 P2，仅故障时 P3；优化 P3。`external` 的 `open` 项等级为 P2 或 P3 的（后果只涉及余量、优化，或仅故障时的功能）照常列在报告的未关闭项里，但不计入未完成；其余未关闭的 `open` 项都使设计未完成。报告按等级排序；写了 `severity` 而与规则不符记 `severity_contradicts_rule`；external 的资料缺口按下面的“资料缺口”写；requirement 只用于用户暂缓的需求：`clarification` 写对应的需求澄清编号，`assumption` 照抄其建议条文，依赖它的计算写进 `calculations`（见 [需求澄清](requirement-clarifications.md)）。closed 与 handoff 均需证据。`pcb` 须声明 `scope` 为 `footprint_library` / `layout_implementation` / `dfm`，并用非空 `electrical_preconditions` 指向已关闭的 design 工作；这些前提须有选定变体、物理引脚号及相关电气边界证据，不能用“已建封装”自证。该分类仍需人工检查，脚本不理解正文电气内容。
 - 计算：`coverage` 为 `bounded` / `partial`；`conclusion` 为 `supported` / `conditional` / `failed`。无适用计算时提供 `no_calculations_reason`，不能用空列表绕过。
   - **结论由记录推出**：审计按下表推出结论，写的 `conclusion`/`rests_on` 与推出的不一致记
     `conclusion_not_derived`。这三个字段（`conclusion`、`rests_on`、`coverage`）由 `refresh.py` 按下表写，C4 关卡运行前自动执行，不必手填。报告按三档计数，分“依赖厂家资料的计算”“依赖工程估计的计算”两节列出每条依赖的参数或项。
@@ -351,7 +351,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
   - `model`：工程假设或折减（CTR 保持系数、效率包络等），写 `reason`。
   - `requirement`：来自需求的输入（额定功率、最低输入电压），`source` 写 `req:<需求编号>`，编号须在 `requirements` 里。
   - `constant`：物理常数（铜电阻率），写 `reason`。
-  - `unspecified`：手册没给的器件参数。`source`/`locator` 写查过的位置，`operating_point` 指向一条 `specified: false` 的工作点；
+  - `unspecified`：手册没给、也不能由电路自身的界或同一手册别的保证行定界的器件参数（能定界的不用这一类，见任务 C4.1 和 G02-004）。`source`/`locator` 写查过的位置，`operating_point` 指向一条 `specified: false` 的工作点；
     `value` 可留空。含 `typical` 或 `unspecified` 的计算不能是 `supported`。
 - **工作点**（`operating_points`）：`{id, refs, pins, mode, specified, source, locator}`。
   `specified: true` 时 `source`/`locator` 指向手册规定这种用法的位置；`specified: false` 时指向查过但没有规定的位置，

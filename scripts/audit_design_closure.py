@@ -20,6 +20,7 @@ from schematic_layout.citations import check_source
 
 
 SEVERITIES = ('P0', 'P1', 'P2', 'P3')
+LIGHT_SEVERITIES = ('P2', 'P3')
 # What happens if an open item is left undone, and when it shows; the level follows from the two.
 CONSEQUENCES = ('safety', 'damage', 'function', 'margin', 'optimization')
 OCCURRENCES = ('normal', 'condition', 'fault')
@@ -1937,9 +1938,12 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
             if stage in ('validation', 'pcb') and state == 'handoff':
                 linked(row, 'evidence', evidence, True)
             else:
-                need('open_' + str(stage), key)
                 # Possible consequence if left undone; its level orders the report's to-do list.
                 level = severity_of(row)
+                # A light external data gap (P2/P3: margin, optimisation, or function only under a fault) stays an open
+                # item but does not leave the design unfinished (user 2026-11-16, with the G02-004 revision).
+                if not (stage == 'external' and level in LIGHT_SEVERITIES):
+                    need('open_' + str(stage), key)
                 if level is None:
                     error('missing_consequence', key)
                 elif row.get('severity') not in (None, level):

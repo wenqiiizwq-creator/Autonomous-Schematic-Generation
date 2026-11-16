@@ -196,6 +196,18 @@ class DesignClosureTests(unittest.TestCase):
         self.assertEqual('INCOMPLETE', result['status'], result['errors'])
         self.assertIn({'code': 'open_requirement', 'item': 'W1'}, result['pending'])
 
+    def test_a_light_external_gap_does_not_leave_the_design_unfinished(self):
+        # User 2026-11-16 (G02-004 revision): an external data gap whose consequence is P2/P3 stays listed, not blocking.
+        self.external()
+        self.assertIn('open_external', {x['code'] for x in self.run_audit()['pending']})        # function, normal: P1
+        for consequence, occurrence in (('margin', 'normal'), ('function', 'fault'), ('optimization', 'normal')):
+            self.record['work_items'][0].update(consequence_class=consequence, occurrence=occurrence)
+            self.assertNotIn('open_external', {x['code'] for x in self.run_audit()['pending']}, consequence)
+        self.record['work_items'][0].update(consequence_class='damage', occurrence='fault')      # P1
+        self.assertIn('open_external', {x['code'] for x in self.run_audit()['pending']})
+        self.record['work_items'][0].update(stage='design', consequence_class='margin', occurrence='normal')
+        self.assertIn('open_design', {x['code'] for x in self.run_audit()['pending']})
+
     def test_answer_is_the_users_or_the_task_files(self):
         # 整板评测 2026-11-07 A3: the runner wrote its own answer (by eval-run:auto) and the audit let it through.
         q = self.clarification('ADOPTED_PROPOSAL')

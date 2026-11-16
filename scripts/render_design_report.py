@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_design_closure import DOWNSTREAM_RECEIVERS, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
+from audit_design_closure import DOWNSTREAM_RECEIVERS, LIGHT_SEVERITIES, calculation_basis, check_delegate, failing_checks, holds, load_task, merge_requirements, self_assigned, severity_of, squeeze, vendor_items_of  # noqa: E402
 from architecture import check_architecture  # noqa: E402
 import find_parts  # noqa: E402
 import typical_circuits  # noqa: E402
@@ -1145,9 +1145,12 @@ def render(root, notes=None, title=None):
         missing.append('外围电路按手册核对：未执行')
     if visual.get('status') != 'REVIEWED':
         missing.append('图面审阅%s' % VISUAL.get(visual.get('status'), '没有记录'))
-    by_stage = Counter(w.get('stage') for w in open_work)
-    if open_work:
-        missing.append('%d 件未关闭项（%s）' % (len(open_work), '，'.join(
+    # Light external data gaps (P2/P3) are carried as open items; they do not leave the design unfinished.
+    carried = [w for w in open_work if w.get('stage') == 'external' and severity_of(w) in LIGHT_SEVERITIES]
+    blocking = [w for w in open_work if w not in carried]
+    by_stage = Counter(w.get('stage') for w in blocking)
+    if blocking:
+        missing.append('%d 件未关闭项（%s）' % (len(blocking), '，'.join(
             '%s %d 件' % (STAGES[s], by_stage[s]) for s in STAGES if by_stage.get(s))))
     if problems:
         missing.append('设计记录有问题，见开头')
@@ -1156,7 +1159,8 @@ def render(root, notes=None, title=None):
         out += ['  %d. %s；' % (i, m) for i, m in enumerate(missing, 1)]
         out[-1] = out[-1][:-1] + '。'
     else:
-        out.append('- **设计完成状态**：已完成。自动检查、图面审阅和设计待办都已处理完。')
+        out.append('- **设计完成状态**：已完成。自动检查、图面审阅和设计待办都已处理完。' + (
+            '另有 %d 件外部资料缺口待关闭，后果只涉及余量、优化或故障时的功能，不影响完成状态，见“未关闭项”。' % len(carried) if carried else ''))
     asks = [w for w in open_work if w.get('stage') == 'requirement']
     if asks:
         out.append('- **用户暂缓的需求**：%d 件（%s）。本版按建议条文设计，定下来后可能要改图，列在“未关闭项”最前面。'

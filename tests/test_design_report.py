@@ -199,6 +199,16 @@ class DesignReportTests(unittest.TestCase):
         self.d.write('design-closure-audit.json',
                      audit(c, self.d.record / 'electrical-intent.json', self.d.root))
 
+    def test_a_light_external_gap_is_listed_but_not_counted_as_unfinished(self):
+        c = self.d.closure
+        fw = [w for w in c['work_items'] if w['id'] == 'W-FW'][0]
+        fw.update(consequence_class='margin', occurrence='normal')
+        self.d.write('design-closure.json', c)
+        self.d.write('design-closure-audit.json', audit(c, self.d.record / 'electrical-intent.json', self.d.root))
+        text, problems = self.d.report()
+        self.assertIn('1 件未关闭项（设计未完成 1 件）', text)
+        self.assertIn('W-FW（P2', text.split('## 未关闭项')[1].split('\n## ')[0])
+
     def test_requirement_questions_called_out_and_listed_first(self):
         self.ask_user()
         text, problems = self.d.report()
