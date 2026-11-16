@@ -4,7 +4,7 @@
   python3 knowledge_gaps.py <交付目录> [--input datasheets=<资料目录>]
 
 从各模块的产品里抽出设计中知识不够的地方，不手写：知识框架（知识/）哪个组件查不到什么
-（典型电路没有适用方案、modules.json 的 knowledge_lookups 里没查到的）、候选来源未证实、手册不在知识库、
+（典型电路没有适用方案、modules.json 的 knowledge_lookups 里没查到的）、查到的条目有问题（lookup --issue 记的）、候选来源未证实、手册不在知识库、
 计算依据是典型值或估计、外部资料待办、回到上游重做、用户没有采纳 ASG 的建议。清单只如实列出，不拦交付；
 能力缺陷的归纳和改进在评测侧做。格式见 references/delivery-report.md。
 """
@@ -19,6 +19,7 @@ SCHEMA_VERSION = 1
 SIGNALS = {
     'no_typical_circuit': ('典型电路没有适用方案', '知识框架/典型电路'),
     'knowledge_missing': ('知识框架查不到', '知识框架（组件见对象）'),
+    'knowledge_issue': ('知识条目有问题', '知识框架（组件见对象）'),
     'unverified_candidate': ('候选来源未证实', '知识框架/典型电路'),
     'datasheet_not_in_library': ('手册不在知识库', '器件知识库'),
     'weak_basis': ('计算依据是典型值、估计或未规定', '知识框架/器件参数'),
@@ -26,6 +27,11 @@ SIGNALS = {
     'returned_upstream': ('回到上游重做', '上游模块'),
     'user_overrode': ('用户没有采纳 ASG 的建议', '判断依据'),
 }
+# signal → the framework component the gap is fed back to (工具/collect_feedback.py of the framework); the two lookup
+# signals take the component of their row, and the signals left out are not the framework's to fill (a typical-value
+# or estimated basis is how the design was argued, mostly where no source guarantees the number)
+COMPONENT = {'no_typical_circuit': '典型电路', 'unverified_candidate': '典型电路', 'datasheet_not_in_library': '原件',
+             'external_item': '器件参数'}
 WEAK_BASES = ('typical', 'model', 'unspecified')
 
 
@@ -49,8 +55,9 @@ def extract(root, datasheets_to_file=()):
     """The knowledge-gap list of a design folder, from its records alone."""
     record = Path(root) / 'record'
     gaps = []
-    def gap(signal, module, task, item, detail, source):
-        gaps.append({'signal': signal, 'module': module, 'task': task, 'item': item, 'detail': detail, 'source': source})
+    def gap(signal, module, task, item, detail, source, component=None):
+        gaps.append({'signal': signal, 'component': component or COMPONENT.get(signal, ''), 'module': module, 'task': task,
+                     'item': item, 'detail': detail, 'source': source})
 
     folder = record / 'block-circuits'
     for path in sorted(folder.glob('*.json')) if folder.is_dir() else []:
@@ -83,11 +90,13 @@ def extract(root, datasheets_to_file=()):
 
     modules = load(record / 'modules.json')
     for row in rows(modules, 'knowledge_lookups'):
-        if row.get('found'):
-            continue
         task = str(row.get('task') or '')
-        gap('knowledge_missing', task.partition('.')[0], task, '%s：%s' % (row.get('component'), row.get('query')),
-            str(row.get('detail') or '查不到'), 'modules.json')
+        if row.get('issue'):
+            gap('knowledge_issue', task.partition('.')[0], task, '、'.join(row['found']),
+                '%s：%s（依据：%s）' % (row['issue'], row.get('detail'), row.get('evidence')), 'modules.json', row.get('component'))
+        elif not row.get('found'):
+            gap('knowledge_missing', task.partition('.')[0], task, '%s：%s' % (row.get('component'), row.get('query')),
+                str(row.get('detail') or '查不到'), 'modules.json', row.get('component'))
     for row in rows(modules, 'returns'):
         source, target = str(row.get('from') or ''), str(row.get('to') or '')
         gap('returned_upstream', target.partition('.')[0], target, '%s → %s' % (source, target),

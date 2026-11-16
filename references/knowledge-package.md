@@ -71,7 +71,16 @@ python3 scripts/check_module.py lookup <设计目录> --task C4.2 --component �
 C1 `需求要素`，C2 `板级架构模式`、`接口约定`，C3 `接口约定`（任务 C3.3），C4 `计算方法`、`器件参数`，C5 `失效与故障分析`，设计网表里有对外连接器时 C5 另加 `需求要素`（EMC 端口矩阵查 `需求要素/环境与电磁等级/`）（`check_module.py C4 --block` 不核）。关卡不判查得对不对、用没用上。
 任务 C3.1 选了哪个典型电路的哪种方案另记在 `scheme-criteria.json`，没有适用方案由块文件抽出。
 
-没查到的记录由 `knowledge_gaps.py` 抽进知识缺口清单（见[交付与设计报告](delivery-report.md)）。知识框架的条目日后勘误时，按 `found` 可以找出用过它的设计。
+查到的条目有问题时当场再记一条，`--found` 写这个条目，加 `--issue` 和依据：
+
+```bash
+python3 scripts/check_module.py lookup <设计目录> --task C4.1 --component 器件参数 --query "TPS3808 释放门限" \
+  --found 器件参数/<器件分类>/<条目>.md --issue 错 --detail "释放门限上限写的是典型值" --evidence "手册 p5 表 6.5"
+```
+
+`--issue` 四种：`错`（与手册或标准对不上）、`不够`（适用条件没覆盖本板的情况，或缺本板要用的量）、`歧义`（有两种读法，写明本板按哪种读的）、`过严`（照做明显超出需要，写明理由）。设计准则的问题 `--component` 写 `设计准则`，`--found` 写规范正文文件，`--detail` 里写准则编号。只记有依据的：`--evidence` 写手册页或本板上的实例。记了不等于可以不照做，设计仍按框架现有内容和手册保证值走。
+
+没查到的和有问题的记录由 `knowledge_gaps.py` 抽进知识缺口清单（见[交付与设计报告](delivery-report.md)）。知识框架的条目日后勘误时，按 `found` 可以找出用过它的设计。
 
 ## 必答清单
 

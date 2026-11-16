@@ -6,6 +6,7 @@
   python3 check_module.py return <设计目录> --from C4.2 --to C3.3 --reason … --evidence …
                                                              回到上游重做时在 record/modules.json 的 returns 记一条（P7）
   python3 check_module.py lookup <设计目录> --task C4.2 --component 计算方法 --query … [--found 计算方法/<知识域>/x.md ...]
+                                                             [--issue 错|不够|歧义|过严 --detail … --evidence …]
                                                              查知识框架后在 record/modules.json 的 knowledge_lookups 记一条；
                                                              不写 --found 表示没查到
   python3 check_module.py entries <设计目录> [--circuit-types …] [--device-kinds …]
@@ -481,15 +482,22 @@ def record_return(root, source, target, reason, evidence):
     return []
 
 
+ISSUES = ('错', '不够', '歧义', '过严')   # what is wrong with an entry the lookup found
+
+
 def lookup_row_problems(row):
     """Problems of one knowledge_lookups row: the task, the component and every entry it names exist."""
     task, component, found = row.get('task'), row.get('component'), row.get('found')
     where = '%s %s' % (task, component)
     if not (isinstance(task, str) and TASK.match(task)):
         return ['knowledge_lookups：task 写任务编号，例如 C4.2（现为 %r）' % task]
-    if not (isinstance(component, str) and component in knowledge_source.COMPONENTS
+    issue = row.get('issue')
+    if not (isinstance(component, str) and component in knowledge_source.COMPONENTS + (('设计准则',) if issue else ())
             and (knowledge_source.knowledge_dir() / component).is_dir()):
         return ['knowledge_lookups %s：component 不是知识框架的组件' % where]
+    if issue is not None and not (issue in ISSUES and found and text(row.get('detail')) and text(row.get('evidence'))):
+        return ['knowledge_lookups %s：issue 写 %s 之一，并写 found（哪个条目）、detail（问题是什么）和 evidence（手册页或板上的实例）'
+                % (where, '、'.join(ISSUES))]
     if not text(row.get('query')):
         return ['knowledge_lookups %s：query 写查的什么' % where]
     if not isinstance(found, list):
@@ -597,12 +605,14 @@ def entries_report(root, circuit_types=None, device_kinds=None):
     return '\n'.join(lines)
 
 
-def record_lookup(root, task, component, query, found, detail):
+def record_lookup(root, task, component, query, found, detail, issue=None, evidence=None):
     """One knowledge framework lookup goes into record/modules.json `knowledge_lookups`. Returns the problems."""
     row = {'date': datetime.date.today().isoformat(), 'task': task, 'component': component, 'query': query,
            'found': list(found or [])}
     if text(detail):
         row['detail'] = detail
+    if issue is not None:
+        row.update(issue=issue, evidence=evidence)
     problems = lookup_row_problems(row)
     if problems:
         return problems
@@ -734,12 +744,13 @@ def main(argv=None):
     ap.add_argument('--from', dest='source', help='return：发现问题的任务，如 C4.2')
     ap.add_argument('--to', dest='target', help='return：回到的任务，如 C3.3')
     ap.add_argument('--reason', help='return：原因')
-    ap.add_argument('--evidence', help='return：依据（计算编号、手册页码、检查输出）')
+    ap.add_argument('--evidence', help='return：依据（计算编号、手册页码、检查输出）；lookup --issue：手册页或板上的实例')
     ap.add_argument('--task', help='lookup：查知识框架的任务，如 C4.2')
     ap.add_argument('--component', help='lookup：知识框架的组件，如 计算方法')
     ap.add_argument('--query', help='lookup：查的什么')
     ap.add_argument('--found', nargs='*', default=[], help='lookup：查到的条目（相对知识框架的 知识/）；没查到不写')
     ap.add_argument('--detail', help='lookup：补充说明（可选）')
+    ap.add_argument('--issue', choices=ISSUES, help='lookup：查到的条目有问题（与手册对不上、适用条件不够、有两种读法、过严）')
     ap.add_argument('--circuit-types', nargs='*', help='entries：电路类型（词表名称）；不写取 guideline_scope')
     ap.add_argument('--device-kinds', nargs='*', help='entries：器件类别（词表名称）；不写取 guideline_scope')
     args = ap.parse_args(argv)
@@ -747,7 +758,8 @@ def main(argv=None):
         print(entries_report(args.design_root, args.circuit_types, args.device_kinds))
         return 0
     if args.module == 'lookup':
-        problems = record_lookup(args.design_root, args.task, args.component, args.query, args.found, args.detail)
+        problems = record_lookup(args.design_root, args.task, args.component, args.query, args.found, args.detail,
+                                 args.issue, args.evidence)
         for problem in problems:
             print('PROBLEM:', problem)
         print('FAIL' if problems else 'recorded')

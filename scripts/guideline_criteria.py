@@ -272,16 +272,14 @@ def engineering_value(name, bundle=None):
 
 
 def shared_versions():
-    """What the plan or audit records of the guideline data it read: the read date and the derating data version."""
-    derating = json.loads(Path(knowledge_source.derating_path()).read_text(encoding='utf-8'))
-    return {'derating_version': derating['version'], 'read_date': datetime.date.today().isoformat()}
+    """What the plan or audit records of the guideline data it read: the read date."""
+    return {'read_date': datetime.date.today().isoformat()}
 
 
 def shared_label(identity=None):
     """Print the recorded read date when supplied; a missing one is shown as such, never as today's."""
     v = shared_versions() if identity is None else identity
-    label = '设计准则（%s 读取）' % v.get('read_date', '日期未记录')
-    return label + ('，降额 v%s' % v['derating_version'] if 'derating_version' in v else '')
+    return '设计准则（%s 读取）' % v.get('read_date', '日期未记录')
 
 
 def select(bundle, baseline=None, circuit_types=(), device_kinds=(), typed_only=False, ports=False):

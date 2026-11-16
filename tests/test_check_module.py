@@ -295,6 +295,12 @@ class FingerprintTests(unittest.TestCase):
         self.assertEqual(([], []), check_module.gate('C2', self.root))
         data = json.loads((self.record / 'modules.json').read_text(encoding='utf-8'))
         self.assertEqual([['板级架构模式/' + entry.name], []], [r['found'] for r in data['knowledge_lookups']])
+        # an entry that was found and is wrong, too narrow, ambiguous or too strict: --issue with what and the evidence
+        issue = args + ['--found', '板级架构模式/' + entry.name, '--issue', '不够']
+        self.assertEqual(1, check_module.main(issue + ['--detail', '没有覆盖负压轨']))                     # no evidence
+        self.assertEqual(0, check_module.main(issue + ['--detail', '没有覆盖负压轨', '--evidence', '本板 -5 V 轨']))
+        data = json.loads((self.record / 'modules.json').read_text(encoding='utf-8'))
+        self.assertEqual(('不够', '本板 -5 V 轨'), (data['knowledge_lookups'][-1]['issue'], data['knowledge_lookups'][-1]['evidence']))
         data['knowledge_lookups'][0]['found'] = ['板级架构模式/已删的条目.md']               # hand-written, not in the framework
         self.write('modules.json', data)
         self.assertTrue(any('不是知识框架' in p for p in check_module.gate('C2', self.root)[0]))

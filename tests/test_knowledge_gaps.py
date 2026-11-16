@@ -20,7 +20,9 @@ RECORDS = {
                        {'id': 'W-2', 'stage': 'external', 'status': 'closed', 'action': 'x'}]},
     'modules.json': {'returns': [{'from': 'C4.2', 'to': 'C3.3', 'reason': '电流预算不够', 'evidence': 'calc:C-1'}],
                      'knowledge_lookups': [{'task': 'C4.2', 'component': '计算方法', 'query': '电荷泵飞电容取值', 'found': []},
-                                           {'task': 'C4.2', 'component': '计算方法', 'query': '降压电感', 'found': ['计算方法/x.md']}]},
+                                           {'task': 'C4.2', 'component': '计算方法', 'query': '降压电感', 'found': ['计算方法/x.md']},
+                                           {'task': 'C4.1', 'component': '器件参数', 'query': 'TPS3808 门限', 'found': ['器件参数/y.md'],
+                                            'issue': '错', 'detail': '释放门限上限抄成了典型值', 'evidence': '手册 p5 表 6.5'}]},
     'requirements.json': {'clarifications': [
         {'id': 'Q1', 'proposed_requirement': '输出 2 A', 'answer': {'decision': 'DECIDED', 'text': '输出 3 A'}},
         {'id': 'Q2', 'proposed_requirement': '输出 2 A', 'answer': {'decision': 'ADOPTED_PROPOSAL', 'text': '输出 2 A'}}]},
@@ -42,7 +44,7 @@ class KnowledgeGapTests(unittest.TestCase):
     def test_each_signal_comes_from_its_record(self):
         data = knowledge_gaps.extract(self.root, ['Y - ABC200.pdf'])
         self.assertEqual({'no_typical_circuit': 1, 'unverified_candidate': 1, 'datasheet_not_in_library': 1, 'weak_basis': 2,
-                          'external_item': 1, 'returned_upstream': 1, 'user_overrode': 2, 'knowledge_missing': 1}, data['counts'])
+                          'external_item': 1, 'returned_upstream': 1, 'user_overrode': 2, 'knowledge_missing': 1, 'knowledge_issue': 1}, data['counts'])
         by = {g['signal']: g for g in data['gaps']}
         self.assertEqual(('C3', 'PSU：隔离电源'), (by['no_typical_circuit']['module'], by['no_typical_circuit']['item']))
         self.assertEqual(('C3', 'C3.3'), (by['returned_upstream']['module'], by['returned_upstream']['task']))
@@ -50,6 +52,12 @@ class KnowledgeGapTests(unittest.TestCase):
         # 知识框架里哪个组件查不到什么（modules.json 的 knowledge_lookups 里 found 为空的）
         self.assertEqual(('C4', 'C4.2', '计算方法：电荷泵飞电容取值'), (by['knowledge_missing']['module'],
                          by['knowledge_missing']['task'], by['knowledge_missing']['item']))
+        # 查到的条目有问题（lookup --issue 记的），连同缺的一起带上所指的框架组件；与知识无关的信号不带
+        self.assertEqual(('器件参数', '器件参数/y.md', '错：释放门限上限抄成了典型值（依据：手册 p5 表 6.5）'),
+                         (by['knowledge_issue']['component'], by['knowledge_issue']['item'], by['knowledge_issue']['detail']))
+        self.assertEqual({'no_typical_circuit': '典型电路', 'unverified_candidate': '典型电路', 'datasheet_not_in_library': '原件',
+                          'weak_basis': '', 'external_item': '器件参数', 'returned_upstream': '', 'user_overrode': '',
+                          'knowledge_missing': '计算方法', 'knowledge_issue': '器件参数'}, {g['signal']: g['component'] for g in data['gaps']})
 
     def test_an_empty_design_folder_gives_an_empty_list(self):
         with tempfile.TemporaryDirectory() as tmp:

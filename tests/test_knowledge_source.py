@@ -195,9 +195,9 @@ class RealFramework(unittest.TestCase):
         self.assertTrue(library['engineering_values'])
         self.assertIn(library['default_baseline'], library['vocabulary']['baselines'])
 
-    def test_shared_versions_records_the_read_date_and_derating_version(self):
-        self.assertEqual(set(g.shared_versions()), {'derating_version', 'read_date'})
-        self.assertRegex(g.shared_label(), r'^设计准则（\d{4}-\d{2}-\d{2} 读取），降额 v\S+$')
+    def test_shared_versions_records_the_read_date(self):
+        self.assertEqual(set(g.shared_versions()), {'read_date'})
+        self.assertRegex(g.shared_label(), r'^设计准则（\d{4}-\d{2}-\d{2} 读取）$')
 
     def test_vocabulary_and_floors_come_from_the_framework(self):
         self.assertEqual(g.vocabulary()['vocabulary']['baselines'], g.load()['vocabulary']['baselines'])

@@ -41,7 +41,7 @@ python3 <skill>/scripts/pack_design.py <交付目录> --input requirements=<需�
   --input datasheets=<资料目录>
 ```
 
-`knowledge_gaps.py <交付目录>` 从各模块的产品里抽出知识缺口清单 `record/knowledge-gaps.json`，不手写：知识框架哪个组件查不到什么（典型电路没有适用方案、`modules.json` 的 `knowledge_lookups` 里没查到的）、候选来源未证实、计算依据是典型值或估计、回到上游重做、用户否定了 ASG 的建议。清单只如实列出，不拦交付；它是评测侧归纳能力缺陷的输入。
+`knowledge_gaps.py <交付目录>` 从各模块的产品里抽出知识缺口清单 `record/knowledge-gaps.json`，不手写：知识框架哪个组件查不到什么（典型电路没有适用方案、`modules.json` 的 `knowledge_lookups` 里没查到的）、查到的条目有问题、候选来源未证实、计算依据是典型值或估计、回到上游重做、用户否定了 ASG 的建议。清单只如实列出，不拦交付；它是评测侧归纳能力缺陷的输入；其中指向知识框架的行由框架的 `工具/collect_feedback.py` 归集，用来补框架的知识。
 也可以用 `deliver.py <交付目录>` 按固定顺序一次跑完生成报告、写交付证据、新鲜度检查和打包，见任务 C6.4。
 报告如实写出各项自检的 PASS/FAIL/INSUFFICIENT 及数量（含零）。历史版本快照、日志、仿真中间文件、
 审查方的其他文件都不放进交付目录；本版独立审查的报告只放 `record/sr-review/`。
