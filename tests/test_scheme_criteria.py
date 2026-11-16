@@ -98,7 +98,9 @@ def test_each_rule_says_what_it_excludes_how_and_on_what_basis():
 def test_block_types_must_be_in_the_scope():
     data = record(criterion())
     data['blocks'][0]['device_kinds'] = ['varistor']
-    assert any('varistor' in p for p in check(data))
+    assert not any('varistor' in p for p in check(data))  # device kinds follow the chosen scheme
+    data['blocks'][0]['circuit_types'] = data['blocks'][0]['circuit_types'] + ['AC_MAINS']
+    assert any('AC_MAINS' in p for p in check(data))
 
 
 def test_report_marks_inference_as_not_a_hard_exclusion():

@@ -1766,6 +1766,22 @@ def merge_requirements(closure, requirements):
     return merged, problems
 
 
+def component_kinds(components):
+    """{device kind (framework vocabulary): [refs]} of the parts a design has. The guideline scope takes these in by
+    itself: module C1 cannot know them before a scheme is chosen, and a scheme change must not send the design back."""
+    known = knowledge_source.vocabulary()['device_kinds']
+    used = {}
+    for comp in components or []:
+        if not isinstance(comp, dict):
+            continue
+        kind = part_classes.kind_of(comp)[0]
+        if kind == 'diode' and re.search('LED', '%s %s' % (comp.get('lib_id'), comp.get('value')), re.I):
+            kind = 'led'
+        if kind in known:
+            used.setdefault(kind, []).append(comp.get('ref'))
+    return used
+
+
 def read_requirements(closure_path):
     """requirements.json next to design-closure.json; {} when missing or unreadable (the audit reports it)."""
     path = Path(closure_path).parent / REQUIREMENTS_FILE
@@ -1879,6 +1895,10 @@ def audit(record, intent_path, artifact_root, inputs=None, module=None, requirem
         error('stale_intent', intent_path.name)
     intent = json.loads(intent_path.read_text(encoding='utf-8')) if intent_path is not None else {'components': [], 'nets': []}
     refs = {c['ref'] for c in intent['components']} if intent_path is not None else None
+    scope = record.get('guideline_scope')
+    if isinstance(scope, dict) and isinstance(scope.get('device_kinds'), list):
+        record = dict(record, guideline_scope=dict(scope, device_kinds=scope['device_kinds'] + sorted(
+            k for k in component_kinds(intent['components']) if k not in scope['device_kinds'])))
     threshold_parts = sorted(c['ref'] for c in intent['components'] if threshold_part(c))
     root = artifact_root.resolve()
     tables = {}

@@ -53,10 +53,11 @@ class BoardConsistencyTests(unittest.TestCase):
         self.assertEqual([p for p in self.problems() if '选型角色' in p and 'Q201' in p and 'U101' not in p][:1],
                          self.problems())
 
-    def test_a_device_kind_outside_the_guideline_scope_is_named(self):
-        found = self.problems({'guideline_scope': {'device_kinds': ['ic', 'connector', 'led']}})
-        self.assertEqual(len(found), 1)
-        self.assertIn('mosfet（Q201）', found[0])
+    def test_a_device_kind_the_scope_does_not_list_joins_it_by_itself(self):
+        self.assertEqual(self.problems({'guideline_scope': {'device_kinds': ['ic', 'connector', 'led']}}), [])
+        import audit_design_closure
+        self.assertEqual(audit_design_closure.component_kinds([{'ref': 'Q201', 'lib_id': 'Device:Q_NMOS_GSD', 'value': 'x'}]),
+                         {'mosfet': ['Q201']})
 
     def test_missing_records_are_left_to_their_own_checks(self):
         for name in ('reference-input.json', 'selection.json'):

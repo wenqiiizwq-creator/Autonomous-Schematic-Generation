@@ -224,8 +224,7 @@ def block_view(root, only=None):
 
 def board_consistency(record, intent, requirements):
     """What the later stages only find by running into it: the peripheral-circuit table naming a designator or pin the
-    block designs do not have (C6's reference_contract), a U/Q/T part without a selection role (the report), and a
-    device kind the board uses that the guideline scope does not list (nothing checked it)."""
+    block designs do not have (C6's reference_contract) and a U/Q/T part without a selection role (the report)."""
     problems = []
     refs = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
     nets = intent.get('nets') or {}
@@ -255,19 +254,6 @@ def board_consistency(record, intent, requirements):
         missing = sorted(r for r in refs if isinstance(r, str) and report.CORE_REF.match(r) and r not in covered)
         if missing:
             problems.append('核心器件没有选型角色：%s（selection.json 是 C3 的产品：回到任务 C3.2 给它们补角色）' % '、'.join(missing))
-    scope = (requirements or {}).get('guideline_scope')
-    if isinstance(scope, dict) and isinstance(scope.get('device_kinds'), list):
-        known = knowledge_source.vocabulary()['device_kinds']
-        used = {}
-        for ref, comp in refs.items():
-            kind = part_classes.kind_of(comp)[0]
-            if kind == 'diode' and re.search('LED', '%s %s' % (comp.get('lib_id'), comp.get('value')), re.I):
-                kind = 'led'
-            if kind in known and kind not in scope['device_kinds']:
-                used.setdefault(kind, []).append(ref)
-        if used:
-            problems.append('requirements.json 的 guideline_scope.device_kinds 没有本板用到的器件类别：%s（准则按它筛选；'
-                            'C1 的产品：回到 C1 补上）' % '、'.join('%s（%s）' % (k, '、'.join(sorted(v))) for k, v in sorted(used.items())))
     return problems
 
 
@@ -534,12 +520,19 @@ def has_connectors(root):
 
 
 def board_scope(root):
-    """(circuit types, device kinds) the board declares in guideline_scope (requirements.json, else design-closure.json)."""
+    """(circuit types, device kinds) of the board: guideline_scope (requirements.json, else design-closure.json) plus
+    the device kinds of the chosen schemes and of the parts in the block designs."""
     for name in (closure_audit.REQUIREMENTS_FILE, 'design-closure.json'):
         data, _ = load(root / 'record', name)
         scope = data.get('guideline_scope') if isinstance(data, dict) else None
         if isinstance(scope, dict):
-            return tuple([v for v in scope.get(key) or [] if isinstance(v, str)] for key in ('circuit_types', 'device_kinds'))
+            types, kinds = ([v for v in scope.get(key) or [] if isinstance(v, str)] for key in ('circuit_types', 'device_kinds'))
+            # The kinds the chosen schemes and the block designs brought in count without C1 listing them.
+            scheme, _ = load(root / 'record', 'scheme-criteria.json')
+            more = [k for b in (scheme or {}).get('blocks') or [] if isinstance(b, dict) for k in b.get('device_kinds') or []]
+            for block in blocks.read_dir(root / 'record')[0].values():
+                more += sorted(closure_audit.component_kinds(block.get('components')))
+            return types, kinds + [k for k in dict.fromkeys(more) if isinstance(k, str) and k not in kinds]
     return [], []
 
 

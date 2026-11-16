@@ -849,9 +849,10 @@ def check_scheme_criteria(data, closure, bundle=None, plan=None, deferred=True):
         if not isinstance(types, list) or not types or not isinstance(kinds, list):
             problems.append('%s 要写 circuit_types（非空列表）和 device_kinds（列表）' % where)
             continue
-        outside = [v for v in types + kinds if v not in (scope.get('circuit_types') or []) + (scope.get('device_kinds') or [])]
+        # Device kinds follow the chosen scheme (C1 cannot list them beforehand); only the circuit types are the board's.
+        outside = [v for v in types if v not in (scope.get('circuit_types') or [])]
         if outside:
-            problems.append('%s 的 %s 不在 guideline_scope 里' % (where, '、'.join(map(str, outside))))
+            problems.append('%s 的 %s 不在 guideline_scope.circuit_types 里' % (where, '、'.join(map(str, outside))))
         named |= set(types)
         problems += check_scheme_candidates(block, where, plan)
         allowed = {r['id'] for r in guideline_criteria.select(bundle, baseline, types, kinds, typed_only=True,

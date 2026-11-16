@@ -208,7 +208,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
     - 审计只核行在、行写全、依据指对；热阻目标等数值算得对不对由 SR 审查核（G08-047 的审查方法）。
   - **设计准则**（用户 2026-10-31：请开始执行这个方案）：设计准则（G01–G09，见框架的准则登记（`知识/设计准则/准则登记/`））。
     `guideline_scope`（在 `requirements.json`）写 `baseline`（默认 `industrial_telecom`，需求写明时 `aerospace`/`military`）、
-    `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别）、`not_applicable: [{id, reason}]`。
+    `circuit_types` 与 `device_kinds`（取设计准则库词表：本设计有的功能电路类型和器件类别；设计网表里实际用到的器件类别审计时自动并入，`device_kinds` 可以只写 `[]`）、`not_applicable: [{id, reason}]`。
     计算、待办、`record/component-requirements.json` 的性能记录和 `evidence` 条目可写 `guidelines`（设计准则编号列表）。
     只有能淘汰候选方案（任务 C3.1 的 `scheme-criteria.json`）、改变选型（性能记录）或进入计算（计算）的准则逐条落实，其余按设计动作照做，
     不要求逐条引用（用户 2026-11-08 按草案实施）。审计按范围选出适用准则，在 `guidelines` 列出适用（`applicable`）、已引用（`covered`）、
