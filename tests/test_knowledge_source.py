@@ -43,19 +43,19 @@ def make_framework(root, registries=('G02',), criteria_per_registry=2):
         (root / name).write_text('# %s\n' % name, encoding='utf-8')
     registry = root / '知识/设计准则/准则登记'
     registry.mkdir(parents=True)
-    vocab = {'version': '1', 'default_baseline': 'base',
+    vocab = {'default_baseline': 'base',
              'baselines': [{'name': 'base', 'title': '基线'}],
              'circuit_types': [{'name': 'power', 'title': '电源'}],
              'device_kinds': [{'name': 'resistor', 'title': '电阻'}]}
     (registry / '词表.json').write_text(json.dumps(vocab, ensure_ascii=False), encoding='utf-8')
     for spec in registries:
-        rules = [{'id': '%s-%03d' % (spec, n + 1), 'title': 'rule %d' % n, 'spec': spec, 'version': '1',
+        rules = [{'id': '%s-%03d' % (spec, n + 1), 'title': 'rule %d' % n, 'spec': spec,
                   'status': 'active', 'nature': 'shall', 'applies_when': {'board': True}, 'asg_action': 'do',
                   'sr_check': 'check', 'closing_stage': 'schematic',
                   'source': [{'document': 'doc', 'edition': '1', 'clause': '1', 'page': '1'}]}
                  for n in range(criteria_per_registry)]
         (registry / ('%s_准则登记.json' % spec)).write_text(
-            json.dumps({'spec': spec, 'version': '1', 'criteria': rules}, ensure_ascii=False), encoding='utf-8')
+            json.dumps({'spec': spec, 'criteria': rules}, ensure_ascii=False), encoding='utf-8')
     return root
 
 

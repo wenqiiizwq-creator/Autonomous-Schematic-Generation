@@ -29,7 +29,7 @@ _env = None
 def setUpModule():
     global _env
     library = guideline_criteria.load()
-    library.update(specs={}, criteria=[])
+    library.update(criteria=[])
     empty = Path(tempfile.gettempdir()) / 'asg-empty-guideline-criteria-boards.json'
     empty.write_text(guideline_criteria.dump(library), encoding='utf-8')
     _env = mock.patch.dict('os.environ', {**temp_framework.without_raw(),   # 没有原件总库

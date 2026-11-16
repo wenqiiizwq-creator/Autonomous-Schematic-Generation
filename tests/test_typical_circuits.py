@@ -68,7 +68,7 @@ class PatternFileTests(unittest.TestCase):
 
 
 def card(rid, **changes):
-    out = {'id': rid, 'title': '示例规则 ' + rid, 'spec': rid[:3], 'version': '0.1', 'status': 'active',
+    out = {'id': rid, 'title': '示例规则 ' + rid, 'spec': rid[:3], 'status': 'active',
            'nature': 'shall', 'applies_when': {'board': True}, 'inputs': [], 'asg_action': '设计动作',
            'sr_check': '审查方法', 'source': [{'document': 'GB/T 17799.2', 'edition': '2023', 'clause': '表4', 'page': 9}],
            'closing_stage': 'schematic'}

@@ -30,7 +30,7 @@ def tearDownModule():
 
 
 def card(rid, **changes):
-    out = {'id': rid, 'title': '示例规则 ' + rid, 'spec': rid[:3], 'version': '0.1', 'status': 'active',
+    out = {'id': rid, 'title': '示例规则 ' + rid, 'spec': rid[:3], 'status': 'active',
            'nature': 'shall', 'applies_when': {'board': True}, 'inputs': [], 'asg_action': '设计动作',
            'sr_check': '审查方法', 'source': [{'document': 'GB/T 17799.2', 'edition': '2023', 'clause': '表4', 'page': 9}],
            'closing_stage': 'schematic'}
@@ -143,7 +143,6 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertTrue({'G04-103', 'G04-104'} <= ids(['USB']) - ids([]))
         by_id = {r['id']: r for r in real['criteria']}
         self.assertIn('Type-C', by_id['G01-029']['title'])
-        self.assertEqual(by_id['G01-029']['version'], '1.1')
 
     def test_a_downstream_rule_needs_a_work_item(self):
         self.record['work_items'][0]['guidelines'] = []

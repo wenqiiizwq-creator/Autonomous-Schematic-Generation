@@ -33,7 +33,7 @@ COVERAGES = ('item', 'project_input', 'handoff')   # how an applicable rule is c
 TRIGGERS = ('baselines', 'circuit_types', 'device_kinds')
 APPLIES_KEYS = set(TRIGGERS) | {'board', 'text'}
 RELATION_KEYS = ('related', 'primary', 'reuses', 'conflicts')
-RULE_KEYS = {'id', 'title', 'spec', 'version', 'status', 'nature', 'applies_when', 'not_applicable', 'tailoring',
+RULE_KEYS = {'id', 'title', 'spec', 'status', 'nature', 'applies_when', 'not_applicable', 'tailoring',
              'inputs', 'asg_action', 'sr_check', 'source', 'relations', 'closing_stage', 'coverage'}
 SOURCE_KEYS = ('document', 'edition', 'clause', 'page')
 VALUE_NAME = re.compile(r'^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$')
@@ -142,7 +142,7 @@ def rule_errors(rule, vocabulary, default_baseline):
     extra = set(rule) - RULE_KEYS
     if extra:
         errors.append('%s: unknown fields %s' % (label, sorted(extra)))
-    for key in ('title', 'version', 'asg_action', 'sr_check'):
+    for key in ('title', 'asg_action', 'sr_check'):
         if not _text(rule.get(key)):
             errors.append('%s: %s is required' % (label, key))
     for key in ('not_applicable', 'tailoring'):
@@ -358,7 +358,7 @@ def build(registry_dir, vocabulary_path=None):
     Existing import callers may omit vocabulary_path; the framework vocabulary is then used."""
 
     base = vocabulary(vocabulary_path)
-    rules, specs, values = [], {}, {}
+    rules, specs, values = [], set(), {}
     for path in sorted(Path(registry_dir).glob('G0*_准则登记.json')):
         registry = json.loads(path.read_text(encoding='utf-8'))
         if registry['spec'] in specs:
@@ -367,7 +367,7 @@ def build(registry_dir, vocabulary_path=None):
             raise ValueError('unknown spec: %s' % registry['spec'])
         if any(rule.get('spec') != registry['spec'] for rule in registry['criteria']):
             raise ValueError('rule spec differs from its registry')
-        specs[registry['spec']] = registry['version']
+        specs.add(registry['spec'])
         rules.extend(registry['criteria'])
         for name, entry in (registry.get('engineering_values') or {}).items():
             if name in values:
@@ -377,7 +377,7 @@ def build(registry_dir, vocabulary_path=None):
     rules.sort(key=lambda r: str(r.get('id')))
     values = dict(sorted(values.items()))
     bundle = {'schema_version': BUNDLE_SCHEMA_VERSION,
-              'default_baseline': base['default_baseline'], 'vocabulary': base['vocabulary'], 'specs': specs,
+              'default_baseline': base['default_baseline'], 'vocabulary': base['vocabulary'],
               'criteria': rules}
     if values:
         bundle['engineering_values'] = values
