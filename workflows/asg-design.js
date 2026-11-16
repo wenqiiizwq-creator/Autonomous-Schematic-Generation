@@ -58,7 +58,7 @@ ${fromDown ? `下游模块做不下去，指出本模块的产出有错或不够
 function gatePrompt(s) {
   return `${common}
 
-你是关卡检查员，不是设计者：不写、不改设计目录和交付目录里的任何设计产物，不替设计者补内容。读 ${SKILL}/SKILL.md 的“主流程”模块表和 references/${s.file}，找出 ${s.id} 做完的标志和关卡命令，在设计目录（交付阶段在交付目录）上实际运行这些命令，并核对本模块应有的产出文件都在。
+你是关卡检查员，不是设计者：不写、不改设计目录和交付目录里的任何设计产物，不替设计者补内容。读 ${SKILL}/SKILL.md 的“主流程”模块表和 references/${s.file}，找出 ${s.id} 做完的标志和关卡命令，在${s.n === 7 ? '交付目录' : '设计目录'}上实际运行这些命令，并核对本模块应有的产出文件都在。${s.n === 7 ? '' : '只在设计目录上判：交付目录到交付阶段才同步，里面的记录可能是旧副本，不在它上面跑关卡，也不拿它的结果判。'}
 返回 passed（关卡命令全部通过且产出齐全才为 true）和 details（跑了哪些命令、各自的结果；没过时逐条列出错误原文，够设计者照着改）。`
 }
 
@@ -76,6 +76,7 @@ if (a.review && !a.start) {
 
 const done = []
 let backtracks = 0, carry = ''
+const pairs = {}
 for (let i = from - 1; i < STAGES.length; i++) {
   const s = STAGES[i]
   phase(s.title)
@@ -94,7 +95,10 @@ for (let i = from - 1; i < STAGES.length; i++) {
     log(`${s.id} 关卡未过，返回本模块处置`)
   }
   if (back) {
-    if (back >= s.n || ++backtracks > 3) return { status: 'blocked', stage: s.n, reason: `需要回到上游但无法继续：${feedback}`, done }
+    // 同一对“从哪回到哪”超过 3 次才算原地打转；总数另设上限。条文澄清这类回退每次内容不同，不该两三次就停。
+    const pair = `${s.n}>${back}`
+    pairs[pair] = (pairs[pair] || 0) + 1
+    if (back >= s.n || pairs[pair] > 3 || ++backtracks > 8) return { status: 'blocked', stage: s.n, reason: `需要回到上游但无法继续：${feedback}`, done }
     log(`${s.id} 发现上游问题，回到第 ${back} 个阶段：${feedback}`)
     carry = feedback
     i = back - 2
