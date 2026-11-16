@@ -4,6 +4,11 @@
 
 给定输入：`architecture.json`、`interfaces.json`、各块的块设计 `record/blocks/`。产出：整板 `electrical-intent.json`、整板层块 `blocks/BOARD.json`、需求追溯、闭合矩阵、FMEA 与 EMC 端口矩阵。
 
+**不为提示回上游。** 关卡输出里 `PENDING` 开头的是提示，不挡关卡，也不是回上游的理由：`knowledge_declared`（框架里还有没查的条目）、`requirement_not_supported`（等样机验证的需求）、
+`partial_review` 都照常往下走。需求没写存储温度时温度矩阵的 `storage` 不用写，按工作温度范围核，不为它提澄清。
+闭合时才看出不适用的下游阶段准则写在 `design-closure.json` 的 `not_applicable`。只有关卡报错、且错在上游产品里时才返回上游
+（H-001 2026-11-16：C5 为存储温度和 15 条不适用准则回了一次 C1，下游四个模块各重跑一遍）。
+
 ## C5.1 设计网表
 
 用 `scripts/blocks.py merge` 把各块的块设计按网络名合成整板设计网表 `electrical-intent.json`：同名端口接成一个网络，每个器件的 `fields.Circuit` 写所属块。合并报错（块内网络重名、端口没有对端、位号重复、同一网络各块的角色或电压不一致）时，按原因回到 C4 或 C2，不在 C5 改块设计。

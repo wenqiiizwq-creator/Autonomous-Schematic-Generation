@@ -1588,7 +1588,7 @@ def audit_rating_above_need(record, comp, rating, rail, top, error):
     out per G03-010, same price and supply, the datasheet, one part number for the board)."""
     from schematic_layout.recipes import capacitance
     if not part_classes.DIELECTRIC.search(part_classes.spec_text(comp)) or (capacitance(comp.get('value')) or 0) < RATING_CHECK_MIN_F \
-            or text(comp.get('grade_reason')):
+            or text(comp.get('grade_reason')) or text((comp.get('fields') or {}).get('grade_reason')):
         return
     level = ((record.get('derating') or {}) if isinstance(record.get('derating'), dict) else {}).get('level')
     level = level if level in stress_check.LEVELS else guideline_criteria.engineering_value('unset_level')
@@ -1636,7 +1636,7 @@ def audit_grade_reasons(intent, requirements, error):
             continue
         codes = {m.upper() for m in part_classes.DIELECTRIC.findall(part_classes.spec_text(comp))}
         chosen = [c for c in codes if c in STABLE_CLASS_II]
-        if len(chosen) == 1 and STABLE_CLASS_II[chosen[0]][1] > STABLE_CLASS_II[enough[0]][1] and not text(comp.get('grade_reason')):
+        if len(chosen) == 1 and STABLE_CLASS_II[chosen[0]][1] > STABLE_CLASS_II[enough[0]][1] and not (text(comp.get('grade_reason')) or text((comp.get('fields') or {}).get('grade_reason'))):
             error('grade_above_requirement_without_reason',
                   '%s：介质 %s 高于需求 %g～%g ℃ 所需的 %s；按 G08-006 选够用的一档，或在器件上写 grade_reason'
                   '（同价同供货、局部热点、手册要求、整板统一物料等）' % (comp.get('ref'), chosen[0], lo, hi, enough[0]))
@@ -1756,6 +1756,13 @@ def merge_requirements(closure, requirements):
         trace[rid] = {k: v for k, v in row.items() if k in TRACE_FIELDS}
     merged = {k: v for k, v in closure.items() if k != 'traceability' and k not in C1_SECTIONS}
     merged.update({k: requirements[k] for k in C1_SECTIONS if k in requirements})
+    # Rules that turn out not to apply once the board is closed are written by module C5 in design-closure.json
+    # `not_applicable` [{id, reason}], not sent back to C1.
+    late = closure.get('not_applicable')
+    if isinstance(late, list) and isinstance(merged.get('guideline_scope'), dict):
+        scope = merged['guideline_scope']
+        merged['guideline_scope'] = dict(scope, not_applicable=list(scope.get('not_applicable') or []) + late)
+    merged.pop('not_applicable', None)
     for row in rows:
         # The text and source are module C1's gate; here only a traceability field written in the wrong file.
         problems += [p for p in requirement_row_problems(row) if p[0] == 'trace_in_requirements']

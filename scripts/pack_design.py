@@ -44,7 +44,7 @@ RENAMED_TOP = {'原理图': '改名为 设计方案/', 'PCB设计': '板子文�
 SCHEMATIC = ('schematic.pdf', 'netlist.xml', 'BOM.csv')
 # sr-review: an independent schematic-review run of this version kept with the records it reviewed
 # (industrial I/O calibration board 2026-11-03: the SR report lives in record/sr-review/ and packing refused it).
-RECORD_DIRS = ('calculations', 'scripts', 'evidence', 'sr-review', 'block-circuits')
+RECORD_DIRS = ('calculations', 'scripts', 'evidence', 'sr-review', 'block-circuits', 'blocks')
 
 
 def sha256(path):

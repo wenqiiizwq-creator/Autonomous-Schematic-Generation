@@ -294,7 +294,13 @@ def main(argv=None):
     ap.add_argument('delivery', type=Path)
     ap.add_argument('--for-review', action='store_true',
                     help='stop after the automatic checks even if a review matches: the PDF is exported for the visual review')
+    ap.add_argument('--design', type=Path,
+                    help='设计目录：先把它的 record/ 和 设计资料/ 同步进交付目录再跑（交付目录里的旧副本不手工对）')
     args = ap.parse_args(argv)
+    if args.design:
+        for name in ('record', '设计资料'):
+            if (args.design / name).is_dir():
+                shutil.copytree(args.design / name, args.delivery / name, dirs_exist_ok=True)
     code, _, _ = deliver(args.delivery, for_review=args.for_review)
     return code
 

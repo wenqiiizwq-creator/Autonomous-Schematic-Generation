@@ -420,6 +420,8 @@ def audit(record, intent, calculations, evidence, requirements, holds, error, ne
     ranges = {}
     for key, title in (('operating', '工作温度'), ('storage', '存储温度')):
         r = temp.get(key)
+        if key == 'storage' and r is None:
+            r = temp.get('operating')       # the requirement gives no storage range: the operating range stands for it
         if not (isinstance(r, dict) and finite(r.get('min')) and finite(r.get('max'))):
             need('matrix_temperature_requirement_missing', '温度矩阵：写需求的%s范围 %s {min, max, source}' % (title, key))
             continue

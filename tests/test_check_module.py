@@ -639,15 +639,15 @@ class DeclaredEntriesTests(unittest.TestCase):
         notes = check_module.declaration_notes(self.root, 'C4')
         self.assertEqual(2, len(notes), notes)
         self.assertTrue(notes[0].startswith('knowledge_declared：知识框架 知识/计算方法/'), notes)
-        self.assertIn('计算方法/电源/buck.md（POWER_CONVERTER）', notes[0])
-        self.assertIn('器件类别/mosfet.md（mosfet）', notes[1])
+        self.assertIn('知识/计算方法/ 里还有 1 条', notes[0])
+        self.assertIn('知识/器件类别/ 里还有 1 条', notes[1])
         self.assertEqual([], check_module.declaration_notes(self.root, 'C1'))     # no 需求要素 entry declares them
         self.assertEqual([], check_module.declaration_notes(self.root, 'C5'))     # C5 has no such note
         rows = [{'task': 'C4.2', 'component': '计算方法', 'query': 'x', 'found': ['计算方法/电源/buck.md']}]
         (self.root / 'record' / 'modules.json').write_text(json.dumps({'knowledge_lookups': rows}), encoding='utf-8')
         notes = check_module.declaration_notes(self.root, 'C4')
         self.assertEqual(1, len(notes), notes)
-        self.assertIn('器件类别/mosfet.md', notes[0])
+        self.assertIn('知识/器件类别/', notes[0])
         self.assertIn('已查', check_module.entries_report(self.root).split('buck.md')[1].splitlines()[0])
         # task C3.1: a typical circuit compared among the scheme candidates counts as consulted
         self.assertEqual(1, len(check_module.declaration_notes(self.root, 'C3')))

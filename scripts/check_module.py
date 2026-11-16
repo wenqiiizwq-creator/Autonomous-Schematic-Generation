@@ -54,7 +54,7 @@ OUTPUTS = {
     'C4': ('design-closure.json#calculations,operating_points,pin_dispositions', 'component-requirements.json',
            'reference-input.json', blocks.DIR + '/', knowledge_checklist.FILE + '#C4'),
     'C5': ('electrical-intent.json', '%s/%s.json' % (blocks.DIR, blocks.BOARD),
-           'design-closure.json#traceability,net_voltages,matrices'),
+           'design-closure.json#traceability,net_voltages,matrices,not_applicable'),
     'C6': ('page-plan.json', 'summary.json', 'visual-review.json'),
 }
 # Upstream runs one way (C1 → C6); task C3.3 (interface freeze) closes C3. READS narrows what a module reads of an
@@ -384,6 +384,16 @@ def gate(module, root, write=True, block=None):
                                               lambda code, item: problems.append('块设计 %s：%s' % (code, item)))
             problems += board_consistency(record, json.loads(intent_path.read_text(encoding='utf-8')),
                                           load(record, closure_audit.REQUIREMENTS_FILE)[0])
+            # What the delivery report refuses is found here, where the block designs can still be changed (H-001
+            # 2026-11-16: five returns from delivery for a part without its rating and a citation naming the wrong part).
+            whole = json.loads(intent_path.read_text(encoding='utf-8'))
+            view = merged(load(record, 'design-closure.json')[0], load(record, closure_audit.REQUIREMENTS_FILE)[0])
+            identity = part_classes.audit_identity(whole, [root, record])[0]
+            if identity:
+                problems.append('关键器件和特殊器件要写确切料号、数据手册和类型声明，常规件要写规格（见 part-roles.md 第 1 节）：'
+                                + '；'.join(identity))
+            problems += ['保护器件与安全防护位置：%s' % p for p in part_classes.audit_safety(whole, view)]
+            problems += part_classes.audit_citations(whole, view, [root, record])
         intent_path.unlink(missing_ok=True)
     if module == 'C6':
         plan, problem = load(record, 'page-plan.json')
@@ -583,9 +593,8 @@ def declaration_notes(root, module):
     for component, entries in declared_entries(types, kinds, DECLARED_LOOKUPS[module]).items():
         missing = [p for p in entries if p not in found and not (component == '典型电路' and Path(p).stem in compared)]
         if missing:
-            notes.append('knowledge_declared：知识框架 知识/%s/ 里声明了本板电路类型或器件类别的条目，查阅记录里没有 %d 条：%s；'
-                         '查阅后用 check_module.py lookup 记下，读过不适用的也记（--detail 写理由）' % (
-                             component, len(missing), '、'.join('%s（%s）' % (p, '、'.join(entries[p])) for p in missing)))
+            notes.append('knowledge_declared：知识框架 知识/%s/ 里还有 %d 条声明了本板电路类型或器件类别、查阅记录里没有的条目'
+                         '（check_module.py entries 列出）；只是提醒别漏查，与本板功能无关的不用读也不用记' % (component, len(missing)))
     return notes
 
 

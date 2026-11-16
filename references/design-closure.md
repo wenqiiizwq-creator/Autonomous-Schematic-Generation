@@ -202,7 +202,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       且依据里写这条计算（`downstream_row_not_citing`）。热类的行写所需的结到环境热阻 =（降额后结温上限 − 环境温度）÷ 功耗，
       以及散热面、路径、所在面或朝向（G08-047）。
     - 整板审计：没登记这份表记 `design_document_incomplete`；适用准则里 `closing_stage` 不是 `schematic` 的，每条至少一行在依据里写它的编号，
-      或在 `guideline_scope.not_applicable` 写理由，缺记 `downstream_constraint_missing`；两者都让打包拒绝。
+      或在 `guideline_scope.not_applicable` 写理由（C5 闭合时才看出不适用的，写在 `design-closure.json` 顶层的 `not_applicable: [{id, reason}]`，不为它回 C1），缺记 `downstream_constraint_missing`；两者都让打包拒绝。
       行缺列、编号或接收方不合法记 `downstream_row_incomplete`。表里写了一条下游准则，等同于用待办把它交给下游。
     - 报告“技术转交要求”按接收方分组列出各行，挂在应力超幅上的排前面；结论写各接收方的行数。
     - 审计只核行在、行写全、依据指对；热阻目标等数值算得对不对由 SR 审查核（G08-047 的审查方法）。
@@ -280,7 +280,7 @@ ASG 对其方案、选型、参数和功能实现负责；审查方只提意见�
       TVS 的 VRWM（性能记录的 `working_voltage` 下限，或按 VRWM 命名的系列 SMAJ/SMBJ/SMCJ/SMDJ/SMLJ/SMF、PESD/PTVS<a>V<b> 从型号读出）
       低于它记 `tvs_vrwm_below_net_voltage`。降额比较仍写在计算里；这里拦额定低于工作电压的错，
       也拦反方向的：1 µF 及以上的 MLCC 额定比按降额（`CAP-MLCC-CHIP-V`，本板等级，未定按 `unset_level`）够用的最低标准档（6.3 V 起）高出两档及以上，
-      又没在器件上写 `grade_reason` 的，记 `capacitor_rating_above_need_without_reason`（降额规范 R13；用户 2026-11-15，AD9361 板 +5 V 轨按“留一倍”取了 25 V）。
+      又没在器件上写 `grade_reason`（器件顶层或 `fields` 里都认）的，记 `capacitor_rating_above_need_without_reason`（降额规范 R13；用户 2026-11-15，AD9361 板 +5 V 轨按“留一倍”取了 25 V）。
       1 µF 以下的耐压高几档不影响尺寸和价格，不查。
     - 审计在 `binding` 列出各网络最高电压和处置行数。
   - **对全部对象核对的矩阵与保护逻辑状态表**（整板评测基线 2026-11-07：6 个漏项里 3 个是同一条判据
