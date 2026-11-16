@@ -89,7 +89,7 @@ for (let i = from - 1; i < STAGES.length; i++) {
     if (w.status === 'needs_input') return { status: 'needs_input', stage: s.n, questions: w.questions || [], summary: w.summary, done }
     if (w.status === 'upstream') { back = w.upstream_stage || s.n - 1; feedback = w.summary; break }
     if (w.status === 'partial') { log(`${s.id} 未完，继续：${w.summary}`); feedback = ''; continue }
-    const g = await agent(gatePrompt(s), { label: `${s.id} 关卡`, phase: s.title, schema: GATE, effort: 'low' })
+    const g = await agent(gatePrompt(s), { label: `${s.id} 关卡`, phase: s.title, schema: GATE, effort: 'low', model: 'sonnet' })
     if (g && g.passed) { passed = true; done.push({ stage: s.id, summary: w.summary }); break }
     feedback = g ? g.details : '关卡检查没有返回结果'
     log(`${s.id} 关卡未过，返回本模块处置`)
