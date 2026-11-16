@@ -1570,7 +1570,7 @@ def audit_net_voltages(record, intent, requirements, calculations, error):
     return maxima
 
 
-# Standard MLCC voltage ratings from the lowest commonly stocked one (G10 R13: the rating is the lowest standard step meeting
+# Standard MLCC voltage ratings from the lowest commonly stocked one (降额规范 R13: the rating is the lowest standard step meeting
 # the derating; user 2026-11-15, AD9361 board: 1～10 µF parts on a 7 V rail rated 25 V by a "twice the rail" habit).
 MLCC_VOLTS = (6.3, 10, 16, 25, 35, 50, 63, 100, 200, 250, 500, 630, 1000)
 # Below about 1 µF a higher voltage rating costs nothing in an MLCC's size or price; the check is for the parts where it does.
@@ -1578,7 +1578,7 @@ RATING_CHECK_MIN_F = 1e-6
 
 
 def audit_rating_above_need(record, comp, rating, rail, top, error):
-    """G10 R13: an MLCC of 1 µF or more rated two or more standard steps above the lowest step meeting the derating
+    """降额规范 R13: an MLCC of 1 µF or more rated two or more standard steps above the lowest step meeting the derating
     (CAP-MLCC-CHIP-V at the board's level, unset_level when none) states why in grade_reason (DC-bias capacitance worked
     out per G03-010, same price and supply, the datasheet, one part number for the board)."""
     from schematic_layout.recipes import capacitance
@@ -1592,7 +1592,7 @@ def audit_rating_above_need(record, comp, rating, rail, top, error):
     above = MLCC_VOLTS[MLCC_VOLTS.index(steps[0]) + 2:] if steps else ()
     if above and rating >= above[0]:
         error('capacitor_rating_above_need_without_reason',
-              '%s：额定 %g V，%s 最高 %g V 按 %s 级降额（CAP-MLCC-CHIP-V %g）%g V 就够；按 G10 R13 取够用的一档，'
+              '%s：额定 %g V，%s 最高 %g V 按 %s 级降额（CAP-MLCC-CHIP-V %g）%g V 就够；按 降额规范 R13 取够用的一档，'
               '或在器件上写 grade_reason（直流偏压降容按 G03-010 算过、同价同供货、手册要求、整板统一物料等）'
               % (comp['ref'], rating, rail, top, level, share, steps[0]))
 

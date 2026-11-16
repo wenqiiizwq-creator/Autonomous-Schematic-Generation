@@ -17,7 +17,7 @@ import guideline_criteria as g
 import knowledge_source as ks
 
 ENV = ks.ENV_VAR
-G10 = ks.G10_DIR
+DERATING = ks.DERATING_DIR
 
 
 def real_framework():

@@ -178,7 +178,7 @@ C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项�
 | 设计准则（G01–G09）：适用条件、引用与覆盖、下游约束 | 框架 `知识/设计准则/工具/包说明/guideline-criteria.md`、`知识/设计准则/准则登记/` |
 | 必写的设计文档（FMEA、EMC 端口矩阵）：何时要写、必备章节与对象 | [guideline-evidence-groups.md](references/guideline-evidence-groups.md)、`references/guideline-evidence-groups.json` |
 | 设计准则、降额数据和词表在框架里的位置、各文件的字段 | 框架 `知识/设计准则/工具/包说明/shared-layer.md` |
-| 规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度 | 框架 `知识/设计准则/规范正文/G10_元器件降额与应力规范/` 下的 `应力判法.md`、`降额规范.md`、`降额值.json` |
+| 降额规范 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度 | 框架 `知识/设计准则/降额与应力/` 下的 `应力判法.md`、`降额规范.md`、`降额值.json` |
 | 绘图纲要（结构规则与画图习惯）与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR 规则、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |
 | 拓扑结构、标签策略、检查项 | [schematic-drawing-standards.md](references/schematic-drawing-standards.md) |

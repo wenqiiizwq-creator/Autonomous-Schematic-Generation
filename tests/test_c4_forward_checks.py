@@ -61,7 +61,7 @@ class GradeReasonTests(unittest.TestCase):
 
 
 class RatingAboveNeedTests(unittest.TestCase):
-    """G10 R13 (user 2026-11-15): an MLCC of 1 µF or more two standard steps above the derated need states why."""
+    """降额规范 R13 (user 2026-11-15): an MLCC of 1 µF or more two standard steps above the derated need states why."""
     def codes(self, value, top=7.0, level='III', **extra):
         found = []
         comp = dict({'ref': 'C1', 'lib_id': 'Device:C', 'value': value}, **extra)

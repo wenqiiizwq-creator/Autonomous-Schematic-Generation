@@ -23,7 +23,7 @@ ENV_VAR = 'HARDWARE_KNOWLEDGE_FRAMEWORK'
 LOCAL_FILE_NAME = '.knowledge-framework'
 # 技能使用的知识组件（框架 知识/ 下的目录名）；设计实例、设计准则不在其内，准则由 guideline_criteria 读。
 COMPONENTS = ('需求要素', '板级架构模式', '接口约定', '典型电路', '计算方法', '器件参数', '器件类别', '失效与故障分析')
-G10_DIR = '规范正文/G10_元器件降额与应力规范'
+DERATING_DIR = '降额与应力'
 RAW_LINK = '原件'   # 框架里指向原件总库（HardwareWiki/raw）的链接；技能找原厂资料也经它，不另设位置
 # 条目头部的词表声明（框架 条目规范.md“条目头部的词表声明”）：标题之后、第一个二级标题之前的两行
 DECLARE = re.compile(r'^(电路类型|器件类别)[：:]\s*(.+)$')
@@ -84,24 +84,24 @@ def vocabulary_path():
     return registry_dir() / '词表.json'
 
 
-def _g10(name):
-    return guideline_dir() / G10_DIR / name
+def _derating(name):
+    return guideline_dir() / DERATING_DIR / name
 
 
 def derating_path():
-    return _g10('降额值.json')
+    return _derating('降额值.json')
 
 
 def commodity_path():
-    return _g10('常规件最弱档.json')
+    return _derating('常规件最弱档.json')
 
 
 def derating_doc_path():
-    return _g10('降额规范.md')
+    return _derating('降额规范.md')
 
 
 def stress_spec_path():
-    return _g10('应力判法.md')
+    return _derating('应力判法.md')
 
 
 def raw_root():
