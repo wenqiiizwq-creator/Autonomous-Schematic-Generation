@@ -10,8 +10,8 @@ ASG 画不同类型的板子时复用的是这一层，不是具体型号。
 1. 环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK`，值为框架目录的绝对路径；
 2. 技能根目录下的本机文件 `.knowledge-framework`，一行，写框架目录的绝对路径（该文件不进版本库）。
 
-框架目录下要有 `知识/` 和 `索引/`；否则脚本报 `KnowledgeFrameworkNotFound`，消息写明这两种办法。所有脚本只经 `scripts/knowledge_source.py` 取框架里的路径，`python3 scripts/knowledge_source.py` 打印框架目录、读取日期和指纹。
-交付物（`record/manifest.json` 的 `knowledge_release`、设计准则身份）记读取日期和读到的知识文件的指纹；框架不维护版本号。
+框架目录下要有 `知识/` 和 `索引/`；否则脚本报 `KnowledgeFrameworkNotFound`，消息写明这两种办法。所有脚本只经 `scripts/knowledge_source.py` 取框架里的路径，`python3 scripts/knowledge_source.py` 打印框架目录和读取日期。
+交付物（`record/manifest.json` 的 `knowledge_release`）记读取日期；框架不维护版本号。
 
 ## 框架里读哪些路径
 

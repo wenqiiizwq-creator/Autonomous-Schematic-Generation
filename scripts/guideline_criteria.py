@@ -26,14 +26,6 @@ from pathlib import Path
 import knowledge_source
 
 BUNDLE_SCHEMA_VERSION = 1
-SKILL_ROOT = Path(__file__).resolve().parent.parent
-# 身份覆盖的技能自己的代码；其余文件在知识框架里，键是相对框架目录的路径。
-SKILL_FILES = ('scripts/guideline_criteria.py', 'scripts/stress_check.py')
-G10 = '知识/设计准则/' + knowledge_source.G10_DIR + '/'
-FRAMEWORK_FILES = ('知识/设计准则/准则登记/词表.json', G10 + '降额值.json', G10 + '降额规范.md', G10 + '应力判法.md',
-                   G10 + '常规件最弱档.json')
-FINGERPRINT_FORMAT = 'framework-paths-sha256-v1'
-
 RULE_ID = re.compile(r'^G0[1-9]-\d{3}$')
 STATUSES = ('draft', 'active', 'retired')
 NATURES = ('shall', 'should', 'method', 'project')
@@ -292,77 +284,16 @@ def engineering_value(name, bundle=None):
     return (bundle if bundle is not None else load())['engineering_values'][name]['value']
 
 
-def shared_files():
-    """{path relative to the framework: sha256} of the guideline and derating data in the framework (the registries,
-    the vocabulary, the derating values and spec, the stress rule, the commodity floors) plus the skill's own
-    scripts/ files (keyed scripts/...)."""
-    root = knowledge_source.framework_root()
-    registries = sorted((root / '知识/设计准则/准则登记').glob('G0*_准则登记.json'))
-    names = [p.relative_to(root).as_posix() for p in registries] + list(FRAMEWORK_FILES)
-    files = {name: _sha(root / name) for name in names}
-    files.update({name: _sha(SKILL_ROOT / name) for name in SKILL_FILES})
-    return files
-
-
-def _sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
-def _digest(files):
-    """Canonical relative-path -> file SHA-256 map; input enumeration order has no meaning."""
-    return hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode('utf-8')).hexdigest()
-
-
-def shared_digest():
-    return _digest(shared_files())
-
-
-def shared_versions(bundle=None):
-    """Identity of the data actually consumed; alternate data never borrows the framework fingerprint."""
-    assembled = _assembled()
-    library = bundle if bundle is not None else load()
+def shared_versions():
+    """What the plan or audit records of the guideline data it read: the read date and the derating data version."""
     derating = json.loads(Path(knowledge_source.derating_path()).read_text(encoding='utf-8'))
-    files = shared_files()
-    override = os.environ.get('GUIDELINE_CRITERIA')
-    input_identity = None
-    if override or library != assembled:
-        # Explicit in-memory test inputs use canonical JSON; environment inputs bind their real bytes.
-        raw = dump(library).encode('utf-8')
-        if override:
-            alternate = Path(override).read_bytes()
-            if json.loads(alternate) != library:
-                raise ValueError('alternate guideline input changed during identity binding')
-            raw = alternate
-        input_identity = {'kind': 'alternate', 'sha256': hashlib.sha256(raw).hexdigest()}
-        files['guideline_input'] = input_identity['sha256']
-    identity = {'shared_sha256': _digest(files), 'fingerprint_format': FINGERPRINT_FORMAT,
-                'library_version': library['library_version'], 'content_sha256': library['content_sha256'],
-                'derating_version': derating['version'], 'read_date': datetime.date.today().isoformat()}
-    if input_identity:
-        identity['guideline_input'] = input_identity
-    return identity
-
-
-def identity_errors(record, bundle=None):
-    """Any record not in the current format must be regenerated; an old PASS never migrates. read_date is not compared."""
-    if not isinstance(record, dict):
-        return ['missing shared identity: regenerate the plan/audit']
-    current = shared_versions(bundle)
-    if record.get('fingerprint_format') != current['fingerprint_format']:
-        return ['shared fingerprint format changed/missing: regenerate the plan/audit']
-    errors = []
-    for key in ('library_version', 'shared_sha256'):
-        if record.get(key) != current[key]:
-            errors.append('shared %s changed: regenerate the plan/audit' % key)
-    if record.get('guideline_input') != current.get('guideline_input'):
-        errors.append('shared guideline input changed: regenerate the plan/audit')
-    return errors
+    return {'derating_version': derating['version'], 'read_date': datetime.date.today().isoformat()}
 
 
 def shared_label(identity=None):
-    """Print recorded identity when supplied; a missing read date is shown as such, never as today's."""
+    """Print the recorded read date when supplied; a missing one is shown as such, never as today's."""
     v = shared_versions() if identity is None else identity
-    label = '设计准则 %s（%s 读取）' % (v['shared_sha256'][:12], v.get('read_date', '日期未记录'))
+    label = '设计准则（%s 读取）' % v.get('read_date', '日期未记录')
     return label + ('，降额 v%s' % v['derating_version'] if 'derating_version' in v else '')
 
 
@@ -387,7 +318,7 @@ def select(bundle, baseline=None, circuit_types=(), device_kinds=(), typed_only=
 
 def scope_errors(scope, bundle):
     """A design's declared scope (ASG design-closure.json guideline_scope): the library version it was written
-    against, its baseline and the circuit types and device kinds it has, in the bundle's vocabulary, and the rules
+    against (a record), its baseline and the circuit types and device kinds it has, in the bundle's vocabulary, and the rules
     it holds not applicable with a reason."""
     if not isinstance(scope, dict):
         return ['scope is not an object']
@@ -395,9 +326,6 @@ def scope_errors(scope, bundle):
     extra = set(scope) - {'library_version', 'baseline', 'circuit_types', 'device_kinds', 'not_applicable'}
     if extra:
         errors.append('scope has unknown fields %s' % sorted(extra))
-    if scope.get('library_version') != bundle['library_version']:
-        errors.append('scope library_version %s is not the current %s'
-                      % (scope.get('library_version'), bundle['library_version']))
     vocabulary = bundle['vocabulary']
     if scope.get('baseline') not in vocabulary['baselines']:
         errors.append('scope baseline must be one of %s' % '/'.join(vocabulary['baselines']))
@@ -427,8 +355,6 @@ def coverage(bundle, applicable, cited, not_applicable=None, answered=None):
     where = {i: (['baseline:' + answered[i]] if i in answered else []) if classes[i] == 'project_input' else cited.get(i)
              for i in ids}
     found = {
-        'library_version': bundle['library_version'],
-        'content_sha256': bundle['content_sha256'],
         'applicable': ids,
         'covered': {i: sorted(where[i]) for i in ids if where[i]},
         'not_applicable': {i: not_applicable[i] for i in ids if i in not_applicable and not where[i]},
@@ -498,14 +424,8 @@ def main(argv=None):
     read = sub.add_parser('value')
     read.add_argument('name')
     read.add_argument('bundle', nargs='?')
-    sub.add_parser('shared')
     args = parser.parse_args(argv)
     try:
-        if args.command == 'shared':
-            for name, digest in shared_files().items():
-                print('%s  %s' % (digest, name))
-            print(shared_label())
-            return 0
         if args.command == 'build':
             bundle = build(args.source, args.library_version, args.vocabulary)
             errors = bundle_errors(bundle, args.vocabulary)

@@ -1121,7 +1121,7 @@ def audit_guidelines(record, calculations, work, error, need, library=None, arti
     found['uncited'] = found.pop('uncovered')
     found.pop('by_coverage', None)
     found['documents'] = documents
-    found.update(guideline_criteria.shared_versions(bundle=library))
+    found.update(guideline_criteria.shared_versions())
     return found
 
 

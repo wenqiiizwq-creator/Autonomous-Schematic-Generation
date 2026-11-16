@@ -957,8 +957,6 @@ def render(root, notes=None, title=None):
         problems.append('缺少 record/architecture.json：任务 C2.1 把系统架构与各块的块规格写成机读记录（见 references/modules.md）')
     else:
         problems += check_architecture(arch, {r.get('id') for r in closure.get('requirements') or [] if isinstance(r, dict)})
-    if isinstance(audit.get('guidelines'), dict):
-        problems += ['设计准则身份：' + e for e in guideline_criteria.identity_errors(audit['guidelines'])]
     summary = data['summary.json'] or {}
     visual = data['visual-review.json'] or {}
 

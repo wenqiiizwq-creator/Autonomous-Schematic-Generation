@@ -75,8 +75,7 @@ ASG 的**设计能力框架**由六个能力模块（C1–C6）组成，与硬�
 - **支撑**：KiCad CLI（唯一证据来源）、`schematic_layout`（布图与检查）、`references/`（规则与知识）
 
 工程判据（设计准则与降额）和其余设计知识都直接读本机的硬件设计知识框架；准则由 `guideline_criteria.py` 从框架的准则登记汇编，降额值、常规件最弱档、词表也从框架读，路径见[知识框架的用法](references/knowledge-package.md)。运行和本地测试不读取 SR 源码。
-计划/审计记录写明采用的设计准则身份（指纹、指纹格式、读取日期）；准则登记、降额与应力数据或判法脚本变了，身份随之变，按规定重验；框架里不属于这些数据的维护说明不属于工程身份。
-准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、器件类别、失效与故障分析）读框架 `知识/` 下的同名目录；框架位置由环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK` 或技能根目录的 `.knowledge-framework` 指定，脚本经 `knowledge_source.py` 定位，只读不改。交付物记读取日期和读到的知识文件的指纹。各模块查哪部分见[知识框架的用法](references/knowledge-package.md)。
+准则以外的知识（需求要素、板级架构模式、接口约定、典型电路、计算方法、器件参数、器件类别、失效与故障分析）读框架 `知识/` 下的同名目录；框架位置由环境变量 `HARDWARE_KNOWLEDGE_FRAMEWORK` 或技能根目录的 `.knowledge-framework` 指定，脚本经 `knowledge_source.py` 定位，只读不改。交付物记读取日期。各模块查哪部分见[知识框架的用法](references/knowledge-package.md)。
 查阅时先用 `check_module.py entries <设计目录>` 按本板的电路类型、器件类别（`guideline_scope`）列出知识框架里声明了它们的条目（条目头部的 `电路类型：`、`器件类别：`），再按需读；C1、C3、C4 的关卡把声明了本板类型、查阅记录里却没有的条目列为提示（不判失败），读过不适用的也记一条并写理由。
 原厂资料（数据手册、应用笔记、参考设计、标准）在原件总库：知识框架里的 `原件/`（它指向 HardwareWiki/raw），脚本经 `knowledge_source.raw_root()` 找，不另设位置。
 C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项任务、哪个组件、查的什么、查到哪些条目，没查到也记；写进 `record/modules.json` 的 `knowledge_lookups`。这五个模块的关卡核对每个该查的组件都有记录、所记条目在知识框架里，不判查得对不对。任务 C3.1 选了哪个典型电路的哪种方案另记在方案记录里。
@@ -178,7 +177,7 @@ C1–C5 每次查知识框架后用 `check_module.py lookup` 记一条：哪项�
 | 非线性极值、条件匹配与插值边界 | [worst-case-bounds.md](references/worst-case-bounds.md) |
 | 设计准则（G01–G09）：适用条件、引用与覆盖、下游约束 | 框架 `知识/设计准则/工具/包说明/guideline-criteria.md`、`知识/设计准则/准则登记/` |
 | 必写的设计文档（FMEA、EMC 端口矩阵）：何时要写、必备章节与对象 | [guideline-evidence-groups.md](references/guideline-evidence-groups.md)、`references/guideline-evidence-groups.json` |
-| 设计准则、降额数据和词表在框架里的位置、各文件的字段、身份指纹覆盖哪些文件 | 框架 `知识/设计准则/工具/包说明/shared-layer.md` |
+| 设计准则、降额数据和词表在框架里的位置、各文件的字段 | 框架 `知识/设计准则/工具/包说明/shared-layer.md` |
 | 规范 G10 降额与应力规范（G01–G09 设计准则之外的第十份，不进准则登记）：I/II/III 级降额值、等级从哪来、取值规则、应力怎么判、查到什么程度 | 框架 `知识/设计准则/规范正文/G10_元器件降额与应力规范/` 下的 `应力判法.md`、`降额规范.md`、`降额值.json` |
 | 绘图纲要（结构规则与画图习惯）与 recipes API | [drawing-recipes.md](references/drawing-recipes.md) |
 | 阅读路径、HR 规则、图面审阅 | [human-readable-routing.md](references/human-readable-routing.md) |

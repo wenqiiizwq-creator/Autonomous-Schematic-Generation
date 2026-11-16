@@ -85,7 +85,7 @@ C4 每块写一个块设计 `record/blocks/<块>.json`，不写整板网表；C5
  "requirements": [{"id": "R1", "text": "24 V 输入，输出 3.3 V 1 A，隔离 1500 Vrms", "evidence": ["E-REQ"]}],
  "clarifications": [],
  "derating": {"level": "II", "source": "req:R1"},
- "guideline_scope": {"library_version": "<版本>", "baseline": "industrial_telecom", "circuit_types": [], "device_kinds": [], "not_applicable": []}}
+ "guideline_scope": {"baseline": "industrial_telecom", "circuit_types": [], "device_kinds": [], "not_applicable": []}}
 ```
 
 - **requirements**：每条写 `id`、可验收的 `text` 和来源 `evidence`（本文件 `evidence` 里的编号）；并入的澄清写 `clarifications`。不写设计决定。

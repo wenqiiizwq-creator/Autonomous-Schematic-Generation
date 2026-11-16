@@ -9,10 +9,9 @@
 
 路径一律用函数取，import 时不解析，没配框架时 --help 之类的命令照样能跑。只用标准库。
 
-    python3 knowledge_source.py        打印框架目录、读取日期和指纹
+    python3 knowledge_source.py        打印框架目录和读取日期
 """
 import datetime
-import hashlib
 import json
 import os
 import re
@@ -24,8 +23,6 @@ ENV_VAR = 'HARDWARE_KNOWLEDGE_FRAMEWORK'
 LOCAL_FILE_NAME = '.knowledge-framework'
 # 技能使用的知识组件（框架 知识/ 下的目录名）；设计实例、设计准则不在其内，准则由 guideline_criteria 读。
 COMPONENTS = ('需求要素', '板级架构模式', '接口约定', '典型电路', '计算方法', '器件参数', '器件类别', '失效与故障分析')
-INDEX_FILES = ('索引/条目总表.md', '索引/准则支撑表.md')
-SINGLE_FILES = INDEX_FILES + ('原件勘误.md', '条目规范.md')
 G10_DIR = '规范正文/G10_元器件降额与应力规范'
 RAW_LINK = '原件'   # 框架里指向原件总库（HardwareWiki/raw）的链接；技能找原厂资料也经它，不另设位置
 # 条目头部的词表声明（框架 条目规范.md“条目头部的词表声明”）：标题之后、第一个二级标题之前的两行
@@ -124,23 +121,6 @@ def entry_spec_path():
     return framework_root() / '条目规范.md'
 
 
-def _sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
-def knowledge_files():
-    """{相对框架目录的路径: sha256}：各组件下的全部 .md、索引/ 的两个文件、原件勘误.md、条目规范.md。"""
-    root = framework_root()
-    missing = [name for name in COMPONENTS if not (root / '知识' / name).is_dir()] + \
-              [name for name in SINGLE_FILES if not (root / name).is_file()]
-    if missing:
-        raise KnowledgeFrameworkNotFound('知识框架 %s 里没有：%s' % (root, '、'.join(missing)))
-    files = {p.relative_to(root).as_posix(): _sha(p)
-             for name in COMPONENTS for p in sorted((root / '知识' / name).rglob('*.md'))}
-    files.update({name: _sha(root / name) for name in SINGLE_FILES})
-    return files
-
-
 def parse_declarations(text):
     """一个条目头部的两行声明：{'circuit_types': [名称…], 'device_kinds': [名称…]}；写“通用”或没写的为空表。
     名称后的全角括号是适用条件的说明，不算名称。"""
@@ -183,20 +163,15 @@ def vocabulary():
     return {key: {item['name']: item['title'] for item in raw[key]} for key in ('circuit_types', 'device_kinds')}
 
 
-def fingerprint(files):
-    return hashlib.sha256(json.dumps(files, ensure_ascii=False, sort_keys=True,
-                                     separators=(',', ':')).encode('utf-8')).hexdigest()
-
-
 def identity():
-    """交付物里记的知识身份：读取日期和读到的知识文件的指纹（框架不维护版本号）。"""
-    return {'read_date': datetime.date.today().isoformat(), 'fingerprint': fingerprint(knowledge_files())}
+    """交付物里记的读取日期（框架不维护版本号）。"""
+    return {'read_date': datetime.date.today().isoformat()}
 
 
 def label(ident=None):
-    """交付物里写的一句话：知识框架 <指纹前 12 位>（<读取日期> 读取）。"""
+    """交付物里写的一句话：知识框架（<读取日期> 读取）。"""
     ident = identity() if ident is None else ident
-    return '知识框架 %s（%s 读取）' % (ident['fingerprint'][:12], ident['read_date'])
+    return '知识框架（%s 读取）' % ident['read_date']
 
 
 def main():

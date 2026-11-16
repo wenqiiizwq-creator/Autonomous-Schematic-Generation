@@ -39,7 +39,7 @@ def make_framework(root, registries=('G02',), criteria_per_registry=2):
         (root / '知识' / name).mkdir(parents=True)
         (root / '知识' / name / '条目.md').write_text('# %s\n' % name, encoding='utf-8')
     (root / '索引').mkdir()
-    for name in ks.SINGLE_FILES:
+    for name in ('索引/条目总表.md', '索引/准则支撑表.md', '原件勘误.md', '条目规范.md'):
         (root / name).write_text('# %s\n' % name, encoding='utf-8')
     registry = root / '知识/设计准则/准则登记'
     registry.mkdir(parents=True)
@@ -124,25 +124,11 @@ class SmallFramework(unittest.TestCase):
         patch.start()
         self.addCleanup(patch.stop)
 
-    def test_identity_has_read_date_and_fingerprint_only(self):
+    def test_identity_is_the_read_date(self):
         ident = ks.identity()
-        self.assertEqual(set(ident), {'read_date', 'fingerprint'})
+        self.assertEqual(set(ident), {'read_date'})
         self.assertRegex(ident['read_date'], r'^\d{4}-\d{2}-\d{2}$')
-        self.assertRegex(ident['fingerprint'], r'^[0-9a-f]{64}$')
-        self.assertIn(ident['fingerprint'][:12], ks.label(ident))
-
-    def test_fingerprint_is_stable_and_follows_the_content(self):
-        first = ks.identity()['fingerprint']
-        self.assertEqual(first, ks.identity()['fingerprint'])
-        (self.fw / '知识' / ks.COMPONENTS[0] / '条目.md').write_text('# changed\n', encoding='utf-8')
-        self.assertNotEqual(first, ks.identity()['fingerprint'])
-
-    def test_knowledge_files_cover_the_components_and_single_files(self):
-        files = ks.knowledge_files()
-        for name in ks.SINGLE_FILES:
-            self.assertIn(name, files)
-        self.assertIn('知识/%s/条目.md' % ks.COMPONENTS[3], files)
-        self.assertEqual(len(files), len(ks.COMPONENTS) + len(ks.SINGLE_FILES))
+        self.assertIn(ident['read_date'], ks.label(ident))
 
     def test_load_assembles_the_registry_subset(self):
         library = g.load()
@@ -201,16 +187,8 @@ class RealFramework(unittest.TestCase):
                      ks.entry_spec_path()):
             self.assertTrue(path.is_file(), path)
 
-    def test_identity_structure(self):
-        ident = ks.identity()
-        self.assertEqual(set(ident), {'read_date', 'fingerprint'})
-        self.assertEqual(ident['fingerprint'], ks.identity()['fingerprint'])
-        files = ks.knowledge_files()
-        self.assertTrue(files)
-        self.assertTrue(all(name.startswith(('知识/', '索引/')) or name in ('原件勘误.md', '条目规范.md') for name in files))
-
     def test_typical_circuit_file_names_are_unique_across_domains(self):
-        stems = [Path(n).stem for n in ks.knowledge_files() if n.startswith('知识/典型电路/') and Path(n).name != 'README.md']
+        stems = [p.stem for p in (ks.knowledge_dir() / '典型电路').rglob('*.md') if p.name != 'README.md']
         self.assertEqual(sorted({s for s in stems if stems.count(s) > 1}), [])
 
     def test_assembled_criteria_pass_the_bundle_checks(self):
@@ -221,36 +199,9 @@ class RealFramework(unittest.TestCase):
         self.assertEqual(library['library_version'], 'framework-' + library['content_sha256'][:12])
         self.assertIn(library['default_baseline'], library['vocabulary']['baselines'])
 
-    def test_shared_versions_keys_and_stable_fingerprint(self):
-        with mock.patch.dict(os.environ, {'GUIDELINE_CRITERIA': ''}):
-            first, second = g.shared_versions(), g.shared_versions()
-        self.assertEqual(set(first), {'shared_sha256', 'fingerprint_format', 'library_version', 'content_sha256',
-                                      'derating_version', 'read_date'})
-        self.assertEqual(first, second)
-        self.assertEqual(first['fingerprint_format'], g.FINGERPRINT_FORMAT)
-        self.assertEqual(first['shared_sha256'], g.shared_digest())
-        self.assertEqual(g.identity_errors(first), [])
-        self.assertRegex(g.shared_label(), r'^设计准则 [0-9a-f]{12}（\d{4}-\d{2}-\d{2} 读取），降额 v\S+$')
-
-    def test_shared_files_lists_framework_data_and_the_skill_scripts(self):
-        files = g.shared_files()
-        self.assertIn('scripts/guideline_criteria.py', files)
-        self.assertIn('scripts/stress_check.py', files)
-        for name in g.FRAMEWORK_FILES:
-            self.assertIn(name, files)
-        self.assertGreaterEqual(sum(1 for n in files if n.endswith('_准则登记.json')), 1)
-
-    def test_alternate_input_changes_the_identity(self):
-        library = g.load()
-        library = copy.deepcopy(library)
-        library['criteria'][0]['title'] += ' (edited)'
-        library['content_sha256'] = g.content_sha256(library['criteria'], library.get('engineering_values'))
-        with mock.patch.dict(os.environ, {'GUIDELINE_CRITERIA': ''}):
-            installed, alternate = g.shared_versions(), g.shared_versions(bundle=library)
-        self.assertNotEqual(installed['shared_sha256'], alternate['shared_sha256'])
-        self.assertIn('guideline_input', alternate)
-        self.assertNotIn('guideline_input', installed)
-        self.assertTrue(g.identity_errors(installed, library))
+    def test_shared_versions_records_the_read_date_and_derating_version(self):
+        self.assertEqual(set(g.shared_versions()), {'derating_version', 'read_date'})
+        self.assertRegex(g.shared_label(), r'^设计准则（\d{4}-\d{2}-\d{2} 读取），降额 v\S+$')
 
     def test_vocabulary_and_floors_come_from_the_framework(self):
         self.assertEqual(g.vocabulary()['vocabulary']['baselines'], g.load()['vocabulary']['baselines'])

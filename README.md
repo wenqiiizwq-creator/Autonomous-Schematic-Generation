@@ -76,7 +76,7 @@ Copyright (c) 2026 wenqiii.zwq
 ```bash
 export HARDWARE_KNOWLEDGE_FRAMEWORK=<硬件设计知识框架的绝对路径>
 # 或在技能根目录建文件 .knowledge-framework，一行写框架的绝对路径（该文件不进版本库）
-python3 scripts/knowledge_source.py        # 打印框架目录、读取日期和指纹，确认配对
+python3 scripts/knowledge_source.py        # 打印框架目录和读取日期，确认配对
 ```
 
 框架目录下要有 `知识/` 和 `索引/`；没配或配错时脚本报错并说明办法。各模块查哪部分见 [知识框架的用法](references/knowledge-package.md)。

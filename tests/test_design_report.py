@@ -338,8 +338,7 @@ class DesignReportTests(unittest.TestCase):
                                    'uncovered': [], 'downstream': ['G07-001'],
                                    'identity': {}}
         self.d.write('design-closure-audit.json', audit_out)
-        with mock.patch('render_design_report.guideline_criteria.identity_errors', lambda found: []), \
-                mock.patch('render_design_report.guideline_criteria.shared_label', lambda identity=None: '设计准则 x'):
+        with mock.patch('render_design_report.guideline_criteria.shared_label', lambda identity=None: '设计准则 x'):
             text, _ = self.d.report()
         self.assertIn('- **共用规范**：设计准则 x，适用 2 条，其中计算、选型、待办或证据引用 2 条，写明不适用 0 条；'
                       '只有淘汰候选方案、改变选型或进入计算的准则逐条落实。', text)
@@ -950,9 +949,7 @@ class PackDesignTests(unittest.TestCase):
         self.assertEqual(manifest['inputs']['requirements']['kind'], 'directory')
         self.assertIn('设计方案/schematic.pdf', manifest['packed'])
         self.assertTrue((self.d.record / 'manifest.json').is_file())
-        import knowledge_source
-        self.assertEqual(sorted(manifest['knowledge_release']), ['fingerprint', 'read_date'])
-        self.assertEqual(manifest['knowledge_release']['fingerprint'], knowledge_source.identity()['fingerprint'])
+        self.assertEqual(sorted(manifest['knowledge_release']), ['read_date'])
 
     def test_extra_files_and_history_fail_but_a_log_does_not(self):
         (self.d.root / 'README.md').write_text('x')

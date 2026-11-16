@@ -162,7 +162,7 @@ class GuidelineClosureTests(unittest.TestCase):
         self.assertIn('guideline_scope', self.codes(self.run_audit()))
         self.record['guideline_scope']['circuit_types'] = ['RS485']
         self.record['guideline_scope']['library_version'] = '9.9.9'
-        self.assertIn('guideline_scope', self.codes(self.run_audit()))
+        self.assertNotIn('guideline_scope', self.codes(self.run_audit()))
 
     def test_a_library_with_rules_asks_for_the_scope_and_an_empty_one_does_not(self):
         del self.record['guideline_scope']
@@ -176,17 +176,8 @@ class GuidelineClosureTests(unittest.TestCase):
         self.record['guideline_scope']['device_kinds'] = ['fuse']
         self.record['guideline_scope']['not_applicable'] = [{'id': 'G05-001', 'reason': '输入由上级设备熔断'}]
         result = self.run_audit()
-        self.assertEqual(result['guidelines']['fingerprint_format'], 'framework-paths-sha256-v1')
-        self.assertEqual(result['guidelines']['shared_sha256'], guideline_criteria.shared_versions(bundle=LIBRARY)['shared_sha256'])   # binds the actual test input
         self.assertEqual(result['guidelines']['covered']['G04-001'], ['calc:C1'])
         self.assertEqual(result['guidelines']['not_applicable']['G05-001'], '输入由上级设备熔断')
-
-    def test_the_identity_names_the_framework_files_and_the_label_is_readable(self):
-        files = guideline_criteria.shared_files()
-        self.assertTrue(all(len(digest) == 64 for digest in files.values()))
-        self.assertEqual(sorted(n for n in files if n.startswith('scripts/')), ['scripts/guideline_criteria.py', 'scripts/stress_check.py'])
-        self.assertTrue(any(n.endswith('/降额值.json') for n in files) and any(n.endswith('/词表.json') for n in files))
-        self.assertRegex(guideline_criteria.shared_label(), r'^设计准则 [0-9a-f]{12}（\d{4}-\d{2}-\d{2} 读取），降额 v\d+$')
 
     def batch_library(self):
         return library(card('G01-001'), card('G04-001', applies_when={'circuit_types': ['RS485']}),
