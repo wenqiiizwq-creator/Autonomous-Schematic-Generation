@@ -673,7 +673,10 @@ def bom_rows(intent):
         cat, cat_error = category(c, kind)
         if conflict or cat_error:
             raise ValueError(f"{c['ref']}: {conflict or cat_error}")
-        rows.append(dict(Reference=c['ref'], Value=c['value'], MPN=c.get('mpn', ''),
+        # Specification: a part bought to its specification is ordered from this column (H-001 2026-11-16: three reviews
+        # in a row read the BOM as unorderable because the specification was only in the netlist).
+        rows.append(dict(Reference=c['ref'], Value=c['value'], Specification=c.get('fields', {}).get('Specification', ''),
+                         MPN=c.get('mpn', ''),
                          Orderable=NOT_ORDERABLE if c.get('fields', {}).get('SelectionStatus') == 'candidate' else '',
                          Assembly=NOT_FITTED if c.get('dnp') else FITTED,
                          Datasheet=c.get('datasheet', ''), Footprint=c.get('footprint', ''),
