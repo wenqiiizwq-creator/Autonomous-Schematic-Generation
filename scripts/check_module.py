@@ -221,6 +221,55 @@ def block_view(root, only=None):
     return Path(handle.name), ports, problems
 
 
+def board_consistency(record, intent, requirements):
+    """What the later stages only find by running into it: the peripheral-circuit table naming a designator or pin the
+    block designs do not have (C6's reference_contract), a U/Q/T part without a selection role (the report), and a
+    device kind the board uses that the guideline scope does not list (nothing checked it)."""
+    problems = []
+    refs = {c.get('ref'): c for c in intent.get('components') or [] if isinstance(c, dict)}
+    nets = intent.get('nets') or {}
+    pins = {p for members in (nets.values() if isinstance(nets, dict) else [n[1] for n in nets]) for p in members
+            if isinstance(p, str)}
+    table, _ = load(record, 'reference-input.json')
+    if isinstance(table, dict):
+        cited = {}
+        for ref in list((table.get('scope') or {}).get('core_refs') or []) + list(table.get('pin_maps') or {}):
+            cited.setdefault(ref, 'scope/pin_maps')
+        for check in table.get('checks') or []:
+            if isinstance(check, dict):
+                for name in [check.get('ref')] + list(check.get('pins') or []):
+                    if isinstance(name, str):
+                        cited.setdefault(name, 'checks %s' % check.get('id'))
+        for feature in table.get('features') or []:
+            for stage in (feature.get('stages') or []) if isinstance(feature, dict) else []:
+                for ref in (stage.get('refs') or []) if isinstance(stage, dict) else []:
+                    cited.setdefault(ref, 'features %s' % feature.get('id'))
+        absent = ['%s（%s）' % (name, where) for name, where in sorted(cited.items()) if isinstance(name, str)
+                  and (name not in pins if '.' in name else name not in refs)]
+        if absent:
+            problems.append('reference-input.json 引用的位号或引脚不在块设计里：%s（位号改过的话核对表要跟着改）' % '、'.join(absent))
+    selection, _ = load(record, 'selection.json')
+    if isinstance(selection, dict):
+        covered = {r for role in selection.get('roles') or [] if isinstance(role, dict) for r in role.get('refs') or []}
+        missing = sorted(r for r in refs if isinstance(r, str) and report.CORE_REF.match(r) and r not in covered)
+        if missing:
+            problems.append('核心器件没有选型角色：%s（selection.json 是 C3 的产品：回到任务 C3.2 给它们补角色）' % '、'.join(missing))
+    scope = (requirements or {}).get('guideline_scope')
+    if isinstance(scope, dict) and isinstance(scope.get('device_kinds'), list):
+        known = knowledge_source.vocabulary()['device_kinds']
+        used = {}
+        for ref, comp in refs.items():
+            kind = part_classes.kind_of(comp)[0]
+            if kind == 'diode' and re.search('LED', '%s %s' % (comp.get('lib_id'), comp.get('value')), re.I):
+                kind = 'led'
+            if kind in known and kind not in scope['device_kinds']:
+                used.setdefault(kind, []).append(ref)
+        if used:
+            problems.append('requirements.json 的 guideline_scope.device_kinds 没有本板用到的器件类别：%s（准则按它筛选；'
+                            'C1 的产品：回到 C1 补上）' % '、'.join('%s（%s）' % (k, '、'.join(sorted(v))) for k, v in sorted(used.items())))
+    return problems
+
+
 def gate(module, root, write=True, block=None):
     """Problems of the module's gate (empty when it passes) and notes (pending items that do not block). The C3 gate
     writes the block files when `write`; the report and the delivery check only compare them. `block` limits the C4
@@ -346,6 +395,8 @@ def gate(module, root, write=True, block=None):
             # Every block design is written: a power-input pin with nothing driving its net is found here, not by C6's ERC.
             closure_audit.audit_power_sources(json.loads(intent_path.read_text(encoding='utf-8')), root,
                                               lambda code, item: problems.append('块设计 %s：%s' % (code, item)))
+            problems += board_consistency(record, json.loads(intent_path.read_text(encoding='utf-8')),
+                                          load(record, closure_audit.REQUIREMENTS_FILE)[0])
         intent_path.unlink(missing_ok=True)
     if module == 'C6':
         plan, problem = load(record, 'page-plan.json')
