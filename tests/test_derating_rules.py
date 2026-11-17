@@ -90,11 +90,11 @@ class DeratingSpecTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), source['sha256'], key)
 
     def test_engineering_values_live_in_the_rule_library(self):
-        # Values the standards do not give (user 2026-10-29: SOA 段系数并入降额规范；等级未定按 I 级) moved into the rule
+        # Values the standards do not give (user 2026-10-29: SOA 段系数并入降额规范；等级未定按 I 级；2026-11-16 用户：默认改为 III 级) moved into the rule
         # library on 2026-11-02 (user: 迁进设计准则库): the derating table holds none, its document points at the library.
         self.assertNotIn('engineering_values', SPEC)
         values = guideline_criteria.load()['engineering_values']
-        self.assertEqual(values['unset_level']['value'], 'I')
+        self.assertEqual(values['unset_level']['value'], 'III')
         self.assertEqual(values['soa_segment_share']['value'], {'CONSTANT_POWER': 1.0, 'THERMAL_INSTABILITY': 0.8})
         text = MD_PATH.read_text(encoding='utf-8')
         for name in ('unset_level', 'soa_segment_share', 'thermal_calc_trigger'):

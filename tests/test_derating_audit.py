@@ -272,16 +272,19 @@ class DeratingAuditTests(unittest.TestCase):
         self.add_resistor('1k/1%', 0.02)          # below 0.025 W the weakest 0603 part is enough
         self.assertNotIn('resistor_power_rating_missing', self.codes())
 
-    def test_without_a_level_the_power_rating_follows_level_i(self):
-        # 2026-10-29 (user: 删掉 2 倍，按降额规范取): no level takes the spec's unset_level, I (RES-SMD-P 0.7):
-        # 0603's weakest part 1/16 W × 0.5 × 0.7 = 0.021875 W < 0.023 W ≤ 0.025 W (level III)
+    def test_without_a_level_the_power_rating_follows_the_unset_level(self):
+        # 2026-10-29 (user: 删掉 2 倍，按降额规范取): no level takes the spec's unset_level; 2026-11-16 (user: 默认改为
+        # III 级): III (RES-SMD-P 0.8), 0603's weakest part 1/16 W × 0.5 × 0.8 = 0.025 W
         self.add_resistor('1k/1%', 0.023)
+        self.record['derating'] = {}
         self.assertNotIn('resistor_power_rating_missing', self.codes())
+        self.setUp()
+        self.add_resistor('1k/1%', 0.026)
         self.record['derating'] = {}
         errors = [e for e in self.run_audit()['errors'] if e['code'] == 'resistor_power_rating_missing']
         self.assertEqual(1, len(errors))
-        self.assertIn('0.03286 W', errors[0]['item'])
-        self.assertIn('降额等级未定按 I 级', errors[0]['item'])
+        self.assertIn('0.0325 W', errors[0]['item'])
+        self.assertIn('降额等级未定按 III 级', errors[0]['item'])
 
     def test_a_resistor_without_a_footprint_is_judged_as_0402(self):
         self.add_resistor('1k/1%', 0.03, footprint='')   # 0402 1/16 W too: 0.03 > 0.025

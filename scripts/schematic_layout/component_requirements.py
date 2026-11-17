@@ -41,7 +41,7 @@ PARAMETERS = {'resistance': '阻值', 'tolerance': '容差', 'power': '连续额
 BOM_SPEC = 'by_bom_spec'
 # Commodity chip-resistor floor voltages (V) from the framework (常规件最弱档.json, the data SR's passive_stress reads): a working
 # voltage within the package's weakest part derated by RES-SMD-V constrains nothing (SR passes it with no rating
-# written). The record names no derating level, so the rule library's unset_level (I, the strictest) applies (user 2026-10-29:
+# written). The record names no derating level, so the rule library's unset_level applies (user 2026-10-29:
 # 类似这种单一的规则，都先不要，全都并入到降额规范里面去).
 import guideline_criteria   # scripts/ is on the path whenever ASG runs
 import knowledge_source
