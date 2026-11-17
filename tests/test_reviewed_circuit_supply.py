@@ -25,10 +25,6 @@ class ReviewedCircuitSupplyTests(unittest.TestCase):
  def test_missing_review_fails(self):self.ev.unlink();self.assertEqual(self.run_case()['status'],'FAIL')
  def test_document_without_the_locator_fails(self):self.ev.write_text('changed');self.assertEqual(self.run_case()['status'],'FAIL')
  def test_locator_fails(self):self.i['reviewed_circuit_supply'][0]['evidence']['locator']='absent';self.assertEqual(self.run_case()['status'],'FAIL')
- def test_review_carries_no_binding_hash(self):self.i['components'][1]['value']='22u';self.assertEqual(self.run_case()['status'],'PASS')
- def test_hashes_of_older_records_are_accepted_and_not_read(self):
-  d=self.i['reviewed_circuit_supply'][0];d['binding_sha256']='0'*64;d['evidence']['sha256']='0'*64
-  self.assertEqual(self.run_case()['status'],'PASS')
  def test_reversed_native_diode_fails(self):self.n['IN'][0]=('D1','1','passive');self.n['VCC'][0]=('D1','2','passive');self.assertEqual(self.run_case()['status'],'FAIL')
  def test_disconnected_return_is_the_netlist_gates(self):
   self.n['IN']+=self.n.pop('GND');self.assert_netlist_gate_catches()

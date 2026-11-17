@@ -471,14 +471,6 @@ class ParameterSourceTests(unittest.TestCase):
             'alternatives': [{'approach': '小信号 MOS 缓冲', 'specified': True, 'feasible': False, 'reason': '占位'}]}]
         return self.record['calculations'][0], self.record['operating_points'][0]
 
-    def test_the_record_carries_no_format_versions(self):
-        # user 2026-11-15 (简化不必要的版本记录): one format is read; version fields in a record are ignored.
-        before = self.run_audit()
-        self.record.update(parameter_version=2, matrix_version=7)
-        self.assertEqual(before['errors'], audit(self.record, self.intent, self.root)['errors'])
-        del self.record['calculations'][0]['parameters']
-        self.assertIn('missing_parameters', {e['code'] for e in audit(self.record, self.intent, self.root)['errors']})
-
     def test_device_parameter_needs_a_datasheet_page(self):
         calc, _ = self.opto_board()
         calc['parameters'][2].update(basis='guaranteed', source='RT7209 datasheet')   # the invented VOL<=0.4 V

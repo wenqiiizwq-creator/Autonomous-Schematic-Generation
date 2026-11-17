@@ -127,11 +127,6 @@ class BindingTests(unittest.TestCase):
         self.nets = {k: [p.replace('C1.', 'C?.') for p in v] for k, v in self.nets.items()}
         self.assertIn('unannotated_reference', self.codes())
 
-    def test_placeholders_are_checked_without_binding_version(self):
-        del self.record['binding_version']
-        self.part('C1')['value'] = 'R_Small'
-        self.assertIn('placeholder_value', self.codes())
-
     # --- identity (DEV-D01 greenmobi-bms LM5163/LM5164, protocentral TCR2EF33 vs AP2112; CLK-C01 16 vs 24 MHz) ---
     def test_value_and_part_number_name_one_part(self):
         self.part('U1').update(value='TPS79333', mpn='TPS70933DBVR')

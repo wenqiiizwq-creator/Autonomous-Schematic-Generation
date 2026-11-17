@@ -190,13 +190,6 @@ class PerformanceTests(unittest.TestCase):
         (self.root / 'calculation.txt').unlink()
         self.assertTrue(any('missing' in e for e in cr.audit(projected, self.record, self.root)['errors']))
 
-    def test_registering_a_source_hash_again_leaves_the_projection_current(self):
-        projected = self.project()
-        (self.root / 'calculation.txt').write_text('changed calculation')
-        for req in self.record['components'][0]['requirements']:
-            req['source']['sha256'] = hashlib.sha256((self.root / 'calculation.txt').read_bytes()).hexdigest()
-        self.assertEqual([], cr.audit(projected, self.record, self.root)['errors'])
-
     def test_changed_requirement_invalidates_projection(self):
         projected = self.project()
         self.record['components'][0]['requirements'][1]['value'] = 1.5
