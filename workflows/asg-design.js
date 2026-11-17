@@ -14,7 +14,7 @@ export const meta = {
 //   delivery: 交付目录的绝对路径（改版时用原来的交付目录，设计方案/ 里 PCB 环节的板子保留）,
 //   review: 可选，改版时审查报告的路径（审查工作流的产出）；有它就从受影响的最上游模块重做,
 //   start: 可选，从第几个阶段开始（1–7：C1…C6、交付）,
-//   mode: 可选，auto（默认：小板走快速设计，否则走六个模块）、quick、full,
+//   mode: 可选，auto（默认：小板走快速设计，器件多的板走分块设计）、quick、blocks、full（六个模块，只在点名时走）,
 //   quick_limit: 可选，小板的器件数上限，默认 40,
 //   skill: 可选，技能目录，默认 ~/.agents/skills/autonomous-schematic-generation
 // }
@@ -70,8 +70,8 @@ let mode = a.mode || 'auto'
 if (mode === 'auto' && !a.start && !a.review) {
   const size = await agent(`${common}\n\n只做一件事：读需求，判断这块板是不是小板——预计器件不超过约 ${a.quick_limit || 40} 个位号、单一电压域、没有隔离与安规要求、没有高速接口。返回 small（是否小板）和 reason（一句话）。不写任何文件。`,
     { label: '判规模', phase: 'C1 需求', schema: { type: 'object', required: ['small', 'reason'], properties: { small: { type: 'boolean' }, reason: { type: 'string' } } }, effort: 'low', model: 'sonnet' })
-  mode = size && size.small ? 'quick' : 'full'
-  log(`${mode === 'quick' ? '小板，走快速设计' : '走六个模块'}：${size ? size.reason : '没有判出规模'}`)
+  mode = size && size.small ? 'quick' : 'blocks'
+  log(`${mode === 'quick' ? '小板，走快速设计' : '器件多，走分块设计'}：${size ? size.reason : '没有判出规模'}`)
 } else if (mode === 'auto') mode = 'full'
 if (mode === 'quick') {
   const QUICK = { type: 'object', required: ['status', 'summary'], properties: {
@@ -95,6 +95,55 @@ if (mode === 'quick') {
     { label: '绘图与自检', phase: 'C6 原理图', schema: QUICK })
   return { status: g && g.status === 'done' ? 'complete' : 'blocked', mode: 'quick', workdir: a.workdir, delivery: a.delivery, report: `${a.delivery}/设计报告.md`,
     done: [{ stage: '快速设计', summary: d.summary }, { stage: '绘图与自检', summary: g ? g.summary : '绘图没有返回结果' }] }
+}
+
+// 分块设计：器件多的板。架构师定板级方案，各功能块并行设计，整板核对者合并并走查，绘图者画图；不设接口定稿，不逐级回退。
+// M-001 2026-11-17：约 100 个器件的控制板走六个模块约 8 小时、回退 14 次，独立审查指出 1 条 P0、4 条 P1；直接设计 41 分钟、1 条 P1。
+if (mode === 'blocks') {
+  const R = { type: 'object', required: ['status', 'summary'], properties: {
+    status: { type: 'string', enum: ['done', 'needs_input'] }, summary: { type: 'string' }, questions: { type: 'array', items: { type: 'string' } } } }
+  const QD = `${SKILL}/references/quick-design.md`
+  const read = `读 ${SKILL}/SKILL.md 的「ASG 纲要（核心标准）」一节和 ${QD}（“设计者做什么”和“分块设计”两节）；只读细则点到、且你确实要用的参考文件，不通读各模块细则，不跑 check_module.py。知识框架目录见 ${SKILL}/.knowledge-framework。`
+  phase('C2 板级方案')
+  const arch = await agent(`${common}
+
+你是这块板的架构师。${read}
+照“架构师”一节做：写 设计资料/需求基线.md、设计资料/板级方案.md 和 record/architecture.json。
+需要人确认的地方：任务书里有答复或代答授权的按任务书办；没有且必须人定的才返回 needs_input 并把问题写进 questions。
+返回 status、summary（电源树一句话、采纳的澄清、每颗保护或切换芯片对应哪条需求、引脚余量）和 blocks（功能块的 id 列表，与 architecture.json 一致）。`,
+    { label: '架构师', phase: 'C2 板级方案', schema: { ...R, required: ['status', 'summary', 'blocks'], properties: { ...R.properties, blocks: { type: 'array', items: { type: 'string' } } } } })
+  if (!arch) return { status: 'stopped', stage: 2, done: [] }
+  if (arch.status === 'needs_input') return { status: 'needs_input', stage: 2, questions: arch.questions || [], summary: arch.summary, done: [] }
+  const done = [{ stage: '架构师', summary: arch.summary }]
+  phase('C4 详细设计')
+  const built = await parallel((arch.blocks || []).map(id => () => agent(`${common}
+
+你是功能块 ${id} 的设计者，只做这一块。${read}
+先读设计目录的 设计资料/需求基线.md、设计资料/板级方案.md 和 record/architecture.json，再照“块设计者”一节做：写 record/blocks/${id}.json 和 设计资料/块设计/${id}.md。
+别的块同时有人在做：不改别的块的文件，不改 architecture.json 和板级方案；需要别的块配合的写进本块报告的“对其他块的要求”。项目符号写进 设计目录/symbols/${id}.kicad_sym（每块自己的库文件，免得并行写冲突）。
+返回 status 和 summary（核心器件、余量最小的两项、对其他块的要求、未核实项）。`,
+    { label: `块 ${id}`, phase: 'C4 详细设计', schema: R }).then(r => ({ id, r }))))
+  for (const b of built.filter(Boolean)) done.push({ stage: `块 ${b.id}`, summary: b.r ? b.r.summary : '没有返回结果' })
+  const missing = (arch.blocks || []).filter(id => !built.some(b => b && b.id === id && b.r))
+  phase('C5 全板闭合')
+  const whole = await agent(`${common}
+
+你是整板核对者。${read}
+架构师和各块设计者的产出已在设计目录（设计资料/板级方案.md、设计资料/块设计/、record/blocks/、record/architecture.json）。照“整板核对者”一节做：合并、走查、做减法、写 设计目录/设计报告.md，合并通过后 record/electrical-intent.json 就是设计网表。各块的项目符号在 设计目录/symbols/ 下，按需合成一个库。
+${missing.length ? `这些块的设计者没有交出结果，由你补做：${missing.join('、')}。\n` : ''}返回 status 和 summary（器件数、合并时改了什么、走查发现并改掉的问题、减掉的器件、余量最小的三项、未核实项）。`,
+    { label: '整板核对', phase: 'C5 全板闭合', schema: R })
+  if (!whole) return { status: 'stopped', stage: 5, done }
+  done.push({ stage: '整板核对', summary: whole.summary })
+  if (whole.status === 'needs_input') return { status: 'needs_input', stage: 5, questions: whole.questions || [], summary: whole.summary, done }
+  phase('C6 原理图')
+  const g = await agent(`${common}
+
+你是绘图者。读 ${QD} 的“绘图者做什么”并照它做：设计网表在设计目录的 record/electrical-intent.json，设计报告在 设计目录/设计报告.md。器件多，按功能分页。
+画完并通过自动检查后，把交付目录按该节写齐（设计报告.md、设计方案/、设计资料/（需求基线.md、板级方案.md、块设计/）、record/），并在设计报告的“自检结果”里填上 ERC、网表比对和图面检查的结果。
+返回 status 和 summary（页数、ERC 违规数、网表是否逐脚一致、summary.json 里各检查项的结果、改过设计网表的地方）。`,
+    { label: '绘图与自检', phase: 'C6 原理图', schema: R })
+  done.push({ stage: '绘图与自检', summary: g ? g.summary : '绘图没有返回结果' })
+  return { status: g && g.status === 'done' ? 'complete' : 'blocked', mode: 'blocks', workdir: a.workdir, delivery: a.delivery, report: `${a.delivery}/设计报告.md`, done }
 }
 
 let from = a.start || 1
