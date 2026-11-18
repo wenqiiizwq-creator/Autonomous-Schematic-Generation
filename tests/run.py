@@ -2,7 +2,7 @@
 """Run the tests a change needs: python3 tests/run.py [--all | --fast].
 
 The drawing tests below build sheets and export them with KiCad: most of the suite's time, and they say nothing
-about a change to a rule, a gate, the delivery or a document. Without an option they run only when the working tree
+about a change to a rule or a document. Without an option they run only when the working tree
 (against HEAD, untracked files included) touches drawing code: scripts/schematic_layout/, a script a drawing test
 imports, a drawing test or tests/fixtures/. --all runs everything (a KiCad version change, or when unsure); --fast
 never runs them.

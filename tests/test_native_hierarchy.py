@@ -6,7 +6,6 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from schematic_layout.project_audit import audit_project
 from schematic_layout.symbol_integrity import audit_symbols
 from schematic_layout.sexpr import parse, dump, form, first, all_nodes, set_node
-from check_delivery_freshness import check
 
 def library():
     return parse('''(symbol "Audit:X" (symbol "X_0_0" (rectangle (start 0 -2) (end 4 2) (stroke (width 0.1))))
@@ -34,15 +33,6 @@ class HierarchyRegressionTests(unittest.TestCase):
     def xml(self,pins):
         p=self.base/'net.xml';refs=sorted({r for r,_ in pins})
         p.write_text('<export><components>'+''.join(f'<comp ref="{r}"><value>X</value></comp>' for r in refs)+'</components><nets><net name="N">'+''.join(f'<node ref="{r}" pin="{n}"/>' for r,n in pins)+'</net></nets></export>');return p
-    def freshness(self,omit=None):
-        outs={}
-        for name in ('net.xml','erc.json','geometry.json','drawing.pdf'):
-            p=self.base/name
-            if not p.exists():p.write_text('hash fixture only')
-            outs[name]=hashlib.sha256(p.read_bytes()).hexdigest()
-        ins={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in self.base.glob('*.kicad_sch') if p.name!=omit}
-        m={'schema_version':1,'root':self.root.name,'inputs':ins,'outputs':outs,'roles':dict(zip(('netlist','erc','geometry','render'),([n] for n in outs)))}
-        p=self.base/'manifest.json';p.write_text(json.dumps(m));return check(p)
     def modern(self):
         for tree,parent,ref in [(self.root_tree,'/root','R1'),(self.child,'/root/a','R2')]:
             first(tree,'symbol').append(form('instances',form('project','board',annotation(parent,ref))))
@@ -51,7 +41,6 @@ class HierarchyRegressionTests(unittest.TestCase):
     def test_legacy_two_resolves_globals_and_native_pins(self):
         r=audit_project(self.root);self.assertEqual(r['status'],'PASS',r);self.assertEqual(r['page_count'],2)
         s=audit_symbols(self.root,self.xml([('R1','1'),('R2','1')]));self.assertEqual(s['status'],'PASS',s);self.assertEqual(s['physical_pin_count'],2)
-        self.assertEqual(self.freshness()['status'],'FRESH')
     def test_shared_child_counts_instances_not_files(self):
         self.root_tree.append(sheet('b','child.kicad_sch'));first(self.root_tree,'sheet_instances').append(spath('/b','3'));first(self.root_tree,'symbol_instances').append(annotation('/b/c','R3'));self.save()
         r=audit_project(self.root);self.assertEqual((r['status'],r['page_count'],len(r['file_sha256'])),('PASS',3,2),r)
@@ -60,20 +49,18 @@ class HierarchyRegressionTests(unittest.TestCase):
         self.modern();self.save();self.assertEqual(audit_symbols(self.root,self.xml([('R1','1'),('R2','1')]))['status'],'PASS')
     def test_equal_aliases_pass_and_track_child(self):
         sh=first(self.root_tree,'sheet');sh.append(form('property','Sheetname','a'));sh.append(form('property','Sheetfile','child.kicad_sch'));self.save()
-        self.assertEqual(audit_project(self.root)['status'],'PASS');self.assertEqual(self.freshness()['status'],'FRESH')
+        self.assertEqual(audit_project(self.root)['status'],'PASS')
     def test_conflicting_file_alias_is_rejected_by_all_consumers(self):
         first(self.root_tree,'sheet').append(form('property','Sheetfile','decoy.kicad_sch'));(self.base/'decoy.kicad_sch').write_text(dump(self.child));self.save()
-        self.assertIn('conflicting_sheet_property',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH');self.assertEqual(audit_symbols(self.root)['status'],'INSUFFICIENT')  # the hierarchy gate lists the error
+        self.assertIn('conflicting_sheet_property',self.kinds());self.assertEqual(audit_symbols(self.root)['status'],'INSUFFICIENT')  # the hierarchy gate lists the error
     def test_sheet_name_alias_is_a_label_not_an_error(self):
         first(self.root_tree,'sheet').append(form('property','Sheetname','wrong'));self.save();self.assertNotIn('conflicting_sheet_property',self.kinds())
     def test_duplicate_property_is_rejected(self):
-        first(self.root_tree,'sheet').append(form('property','Sheet file','child.kicad_sch'));self.save();self.assertIn('duplicate_sheet_property',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH')
+        first(self.root_tree,'sheet').append(form('property','Sheet file','child.kicad_sch'));self.save();self.assertIn('duplicate_sheet_property',self.kinds())
     def test_missing_file_has_precise_error(self):
-        (self.base/'child.kicad_sch').unlink();self.assertIn('missing_sheet',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH')
-    def test_omitted_existing_child_manifest_is_rejected(self):
-        self.assertIn('untracked_active_sheet',{e['kind'] for e in self.freshness('child.kicad_sch')['errors']})
+        (self.base/'child.kicad_sch').unlink();self.assertIn('missing_sheet',self.kinds())
     def test_parent_escape_is_rejected(self):
-        next(p for p in all_nodes(first(self.root_tree,'sheet'),'property') if p[1]=='Sheet file')[2]='../outside.kicad_sch';self.save();self.assertIn('nonportable_sheet_path',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH')
+        next(p for p in all_nodes(first(self.root_tree,'sheet'),'property') if p[1]=='Sheet file')[2]='../outside.kicad_sch';self.save();self.assertIn('nonportable_sheet_path',self.kinds())
     def test_duplicate_global_symbol_context_is_rejected(self):
         first(self.root_tree,'symbol_instances').append(annotation('/a/c','R2'));self.save();self.assertIn('duplicate_annotation_context',self.kinds())
     def test_duplicate_global_sheet_context_is_rejected(self):
@@ -103,11 +90,11 @@ class HierarchyRegressionTests(unittest.TestCase):
         other=tempfile.TemporaryDirectory();self.addCleanup(other.cleanup)
         external=Path(other.name)/'outside.kicad_sch';external.write_text(dump(self.child))
         (self.base/'child.kicad_sch').unlink();(self.base/'child.kicad_sch').symlink_to(external)
-        self.assertIn('nonportable_sheet_path',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH')
+        self.assertIn('nonportable_sheet_path',self.kinds())
     def test_legacy_cycle_is_rejected_without_infinite_walk(self):
-        self.child.append(sheet('loop','board.kicad_sch'));self.save();self.assertIn('hierarchy_cycle',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH')
+        self.child.append(sheet('loop','board.kicad_sch'));self.save();self.assertIn('hierarchy_cycle',self.kinds())
     def test_unresolved_variable_rejected(self):
-        next(p for p in all_nodes(first(self.root_tree,'sheet'),'property') if p[1]=='Sheet file')[2]='${UNKNOWN}/child.kicad_sch';self.save();self.assertIn('unresolved_sheet_path',self.kinds());self.assertNotEqual(self.freshness()['status'],'FRESH')
+        next(p for p in all_nodes(first(self.root_tree,'sheet'),'property') if p[1]=='Sheet file')[2]='${UNKNOWN}/child.kicad_sch';self.save();self.assertIn('unresolved_sheet_path',self.kinds())
     def test_hidden_pin_still_has_native_physical_coverage(self):
         pin=first(all_nodes(first(first(self.child,'lib_symbols'),'symbol'),'symbol')[1],'pin');pin.append('hide')
         # Both pages use the identical changed cache; cached conflicts remain real errors.
@@ -127,14 +114,12 @@ class HierarchyRegressionTests(unittest.TestCase):
         report = audit_project(self.root)
         self.assertEqual(report['status'], 'INSUFFICIENT', report)
         self.assertTrue(any('unsupported native annotation version' in gap for gap in report['coverage_gaps']))
-        self.assertEqual(self.freshness()['status'], 'FRESH')
 
     def test_missing_sheetname_does_not_block_filename_coverage(self):
         sh = first(self.root_tree, 'sheet')
         sh.remove(next(p for p in all_nodes(sh, 'property') if p[1] == 'Sheet name'))
         self.save()
         self.assertEqual(audit_project(self.root)['status'], 'PASS')
-        self.assertEqual(self.freshness()['status'], 'FRESH')
 
     def test_duplicate_name_alias_is_not_an_error(self):
         first(self.root_tree, 'sheet').append(form('property', 'Sheet name', 'a'))
@@ -193,7 +178,6 @@ class HierarchyRegressionTests(unittest.TestCase):
         self.root_tree.remove(first(self.root_tree, 'symbol_instances'))
         self.save()
         self.assertEqual(audit_project(self.root)['status'], 'INSUFFICIENT')
-        self.assertEqual(self.freshness()['status'], 'FRESH')
 
 
     def test_declared_modern_native_symbol_requires_uuid(self):
@@ -216,7 +200,6 @@ class HierarchyRegressionTests(unittest.TestCase):
         self.assertEqual(report['status'], 'INSUFFICIENT', report)
         self.assertTrue(any('missing native symbol UUID' in g for g in report['coverage_gaps']))
         self.assertEqual({p['reference'] for p in audit_symbols(self.root)['pins']}, {'R1'})
-        self.assertEqual(self.freshness()['status'], 'FRESH')
 
     def test_duplicate_symbol_uuid_field_is_rejected(self):
         first(self.child, 'symbol').append(form('uuid', 'other'))

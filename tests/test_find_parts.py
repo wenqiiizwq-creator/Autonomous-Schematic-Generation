@@ -98,20 +98,6 @@ class FindPartsTests(unittest.TestCase):
         self.assertEqual(0, r.returncode, r.stderr)
         self.assertEqual((1, str(self.wiki.resolve())), (json.loads(r.stdout)['total'], json.loads(r.stdout)['library']))
 
-    def test_the_old_hardwarewiki_root_is_refused_with_the_new_meaning(self):
-        # --wiki names the source library itself; the HardwareWiki root (raw/ inside, no Datasheet/) is an old call
-        root = Path(self.tmp.name) / 'HardwareWiki'
-        root.mkdir()
-        self.wiki.rename(root / 'raw')
-        r = subprocess.run([sys.executable, str(CLI), '--wiki', str(root), '--category', 'USB PD'], capture_output=True, text=True)
-        self.assertEqual(2, r.returncode)
-        self.assertIn('现在要给原件目录本身（%s）' % (root / 'raw'), r.stderr)
-        self.assertIn('默认取知识框架的原件', r.stderr)
-        r = subprocess.run([sys.executable, str(HERE.parent / 'scripts' / 'pack_design.py'), str(Path(self.tmp.name) / 'v1'),
-                            '--wiki', str(root)], capture_output=True, text=True)
-        self.assertEqual(2, r.returncode)
-        self.assertIn('现在要给原件目录本身', r.stderr)
-        self.assertIsNone(find_parts.old_wiki_problem(root / 'raw'))
 
     def test_locate_file_by_hash_then_by_name(self):
         ds = self.wiki / 'Datasheet'

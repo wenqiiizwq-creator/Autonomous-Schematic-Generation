@@ -14,7 +14,7 @@
 核对该页存在（找不到知识库时不核，记 NOT_CHECKED 不拦），页不存在记 `circuit_basis_citation`。证据是 artifact root
 （`verify_schematic.py --artifact-root`，通常是交付目录，复核文档可放在 `record/evidence/`；默认是根图所在目录）
 内一份可读的复核文档，文档里要找得到所写的定位。
-来源路径上的器件或连接改了，由设计者重看这份复核；关卡不替设计者判断复核是否过期。
+来源路径上的器件或连接改了，由设计者重看这份复核；自动检查不替设计者判断复核是否过期。
 
 设计网表把该网的角色声明为 power 或 return。在复核过的输出端恰好放一个 `Sheet.power_flag()`。
 `page_intents` 把声明带到输出引脚所在的页。整板的导出审计核对：复核过的器件已装配、没有冲突的 KiCad 电源输出脚、

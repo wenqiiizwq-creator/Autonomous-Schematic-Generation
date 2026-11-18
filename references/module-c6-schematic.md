@@ -1,8 +1,8 @@
 # C6 原理图绘制
 
-做本模块前读 [SKILL.md](../SKILL.md) 和本文件。各模块的总表见 [SKILL.md 的主流程](../SKILL.md#主流程)，关卡与交接文件见 [能力模块](modules.md)，单独运行时的任务书见 [任务书格式](workflow-handoff.md)。
+绘图者读 [SKILL.md](../SKILL.md) 和本文件。谁来画、交付目录怎么写见 [quick-design.md](quick-design.md) 的“绘图者做什么”；只给网表重画见 [modules.md](modules.md)。
 
-给定输入：设计网表；串联运行时另读 `architecture.json` 与各块的 `block-circuits/<块>.json`（各块选定的典型电路）；单独运行时只给网表。产出：`page-plan.json`、KiCad 工程、`summary.json`、`visual-review.json`。
+给定输入：设计网表；分块设计时另读 `architecture.json`；只给网表重画时只有网表。产出：`page-plan.json`、KiCad 工程、`summary.json`。
 
 ## C6.1 分页方案
 
@@ -14,7 +14,7 @@
 分页方案随交付保存为 `record/page-plan.json`（每页 `file`、`reader_tasks`、`blocks`、`key_blocks`、`circuits`），本页每个器件都要属于一个功能块，
 每个关键功能块标注所用典型电路与实现方案 `"<典型电路文件名>#<实现方案名>"`（第一页是架构页，免标；没有适用典型电路的关键块写 `none`）；
 图面审阅按它逐条追路径。见 [human-readable-routing.md](human-readable-routing.md) 第 1 节。
-单独运行 C6、没有 `architecture.json` 和块文件时，功能块划分由本任务从网表定，`key_blocks`、`circuits` 留空，C6 关卡不做典型电路标注检查。
+没有 `architecture.json` 时，功能块划分由本任务从网表定，`key_blocks`、`circuits` 留空。
 整板不超过约 25 个器件、一页 A4 放得下时只画一页，不设 `System_block` 封面，也不为凑页块把小电路拆开。
 纸张在画完后定：内容能放进 A4 就用 A4；一页只剩零散小块时并页，不把小电路摊在 A3 上。
 
@@ -25,7 +25,7 @@
 - 图面的目标是逻辑清晰、按功能块划分、方便工程师理解、能指导 PCB 设计；按绘图纲要里的画图习惯落实（块标题、块内导线块间标签、不绕远、
   密度与纸张、多单元器件按单元画、去耦画在引脚旁、写给 PCB 的短注），见同一文件。
 
-做完的标志：`render_design_report.py` 的分页方案检查无问题：每页的读者任务、功能块与关键块的典型电路标注（库里没有适用的写 none）齐全，每个器件属于一个功能块。
+做完的标志：每页的读者任务、功能块齐全，每个器件属于一个功能块。
 
 ## C6.2 图页脚本
 
@@ -52,8 +52,6 @@ for n, (key, page) in enumerate(page_intents(board, rails=RAILS).items(), 1):
   失败时按 O8 改结构（方向、间隙、顺序 → 锚点 → 拆行）后重建，不得手调坐标打补丁。
   `report["readability"]` 还给出 `cell_coverage`（有东西的 25.4 mm 格占比）、`part_groups`（只靠标签/电源符号相连的器件组）
   和 `fits_paper`：覆盖率低、组数多于分页方案的功能块、内容能放进更小的纸张，都说明这页要并块、缩间距或换纸。
-- 元件旁的基本规格和同页性能注释从 `component-requirements.json` 生成（长要求用 `Sheet.performance_notes(at)`），不手工回抄；
-  措辞与可见性要求见 [器件性能要求](component-requirements.md)。仍缺计算的审阅草稿标注“待计算”，不能凭此声明完成。
 - 图页脚本随交付版本一起保存；下一版只重生成有变化的页面。
 
 做完的标志：每页 `Sheet.build()` 不报错，`report["structure"]` 与 `report["readability"]["gate"]` 为 PASS；每页间距豁免不超过 3 处。
@@ -64,7 +62,7 @@ for n, (key, page) in enumerate(page_intents(board, rails=RAILS).items(), 1):
 （`kind="power"` 能量流、`"signal"` 控制链，线宽不同），`isolation()` 画隔离边界，`write()` 写出根图 `System_block`、
 各页（实例路径改写到根工程）、`.kicad_pro` 和 `sym-lib-table`；文字压线或系统框图审计不通过时直接报错。
 用法见 [drawing-recipes.md](drawing-recipes.md) 多页一节。
-第 1 页 `System_block` 按任务 C2.1 的架构画，要求见 [reference-driven-board-design.md](reference-driven-board-design.md) 的 System_block 一节。
+第 1 页 `System_block` 按 `architecture.json` 的功能块和流向画，要求见 [reference-driven-board-design.md](reference-driven-board-design.md) 的 System_block 一节。
 
 做完的标志：`Root.write()` 不报错，写出根图、各页、`.kicad_pro` 与 `sym-lib-table`。
 
@@ -73,7 +71,7 @@ for n, (key, page) in enumerate(page_intents(board, rails=RAILS).items(), 1):
 ```bash
 python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical-intent.json \
   --out <新的空目录> [--expected-pages N] [--symbol-exceptions F] [--readability-waivers F] \
-  [--reference-contract F] [--design-closure D --artifact-root R]
+  [--reference-contract F] [--artifact-root R]
 ```
 
 它一次完成：KiCad ERC / XML 网表 / PDF 导出，网表分区与器件身份逐脚对比设计网表（图上画出的网络名须等于设计网表里同一组引脚的网络名，
@@ -81,11 +79,7 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 符号引脚完整性，分立器件符号含义与手册/型号后缀是否一致（`discrete_semantics`），可读性检查（零异网交叉、零三折以上两端连线、
 内容放得进更小纸张的页算 FAIL），以及每个有效页面的几何检查，汇总到 `summary.json`。
 只有全部检查项为 PASS 时结果才是 `AUTOMATED_PASS`。
-可以用 `scripts/deliver.py <交付目录>` 一次跑完出图、自动检查到打包，参数记在 `record/deliver.json`，见 [交付与设计报告](delivery-report.md)。
 
-- 器件性能检查核对性能定义、选型符合性状态和设计网表/BOM/图面的一致性：规格绑定以 KiCad 导出的属性/XML 为准，可见内容以实际 PDF 为准，
-  判法见 [器件性能要求](component-requirements.md)；检查器覆盖不到的图面对象转任务 C6.5，不自动判通过。
-- 新设计提供 `--design-closure`，核对需求实现、外部依赖、计算覆盖和证据是否最新；格式与边界见 [设计待办记录](design-closure.md)。未提供时明确为 NOT_CHECKED，不能据此声明全流程完成。
 - ERC 要求零违规。
 - ERC 摘要按原始报告的 UUID/object 对应实际层次实例、引脚及 KiCad 网络，再归因到电源轨；
   不凭位号或网络名文字猜问题对象。无法对应时保留原违规与待核边界，见 [project-verification.md](project-verification.md#erc-摘要对应到对象)。
@@ -93,10 +87,9 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
   外部 JSON 回执不能授权放行。`geometry` 为 INSUFFICIENT 时保留缺口并在 KiCad 渲染图上核对，有限 PASS 不等于整案通过。
   库里隐藏的引脚号/引脚名不计；可见但无法由 KiCad 导出核对的引脚文字列在 `geometry.render_review_items`（图面待审对象），
   不算缺口。引脚文字是库符号自带的，同一种库符号只列一条，并列出用它画的位号；每只器件的引脚号有没有被别的文字或导线压住由几何检查逐只查
-  （`pin_number_text`、`pin_number_wire`）。任务 C6.5 图面审阅覆盖这些对象并在 visual-review.json 里写明。
+  （`pin_number_text`、`pin_number_wire`）。任务 C6.5 图面审阅覆盖这些对象。
 - 图面检查只有三种结果：PASS、FAIL（画图问题，如外框间距不足 1.27 mm、导线交叉不打点、注释压线）、
-  INSUFFICIENT（检查器覆盖不到的对象）。FAIL 由 ASG 改图关闭，不交给人复核；可读性或几何 FAIL 时
-  `pack_design.py` 拒绝打包。只有 INSUFFICIENT 缺口留给图面审阅核对。
+  INSUFFICIENT（检查器覆盖不到的对象）。FAIL 由 ASG 改图关闭，不交给人复核。只有 INSUFFICIENT 缺口留给图面审阅核对。
 - KiCad 自动生成的 `Net-(...)` 网络名不与设计网表比名；设计网表里的网络名必须显式标注在图上，与导出网表一致，见
   [project-verification.md](project-verification.md#自动网络名不比对)；
   编码斜杠层次字段只用 [schematic-drawing-standards.md](schematic-drawing-standards.md) 的有限回退，不推广。
@@ -121,7 +114,6 @@ python3 <skill>/scripts/verify_schematic.py <root.kicad_sch> --intent electrical
 逐页核对绘图纲要画图习惯里不自动检查的各条，`report["readability"]["detours"]` 列出的绕远连线逐条处置；
 逐条处置 `geometry.render_review_items`：每种库符号挑一只器件在本版 PDF 上看它的引脚号和引脚名，处置里写明看的是哪一只、看到了什么；
 同一种库符号在别的页不必重复处置。没改动的页面也重新审阅，不沿用上一版的处置。
-追法、三种状态（待返工 / 待图面审阅 / 已完成图面审阅）和 `pdf_sha256` 的写法见 [human-readable-routing.md](human-readable-routing.md) 第 4 节
-与 [delivery-report.md](delivery-report.md) 的 `visual-review.json` 一行。用户否决会重新打开图面审阅。
+追法见 [human-readable-routing.md](human-readable-routing.md) 第 4 节。审阅结果写进设计报告的“自检结果”：看的是哪一版 PDF、每页追了哪几条路径、图面待审对象的处置。用户否决会重新打开图面审阅。
 
-做完的标志：`visual-review.json` 为 `REVIEWED`，每页路径数不少于读者任务数，每个图面待审对象有本版的处置，`pdf_sha256` 对得上本版 PDF。
+做完的标志：每页追过的路径数不少于读者任务数，每个图面待审对象有本版的处置。

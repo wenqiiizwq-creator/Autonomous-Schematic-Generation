@@ -74,26 +74,6 @@ class DeclarationTests(unittest.TestCase):
         self.assertEqual([], pages['B']['external'])
         self.assertNotIn('boundary_nets', pages['B']['intent'])
 
-    @skip_without_framework
-    def test_design_closure_audit_checks_the_contract(self):
-        from test_derating_audit import DeratingAuditTests
-        from audit_design_closure import sha256
-        base = DeratingAuditTests('run_audit')
-        base.setUp()
-        self.addCleanup(base.tmp.cleanup)
-        i = json.loads(base.intent.read_text())
-        i['nets'] = [{'name': 'EN_N1', 'pins': ['Q1.1']}]
-        i['boundary_nets'] = [{'net': 'EN_N1', 'to': 'MCU 板', 'contract': '设计资料/MCU与固件接口.md'}]
-        base.intent.write_text(json.dumps(i, ensure_ascii=False))
-        base.record['intent_sha256'] = sha256(base.intent)
-        codes = lambda: {e['code'] for e in base.run_audit()['errors']}
-        self.assertIn('boundary_contract_missing', codes())
-        doc = base.root / '设计资料/MCU与固件接口.md'
-        doc.parent.mkdir()
-        doc.write_text('| 网络 | 方向 |\n|---|---|\n| EN_N1 | MCU → 本板 |\n', encoding='utf-8')
-        self.assertFalse({c for c in codes() if c.startswith('boundary')})
-        self.assertEqual(['EN_N1'], base.run_audit()['boundary_nets'])
-
 
 class DrawingTests(unittest.TestCase):
     def page(self, declared):

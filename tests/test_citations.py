@@ -73,32 +73,5 @@ class CitationTests(unittest.TestCase):
         self.assertEqual('NOT_CHECKED', r['status'])
         self.assertIn('找不到知识库', r['reason'])
 
-    @skip_without_framework
-    def test_values_without_pdftotext_are_said_to_be_unchecked(self):
-        from audit_design_closure import audit_citations
-        real = shutil.which
-        with mock.patch.object(citations.shutil, 'which', lambda tool: None if tool == 'pdftotext' else real(tool)):
-            calc = {'C1': {'parameters': [{'name': 'VCS', 'basis': 'guaranteed', 'value': 0.93,
-                                           'source': 'datasheet:Datasheet/08/Vendor - PART.pdf#p2'}]}}
-            summary = audit_citations({}, calc, {}, [], lambda *a: self.fail(a))
-        self.assertEqual(['没有 pdftotext，Datasheet/08/Vendor - PART.pdf 的数值没核对'], summary['not_checked'])
-
-    @skip_without_framework
-    def test_closure_audit_fails_a_wrong_page_and_lists_an_unshown_value(self):
-        from audit_design_closure import audit_citations
-        errors = []
-        calc = {'C1': {'parameters': [
-            {'name': 'VCS', 'basis': 'guaranteed', 'value': 0.93, 'source': 'datasheet:Datasheet/08/Vendor - PART.pdf#p2'},
-            {'name': 'VX', 'basis': 'typical', 'value': 0.95, 'source': 'datasheet:Datasheet/08/Vendor - PART.pdf#p2'},
-            {'name': 'VD', 'basis': 'derived', 'value': 1.7, 'source': 'datasheet:Datasheet/08/Vendor - PART.pdf#p2'},
-            {'name': 'VZ', 'basis': 'guaranteed', 'value': 1, 'source': 'datasheet:Datasheet/08/Vendor - PART.pdf#p9'}]}}
-        work = {'W1': {'missing': [{'source': 'datasheet:Datasheet/08/Gone.pdf#p1'}]}}
-        summary = audit_citations({}, calc, work, [], lambda code, item: errors.append((code, item)))
-        self.assertEqual(5, summary['checked'])
-        self.assertEqual(['C1:VZ', 'W1:missing[0]'], [i.split(':', 2)[0] + ':' + i.split(':', 2)[1] for _, i in errors])
-        self.assertEqual([{'item': 'C1:VX', 'source': 'datasheet:Datasheet/08/Vendor - PART.pdf#p2', 'values': [0.95]}],
-                         summary['review'])
-
-
 if __name__ == '__main__':
     unittest.main()

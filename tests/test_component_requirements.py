@@ -25,7 +25,6 @@ from schematic_layout.recipes import Sheet, LEFT, RIGHT
 from schematic_layout.sexpr import all_nodes, dump, first, form, Atom
 
 
-
 def fixture(root, qualified=False, actual_tolerance=1):
     evidence = root / 'calculation.txt'
     guarantee = f'tolerance {actual_tolerance:g} %; pulse energy 2 J.'
@@ -443,14 +442,6 @@ class PerformanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'typical/model quote'):
             cr.project(intent, record, self.root)
 
-    def test_continuous_power_constraint_is_used_by_existing_stress_gate(self):
-        import audit_design_closure as adc
-        req = copy.deepcopy(self.record['components'][0]['requirements'][0])
-        req.update(parameter='power', op='ge', value=3, unit='W', conditions={'temperature': '70 degC'})
-        self.record['components'][0]['requirements'].append(req)
-        self.record['components'][0]['required_parameters'].append('power')
-        projected = self.project()
-        self.assertEqual(3, adc.written_power(projected['components'][0]))
 
     def test_missing_new_record_fails_old_record_is_unchecked(self):
         self.assertEqual(('NOT_CHECKED', []), tuple(cr.audit(self.intent, None, self.root)[k] for k in ('status', 'errors')))

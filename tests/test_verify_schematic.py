@@ -55,19 +55,6 @@ class VerifySchematicTests(unittest.TestCase):
             self.assertEqual('PASS', s['gates'][gate]['status'], gate)
         self.assertIn('Native render review', ' '.join(s['pending']))
 
-    def test_missing_design_closure_is_explicit(self):
-        self.assertEqual('NOT_CHECKED', self.good[1]['design_closure'])
-
-    def test_design_closure_integrates_without_masking_native_erc(self):
-        record = self.dir / 'invalid-closure.json'
-        record.write_text('{}')
-        _, result = self.run_gates('good', self.dir / 'intent.json', '-closure',
-                                  ['--design-closure', str(record)])
-        self.assertEqual('checked', result['design_closure'])
-        self.assertEqual('FAIL', result['gates']['design_closure']['status'])
-        self.assertEqual('FAIL', result['gates']['erc']['status'])
-        self.assertEqual('PASS', result['gates']['intent_netlist']['status'])
-
     def test_erc_is_reported_not_hidden(self):
         # A standalone fixture page has undriven power inputs and one-ended global labels.
         code, s = self.good

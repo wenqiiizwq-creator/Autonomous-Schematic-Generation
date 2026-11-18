@@ -3,11 +3,11 @@
 > ASG：从需求文档出发，基于 KiCad 自主绘制可读、电气正确、经 KiCad 导出验证的原理图
 
 Autonomous-Schematic-Generation（简称 **ASG**）是一套面向 Codex、Claude 等 Agent 的 Skill。
-从需求文档出发，按六个能力模块（C1–C6）完成一块板的原理图设计，再生成设计报告和固定交付目录。
-模块可以按给定输入单独运行，也可以串联；上游变化后按指纹重跑受影响的模块。
+从需求文档出发完成一块板的原理图设计，交出设计报告和固定交付目录：器件不多的板由一位设计者加一位绘图者完成，
+器件多的板由架构师、并行的块设计者、整板核对者和绘图者完成。
 ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 
-模块划分，各模块的任务、给定输入和产出只写在 [SKILL.md](SKILL.md) 的「架构」与「主流程」（主流程是一张模块表，各模块的任务与做完的标志在它链接的 `references/module-*.md`），本页不重复；
+做法只写在 [SKILL.md](SKILL.md) 的「架构」和 [references/quick-design.md](references/quick-design.md)，本页不重复；
 各脚本做什么见 [scripts/README.md](scripts/README.md)。
 
 其他：多页核对用 `audit_project.py`、`verify_reference_contract.py`（见 [project-verification.md](references/project-verification.md)）；
@@ -18,7 +18,6 @@ ASG 负责设计完成并只做自检；独立审查交给 `schematic-review`。
 
 ```bash
 python3 scripts/verify_schematic.py board.kicad_sch --intent electrical-intent.json --out runs/verify-01
-python3 scripts/deliver.py <交付目录>          # 参数在 <交付目录>/record/deliver.json
 
 python3 tests/run.py                          # 测试；--all 跑全部，见“设计约定”
 ```
@@ -42,12 +41,12 @@ PDF 目检渲染用 `pdftoppm`，完整 PDF 页数核对用 Poppler `pdfinfo`（
 
 ## 设计约定
 
-以 SKILL.md 的「ASG 纲要」一节为核心标准，修改这一节须先经人确认；模块细则和绘图纲要是它的展开，可以直接改。
+以 SKILL.md 的「ASG 纲要」一节为核心标准，修改这一节须先经人确认；`references/` 下的细则和绘图纲要是它的展开，可以直接改。
 
 维护约定：
 
 - 纲要改动先写草案交人确认，确认后在 [纲要确认记录](docs/outline-approvals.md) 最上面加一行，`python3 scripts/check_ledger.py` 核对。
-- 文档和任务的数量不设上限（2026-11-12 取消了每个模块至多 5 个任务的限制），加内容时保持逻辑清晰：一件事只写在一处，每个任务有给定输入、产出和做完的标志，按主流程读下来不用来回找。
+- 加内容时保持逻辑清晰：一件事只写在一处。
 - 每处改动附复现问题的合成测试，`python3 tests/run.py` 通过才提交。它按工作区的改动决定跑哪些：改动涉及画图代码
   （`scripts/schematic_layout/`、画图测试用到的脚本、画图测试本身、`tests/fixtures/`）时跑全部测试；不涉及时不跑那些
   要建图并用 KiCad 导出的画图测试（名单在 `tests/run.py` 的 `DRAWING`），其余全跑。`--all` 跑全部：换 KiCad 版本、
@@ -79,5 +78,5 @@ export HARDWARE_KNOWLEDGE_FRAMEWORK=<硬件设计知识框架的绝对路径>
 python3 scripts/knowledge_source.py        # 打印框架目录和读取日期，确认配对
 ```
 
-框架目录下要有 `知识/` 和 `索引/`；没配或配错时脚本报错并说明办法。各模块查哪部分见 [知识框架的用法](references/knowledge-package.md)。
-框架更新后技能直接读到新内容。[知识到关卡的对照表](docs/knowledge-coverage.md) 用 `python3 scripts/knowledge_coverage.py --write` 重新生成，它列出知识框架里每类可核对的内容有多少项、关卡现在核对到哪一步，“核对到内容”为“否”的是技能还没吃进去的知识。
+框架目录下要有 `知识/` 和 `索引/`；没配或配错时脚本报错并说明办法。设计时查哪部分见 [知识框架的用法](references/knowledge-package.md)。
+框架更新后技能直接读到新内容。

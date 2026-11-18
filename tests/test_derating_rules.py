@@ -105,9 +105,6 @@ class DeratingSpecTests(unittest.TestCase):
     def test_the_thermal_calculation_trigger_is_the_spec_value(self):
         # 2026-10-29 (user: 这些也都处理): when to estimate junction temperature is named in the spec, not in the text
         self.assertEqual(guideline_criteria.engineering_value('thermal_calc_trigger'), {'power_w': 0.3, 'rating_share': 0.5})
-        text = (ROOT / 'references' / 'requirements-to-intent.md').read_text(encoding='utf-8')
-        self.assertIn('thermal_calc_trigger', text)
-        self.assertNotIn('0.3 W', text)
 
 
 

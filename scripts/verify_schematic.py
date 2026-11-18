@@ -66,10 +66,9 @@ def main():
     ap.add_argument("--symbol-exceptions", type=Path)
     ap.add_argument("--readability-waivers", type=Path)
     ap.add_argument("--reference-contract", type=Path)
-    ap.add_argument("--design-closure", type=Path, help="Evidence-bound end-to-end design review record")
     ap.add_argument("--input", action="append", default=[], metavar="NAME=PATH",
-                    help="declared input for --design-closure evidence, as pack_design takes it")
-    ap.add_argument("--artifact-root", type=Path, help="Evidence base for --design-closure and reviewed_circuit_supply; defaults to root parent")
+                    help="declared input for component-requirements evidence")
+    ap.add_argument("--artifact-root", type=Path, help="Evidence base for reviewed_circuit_supply; defaults to root parent")
     ap.add_argument("--project", help="native project annotation name; defaults to the root file stem")
     ap.add_argument("--cli", help="kicad-cli path")
     ap.add_argument("--native-geometry", action="store_true", help="Also qualify native pin-name geometry on a standalone page; hierarchy roots enable the finite native channel automatically")
@@ -236,13 +235,6 @@ def main():
         tool("verify_reference_contract.py", xml, args.reference_contract, "--out", report)
         gates["reference_contract"] = {"status": status_of(report)}
 
-    if args.design_closure:
-        report = out / "design-closure.json"
-        tool("audit_design_closure.py", args.design_closure, "--intent", args.intent,
-             "--artifact-root", args.artifact_root or args.root.resolve().parent,
-             *[a for v in args.input for a in ("--input", v)], "--out", report)
-        gates["design_closure"] = {"status": status_of(report)}
-
     states = {g["status"] for g in gates.values()}
     overall = "FAIL" if "FAIL" in states else "AUTOMATED_PASS" if states == {"PASS"} else "INCOMPLETE"
     summary = {
@@ -253,10 +245,8 @@ def main():
         "gates": gates,
         "sheets": [str(s) for s in sheets],
         "render": str(pdf) if pdf.is_file() else None,
-        "design_closure": "checked" if args.design_closure else "NOT_CHECKED",
         "reference_contract": "checked" if args.reference_contract else "NOT_CHECKED",
-        "pending": (["End-to-end design closure not checked"] if not args.design_closure else [])
-                   + (["Core-part pin maps and peripherals not checked against datasheets (no --reference-contract)"]
+        "pending": (["Core-part pin maps and peripherals not checked against datasheets (no --reference-contract)"]
                       if not args.reference_contract else []) + ["Native render review: trace each declared reading task on every page"]
                    + ([f"Native render review: check {len({i for items in review.values() for i in items})} pin-text items listed in geometry.render_review_items"] if review else []),
         "commands": commands,

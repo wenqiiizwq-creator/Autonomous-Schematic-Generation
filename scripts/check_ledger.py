@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The ASG outline changes only with a person's approval.
 
-The 纲要 is SKILL.md 「ASG 纲要（核心标准）」 and nothing else: the module table, the module files
-references/module-*.md and the drawing rules are its elaboration and change without this record (user 2026-11-16).
+The 纲要 is SKILL.md 「ASG 纲要（核心标准）」 and nothing else: references/ and the drawing rules are its
+elaboration and change without this record (user 2026-11-16).
 The section is hashed; the newest row of docs/outline-approvals.md must carry the current hash and a `user:<date>`.
 """
 
@@ -13,11 +13,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RECORD = ROOT / 'docs' / 'outline-approvals.md'
-# The 主流程 body: one file per module, then 交付 (SKILL.md 主流程 links them in this order). Not part of the outline.
-MODULE_FILES = ('references/module-c1-requirements.md', 'references/module-c2-architecture.md',
-                'references/module-c3-block-circuits.md', 'references/module-c4-detailed-design.md',
-                'references/module-c5-board-closure.md', 'references/module-c6-schematic.md',
-                'references/module-delivery.md')
 # (file, heading) of each outline section; a section runs to the next level-2 heading.
 OUTLINE = (('SKILL.md', '## ASG 纲要（核心标准）'),)
 APPROVED = re.compile(r'^user:\d{4}-\d{2}-\d{2}$')

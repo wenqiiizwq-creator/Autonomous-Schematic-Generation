@@ -43,8 +43,8 @@ class OutlineApprovalTests(unittest.TestCase):
             skill.write_text(skill.read_text(encoding='utf-8').replace('P1 证据', 'P1 证据改'), encoding='utf-8')
             self.assertNotEqual(check_ledger.outline_hash(), check_ledger.outline_hash(root))
             skill.write_text((check_ledger.ROOT / 'SKILL.md').read_text(encoding='utf-8'), encoding='utf-8')
-            # Only the 纲要 section counts: the module table below it changes without an approval row.
-            skill.write_text(skill.read_text(encoding='utf-8').replace('\n## 主流程\n', '\n## 主流程\n\n补一句。\n'), encoding='utf-8')
+            # Only the 纲要 section counts: the sections below it change without an approval row.
+            skill.write_text(skill.read_text(encoding='utf-8').replace('\n## 硬性规则\n', '\n## 硬性规则\n\n补一句。\n'), encoding='utf-8')
             self.assertEqual(check_ledger.outline_hash(), check_ledger.outline_hash(root))
 
     def test_cli(self):

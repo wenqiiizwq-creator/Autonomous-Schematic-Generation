@@ -862,20 +862,3 @@ def artifact_audit(root, intent, schematic=None, pdf=None, xml=None, bom=None, p
                      project_name=project_name, inputs=inputs)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         return {'status': 'FAIL', 'errors': ['invalid component-requirements record: ' + str(exc)], 'pending': [], 'native': 'NOT_CHECKED'}
-
-
-def package_audit(root, intent):
-    root = Path(root)
-    folder = root / '设计方案'
-    config_path = root / 'record' / 'deliver.json'
-    native = None
-    if config_path.is_file():
-        try:
-            native = root / json.loads(config_path.read_text(encoding='utf-8'))['root']
-        except (ValueError, KeyError):
-            pass
-    if native is None:
-        candidates = sorted(folder.glob('*.kicad_sch'))
-        native = candidates[0] if len(candidates) == 1 else folder / 'unresolved-root.kicad_sch'
-    return artifact_audit(root, intent, schematic=native, xml=folder / 'netlist.xml',
-                          pdf=folder / 'schematic.pdf', bom=folder / 'BOM.csv')

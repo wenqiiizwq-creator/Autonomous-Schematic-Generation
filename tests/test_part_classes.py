@@ -83,46 +83,6 @@ class ClassTests(unittest.TestCase):
         self.assertEqual(('tvs', None), pc.kind_of(part('D1', 'Device:D', Kind='tvs')))
         self.assertIn('不是器件类型', pc.kind_of(part('D1', 'Device:D', Kind='suppressor'))[1])
 
-    def test_kind_vocabulary_is_the_framework_vocabulary(self):
-        # the kinds ASG uses are names of the framework's 词表.json and carry its titles; the framework may have more
-        import knowledge_source
-        import render_design_report
-        vocabulary = knowledge_source.vocabulary()
-        self.assertLessEqual(set(pc.KINDS) - {'mechanical'}, set(vocabulary['device_kinds']))
-        for name, kind in pc.KINDS.items():
-            if name != 'mechanical':
-                self.assertEqual(vocabulary['device_kinds'][name], kind.title, name)
-        self.assertEqual([n for n in vocabulary['device_kinds'] if n not in pc.KINDS], pc.unhandled_kinds())
-        self.assertLessEqual(set(render_design_report.KEY_CIRCUIT_TYPES), set(vocabulary['circuit_types']))
-
-    def test_a_framework_kind_without_asg_behavior_is_no_error(self):
-        # a temporary framework whose vocabulary has one device kind and one circuit type more than ASG knows
-        import json
-        import os
-        import knowledge_source
-        import check_module
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            vocab = json.loads(knowledge_source.vocabulary_path().read_text(encoding='utf-8'))
-            vocab['device_kinds'].append({'name': 'flux_capacitor', 'title': '通量电容'})
-            vocab['circuit_types'].append({'name': 'TIME_TRAVEL', 'title': '时间旅行'})
-            registry = root / '知识/设计准则/准则登记'
-            registry.mkdir(parents=True)
-            (registry / '词表.json').write_text(json.dumps(vocab, ensure_ascii=False), encoding='utf-8')
-            (root / '索引').mkdir()
-            entry = root / '知识/器件类别/flux_capacitor.md'
-            entry.parent.mkdir(parents=True)
-            entry.write_text('# 通量电容\n\n电路类型：TIME_TRAVEL\n器件类别：flux_capacitor\n\n## 要点\n', encoding='utf-8')
-            with mock.patch.dict(os.environ, {knowledge_source.ENV_VAR: str(root)}):
-                self.assertIn('flux_capacitor', pc.unhandled_kinds())
-                kind, problem = pc.kind_of(part('X1', 'Device:C', Kind='flux_capacitor'))
-                self.assertEqual('capacitor', kind)
-                self.assertIn('还没有专门的识别或检查', problem)
-                (root / 'design' / 'record').mkdir(parents=True)
-                text = check_module.entries_report(root / 'design', ['TIME_TRAVEL'], ['flux_capacitor'])
-        self.assertIn('器件类别/flux_capacitor.md（TIME_TRAVEL、flux_capacitor）', text)
-        self.assertIn('本技能对这些器件类别还没有专门的识别或检查：flux_capacitor', text)
-
     def test_kind_cues_have_explicit_local_expectations(self):
         # Classification evidence has independent, named examples; no other skill defines the answer.
         expected = {
@@ -423,26 +383,6 @@ class CommonGroundSafetyTests(unittest.TestCase):
         positions = pc.safety_positions(intent)
         self.assertEqual('isolation', positions.get('U2'))
         self.assertNotIn('J2', positions)
-
-
-class ProposeTests(unittest.TestCase):
-    def test_candidates_come_from_the_title_lines_of_page_one(self):
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-        import propose_part_kinds
-        with tempfile.TemporaryDirectory() as tmp:
-            sheet = Path(tmp) / 'Datasheet' / '23_分立半导体' / 'TVS二极管' / 'Vishay - SMBJ.pdf'
-            sheet.parent.mkdir(parents=True)
-            sheet.write_bytes(b'%PDF')
-            title = 'SMBJ5.0A thru SMBJ188CA\nSurface Mount TRANSZORB Transient Voltage Suppressors\n' + 'body diode text\n' * 20
-            intent = {'components': [part('D706', 'PD100:D_TVS_Uni', 'SMBJ24A', 'SMBJ24A-E3/52', sheet.relative_to(tmp).as_posix())]}
-            with mock.patch.object(propose_part_kinds, 'page_text', return_value=title), \
-                    mock.patch.object(pc, 'library_present', return_value=False):
-                rows = propose_part_kinds.propose(intent, [Path(tmp)])
-        self.assertEqual('single', rows[0]['status'])
-        self.assertTrue(rows[0]['agrees'])
-        self.assertEqual({'Kind': 'tvs', 'KindSource': 'datasheet:Datasheet/23_分立半导体/TVS二极管/Vishay - SMBJ.pdf#p1',
-                          'KindQuote': 'Surface Mount TRANSZORB Transient Voltage Suppressors', 'Category': '23_分立半导体/TVS二极管'},
-                         rows[0]['candidates'][0])
 
 
 class DeclarationEvidenceTests(unittest.TestCase):

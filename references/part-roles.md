@@ -10,12 +10,12 @@
 
 ## 1. 器件分级：哪些器件要写确切料号
 
-分级保留关键器件和安全器件的确切身份要求；采用新[器件性能流程](component-requirements.md)时，先定义性能，再判断能否按规格采购。
+分级保留关键器件和安全器件的确切身份要求；采用新器件性能流程时，先定义性能，再判断能否按规格采购。
 按型号采购的候选（性能待核）也保留确切 `mpn` 和 `datasheet`：这是物理身份；能否按此采购看 `SelectionStatus` 和 BOM 的 `Orderable` 列。
 SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审核时须明确输入和能力边界。
 只有设计依赖“只有某个料号的手册才保证的参数”的器件要写确切料号，常规件按值加规格，
 规格写出设计算得的最低额定（档位见框架降额与应力目录的 `常规件最弱档.json`）。
-分两步：先定**器件类型**，再由类型和所在位置定**级别**。`scripts/schematic_layout/part_classes.py` 按本节判定，`render_design_report.py` 核对。
+分两步：先定**器件类型**，再由类型和所在位置定**级别**。`scripts/schematic_layout/part_classes.py` 按本节判定。
 
 **器件类型**
 
@@ -28,8 +28,6 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
 - **关键器件和特殊器件**（`ic` 和带 `fields.DesignSheet` 的定制磁件除外）在设计网表里声明类型：`fields.Kind` 写类型，
   `fields.KindSource` 写本器件数据手册的页（`datasheet:<库内路径>#p<页>`，与 `datasheet` 是同一份手册），`fields.KindQuote`
   照抄那一页说明器件类型的原文（如 “Unidirectional TVS”“N-Channel MOSFET”“X2 capacitor”）。
-  `scripts/propose_part_kinds.py <交付目录>` 读手册首页前 8 个非空行（标题与产品描述），给出这三项和 `fields.Category` 的候选，
-  设计者核对后写入；候选不算声明。
 - 声明的核对与 SR 侧 `scripts/datasheet_kinds.py` 的 `verify` 同一套结果：
 
   | 结果 | 含义 | 处理 |
@@ -76,15 +74,15 @@ SR 的旧脉冲关键词分级尚不代表新合同的核实结果，独立审�
   检流电阻的阻值/容差/功率和功率电阻的容差/功率由脚本核对；晶体的频率、负载电容（pF）与频率容差（ppm），以及接在电源轨（`net_roles` 为 power）上的
   常规连接器的额定电压与额定电流，也由脚本核对（2026-11-02 工业校准板：晶体按规格采购，28.8 V 口的连接器额定原来没有门槛）。
   晶体在器件性能记录里可以按规格采购（`procurement.mode: spec`）；依赖特殊切型、温度等级或频温曲线的写 `binding_dependencies` 并按型号采购。
-  其余由任务 C4.2 的计算和 SR 核对。
+  其余由设计计算和 SR 核对。
 - **升为特殊器件**：计算参数引用了某个常规件的手册（`source` 为 `datasheet:`，例如按某个电解电容系列的寿命公式算寿命），
-  这个器件就依赖该料号，设计网表要写它的 `mpn` 和同一份 `datasheet`（见 [design-closure.md](design-closure.md) 的参数与资料缺口）。
-  需求指定了系列或料号的器件同样按特殊器件写，由任务 C1.1 的需求追溯核对（脚本不判断需求原文）。
+  这个器件就依赖该料号，设计网表要写它的 `mpn` 和同一份 `datasheet`。
+  需求指定了系列或料号的器件同样按特殊器件写，由设计者对着需求核对（脚本不判断需求原文）。
 - **定制磁件**（变压器、PFC 电感、共模扼流圈等按磁件设计单定制的器件）用 `fields.DesignSheet` 指向磁件设计单，代替 `datasheet` 和类型声明；
-  `mpn` 写设计单编号。有器件性能记录时按设计单定做（`procurement.mode: design_sheet`、`by_design_sheet`，见 [component-requirements.md](component-requirements.md)），
+  `mpn` 写设计单编号。有器件性能记录时按设计单定做（`procurement.mode: design_sheet`、`by_design_sheet`，见 component-requirements.md），
   核实后由 `project` 写入设计单编号。
 - “确切”指订货型号（如 BAT54HT1G、S3J-E3/57T），不是系列名；很多料号按编码表拼成，在手册正文里查不到原样，
-  所以这一层由任务 C4.1 人工核对，脚本只查有没有写。
+  所以这一层由设计者人工核对，脚本只查有没有写。
 - 电解、聚合物、钽电容必须用有极性符号：按符号推断类型时，无极性符号认不出电解电容。
 
 **子类与档位**
